@@ -5,9 +5,9 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: nutracomply
-      POSTGRES_PASSWORD: nutracomply
-      POSTGRES_DB: nutracomply
+      POSTGRES_USER: regbite
+      POSTGRES_PASSWORD: regbite
+      POSTGRES_DB: regbite
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:

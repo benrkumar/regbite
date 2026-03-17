@@ -77,7 +77,7 @@ def _seed_initial_data():
         db.close()
 
 
-app = FastAPI(title="NutraComply", lifespan=lifespan)
+app = FastAPI(title="RegBite", lifespan=lifespan)
 
 # Static files
 static_dir = Path(__file__).parent / "static"

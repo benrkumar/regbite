@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}NutraComply{% endblock %} — FSSAI Compliance</title>
+  <title>{% block title %}RegBite{% endblock %} — FSSAI Compliance</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="/static/styles.css" />
@@ -13,7 +13,7 @@
 {% if user is defined and user %}
 <nav class="navbar">
   <div class="navbar-inner">
-    <a href="/dashboard" class="navbar-brand">&#x2B24; NutraComply</a>
+    <a href="/dashboard" class="navbar-brand">&#x2B24; RegBite</a>
     <a href="/dashboard" class="nav-link{% if request.url.path == '/dashboard' %} active{% endif %}">Dashboard</a>
     <a href="/products"  class="nav-link{% if '/products' in request.url.path %} active{% endif %}">Products</a>
     <a href="/alerts"    class="nav-link{% if request.url.path == '/alerts' %} active{% endif %}">
@@ -34,7 +34,7 @@
 </div>
 
 <footer class="site-footer">
-  NutraComply &mdash; FSSAI Compliance Monitor &nbsp;&middot;&nbsp; All data stored locally &nbsp;&middot;&nbsp; Not legal advice
+  RegBite &mdash; FSSAI Compliance Monitor &nbsp;&middot;&nbsp; All data stored locally &nbsp;&middot;&nbsp; Not legal advice
 </footer>
 
 </body>

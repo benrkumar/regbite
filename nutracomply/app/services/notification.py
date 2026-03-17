@@ -17,10 +17,10 @@ def send_alert_email(alert, product=None):
         return
 
     product_name = product.name if product else "Unknown Product"
-    subject = f"[NutraComply] {alert.severity.value}: {alert.title} — {product_name}"
+    subject = f"[RegBite] {alert.severity.value}: {alert.title} — {product_name}"
 
     body_lines = [
-        f"<h2>NutraComply Compliance Alert</h2>",
+        f"<h2>RegBite Compliance Alert</h2>",
         f"<p><strong>Product:</strong> {product_name}</p>",
         f"<p><strong>Severity:</strong> <span style='color:red'>{alert.severity.value}</span></p>",
         f"<p><strong>Alert:</strong> {alert.message}</p>",
@@ -40,7 +40,7 @@ def send_alert_email(alert, product=None):
         f"</ul>",
         f"<hr/>",
         f"<p><a href='http://localhost:8000/labels/{alert.label_version_id}'>View Full Report →</a></p>",
-        f"<p style='color:gray;font-size:0.8em'>NutraComply — FSSAI Compliance Monitor</p>",
+        f"<p style='color:gray;font-size:0.8em'>RegBite — FSSAI Compliance Monitor</p>",
     ]
 
     html_body = "\n".join(body_lines)
@@ -68,7 +68,7 @@ def send_regulation_change_email(change):
     if not settings.brevo_smtp_user or not settings.alert_to_email:
         return
 
-    subject = f"[NutraComply] FSSAI Regulation Change: {change.change_type.value} — {change.document_name}"
+    subject = f"[RegBite] FSSAI Regulation Change: {change.change_type.value} — {change.document_name}"
 
     html_body = f"""
     <h2>FSSAI Regulation Change Detected</h2>
@@ -78,10 +78,10 @@ def send_regulation_change_email(change):
     <p><strong>Detected At:</strong> {change.detected_at}</p>
     <hr/>
     <h3>Summary:</h3>
-    <p>{change.summary_text or 'See full details in NutraComply.'}</p>
+    <p>{change.summary_text or 'See full details in RegBite.'}</p>
     <hr/>
     <p><a href='http://localhost:8000/regulations'>View Regulation Feed →</a></p>
-    <p style='color:gray;font-size:0.8em'>NutraComply — FSSAI Compliance Monitor</p>
+    <p style='color:gray;font-size:0.8em'>RegBite — FSSAI Compliance Monitor</p>
     """
 
     msg = MIMEMultipart("alternative")

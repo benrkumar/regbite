@@ -3,11 +3,11 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    app_name: str = "NutraComply"
+    app_name: str = "RegBite"
     debug: bool = False
 
     # Database
-    database_url: str = "postgresql://nutracomply:nutracomply@localhost:5432/nutracomply"
+    database_url: str = "postgresql://regbite:regbite@localhost:5432/regbite"
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     brevo_smtp_port: int = 587
     brevo_smtp_user: str = ""
     brevo_smtp_password: str = ""
-    alert_from_email: str = "alerts@nutracomply.local"
+    alert_from_email: str = "alerts@regbite.local"
     alert_to_email: str = ""
 
     # File uploads

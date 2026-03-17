@@ -1,4 +1,4 @@
-# NutraComply — FSSAI Compliance Monitor
+# RegBite — FSSAI Compliance Monitor
 
 Automated compliance checking for nutraceutical product labels against FSSAI regulations.
 
@@ -27,7 +27,7 @@ pip install -r requirements.txt
 
 cp .env.example .env
 # Edit .env: add your GEMINI_API_KEY
-# DATABASE_URL is already set to sqlite:///./nutracomply.db
+# DATABASE_URL is already set to sqlite:///./regbite.db
 
 # Run from the project root (CORDING/)
 python run_api.py
@@ -53,7 +53,7 @@ docker-compose up --build
 
 | Variable | Description |
 |---|---|
-| `DATABASE_URL` | `sqlite:///./nutracomply.db` (dev) or PostgreSQL URL (prod) |
+| `DATABASE_URL` | `sqlite:///./regbite.db` (dev) or PostgreSQL URL (prod) |
 | `REDIS_URL` | Redis connection string (only needed for Celery worker) |
 | `SECRET_KEY` | Random 64-char string for JWT signing |
 | `GEMINI_API_KEY` | Free from https://aistudio.google.com/app/apikey |
