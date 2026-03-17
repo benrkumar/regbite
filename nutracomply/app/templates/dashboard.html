@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <h2>Compliance Dashboard</h2>
+    <p>Welcome back, <strong>{{ user.name }}</strong></p>
+  </div>
+  <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+    <a href="/products/bulk-upload" class="btn btn-outline btn-sm">+ Bulk Add Products</a>
+    <a href="/products" class="btn btn-primary btn-sm">+ Add Product</a>
+  </div>
+</div>
+
+{% if unread_alerts > 0 %}
+<div class="flash flash-error" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+  <span>&#x1F514; <strong>{{ unread_alerts }} unread alert{{ 's' if unread_alerts != 1 }}</strong> require your attention</span>
+  <a href="/alerts" class="btn btn-sm btn-danger-soft">View Alerts &rarr;</a>
+</div>
+{% endif %}
+
+{% if products %}
+<div class="grid-cards">
+  {% for p in products %}
+  {% set score = p.compliance_score %}
+  {% set latest = p.latest_label %}
+  <div class="card" style="display:flex;flex-direction:column;gap:0.9rem;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;">
+      <div style="flex:1;min-width:0;">
+        <a href="/products/{{ p.id }}" style="font-size:1rem;font-weight:700;color:var(--gray-900);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</a>
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.35rem;">
+          <span class="pill pill-primary">{{ p.category or "Nutraceutical" }}</span>
+          {% if p.sku %}<span class="pill pill-neutral">{{ p.sku }}</span>{% endif %}
+        </div>
+      </div>
+      {% if score is not none %}
+        <div class="score-circle {% if score >= 80 %}sc-good{% elif score >= 50 %}sc-warn{% else %}sc-bad{% endif %}">{{ score }}%</div>
+      {% else %}
+        <div class="score-circle sc-none" style="font-size:0.72rem;font-weight:700;">No<br/>label</div>
+      {% endif %}
+    </div>
+
+    {% if latest %}
+      {% set failed = latest.checks | selectattr("result", "equalto", "FAIL") | list %}
+      {% if failed %}
+        {% set critical = failed | selectattr("rule") | selectattr("rule.severity", "equalto", "CRITICAL") | list %}
+        <div style="font-size:0.84rem;color:var(--danger-fg);background:var(--danger-bg);border-radius:var(--r-md);padding:0.5rem 0.75rem;">
+          &#x26A0; {{ failed|length }} violation{{ 's' if failed|length != 1 }}{% if critical %} &mdash; <strong>{{ critical|length }} CRITICAL</strong>{% endif %}
+        </div>
+      {% else %}
+        <div style="font-size:0.84rem;color:var(--success-fg);background:var(--success-bg);border-radius:var(--r-md);padding:0.5rem 0.75rem;">
+          &#x2713; All checks passed
+        </div>
+      {% endif %}
+      <div style="display:flex;gap:0.5rem;margin-top:auto;">
+        <a href="/labels/{{ latest.id }}" class="btn btn-outline btn-sm" style="flex:1;justify-content:center;">View Report</a>
+        <a href="/products/{{ p.id }}/upload" class="btn btn-primary btn-sm" style="flex:1;justify-content:center;">Update Label</a>
+      </div>
+    {% else %}
+      <p style="font-size:0.84rem;color:var(--gray-400);">No label uploaded yet</p>
+      <a href="/products/{{ p.id }}/upload" class="btn btn-primary btn-sm btn-full" style="margin-top:auto;">Upload Label</a>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card no-hover" style="padding:0;">
+  <div class="empty-state">
+    <span class="empty-icon">&#x1F4CB;</span>
+    <h3>No products yet</h3>
+    <p style="margin-bottom:1.2rem;">Add your first product SKU to start checking FSSAI compliance</p>
+    <div style="display:flex;gap:0.6rem;justify-content:center;flex-wrap:wrap;">
+      <a href="/products" class="btn btn-primary">+ Add Product</a>
+      <a href="/products/bulk-upload" class="btn btn-outline">Bulk Upload CSV</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<hr class="divider" style="margin-top:2rem;" />
+<div style="display:flex;gap:1.5rem;font-size:0.84rem;">
+  <a href="/regulations">&#x1F4CB; FSSAI Regulation Feed &rarr;</a>
+  <a href="/products">Manage Products &rarr;</a>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}NutraComply{% endblock %} — FSSAI Compliance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+
+{% if user is defined and user %}
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/dashboard" class="navbar-brand">&#x2B24; NutraComply</a>
+    <a href="/dashboard" class="nav-link{% if request.url.path == '/dashboard' %} active{% endif %}">Dashboard</a>
+    <a href="/products"  class="nav-link{% if '/products' in request.url.path %} active{% endif %}">Products</a>
+    <a href="/alerts"    class="nav-link{% if request.url.path == '/alerts' %} active{% endif %}">
+      Alerts{% if unread_alerts is defined and unread_alerts > 0 %}<span class="badge-alert">{{ unread_alerts }}</span>{% endif %}
+    </a>
+    <a href="/regulations" class="nav-link{% if request.url.path == '/regulations' %} active{% endif %}">Regulations</a>
+    <span class="nav-sep"></span>
+    <a href="/logout" class="nav-link btn btn-ghost btn-sm">{{ user.name.split()[0] }} &rarr;</a>
+  </div>
+</nav>
+{% endif %}
+
+<div class="page-wrap">
+  {% if flash_message is defined and flash_message %}
+  <div class="flash flash-{{ flash_type | default('info') }}">{{ flash_message }}</div>
+  {% endif %}
+  {% block content %}{% endblock %}
+</div>
+
+<footer class="site-footer">
+  NutraComply &mdash; FSSAI Compliance Monitor &nbsp;&middot;&nbsp; All data stored locally &nbsp;&middot;&nbsp; Not legal advice
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,593 @@
+[
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-001",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(1)",
+    "description": "Product must declare its type as 'HEALTH SUPPLEMENT' or 'NUTRACEUTICAL' prominently on the label",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "product_type_declaration",
+      "allowed_values": ["HEALTH SUPPLEMENT", "NUTRACEUTICAL", "FOOD FOR SPECIAL DIETARY USE",
+                         "FOOD FOR SPECIAL MEDICAL PURPOSE", "FUNCTIONAL FOOD", "NOVEL FOOD"]
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Add a prominent declaration stating 'HEALTH SUPPLEMENT' or 'NUTRACEUTICAL' (as applicable) on the principal display panel in capital letters."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-002",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(2)",
+    "description": "Label must carry the statement 'NOT FOR MEDICINAL USE' in capital bold letters",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "warnings",
+      "required_text": "NOT FOR MEDICINAL USE"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Add 'NOT FOR MEDICINAL USE' in bold capital letters prominently on the label. This is mandatory for all health supplements and nutraceuticals."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-003",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(f)",
+    "description": "FSSAI License Number must be present on the label",
+    "check_type": "PATTERN_MATCH",
+    "check_config": {
+      "field": "fssai_license_number",
+      "pattern": "^\\d{14}$",
+      "description": "14-digit FSSAI license number"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Add your 14-digit FSSAI License/Registration number on the label. Format: 14 consecutive digits (e.g., 12345678901234)."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-004",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(a)",
+    "description": "Product name must be present on the label",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "product_name"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Ensure the product name is clearly printed on the principal display panel of the label."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-005",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(b)",
+    "description": "Net quantity/net weight must be declared on the label",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "net_quantity"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Declare the net quantity (weight or volume) on the principal display panel. Use standard metric units (g, kg, ml, L)."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-006",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(d)",
+    "description": "Complete ingredient list must be present, in descending order of weight",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "ingredient_list"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "List all ingredients in descending order by weight used in manufacture. Include all additives, preservatives, and flavoring agents."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-007",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(5)",
+    "description": "Nutritional information table must be present showing per-serving values",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "nutritional_table"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Add a complete Nutritional Information table showing values per serving and per 100g/100ml. Include energy, protein, carbohydrates, fat, and relevant micronutrients."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-008",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(5)(c)",
+    "description": "Percentage of Recommended Daily Allowance (%RDA) must be declared per ICMR guidelines",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "rda_percentages",
+      "description": "Nutritional table must include %RDA column"
+    },
+    "severity": "HIGH",
+    "remediation_template": "Add a %RDA column to the nutritional information table. Values must be based on ICMR Recommended Dietary Allowances for a reference adult (2000 kcal diet)."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-009",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(6)",
+    "description": "Recommended daily usage/dosage must be clearly specified",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "serving_size"
+    },
+    "severity": "HIGH",
+    "remediation_template": "Clearly specify the recommended daily dosage/serving size (e.g., '1 capsule daily', '2 tablets twice daily'). Must not exceed the maximum limits in the regulations."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-010",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(7)",
+    "description": "Label must carry the advisory: 'Not to exceed the stated recommended daily usage'",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "warnings",
+      "required_text": "not to exceed"
+    },
+    "severity": "HIGH",
+    "remediation_template": "Add the advisory statement: 'Not to exceed the stated recommended daily usage' on the label."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-011",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(e)",
+    "description": "Best before / Expiry date must be present on the label",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "expiry_date"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Declare the 'Best Before' or 'Use By' date on the label in DD/MM/YYYY format or Month-Year format."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-012",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(c)",
+    "description": "Manufacturer / packer / importer name and complete address must be on the label",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "manufacturer_details"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Include the complete name and address (including PIN code) of the manufacturer/packer. For imported products, include importer details as well."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-013",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(g)",
+    "description": "Batch / Lot number must be declared on the label",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "batch_number"
+    },
+    "severity": "HIGH",
+    "remediation_template": "Add the Batch/Lot number on the label to enable product traceability. Format: 'Batch No.: [number]' or 'Lot No.: [number]'."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-014",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(h)",
+    "description": "Storage conditions must be declared on the label",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "storage_conditions"
+    },
+    "severity": "MEDIUM",
+    "remediation_template": "Add storage instructions (e.g., 'Store in a cool, dry place', 'Keep away from direct sunlight', 'Store below 25°C'). Also add: 'Keep out of reach of children'."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-015",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 22",
+    "description": "Vegetarian (green dot) or Non-vegetarian (brown dot) mark must be displayed",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "veg_nonveg_mark"
+    },
+    "severity": "HIGH",
+    "remediation_template": "Add the mandatory Veg/Non-Veg symbol. Use a green filled circle inside a green square for vegetarian products, or a brown filled circle inside a brown square for non-vegetarian products."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-CLAIM-001",
+    "category": "PROHIBITED_CLAIM",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 7(1)",
+    "description": "Labels must not carry any disease treatment or cure claims",
+    "check_type": "ABSENCE",
+    "check_config": {
+      "field": "health_claims",
+      "prohibited_patterns": [
+        "cures?\\s+\\w+",
+        "treats?\\s+\\w+",
+        "heals?\\s+\\w+",
+        "reverses?\\s+\\w+",
+        "eliminates?\\s+\\w+\\s+disease",
+        "therapeutic",
+        "medicinal",
+        "cure for",
+        "treatment for",
+        "remedy for"
+      ]
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Remove all disease treatment/cure claims from the label. Nutraceuticals cannot make therapeutic claims. Replace with permissible structure/function claims (e.g., 'supports healthy joints' instead of 'cures arthritis')."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-CLAIM-002",
+    "category": "PROHIBITED_CLAIM",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 7(1)",
+    "description": "Labels must not carry disease prevention claims",
+    "check_type": "ABSENCE",
+    "check_config": {
+      "field": "health_claims",
+      "prohibited_patterns": [
+        "prevents?\\s+\\w+\\s+disease",
+        "prevents?\\s+(cancer|diabetes|osteoporosis|heart disease|hypertension|depression|alzheimer)",
+        "protection against\\s+\\w+\\s+disease",
+        "reduces?\\s+risk\\s+of\\s+(cancer|diabetes|stroke|heart attack)",
+        "anti-cancer",
+        "anti-diabetic"
+      ]
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Remove disease prevention claims. Replace with permissible structure/function claims. For example, replace 'prevents heart disease' with 'supports cardiovascular health'."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-CLAIM-003",
+    "category": "PROHIBITED_CLAIM",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 7(2)",
+    "description": "Labels must not imply a cure or treatment through pictures, vignettes, or misleading language",
+    "check_type": "ABSENCE",
+    "check_config": {
+      "field": "health_claims",
+      "prohibited_patterns": [
+        "clinically proven to cure",
+        "doctor recommended for treatment",
+        "medically proven",
+        "replaces medication",
+        "discontinue your medicine"
+      ]
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Remove all implied treatment claims. The label should not suggest the product replaces medical treatment or pharmaceutical drugs."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-CLAIM-004",
+    "category": "PROHIBITED_CLAIM",
+    "regulation_source": "FSS (Advertisement and Claims) Regulations 2018, Reg 5",
+    "description": "Labels must not carry misleading or false claims about product efficacy",
+    "check_type": "ABSENCE",
+    "check_config": {
+      "field": "health_claims",
+      "prohibited_patterns": [
+        "100% cure",
+        "guaranteed results",
+        "instant cure",
+        "miracle",
+        "magic formula",
+        "secret formula",
+        "wonder\\s+(drug|cure|pill|capsule)"
+      ]
+    },
+    "severity": "HIGH",
+    "remediation_template": "Remove exaggerated or misleading efficacy claims. All claims must be truthful and not mislead consumers. Structure/function claims must be scientifically substantiated."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-001",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022",
+    "description": "Raspberry ketone is a banned ingredient in nutraceuticals",
+    "check_type": "NOT_IN_LIST",
+    "check_config": {
+      "field": "ingredient_list",
+      "banned_items": ["raspberry ketone", "rheosmin", "frambinone", "4-(4-hydroxyphenyl)butan-2-one"]
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Remove raspberry ketone (and all aliases: rheosmin, frambinone) from the formula and label. This ingredient was banned by FSSAI in October 2022 due to insufficient safety data."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-002",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022",
+    "description": "Saw palmetto (Serenoa repens) is a banned ingredient",
+    "check_type": "NOT_IN_LIST",
+    "check_config": {
+      "field": "ingredient_list",
+      "banned_items": ["saw palmetto", "serenoa repens", "sabal serrulata"]
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Remove saw palmetto (Serenoa repens) from the formula and label. This ingredient was prohibited by FSSAI in 2022."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-003",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022",
+    "description": "Silica / Silicon dioxide above 1.5% of product is restricted",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "ingredient_list",
+      "monitored_items": ["silica", "silicon dioxide", "amorphous silica", "SiO2"],
+      "note": "Flag for manual review of dosage compliance"
+    },
+    "severity": "HIGH",
+    "remediation_template": "Ensure silica / silicon dioxide is used only as a permitted anti-caking agent at ≤ 1.5% of the total product weight. Verify usage levels comply with Schedule IV limits."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-004",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022",
+    "description": "Chlorella growth factor is a banned ingredient",
+    "check_type": "NOT_IN_LIST",
+    "check_config": {
+      "field": "ingredient_list",
+      "banned_items": ["chlorella growth factor", "CGF", "chlorella extract growth factor"]
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Remove Chlorella Growth Factor (CGF) from the formula and label. This ingredient was banned by FSSAI in October 2022."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-005",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022",
+    "description": "Paullinia cupana (Guarana) is a banned ingredient",
+    "check_type": "NOT_IN_LIST",
+    "check_config": {
+      "field": "ingredient_list",
+      "banned_items": ["paullinia cupana", "guarana", "guarana extract", "guarana seed extract"]
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Remove Paullinia cupana (Guarana) from the formula and label. This ingredient was banned by FSSAI in 2022."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-006",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022",
+    "description": "Chaga mushroom extract is a banned ingredient",
+    "check_type": "NOT_IN_LIST",
+    "check_config": {
+      "field": "ingredient_list",
+      "banned_items": ["chaga", "chaga extract", "inonotus obliquus", "chaga mushroom"]
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Remove Chaga mushroom extract (Inonotus obliquus) from the formula and label. This ingredient was banned by FSSAI in 2022."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-007",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022",
+    "description": "Angelica sinensis (Dong Quai) is a banned ingredient",
+    "check_type": "NOT_IN_LIST",
+    "check_config": {
+      "field": "ingredient_list",
+      "banned_items": ["angelica sinensis", "dong quai", "dang gui", "chinese angelica"]
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Remove Angelica sinensis (Dong Quai) from the formula and label. This ingredient was banned by FSSAI in 2022."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-008",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022",
+    "description": "Notoginseng (Panax notoginseng) is a banned ingredient",
+    "check_type": "NOT_IN_LIST",
+    "check_config": {
+      "field": "ingredient_list",
+      "banned_items": ["notoginseng", "panax notoginseng", "tian qi", "san qi", "three seven root"]
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Remove Notoginseng (Panax notoginseng) from the formula and label. This ingredient was banned by FSSAI in 2022."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-009",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022",
+    "description": "All listed ingredients must be from the FSSAI positive list or have a safety dossier",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "ingredient_list",
+      "note": "Cross-check each ingredient against FSSAI Schedule I, II, III approved lists"
+    },
+    "severity": "HIGH",
+    "remediation_template": "Ensure all ingredients are either on the FSSAI positive list (Schedules I-IV) or have an approved safety dossier. Ingredients not on the approved list require submission of toxicology and safety data to FSSAI."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-WARN-001",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(8)",
+    "description": "Label must carry the warning: 'Keep out of reach of children'",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "warnings",
+      "required_text": "out of reach of children"
+    },
+    "severity": "HIGH",
+    "remediation_template": "Add the warning statement: 'Keep out of reach of children' on the label."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-WARN-002",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(9)",
+    "description": "Label must advise consumers to consult a doctor if under medication or pregnant/nursing",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "warnings",
+      "required_text": "consult"
+    },
+    "severity": "MEDIUM",
+    "remediation_template": "Add advisory: 'Consult your doctor/healthcare provider before use if you are pregnant, nursing, taking any medication, or have a medical condition.'"
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-WARN-003",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(10)",
+    "description": "Known side effects and contraindications must be declared where applicable",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "warnings",
+      "description": "Side effects or contraindications section"
+    },
+    "severity": "MEDIUM",
+    "remediation_template": "Declare any known side effects, allergen cross-reactions, or contraindications specific to the product's active ingredients."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ALLERGEN-001",
+    "category": "ALLERGEN_REQUIREMENT",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 6",
+    "description": "Common allergens must be declared using the standard 'Contains:' format",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "allergen_declarations",
+      "common_allergens": [
+        "gluten", "wheat", "milk", "egg", "nuts", "peanut", "soy", "soya",
+        "fish", "shellfish", "sesame", "mustard", "celery", "lupin", "sulphite"
+      ]
+    },
+    "severity": "HIGH",
+    "remediation_template": "If the product contains or may contain any of the 14 common allergens (gluten, milk, eggs, nuts, peanuts, soy, fish, shellfish, sesame, mustard, celery, lupin, sulphites), declare them using 'CONTAINS: [allergen name]' prominently near the ingredient list."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-FORMAT-001",
+    "category": "FORMAT_REQUIREMENT",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(3)",
+    "description": "All mandatory label information must be in English; Hindi or regional language may be additionally used",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "product_name",
+      "description": "English language mandatory for all key fields"
+    },
+    "severity": "HIGH",
+    "remediation_template": "Ensure all mandatory label information is printed in English. Regional language translations are permitted additionally but cannot replace English declarations."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-FORMAT-002",
+    "category": "FORMAT_REQUIREMENT",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(2)",
+    "description": "Mandatory label declarations must be legible and in prescribed minimum font size",
+    "check_type": "FORMAT",
+    "check_config": {
+      "description": "Verify that text is not obscured, printed too small, or placed in areas that are difficult to read. Minimum 1mm height for characters."
+    },
+    "severity": "MEDIUM",
+    "remediation_template": "Ensure all mandatory declarations are clearly legible. Minimum font height for mandatory information is 1mm (height of lowercase 'x'). Principal display panel text should be larger."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-QTY-001",
+    "category": "QUANTITY_REQUIREMENT",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule I-IV",
+    "description": "Active ingredients must declare quantity per serving in the nutritional table",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "nutritional_table",
+      "required_columns": ["per_serving", "unit"]
+    },
+    "severity": "HIGH",
+    "remediation_template": "Declare the quantity of each active ingredient per serving in the nutritional information table. Include units (mg, mcg, IU as appropriate)."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-QTY-002",
+    "category": "QUANTITY_REQUIREMENT",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(4)",
+    "description": "Energy value must be declared in kcal per serving and per 100g/100ml",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "nutritional_table",
+      "required_nutrient": "energy"
+    },
+    "severity": "HIGH",
+    "remediation_template": "Add energy (calorie) value to the nutritional table. Declare per serving and per 100g (or per 100ml for liquids) in kcal."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-IMPORT-001",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 5",
+    "description": "Imported nutraceuticals must declare country of origin",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "country_of_origin",
+      "applies_to": "imported_products"
+    },
+    "severity": "HIGH",
+    "remediation_template": "For imported products, declare the country of origin (e.g., 'Country of Origin: USA') on the label, along with importer name and address in India."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-016",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(3)",
+    "description": "The label must specify the target consumer group if the product is intended for a specific population",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "target_consumer",
+      "description": "Target group if product is for specific population (e.g., adults, seniors, athletes)"
+    },
+    "severity": "MEDIUM",
+    "remediation_template": "If the product is designed for a specific group (e.g., 'for adults above 18 years', 'for athletes', 'not suitable for children under 12'), clearly state the intended consumer group on the label."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-CLAIM-005",
+    "category": "CLAIM_SUBSTANTIATION",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 7(3)",
+    "description": "Structure/function health claims must be scientifically substantiated and pre-approved",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "health_claims",
+      "description": "If health claims are present, scientific substantiation documentation must be maintained"
+    },
+    "severity": "HIGH",
+    "remediation_template": "All structure/function claims (e.g., 'supports immune health', 'helps reduce oxidative stress') must be backed by scientific evidence. Maintain a scientific substantiation file with clinical studies or published research. Some claims require prior FSSAI approval."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-CLAIM-006",
+    "category": "PROHIBITED_CLAIM",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 7(1)",
+    "description": "Labels must not claim to be a substitute for a varied diet",
+    "check_type": "ABSENCE",
+    "check_config": {
+      "field": "health_claims",
+      "prohibited_patterns": [
+        "replaces? (a )?balanced diet",
+        "substitute for (a )?balanced diet",
+        "no need for (a )?(proper |varied )?diet",
+        "diet is not required"
+      ]
+    },
+    "severity": "HIGH",
+    "remediation_template": "Remove any claims that the product substitutes for a balanced diet. Add the advisory: 'This product is not a substitute for a varied and balanced diet and a healthy lifestyle.'"
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-017",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(i)",
+    "description": "Date of manufacture must be declared on the label",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "manufacturing_date"
+    },
+    "severity": "HIGH",
+    "remediation_template": "Add the manufacturing/packing date on the label. Use format: 'Mfg. Date: MM/YYYY' or 'Date of Manufacture: DD/MM/YYYY'."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-010",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV",
+    "description": "Vitamin D3 (animal source) must be declared separately from plant-source Vitamin D3",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "ingredient_list",
+      "monitored_items": ["vitamin d3", "cholecalciferol"],
+      "note": "Source must be declared; veg-D3 from lichen must be distinguished from animal-derived D3"
+    },
+    "severity": "MEDIUM",
+    "remediation_template": "If Vitamin D3 is included, clearly declare the source: 'Vitamin D3 (Cholecalciferol) from [sheep wool lanolin / lichen / algae]'. Veg symbol must match source."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-WARN-004",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(8)",
+    "description": "If the product is not suitable for pregnant/nursing women or children, this must be stated",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "warnings",
+      "description": "Pregnancy/nursing/children contraindication if applicable"
+    },
+    "severity": "MEDIUM",
+    "remediation_template": "If the product is not suitable for pregnant or nursing women, children, or any specific group, explicitly state: 'Not suitable for [pregnant women / nursing mothers / children under X years]'."
+  }
+]

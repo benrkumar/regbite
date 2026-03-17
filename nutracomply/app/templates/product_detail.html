@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+  <a href="/products">Products</a>
+  <span style="color:var(--gray-300);">/</span>
+  <span>{{ product.name }}</span>
+</div>
+
+<div class="page-hdr">
+  <div>
+    <h2>{{ product.name }}</h2>
+    <div style="display:flex;gap:0.4rem;margin-top:0.4rem;flex-wrap:wrap;">
+      <span class="pill pill-primary">{{ product.category }}</span>
+      {% if product.sku %}<span class="pill pill-neutral">SKU: {{ product.sku }}</span>{% endif %}
+    </div>
+  </div>
+  <a href="/products/{{ product.id }}/upload" class="btn btn-primary">&#x2B06; Upload New Label</a>
+</div>
+
+{% set latest = product.latest_label %}
+{% if latest %}
+  {% set total = latest.checks|length %}
+  {% set passed = latest.checks|selectattr("result","equalto","PASS")|list|length %}
+  {% set score = (passed / total * 100)|round|int if total > 0 else 0 %}
+  <div class="card" style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+    <div class="score-circle {% if score >= 80 %}sc-good{% elif score >= 50 %}sc-warn{% else %}sc-bad{% endif %}" style="width:80px;height:80px;font-size:1.35rem;">{{ score }}%</div>
+    <div style="flex:1;min-width:180px;">
+      <strong style="font-size:1.05rem;">Current Label</strong>
+      <p style="margin:0.2rem 0;font-size:0.87rem;">Uploaded {{ latest.uploaded_at.strftime('%d %b %Y, %H:%M') }} &middot; {{ latest.file_name }}</p>
+      {% if latest.extraction_confidence %}
+      <p style="font-size:0.82rem;color:var(--gray-400);">Extraction confidence: {{ (latest.extraction_confidence * 100)|round|int }}%</p>
+      {% endif %}
+    </div>
+    <a href="/labels/{{ latest.id }}" class="btn btn-primary">Full Compliance Report &rarr;</a>
+  </div>
+{% else %}
+  <div class="card card-flat no-hover">
+    <div class="empty-state" style="padding:2rem;">
+      <span class="empty-icon">&#x1F4C4;</span>
+      <h3>No label uploaded yet</h3>
+      <p style="margin-bottom:1rem;">Upload a label image or PDF to run a compliance check</p>
+      <a href="/products/{{ product.id }}/upload" class="btn btn-primary">Upload Label</a>
+    </div>
+  </div>
+{% endif %}
+
+{% if product.label_versions|length > 1 %}
+<h4 style="margin-top:1.5rem;margin-bottom:0.75rem;">Label History</h4>
+<div class="table-wrap">
+  <table class="tbl">
+    <thead><tr><th>Uploaded</th><th>File</th><th>Score</th><th></th></tr></thead>
+    <tbody>
+    {% for lv in product.label_versions %}
+      {% set s = lv.checks|length %}
+      {% set p = (lv.checks|selectattr("result","equalto","PASS")|list|length / s * 100)|round|int if s > 0 else None %}
+      <tr>
+        <td><small>{{ lv.uploaded_at.strftime('%d %b %Y') }}</small></td>
+        <td><small>{{ lv.file_name }}</small></td>
+        <td>
+          {% if p is not none %}
+            <span class="pill {% if p >= 80 %}pill-good{% elif p >= 50 %}pill-warn{% else %}pill-bad{% endif %}">{{ p }}%</span>
+          {% else %}&mdash;{% endif %}
+        </td>
+        <td><a href="/labels/{{ lv.id }}" class="btn btn-outline btn-sm">View</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<hr class="divider" style="margin-top:2rem;" />
+<form method="post" action="/products/{{ product.id }}/delete"
+      onsubmit="return confirm('Archive this product? It will be hidden from your dashboard.')">
+  <button type="submit" class="btn btn-danger-soft btn-sm">Archive Product</button>
+</form>
+{% endblock %}

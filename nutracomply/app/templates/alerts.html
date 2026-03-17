@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Alerts{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <h2>Compliance Alerts</h2>
+    <p>{{ alerts|length }} total &middot; {{ unread_alerts }} unread</p>
+  </div>
+  {% if unread_alerts > 0 %}
+  <form method="post" action="/alerts/mark-all-read">
+    <button type="submit" class="btn btn-ghost btn-sm">&#x2713; Mark All Read</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if not alerts %}
+<div class="card no-hover" style="padding:0;">
+  <div class="empty-state">
+    <span class="empty-icon">&#x1F514;</span>
+    <h3>No alerts yet</h3>
+    <p>Upload a product label to run a compliance check</p>
+  </div>
+</div>
+{% endif %}
+
+{% for alert in alerts %}
+<div class="alert-item sev-{{ alert.severity.value }}{% if alert.status.value == 'UNREAD' %} unread{% endif %}">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem;">
+    <div>
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+        <strong style="font-size:0.95rem;">{{ alert.title }}</strong>
+        {% if alert.status.value == 'UNREAD' %}<span class="pill pill-new" style="font-size:0.65rem;">NEW</span>{% endif %}
+      </div>
+      <small>{{ alert.alert_type.value.replace('_',' ') }} &middot; {{ alert.created_at.strftime('%d %b %Y, %H:%M') }}{% if alert.product %} &middot; {{ alert.product.name }}{% endif %}</small>
+    </div>
+    <span class="sev-tag sev-{{ alert.severity.value }}">{{ alert.severity.value }}</span>
+  </div>
+
+  <p style="font-size:0.88rem;margin-bottom:0.6rem;">{{ alert.message }}</p>
+
+  {% if alert.rule_violations %}
+  <details style="margin-bottom:0.6rem;">
+    <summary>{{ alert.rule_violations|length }} violation{{ 's' if alert.rule_violations|length != 1 }} — expand to see details</summary>
+    <ul style="margin-top:0.5rem;font-size:0.84rem;">
+    {% for v in alert.rule_violations %}
+      <li style="margin-bottom:0.4rem;">
+        <strong>[{{ v.severity }}] {{ v.rule_code }}:</strong> {{ v.message }}
+        {% if v.remediation %}<br/><em style="color:var(--gray-500);">Fix: {{ v.remediation }}</em>{% endif %}
+      </li>
+    {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+
+  <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
+    {% if alert.label_version_id %}
+    <a href="/labels/{{ alert.label_version_id }}" class="btn btn-outline btn-sm">View Report</a>
+    {% endif %}
+    {% if alert.status.value != 'RESOLVED' %}
+    <form method="post" action="/alerts/{{ alert.id }}/status" style="display:inline;">
+      <input type="hidden" name="status" value="IN_PROGRESS" />
+      <button type="submit" class="btn btn-ghost btn-sm">In Progress</button>
+    </form>
+    <form method="post" action="/alerts/{{ alert.id }}/status" style="display:inline;">
+      <input type="hidden" name="status" value="RESOLVED" />
+      <button type="submit" class="btn btn-success btn-sm">&#x2713; Resolve</button>
+    </form>
+    {% else %}
+    <span style="font-size:0.82rem;color:var(--success-fg);">&#x2713; Resolved {{ alert.resolved_at.strftime('%d %b %Y') if alert.resolved_at else '' }}</span>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

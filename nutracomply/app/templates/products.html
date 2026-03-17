@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Products{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <h2>Products &amp; SKUs</h2>
+    <p>{{ products|length }} active product{{ 's' if products|length != 1 }}</p>
+  </div>
+  <a href="/products/bulk-upload" class="btn btn-outline btn-sm">&#x2B06; Bulk Upload</a>
+</div>
+
+<div class="card card-flat no-hover" style="margin-bottom:1.5rem;">
+  <details id="add-form">
+    <summary style="font-size:0.95rem;font-weight:700;color:var(--gray-800);padding:0.2rem 0;">
+      + Add New Product
+    </summary>
+    <form method="post" action="/products/add" style="margin-top:1.2rem;">
+      <div class="two-col">
+        <div class="field">
+          <label class="field-label">Product Name *</label>
+          <input class="input" type="text" name="name" placeholder="e.g. OmegaPlus Capsules" required />
+        </div>
+        <div class="field">
+          <label class="field-label">SKU / Product Code</label>
+          <input class="input" type="text" name="sku" placeholder="e.g. OP-60-CAP" />
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Category</label>
+        <select class="input" name="category">
+          <option>Health Supplement</option>
+          <option>Nutraceutical</option>
+          <option>Functional Food</option>
+          <option>Food for Special Dietary Use</option>
+          <option>Novel Food</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label">Description</label>
+        <textarea class="input" name="description" placeholder="Optional product description" rows="2"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Add Product</button>
+    </form>
+  </details>
+</div>
+
+{% if products %}
+<div class="table-wrap">
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Category</th>
+        <th>Score</th>
+        <th>Last Label</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for p in products %}
+      {% set score = p.compliance_score %}
+      {% set latest = p.latest_label %}
+      <tr>
+        <td>
+          <a href="/products/{{ p.id }}" style="font-weight:600;color:var(--gray-900);">{{ p.name }}</a>
+          {% if p.sku %}<br/><small>{{ p.sku }}</small>{% endif %}
+        </td>
+        <td><span class="pill pill-primary" style="font-size:0.72rem;">{{ p.category }}</span></td>
+        <td>
+          {% if score is not none %}
+            <span class="pill {% if score >= 80 %}pill-good{% elif score >= 50 %}pill-warn{% else %}pill-bad{% endif %}">{{ score }}%</span>
+          {% else %}
+            <span style="color:var(--gray-300);">&mdash;</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if latest %}<small>{{ latest.uploaded_at.strftime('%d %b %Y') }}</small>
+          {% else %}<small style="color:var(--gray-300);">None</small>{% endif %}
+        </td>
+        <td style="white-space:nowrap;">
+          <a href="/products/{{ p.id }}/upload" class="btn btn-outline btn-sm">Upload</a>
+          {% if latest %}<a href="/labels/{{ latest.id }}" class="btn btn-primary btn-sm" style="margin-left:0.35rem;">Report</a>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card no-hover" style="padding:0;">
+  <div class="empty-state">
+    <span class="empty-icon">&#x1F4E6;</span>
+    <h3>No products yet</h3>
+    <p>Use the form above to add your first product, or bulk upload from CSV</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

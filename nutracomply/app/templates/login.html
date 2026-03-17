@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — NutraComply</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="card no-hover" style="padding:2.2rem 2rem;">
+      <div style="text-align:center;margin-bottom:1.8rem;">
+        <div style="font-size:2.4rem;font-weight:900;background:linear-gradient(135deg,#6366f1,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.03em;">NutraComply</div>
+        <p style="margin-top:0.3rem;font-size:0.88rem;">FSSAI Compliance Monitor for Nutraceuticals</p>
+      </div>
+
+      {% if error %}
+      <div class="error-banner">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" action="/login">
+        <div class="field">
+          <label class="field-label" for="email">Email</label>
+          <input class="input" type="email" id="email" name="email" placeholder="you@company.com" required autofocus />
+        </div>
+        <div class="field">
+          <label class="field-label" for="password">Password</label>
+          <input class="input" type="password" id="password" name="password" placeholder="Your password" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-xl btn-full" style="margin-top:0.5rem;">Sign In</button>
+      </form>
+
+      <p style="text-align:center;margin-top:1.2rem;font-size:0.87rem;">
+        No account? <a href="/register" style="font-weight:600;">Create one</a>
+      </p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

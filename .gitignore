@@ -1,0 +1,40 @@
+# Design assets (not part of the app)
+*.psd
+*.ai
+
+# Environment / secrets
+nutracomply/.env
+.env
+
+# Local database
+nutracomply/nutracomply.db
+*.db
+
+# Uploaded files
+nutracomply/uploads/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Claude private memory
+.claude/
+
+# Alembic cache (generated)
+nutracomply/alembic/versions/__pycache__/

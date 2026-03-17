@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Bulk Upload Products{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+  <a href="/products">Products</a>
+  <span>/</span>
+  <span>Bulk Upload</span>
+</div>
+
+<div class="page-hdr">
+  <div>
+    <h2>Bulk Upload Products</h2>
+    <p>Add multiple products at once by pasting CSV data</p>
+  </div>
+  <a href="/products" class="btn btn-ghost btn-sm">&larr; Back to Products</a>
+</div>
+
+{% if result %}
+  {% if result.added %}
+  <div class="flash flash-success">
+    <strong>&#x2713; {{ result.added|length }} product{{ 's' if result.added|length != 1 }} added:</strong>
+    {{ result.added | join(', ') }}
+  </div>
+  {% endif %}
+  {% if result.skipped %}
+  <div class="flash flash-info">
+    <strong>Skipped ({{ result.skipped|length }}):</strong>
+    <ul style="margin:0.3rem 0 0 1.2rem;">
+      {% for s in result.skipped %}<li>{{ s }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if result.errors %}
+  <div class="flash flash-error">
+    <strong>Errors:</strong>
+    <ul style="margin:0.3rem 0 0 1.2rem;">
+      {% for e in result.errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if result.added %}
+  <div style="margin-bottom:1.5rem;">
+    <a href="/products" class="btn btn-primary">View All Products &rarr;</a>
+  </div>
+  {% endif %}
+{% endif %}
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;">
+
+  <div class="card no-hover">
+    <h4 style="margin-bottom:1rem;">Paste CSV Data</h4>
+    <form method="post" action="/products/bulk-upload">
+      <div class="field">
+        <label class="field-label">Product Data (CSV format)</label>
+        <textarea class="input mono" name="csv_data" rows="14"
+          placeholder="name,sku,category,description
+OmegaPlus Capsules,OP-60-CAP,Health Supplement,Fish oil supplement
+VitaMax Tablets,VM-90,Nutraceutical,Multivitamin formula
+ProFlora Probiotics,PF-30,Health Supplement,Daily probiotic blend
+IronPro Syrup,IP-200ML,Nutraceutical,Iron and folic acid syrup"></textarea>
+        <span class="field-hint">One product per line. Only &lsquo;name&rsquo; is required. Category defaults to &lsquo;Health Supplement&rsquo;.</span>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Import Products &rarr;</button>
+    </form>
+  </div>
+
+  <div>
+    <div class="card card-flat no-hover" style="margin-bottom:1rem;">
+      <h4 style="margin-bottom:0.8rem;">CSV Format</h4>
+      <pre style="font-size:0.78rem;margin:0;">name,sku,category,description</pre>
+      <div style="font-size:0.83rem;color:var(--gray-600);margin-top:0.75rem;">
+        <p style="margin-bottom:0.5rem;"><strong>Columns (all optional except name):</strong></p>
+        <table style="font-size:0.81rem;width:100%;">
+          <tr><td style="padding:0.2rem 0.5rem 0.2rem 0;"><code>name</code></td><td style="color:var(--gray-500);">Product name <span style="color:var(--danger);">*required</span></td></tr>
+          <tr><td style="padding:0.2rem 0.5rem 0.2rem 0;"><code>sku</code></td><td style="color:var(--gray-500);">SKU / product code</td></tr>
+          <tr><td style="padding:0.2rem 0.5rem 0.2rem 0;"><code>category</code></td><td style="color:var(--gray-500);">See valid values below</td></tr>
+          <tr><td style="padding:0.2rem 0.5rem 0.2rem 0;"><code>description</code></td><td style="color:var(--gray-500);">Optional notes</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="card card-flat no-hover">
+      <h4 style="margin-bottom:0.8rem;">Valid Categories</h4>
+      <div class="tag-row">
+        <span class="pill pill-primary">Health Supplement</span>
+        <span class="pill pill-primary">Nutraceutical</span>
+        <span class="pill pill-primary">Functional Food</span>
+        <span class="pill pill-primary">Food for Special Dietary Use</span>
+        <span class="pill pill-primary">Novel Food</span>
+      </div>
+      <p style="font-size:0.79rem;color:var(--gray-400);margin-top:0.75rem;">Invalid categories default to &lsquo;Health Supplement&rsquo;. Duplicate product names are skipped automatically.</p>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

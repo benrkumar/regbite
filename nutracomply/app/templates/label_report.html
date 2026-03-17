@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Compliance Report — {{ product.name }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ul>
+    <li><a href="/products">Products</a></li>
+    <li><a href="/products/{{ product.id }}">{{ product.name }}</a></li>
+    <li>Compliance Report</li>
+  </ul>
+</nav>
+
+{% if processing %}
+<article>
+  <header><strong>⏳ Processing label...</strong></header>
+  <p>OCR and compliance analysis are running in the background. Refresh in a few seconds.</p>
+  <meta http-equiv="refresh" content="5" />
+</article>
+{% else %}
+
+<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
+  <hgroup>
+    <h2>Compliance Report</h2>
+    <p>{{ product.name }} · Uploaded {{ label.uploaded_at.strftime('%d %b %Y, %H:%M') }}</p>
+  </hgroup>
+
+  {% if score is not none %}
+  <div style="text-align:center;">
+    <div class="big-score {% if score >= 80 %}score-good{% elif score >= 50 %}score-warn{% else %}score-bad{% endif %}">
+      {{ score }}%
+    </div>
+    <small>Compliance Score</small>
+  </div>
+  {% endif %}
+</div>
+
+{% if violation_summary %}
+<div class="grid" style="margin-bottom:1.5rem;">
+  {% if violation_summary.CRITICAL > 0 %}
+  <article style="border-left:4px solid #c0392b;padding:0.8rem;">
+    <strong style="color:#c0392b;font-size:1.4em">{{ violation_summary.CRITICAL }}</strong><br/>
+    <small>CRITICAL</small>
+  </article>
+  {% endif %}
+  {% if violation_summary.HIGH > 0 %}
+  <article style="border-left:4px solid #e67e22;padding:0.8rem;">
+    <strong style="color:#e67e22;font-size:1.4em">{{ violation_summary.HIGH }}</strong><br/>
+    <small>HIGH</small>
+  </article>
+  {% endif %}
+  {% if violation_summary.MEDIUM > 0 %}
+  <article style="border-left:4px solid #f1c40f;padding:0.8rem;">
+    <strong style="color:#b7950b;font-size:1.4em">{{ violation_summary.MEDIUM }}</strong><br/>
+    <small>MEDIUM</small>
+  </article>
+  {% endif %}
+  <article style="border-left:4px solid #27ae60;padding:0.8rem;">
+    <strong style="color:#27ae60;font-size:1.4em">{{ passed_checks | length }}</strong><br/>
+    <small>PASSED</small>
+  </article>
+</div>
+{% endif %}
+
+<!-- FAILED CHECKS -->
+{% if failed_checks %}
+<h3>❌ Violations ({{ failed_checks | length }})</h3>
+{% for check in failed_checks %}
+  {% set sev = check.rule.severity.value if check.rule else 'MEDIUM' %}
+  <article style="border-left:4px solid {% if sev == 'CRITICAL' %}#c0392b{% elif sev == 'HIGH' %}#e67e22{% elif sev == 'MEDIUM' %}#f1c40f{% else %}#95a5a6{% endif %};">
+    <header style="display:flex;justify-content:space-between;">
+      <strong>{{ check.rule.description if check.rule else 'Unknown Rule' }}</strong>
+      <span class="severity-tag sev-{{ sev }}">{{ sev }}</span>
+    </header>
+
+    {% if check.rule %}
+    <small style="color:#666">{{ check.rule.rule_code }} · {{ check.rule.regulation_source }}</small>
+    {% endif %}
+
+    <p style="margin-top:0.5rem">{{ check.message }}</p>
+
+    {% if check.actual_value %}
+    <p><small><strong>Found on label:</strong> {{ check.actual_value }}</small></p>
+    {% endif %}
+
+    {% if check.remediation %}
+    <details>
+      <summary style="cursor:pointer;color:#2980b9;">How to fix →</summary>
+      <p style="margin-top:0.5rem;padding:0.8rem;background:#f0f7ff;border-radius:4px;">
+        {{ check.remediation }}
+      </p>
+    </details>
+    {% endif %}
+  </article>
+{% endfor %}
+{% endif %}
+
+<!-- WARNINGS -->
+{% if warning_checks %}
+<h3>⚠ Warnings ({{ warning_checks | length }})</h3>
+{% for check in warning_checks %}
+  <article style="border-left:4px solid #f1c40f;">
+    <header><strong>{{ check.rule.description if check.rule else 'Unknown Rule' }}</strong></header>
+    <p>{{ check.message }}</p>
+    {% if check.remediation %}
+    <details>
+      <summary style="cursor:pointer;color:#2980b9;">Guidance →</summary>
+      <p style="margin-top:0.5rem;padding:0.8rem;background:#fffde7;border-radius:4px;">
+        {{ check.remediation }}
+      </p>
+    </details>
+    {% endif %}
+  </article>
+{% endfor %}
+{% endif %}
+
+<!-- PASSED CHECKS -->
+{% if passed_checks %}
+<details>
+  <summary><strong>✅ Passed Checks ({{ passed_checks | length }})</strong></summary>
+  <table style="margin-top:1rem;">
+    <thead><tr><th>Rule</th><th>Description</th><th>Value Found</th></tr></thead>
+    <tbody>
+    {% for check in passed_checks %}
+      <tr>
+        <td><small>{{ check.rule.rule_code if check.rule else '—' }}</small></td>
+        <td><small>{{ check.rule.description if check.rule else check.message }}</small></td>
+        <td><small style="color:#27ae60">{{ check.actual_value or '✓' }}</small></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</details>
+{% endif %}
+
+<!-- Extracted Data (debug) -->
+{% if label.extraction_json %}
+<details style="margin-top:2rem;">
+  <summary style="color:#999;">View Extracted Label Data (raw)</summary>
+  <pre style="font-size:0.75em;overflow:auto;max-height:400px;background:#f5f5f5;padding:1rem;">{{ label.extraction_json | tojson(indent=2) }}</pre>
+</details>
+{% endif %}
+
+<hr/>
+<div style="display:flex;gap:1rem;flex-wrap:wrap;">
+  <a href="/products/{{ product.id }}/upload" role="button" class="outline">Upload New Label Version</a>
+  <a href="/products/{{ product.id }}" role="button" class="secondary outline">Back to Product</a>
+</div>
+
+{% endif %}
+{% endblock %}

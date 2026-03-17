@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}FSSAI Regulation Database{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <h2>FSSAI Regulation Database</h2>
+    <p>{{ changes | length }} regulatory updates &middot; {{ rules | length }} active compliance rules</p>
+  </div>
+  <div style="display:flex;gap:0.5rem;">
+    <form method="post" action="/regulations/trigger-scrape" style="margin:0;">
+      <button type="submit" class="btn btn-outline btn-sm">&#x21BB; Run Scrape</button>
+    </form>
+    <form method="post" action="/regulations/trigger-recheck" style="margin:0;">
+      <button type="submit" class="btn btn-ghost btn-sm">Re-check All Labels</button>
+    </form>
+  </div>
+</div>
+
+{# ── Tab navigation ── #}
+<div class="tabs">
+  <a href="/regulations?tab=feed"
+     class="tab{% if active_tab == 'feed' %} active{% endif %}">
+    Update Feed
+    {% if changes | length > 0 %}
+      <span class="tab-badge">{{ changes | length }}</span>
+    {% endif %}
+  </a>
+  <a href="/regulations?tab=rules"
+     class="tab{% if active_tab == 'rules' %} active{% endif %}">
+    Rules Database
+    <span class="tab-badge">{{ rules | length }}</span>
+  </a>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════
+   TAB 1 — UPDATE FEED
+   ══════════════════════════════════════════════════════════ #}
+{% if active_tab == 'feed' %}
+
+<div class="card card-flat no-hover" style="margin-bottom:1.5rem;font-size:0.83rem;color:var(--gray-600);">
+  <strong style="color:var(--gray-800);">Sources monitored:</strong>
+  fssai.gov.in/cms/food-safety-and-standards-regulations.php &middot;
+  fssai.gov.in/cms/advisory.php &middot;
+  Gazette of India (Part III, Section 4)
+  <br/><span style="color:var(--gray-400);font-size:0.79rem;">SHA-256 change detection &mdash; new documents trigger automatic label re-checks.</span>
+</div>
+
+{% if not changes %}
+<div class="card no-hover">
+  <div class="empty-state">
+    <span class="empty-icon">&#x1F4DC;</span>
+    <h3>No updates yet</h3>
+    <p>Click &ldquo;Run Scrape&rdquo; to trigger the first regulatory scan.</p>
+  </div>
+</div>
+{% endif %}
+
+{% for change in changes %}
+<div class="card no-hover" style="margin-bottom:1rem;border-left:4px solid
+  {% if change.severity.value == 'CRITICAL' %}var(--danger)
+  {% elif change.severity.value == 'HIGH' %}#f97316
+  {% elif change.severity.value == 'MEDIUM' %}var(--warning)
+  {% else %}var(--gray-300){% endif %};">
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
+    <div>
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+        <strong style="font-size:0.9rem;color:var(--gray-800);">{{ change.change_type.value.replace('_', ' ') }}</strong>
+        {% if change.status == 'NEW' %}
+          <span class="pill pill-new" style="font-size:0.68rem;">NEW</span>
+        {% endif %}
+      </div>
+      <div style="font-size:0.79rem;color:var(--gray-400);margin-top:0.2rem;">
+        {{ change.detected_at.strftime('%d %b %Y') }}
+        {% if change.effective_date %}&middot; Effective {{ change.effective_date.strftime('%d %b %Y') }}{% endif %}
+      </div>
+    </div>
+    <span class="sev-tag sev-{{ change.severity.value }}">{{ change.severity.value }}</span>
+  </div>
+
+  <p style="margin:0.6rem 0 0.25rem;font-weight:600;color:var(--gray-900);font-size:0.91rem;">{{ change.document_name }}</p>
+
+  {% if change.summary_text %}
+  <p style="margin:0.3rem 0;color:var(--gray-600);font-size:0.85rem;line-height:1.5;">{{ change.summary_text }}</p>
+  {% endif %}
+
+  {% if change.affected_rule_codes and change.affected_rule_codes | length > 0 %}
+  <div style="margin:0.4rem 0;font-size:0.79rem;color:var(--gray-500);">
+    Rules affected:
+    {% for code in change.affected_rule_codes %}
+      <code style="background:var(--gray-100);padding:0.1rem 0.4rem;border-radius:6px;margin-right:3px;font-size:0.75rem;">{{ code }}</code>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if change.diff_text %}
+  <details style="margin-top:0.5rem;">
+    <summary style="cursor:pointer;color:var(--primary);font-size:0.83rem;font-weight:500;">View full details &rarr;</summary>
+    <pre style="font-size:0.74rem;overflow:auto;max-height:360px;background:var(--gray-50);padding:0.8rem;margin-top:0.5rem;white-space:pre-wrap;border-radius:var(--r-md);border:1px solid var(--gray-200);">{{ change.diff_text }}</pre>
+  </details>
+  {% endif %}
+
+  {% if change.source_url %}
+  <div style="margin-top:0.75rem;">
+    <a href="{{ change.source_url }}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">View Source &rarr;</a>
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+
+{# ══════════════════════════════════════════════════════════
+   TAB 2 — RULES DATABASE
+   ══════════════════════════════════════════════════════════ #}
+{% elif active_tab == 'rules' %}
+
+{# Filter bar #}
+<div class="card card-flat no-hover" style="margin-bottom:1.2rem;">
+  <form method="get" action="/regulations" style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;">
+    <input type="hidden" name="tab" value="rules"/>
+    <div class="field" style="flex:1;min-width:180px;margin:0;">
+      <label class="field-label">Category</label>
+      <select class="input" name="category" style="margin-top:0.3rem;">
+        <option value="">All categories</option>
+        {% for cat in rule_categories %}
+        <option value="{{ cat }}" {% if filter_category == cat %}selected{% endif %}>{{ cat.replace('_', ' ') | title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field" style="flex:1;min-width:140px;margin:0;">
+      <label class="field-label">Severity</label>
+      <select class="input" name="severity" style="margin-top:0.3rem;">
+        <option value="">All severities</option>
+        <option value="CRITICAL" {% if filter_severity == 'CRITICAL' %}selected{% endif %}>CRITICAL</option>
+        <option value="HIGH"     {% if filter_severity == 'HIGH'     %}selected{% endif %}>HIGH</option>
+        <option value="MEDIUM"   {% if filter_severity == 'MEDIUM'   %}selected{% endif %}>MEDIUM</option>
+        <option value="LOW"      {% if filter_severity == 'LOW'      %}selected{% endif %}>LOW</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:0.4rem;align-items:flex-end;padding-bottom:0.05rem;">
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+      {% if filter_category or filter_severity %}
+      <a href="/regulations?tab=rules" class="btn btn-ghost btn-sm">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+{# Group rules by category #}
+{% set ns = namespace(current_cat='') %}
+{% for rule in rules %}
+  {% if rule.category.value != ns.current_cat %}
+    {% if ns.current_cat != '' %}
+    </tbody></table></div>
+    {% endif %}
+    {% set ns.current_cat = rule.category.value %}
+    <div style="display:flex;align-items:baseline;gap:0.6rem;margin:1.5rem 0 0.6rem;">
+      <h4 style="margin:0;color:var(--gray-800);">{{ rule.category.value.replace('_', ' ') | title }}</h4>
+      <span class="pill pill-neutral" style="font-size:0.72rem;">
+        {{ rules | selectattr('category.value', 'equalto', ns.current_cat) | list | length }} rules
+      </span>
+    </div>
+    <div class="table-wrap" style="margin-bottom:0;">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th style="width:160px;">Rule Code</th>
+          <th>Description</th>
+          <th style="width:90px;">Severity</th>
+          <th style="width:130px;">Source</th>
+          <th style="width:90px;">Check Type</th>
+        </tr>
+      </thead>
+      <tbody>
+  {% endif %}
+  <tr>
+    <td><code style="font-size:0.78rem;background:var(--gray-100);padding:0.15rem 0.4rem;border-radius:6px;">{{ rule.rule_code }}</code></td>
+    <td>
+      <span style="font-size:0.86rem;font-weight:500;color:var(--gray-800);">{{ rule.description }}</span>
+      {% if rule.remediation_template %}
+      <details style="margin-top:0.3rem;">
+        <summary style="font-size:0.78rem;color:var(--primary);cursor:pointer;">Remediation guidance</summary>
+        <p style="font-size:0.8rem;color:var(--gray-500);margin:0.3rem 0 0;line-height:1.5;">{{ rule.remediation_template }}</p>
+      </details>
+      {% endif %}
+    </td>
+    <td><span class="sev-tag sev-{{ rule.severity.value }}">{{ rule.severity.value }}</span></td>
+    <td><small style="color:var(--gray-400);font-size:0.76rem;">{{ rule.regulation_source or '&mdash;' }}</small></td>
+    <td><span class="pill pill-neutral" style="font-size:0.72rem;">{{ rule.check_type.value }}</span></td>
+  </tr>
+{% endfor %}
+{% if rules %}</tbody></table></div>{% endif %}
+
+{% if not rules %}
+<div class="card no-hover">
+  <div class="empty-state">
+    <span class="empty-icon">&#x1F50D;</span>
+    <h3>No rules match</h3>
+    <p>Try different filters or <a href="/regulations?tab=rules">clear all filters</a>.</p>
+  </div>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}
