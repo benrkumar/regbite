@@ -69,6 +69,35 @@ def _run_migrations():
         # v2: admin flag + per-user notification emails
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS notification_emails JSON DEFAULT '[]'",
+        # v3: LLM Studio knowledge base tables
+        """CREATE TABLE IF NOT EXISTS kb_documents (
+            id SERIAL PRIMARY KEY,
+            kb_type VARCHAR(20) NOT NULL,
+            title VARCHAR(500) NOT NULL,
+            source VARCHAR(500),
+            content TEXT NOT NULL,
+            chunk_count INTEGER DEFAULT 0,
+            uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            uploaded_at TIMESTAMP DEFAULT NOW(),
+            is_active BOOLEAN DEFAULT TRUE
+        )""",
+        """CREATE TABLE IF NOT EXISTS kb_chunks (
+            id SERIAL PRIMARY KEY,
+            document_id INTEGER NOT NULL REFERENCES kb_documents(id) ON DELETE CASCADE,
+            kb_type VARCHAR(20) NOT NULL,
+            chunk_index INTEGER NOT NULL,
+            content TEXT NOT NULL
+        )""",
+        "CREATE INDEX IF NOT EXISTS ix_kb_chunks_kb_type ON kb_chunks (kb_type)",
+        "CREATE INDEX IF NOT EXISTS ix_kb_documents_kb_type ON kb_documents (kb_type)",
+        """CREATE TABLE IF NOT EXISTS llm_conversations (
+            id SERIAL PRIMARY KEY,
+            kb_type VARCHAR(20) NOT NULL,
+            admin_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            messages JSON DEFAULT '[]',
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )""",
     ]
     for sql in migrations:
         try:
@@ -257,6 +286,9 @@ app.include_router(alerts.router)
 app.include_router(regulations.router)
 app.include_router(settings_router.router)
 app.include_router(admin.router)
+
+from app.routes import admin_llm
+app.include_router(admin_llm.router)
 
 
 @app.get("/")

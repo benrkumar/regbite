@@ -244,3 +244,53 @@ class Ingredient(Base):
     ban_reason = Column(Text)
     regulation_reference = Column(String(500))
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+# ─── LLM Studio ──────────────────────────────────────────────────────────────
+
+class KBType(str, enum.Enum):
+    REGULATIONS = "regulations"
+    PRODUCTS    = "products"
+
+
+class KBDocument(Base):
+    """A source document ingested into a knowledge base."""
+    __tablename__ = "kb_documents"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    kb_type     = Column(SAEnum(KBType), nullable=False, index=True)
+    title       = Column(String(500), nullable=False)
+    source      = Column(String(500))           # e.g. "db:rule:42", "upload:file.pdf"
+    content     = Column(Text, nullable=False)
+    chunk_count = Column(Integer, default=0)
+    uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    is_active   = Column(Boolean, default=True)
+
+    chunks = relationship("KBChunk", back_populates="document",
+                          cascade="all, delete-orphan")
+
+
+class KBChunk(Base):
+    """A text chunk from a KBDocument used for retrieval."""
+    __tablename__ = "kb_chunks"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("kb_documents.id"), nullable=False)
+    kb_type     = Column(SAEnum(KBType), nullable=False, index=True)  # denormalized — avoids JOIN in retrieval
+    chunk_index = Column(Integer, nullable=False)
+    content     = Column(Text, nullable=False)
+
+    document = relationship("KBDocument", back_populates="chunks")
+
+
+class LLMConversation(Base):
+    """Stores admin chat history per KB type (persisted across browser sessions)."""
+    __tablename__ = "llm_conversations"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    kb_type    = Column(SAEnum(KBType), nullable=False)
+    admin_id   = Column(Integer, ForeignKey("users.id"), nullable=False)
+    messages   = Column(JSON, default=list)     # [{"role":"user"|"model","content":"..."}]
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

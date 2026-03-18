@@ -151,6 +151,11 @@
         {% endif %}
       </a>
 
+      <div class="adm-nav-section">AI Studio</div>
+      <a href="/admin/llm" class="adm-nav-link {% if '/admin/llm' in request.url.path %}active{% endif %}">
+        <span class="adm-nav-icon">&#x1F916;</span> LLM Studio
+      </a>
+
       <div class="adm-nav-section">System</div>
       <a href="/admin/system" class="adm-nav-link {% if '/admin/system' in request.url.path %}active{% endif %}">
         <span class="adm-nav-icon">&#x2699;</span> System &amp; Controls
