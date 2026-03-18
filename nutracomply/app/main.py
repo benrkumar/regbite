@@ -24,6 +24,8 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     # Run column migrations for tables that already existed before model changes
     _run_migrations()
+    # Auto-promote the ADMIN_EMAIL user to super admin (safe on every startup)
+    _promote_admin()
     # Seed rules and ingredients on first run
     _seed_initial_data()
     yield
@@ -51,6 +53,35 @@ def _run_migrations():
         except Exception as e:
             print(f"[migrate] Skipped ({e})")
     print("[migrate] Column migrations complete")
+
+
+def _promote_admin():
+    """
+    On every startup: if ADMIN_EMAIL is set in config, find that user in the DB
+    and ensure is_admin=True. This handles both new registrations and existing
+    accounts that pre-date the is_admin column.
+    """
+    if not settings.admin_email:
+        return
+    from app.models import User
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(
+            User.email == settings.admin_email.lower().strip()
+        ).first()
+        if user and not user.is_admin:
+            user.is_admin = True
+            db.commit()
+            print(f"[admin] Promoted {user.email} to super admin")
+        elif user:
+            print(f"[admin] {user.email} is already super admin")
+        else:
+            print(f"[admin] ADMIN_EMAIL={settings.admin_email} — user not found yet (will be promoted on registration)")
+    except Exception as e:
+        db.rollback()
+        print(f"[admin] Promotion error: {e}")
+    finally:
+        db.close()
 
 
 def _seed_initial_data():
