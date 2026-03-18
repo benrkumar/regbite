@@ -60,44 +60,31 @@ async def lifespan(app: FastAPI):
 def _run_migrations():
     """
     Add new columns to existing tables that were created before model changes.
-    Each statement runs in its own connection+transaction so a failure in one
-    never leaves a sibling connection in an aborted PostgreSQL transaction.
-    Safe to run on every startup (IF NOT EXISTS is idempotent).
+
+    SQLite notes:
+    - SQLite does NOT support ALTER TABLE … IF NOT EXISTS or SERIAL/NOW().
+    - For SQLite we skip the raw ALTER TABLE statements entirely because
+      _create_tables() (Base.metadata.create_all) already creates every table
+      with all current columns on a fresh database.
+    - The v3 LLM tables are also skipped here for both backends because
+      Base.metadata.create_all handles them cleanly (it checks existence first).
+    - Only the v2 ALTER TABLE statements are needed, and only on PostgreSQL
+      (for databases that existed before the is_admin column was added).
     """
     from sqlalchemy import text
+
+    _sqlite = settings.database_url.startswith("sqlite")
+    if _sqlite:
+        print("[migrate] SQLite — skipping raw SQL migrations (handled by create_all)")
+        return
+
+    # PostgreSQL only: add columns that may be missing from pre-v2 databases.
+    # CREATE TABLE statements for v3 (LLM Studio) are intentionally omitted here;
+    # Base.metadata.create_all already created them above.
     migrations = [
         # v2: admin flag + per-user notification emails
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS notification_emails JSON DEFAULT '[]'",
-        # v3: LLM Studio knowledge base tables
-        """CREATE TABLE IF NOT EXISTS kb_documents (
-            id SERIAL PRIMARY KEY,
-            kb_type VARCHAR(20) NOT NULL,
-            title VARCHAR(500) NOT NULL,
-            source VARCHAR(500),
-            content TEXT NOT NULL,
-            chunk_count INTEGER DEFAULT 0,
-            uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-            uploaded_at TIMESTAMP DEFAULT NOW(),
-            is_active BOOLEAN DEFAULT TRUE
-        )""",
-        """CREATE TABLE IF NOT EXISTS kb_chunks (
-            id SERIAL PRIMARY KEY,
-            document_id INTEGER NOT NULL REFERENCES kb_documents(id) ON DELETE CASCADE,
-            kb_type VARCHAR(20) NOT NULL,
-            chunk_index INTEGER NOT NULL,
-            content TEXT NOT NULL
-        )""",
-        "CREATE INDEX IF NOT EXISTS ix_kb_chunks_kb_type ON kb_chunks (kb_type)",
-        "CREATE INDEX IF NOT EXISTS ix_kb_documents_kb_type ON kb_documents (kb_type)",
-        """CREATE TABLE IF NOT EXISTS llm_conversations (
-            id SERIAL PRIMARY KEY,
-            kb_type VARCHAR(20) NOT NULL,
-            admin_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            messages JSON DEFAULT '[]',
-            created_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP DEFAULT NOW()
-        )""",
     ]
     for sql in migrations:
         try:
@@ -287,9 +274,14 @@ app.include_router(regulations.router)
 app.include_router(settings_router.router)
 app.include_router(admin.router)
 
-from app.routes import admin_llm
-app.include_router(admin_llm.router)
+try:
+    from app.routes import admin_llm
+    app.include_router(admin_llm.router)
+except Exception as _llm_err:
+    print(f"[warning] LLM Studio router failed to load: {_llm_err}")
 
+
+# ── Core page routes (defined AFTER routers but must survive any router error) ─
 
 @app.get("/")
 async def root(request: Request):
