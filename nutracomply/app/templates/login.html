@@ -7,33 +7,94 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    body { background: #f0f2f5; }
+    .login-split {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .login-card {
+      width: 100%; max-width: 420px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+      padding: 2.4rem 2.2rem;
+    }
+    .login-brand {
+      display: flex; align-items: center; gap: 0.7rem;
+      margin-bottom: 1.8rem;
+    }
+    .login-brand-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, #4ade80, #16a34a);
+      box-shadow: 0 4px 16px rgba(34,197,94,0.40);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.15rem;
+    }
+    .login-brand-name {
+      font-size: 1.35rem; font-weight: 900; color: #0f172a; letter-spacing: -0.03em;
+    }
+    .login-brand-sub {
+      font-size: 0.78rem; color: var(--gray-500); margin-top: -0.1rem;
+    }
+    .login-title { font-size: 1.2rem; font-weight: 700; color: var(--gray-900); margin-bottom: 0.3rem; }
+    .login-subtitle { font-size: 0.84rem; color: var(--gray-500); margin-bottom: 1.6rem; }
+
+    .demo-hint {
+      background: #f0fdf4; border: 1px solid #bbf7d0;
+      border-radius: var(--r-md); padding: 0.7rem 0.9rem;
+      font-size: 0.8rem; color: var(--success-fg);
+      margin-bottom: 1.2rem; display: flex; align-items: flex-start; gap: 0.5rem;
+    }
+    .demo-hint strong { color: var(--green-700); }
+  </style>
 </head>
 <body>
-<div class="auth-wrap">
-  <div class="auth-card">
-    <div class="card no-hover" style="padding:2.2rem 2rem;">
-      <div style="text-align:center;margin-bottom:1.8rem;">
-        <div style="font-size:2.4rem;font-weight:900;background:linear-gradient(135deg,#6366f1,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.03em;">RegBite</div>
-        <p style="margin-top:0.3rem;font-size:0.88rem;">FSSAI Compliance Monitor for Nutraceuticals</p>
+<div class="login-split">
+  <div class="login-card">
+
+    <!-- Brand -->
+    <div class="login-brand">
+      <div class="login-brand-icon">🌿</div>
+      <div>
+        <div class="login-brand-name">RegBite</div>
+        <div class="login-brand-sub">FSSAI Compliance Monitor</div>
       </div>
-
-      {% if error %}
-      <div class="error-banner">{{ error }}</div>
-      {% endif %}
-
-      <form method="post" action="/login">
-        <div class="field">
-          <label class="field-label" for="email">Username</label>
-          <input class="input" type="text" id="email" name="email" placeholder="ben or admin" required autofocus />
-        </div>
-        <div class="field">
-          <label class="field-label" for="password">Password</label>
-          <input class="input" type="password" id="password" name="password" placeholder="Your password" required />
-        </div>
-        <button type="submit" class="btn btn-primary btn-xl btn-full" style="margin-top:0.5rem;">Sign In</button>
-      </form>
-
     </div>
+
+    <div class="login-title">Welcome back</div>
+    <div class="login-subtitle">Sign in to your compliance dashboard</div>
+
+    {% if error %}
+    <div class="error-banner">{{ error }}</div>
+    {% endif %}
+
+    <!-- Demo credentials hint -->
+    <div class="demo-hint">
+      <span>💡</span>
+      <div><strong>Demo:</strong> username <code>ben</code> or <code>admin</code> &nbsp;·&nbsp; password <code>admin@123</code></div>
+    </div>
+
+    <form method="post" action="/login">
+      <div class="field">
+        <label class="field-label" for="email">Username</label>
+        <input class="input" type="text" id="email" name="email"
+               placeholder="ben or admin" required autofocus />
+      </div>
+      <div class="field">
+        <label class="field-label" for="password">Password</label>
+        <input class="input" type="password" id="password" name="password"
+               placeholder="Your password" required />
+      </div>
+      <button type="submit" class="btn btn-primary btn-xl btn-full" style="margin-top:0.75rem;">
+        Sign In →
+      </button>
+    </form>
+
   </div>
 </div>
 </body>
