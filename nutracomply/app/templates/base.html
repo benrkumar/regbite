@@ -14,20 +14,50 @@
 <nav class="navbar">
   <div class="navbar-inner">
     <a href="/dashboard" class="navbar-brand">&#x2B24; RegBite</a>
-    <a href="/dashboard" class="nav-link{% if request.url.path == '/dashboard' %} active{% endif %}">Dashboard</a>
-    <a href="/products"  class="nav-link{% if '/products' in request.url.path %} active{% endif %}">Products</a>
-    <a href="/alerts"    class="nav-link{% if request.url.path == '/alerts' %} active{% endif %}">
-      Alerts{% if unread_alerts is defined and unread_alerts > 0 %}<span class="badge-alert">{{ unread_alerts }}</span>{% endif %}
-    </a>
-    <a href="/regulations" class="nav-link{% if request.url.path == '/regulations' %} active{% endif %}">Regulations</a>
-    <span class="nav-sep"></span>
-    {% if user.is_admin %}
-    <a href="/admin/dashboard" class="nav-link{% if '/admin' in request.url.path %} active{% endif %}" style="color:var(--primary);font-weight:700;">&#x1F6E1; Admin</a>
-    {% endif %}
-    <a href="/settings" class="nav-link{% if request.url.path == '/settings' %} active{% endif %}">Settings</a>
-    <a href="/logout" class="nav-link btn btn-ghost btn-sm">{{ user.name.split()[0] }} &rarr;</a>
+
+    <div class="nav-links" id="navLinks">
+      <a href="/dashboard" class="nav-link{% if request.url.path == '/dashboard' %} active{% endif %}">Dashboard</a>
+      <a href="/products"  class="nav-link{% if '/products' in request.url.path %} active{% endif %}">Products</a>
+      <a href="/alerts"    class="nav-link{% if request.url.path == '/alerts' %} active{% endif %}">
+        Alerts{% if unread_alerts is defined and unread_alerts > 0 %}<span class="badge-alert">{{ unread_alerts }}</span>{% endif %}
+      </a>
+      <a href="/regulations" class="nav-link{% if request.url.path == '/regulations' %} active{% endif %}">Regulations</a>
+      <span class="nav-sep"></span>
+      {% if user.is_admin %}
+      <a href="/admin/dashboard" class="nav-link{% if '/admin' in request.url.path %} active{% endif %}" style="color:var(--primary);font-weight:700;">&#x1F6E1; Admin</a>
+      {% endif %}
+      <a href="/settings" class="nav-link{% if request.url.path == '/settings' %} active{% endif %}">Settings</a>
+      <a href="/logout" class="nav-link btn btn-ghost btn-sm">{{ user.name.split()[0] }} &rarr;</a>
+    </div>
+
+    <button class="nav-hamburger" id="navToggle" aria-label="Toggle menu" onclick="toggleNav()">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
+
+<div class="nav-overlay" id="navOverlay" onclick="toggleNav()"></div>
+<div class="nav-drawer" id="navDrawer">
+  <a href="/dashboard" class="nav-link">Dashboard</a>
+  <a href="/products"  class="nav-link">Products</a>
+  <a href="/alerts"    class="nav-link">Alerts{% if unread_alerts is defined and unread_alerts > 0 %} ({{ unread_alerts }}){% endif %}</a>
+  <a href="/regulations" class="nav-link">Regulations</a>
+  {% if user.is_admin %}
+  <a href="/admin/dashboard" class="nav-link" style="color:var(--primary);font-weight:700;">&#x1F6E1; Admin</a>
+  {% endif %}
+  <a href="/settings" class="nav-link">Settings</a>
+  <a href="/logout" class="nav-link">{{ user.name.split()[0] }} — Sign Out</a>
+</div>
+
+<script>
+function toggleNav() {
+  var drawer = document.getElementById('navDrawer');
+  var overlay = document.getElementById('navOverlay');
+  var open = drawer.classList.toggle('open');
+  overlay.classList.toggle('open', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+</script>
 {% endif %}
 
 <div class="page-wrap">

@@ -388,57 +388,13 @@ async def login(
     if not user or not verify_password(password, user.hashed_password):
         return templates.TemplateResponse("login.html", {
             "request": request,
-            "error": "Invalid email or password"
+            "error": "Invalid username or password"
         })
     if not user.is_active:
         return templates.TemplateResponse("login.html", {
             "request": request,
             "error": "Your account has been deactivated. Please contact support."
         })
-
-    token = create_access_token({"sub": user.email})
-    response = RedirectResponse(url="/dashboard", status_code=302)
-    response.set_cookie("access_token", token, httponly=True, max_age=settings.access_token_expire_minutes * 60)
-    return response
-
-
-@router.get("/register")
-async def register_page(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request, "error": None})
-
-
-@router.post("/register")
-async def register(
-    request: Request,
-    name: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db),
-):
-    existing = db.query(User).filter(User.email == email).first()
-    if existing:
-        return templates.TemplateResponse("register.html", {
-            "request": request,
-            "error": "An account with this email already exists"
-        })
-
-    is_admin = bool(settings.admin_email and email.lower() == settings.admin_email.lower())
-    user = User(
-        name=name,
-        email=email,
-        hashed_password=hash_password(password),
-        is_admin=is_admin,
-        notification_emails=[],
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    # Seed demo products for new users
-    try:
-        _seed_demo_products(user, db)
-    except Exception as e:
-        print(f"[demo seed] Failed: {e}")
 
     token = create_access_token({"sub": user.email})
     response = RedirectResponse(url="/dashboard", status_code=302)

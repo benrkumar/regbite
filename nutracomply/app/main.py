@@ -28,6 +28,7 @@ async def lifespan(app: FastAPI):
     _promote_admin()
     # Seed rules and ingredients on first run
     _seed_initial_data()
+    _seed_demo_users()
     yield
 
 
@@ -131,6 +132,66 @@ def _seed_initial_data():
     except Exception as e:
         db.rollback()
         print(f"[seed] Error: {e}")
+    finally:
+        db.close()
+
+
+def _seed_demo_users():
+    """
+    Seed two hardcoded demo accounts on every startup (idempotent — skip if already exist).
+      ben   / admin@123  — regular user, gets 5 demo products
+      admin / admin@123  — super admin
+    """
+    from app.routes.auth import hash_password, _seed_demo_products
+    from app.models import User
+    db = SessionLocal()
+    try:
+        # --- ben (regular user) ---
+        ben = db.query(User).filter(User.email == "ben").first()
+        if not ben:
+            ben = User(
+                name="Ben",
+                email="ben",
+                hashed_password=hash_password("admin@123"),
+                is_admin=False,
+                is_active=True,
+                notification_emails=[],
+            )
+            db.add(ben)
+            db.commit()
+            db.refresh(ben)
+            print("[demo] Created user: ben")
+            try:
+                _seed_demo_products(ben, db)
+                print("[demo] Seeded demo products for ben")
+            except Exception as e:
+                print(f"[demo] Product seed failed: {e}")
+        else:
+            print("[demo] User ben already exists — skipped")
+
+        # --- admin (super admin) ---
+        adm = db.query(User).filter(User.email == "admin").first()
+        if not adm:
+            adm = User(
+                name="Admin",
+                email="admin",
+                hashed_password=hash_password("admin@123"),
+                is_admin=True,
+                is_active=True,
+                notification_emails=[],
+            )
+            db.add(adm)
+            db.commit()
+            print("[demo] Created user: admin")
+        else:
+            if not adm.is_admin:
+                adm.is_admin = True
+                db.commit()
+            print("[demo] User admin already exists — skipped")
+
+    except Exception as e:
+        db.rollback()
+        print(f"[demo] User seed error: {e}")
     finally:
         db.close()
 

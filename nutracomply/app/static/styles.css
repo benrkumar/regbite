@@ -366,11 +366,68 @@ textarea.mono { font-family: 'Fira Mono','Consolas',monospace; font-size: 0.82re
 /* Footer */
 .site-footer { text-align: center; padding: 2.5rem 0 1.5rem; color: var(--gray-400); font-size: 0.77rem; }
 
+/* ─── Hamburger / Mobile Nav ──────────────────────── */
+.nav-hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.4rem;
+  margin-left: auto;
+}
+.nav-hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--gray-700);
+  border-radius: 2px;
+  transition: all var(--t);
+}
+
+.nav-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 199;
+}
+.nav-overlay.open { display: block; }
+
+.nav-drawer {
+  position: fixed;
+  top: 0;
+  right: -280px;
+  width: 260px;
+  height: 100%;
+  background: #fff;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1.2rem;
+  gap: 0.2rem;
+  transition: right 0.25s ease;
+  overflow-y: auto;
+}
+.nav-drawer.open { right: 0; }
+.nav-drawer .nav-link {
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--r-md);
+  font-size: 0.95rem;
+}
+
 /* ─── Responsive ──────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+  .nav-hamburger { display: flex; }
+  .nav-links { display: none; }
   .navbar-inner { padding: 0 1rem; }
   .page-wrap, .page-wrap-narrow { padding: 1.5rem 1rem 3rem; }
   h2 { font-size: 1.35rem; }
   .page-hdr { flex-direction: column; }
   .hide-sm { display: none !important; }
+  .stat-strip { flex-wrap: wrap; }
+  .stat-card { min-width: 140px; flex: 1; }
 }
