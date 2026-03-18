@@ -1,5 +1,6 @@
 import os
 import json
+import asyncio
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -18,28 +19,33 @@ settings = get_settings()
 Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
 
 
+def _create_tables():
+    """Create all tables (idempotent)."""
+    Base.metadata.create_all(bind=engine)
+
+
+async def _run_startup_task(fn, name: str, timeout: float = 40.0):
+    """
+    Run a synchronous startup function in a thread-pool executor with a hard
+    timeout so a hung DB connection can never prevent uvicorn from serving.
+    """
+    loop = asyncio.get_running_loop()
+    try:
+        await asyncio.wait_for(loop.run_in_executor(None, fn), timeout=timeout)
+        print(f"[startup] {name} OK")
+    except asyncio.TimeoutError:
+        print(f"[startup] {name} timed out after {timeout}s — continuing")
+    except Exception as e:
+        print(f"[startup] {name} error: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    try:
-        Base.metadata.create_all(bind=engine)
-    except Exception as e:
-        print(f"[startup] DB create_all error: {e}")
-    try:
-        _run_migrations()
-    except Exception as e:
-        print(f"[startup] Migration error: {e}")
-    try:
-        _promote_admin()
-    except Exception as e:
-        print(f"[startup] Admin promote error: {e}")
-    try:
-        _seed_initial_data()
-    except Exception as e:
-        print(f"[startup] Seed initial data error: {e}")
-    try:
-        _seed_demo_users()
-    except Exception as e:
-        print(f"[startup] Seed demo users error: {e}")
+    await _run_startup_task(_create_tables,    "create_tables")
+    await _run_startup_task(_run_migrations,   "migrations")
+    await _run_startup_task(_promote_admin,    "promote_admin")
+    await _run_startup_task(_seed_initial_data,"seed_initial_data", timeout=60.0)
+    await _run_startup_task(_seed_demo_users,  "seed_demo_users",   timeout=60.0)
     yield
 
 
