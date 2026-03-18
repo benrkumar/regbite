@@ -20,18 +20,26 @@ Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create all DB tables
-    Base.metadata.create_all(bind=engine)
-    # Run column migrations for tables that already existed before model changes
-    _run_migrations()
-    # Auto-promote the ADMIN_EMAIL user to super admin (safe on every startup)
-    _promote_admin()
-    # Seed rules and ingredients on first run
-    _seed_initial_data()
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"[startup] DB create_all error: {e}")
+    try:
+        _run_migrations()
+    except Exception as e:
+        print(f"[startup] Migration error: {e}")
+    try:
+        _promote_admin()
+    except Exception as e:
+        print(f"[startup] Admin promote error: {e}")
+    try:
+        _seed_initial_data()
+    except Exception as e:
+        print(f"[startup] Seed initial data error: {e}")
     try:
         _seed_demo_users()
     except Exception as e:
-        print(f"[demo] Non-fatal seeding error: {e}")
+        print(f"[startup] Seed demo users error: {e}")
     yield
 
 
@@ -223,14 +231,17 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 # Register routers
-from app.routes import auth, products, labels, alerts, regulations, settings, admin
+# NOTE: import settings route as settings_router to avoid shadowing the
+# module-level `settings = get_settings()` config object.
+from app.routes import auth, products, labels, alerts, regulations, admin
+from app.routes import settings as settings_router
 
 app.include_router(auth.router)
 app.include_router(products.router)
 app.include_router(labels.router)
 app.include_router(alerts.router)
 app.include_router(regulations.router)
-app.include_router(settings.router)
+app.include_router(settings_router.router)
 app.include_router(admin.router)
 
 
