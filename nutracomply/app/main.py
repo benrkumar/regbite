@@ -32,21 +32,25 @@ async def lifespan(app: FastAPI):
 def _run_migrations():
     """
     Add new columns to existing tables that were created before model changes.
-    Uses ALTER TABLE ... ADD COLUMN IF NOT EXISTS — safe to run on every startup.
+    Each statement runs in its own connection+transaction so a failure in one
+    never leaves a sibling connection in an aborted PostgreSQL transaction.
+    Safe to run on every startup (IF NOT EXISTS is idempotent).
     """
+    from sqlalchemy import text
     migrations = [
-        # Added in v2: admin flag + per-user notification emails
+        # v2: admin flag + per-user notification emails
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS notification_emails JSON DEFAULT '[]'",
     ]
-    with engine.connect() as conn:
-        for sql in migrations:
-            try:
-                conn.execute(__import__('sqlalchemy').text(sql))
-            except Exception as e:
-                print(f"[migrate] Warning: {e}")
-        conn.commit()
-    print("[migrate] Column migrations applied")
+    for sql in migrations:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text(sql))
+                conn.commit()
+            print(f"[migrate] OK: {sql}")
+        except Exception as e:
+            print(f"[migrate] Skipped ({e})")
+    print("[migrate] Column migrations complete")
 
 
 def _seed_initial_data():

@@ -30,9 +30,9 @@
     <select name="status" style="padding:0.4rem 2rem 0.4rem 0.6rem;border:1px solid #e2e8f0;border-radius:7px;font-size:0.83rem;background:#fff;appearance:none;">
       <option value="">All Statuses</option>
       <option value="UNREAD"    {% if filter_status == 'UNREAD'    %}selected{% endif %}>Unread</option>
-      <option value="READ"      {% if filter_status == 'READ'      %}selected{% endif %}>Read</option>
-      <option value="RESOLVED"  {% if filter_status == 'RESOLVED'  %}selected{% endif %}>Resolved</option>
-      <option value="DISMISSED" {% if filter_status == 'DISMISSED' %}selected{% endif %}>Dismissed</option>
+      <option value="ACKNOWLEDGED" {% if filter_status == 'ACKNOWLEDGED' %}selected{% endif %}>Acknowledged</option>
+      <option value="IN_PROGRESS"  {% if filter_status == 'IN_PROGRESS'  %}selected{% endif %}>In Progress</option>
+      <option value="RESOLVED"     {% if filter_status == 'RESOLVED'     %}selected{% endif %}>Resolved</option>
     </select>
   </div>
   <div style="display:flex;gap:0.4rem;align-items:flex-end;">
@@ -80,7 +80,8 @@
         </td>
         <td>
           {% if a.status.value == 'UNREAD' %}<span class="adm-badge badge-red">UNREAD</span>
-          {% elif a.status.value == 'READ' %}<span class="adm-badge badge-blue">READ</span>
+          {% elif a.status.value == 'ACKNOWLEDGED' %}<span class="adm-badge badge-blue">ACKNOWLEDGED</span>
+          {% elif a.status.value == 'IN_PROGRESS' %}<span class="adm-badge badge-yellow">IN PROGRESS</span>
           {% elif a.status.value == 'RESOLVED' %}<span class="adm-badge badge-green">RESOLVED</span>
           {% else %}<span class="adm-badge badge-gray">{{ a.status.value }}</span>{% endif %}
         </td>

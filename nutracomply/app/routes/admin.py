@@ -271,7 +271,7 @@ async def mark_alert_read(alert_id: int, request: Request, db: Session = Depends
 
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
     if alert:
-        alert.status = AlertStatus.READ
+        alert.status = AlertStatus.ACKNOWLEDGED
         db.commit()
     return RedirectResponse(url="/admin/alerts", status_code=302)
 
