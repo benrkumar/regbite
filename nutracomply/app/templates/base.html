@@ -126,10 +126,9 @@ function closeSidebar() {
 </script>
 
 {% else %}
-
-{# ── Unauthenticated pages (login, etc.) ── #}
-{% block content %}{% endblock %}
-
+{# login.html is a standalone file — it does NOT extend base.html,
+   so no content block is needed here. A second block definition
+   would cause a Jinja2 TemplateAssertionError at parse time. #}
 {% endif %}
 
 </body>
