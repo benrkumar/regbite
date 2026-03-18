@@ -13,6 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY nutracomply/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Cache-bust label — increment when you need a forced fresh build
+ENV CACHE_BUST=2026031801
+
 # Copy app source
 COPY nutracomply/ .
 
