@@ -24,28 +24,36 @@ def _create_tables():
     Base.metadata.create_all(bind=engine)
 
 
-async def _run_startup_task(fn, name: str, timeout: float = 40.0):
+
+def _run_all_startup_tasks():
     """
-    Run a synchronous startup function in a thread-pool executor with a hard
-    timeout so a hung DB connection can never prevent uvicorn from serving.
+    Run all DB initialisation tasks sequentially in a background thread.
+    Errors in individual steps are caught and logged so a failure in one
+    step never prevents the remaining steps from running.
     """
-    loop = asyncio.get_running_loop()
-    try:
-        await asyncio.wait_for(loop.run_in_executor(None, fn), timeout=timeout)
-        print(f"[startup] {name} OK")
-    except asyncio.TimeoutError:
-        print(f"[startup] {name} timed out after {timeout}s — continuing")
-    except Exception as e:
-        print(f"[startup] {name} error: {e}")
+    tasks = [
+        (_create_tables,     "create_tables"),
+        (_run_migrations,    "migrations"),
+        (_promote_admin,     "promote_admin"),
+        (_seed_initial_data, "seed_initial_data"),
+        (_seed_demo_users,   "seed_demo_users"),
+    ]
+    for fn, name in tasks:
+        try:
+            fn()
+            print(f"[startup] {name} OK")
+        except Exception as exc:
+            print(f"[startup] {name} error: {exc}")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await _run_startup_task(_create_tables,    "create_tables")
-    await _run_startup_task(_run_migrations,   "migrations")
-    await _run_startup_task(_promote_admin,    "promote_admin")
-    await _run_startup_task(_seed_initial_data,"seed_initial_data", timeout=60.0)
-    await _run_startup_task(_seed_demo_users,  "seed_demo_users",   timeout=60.0)
+    # Fire DB initialisation in a background thread and yield immediately so
+    # uvicorn starts accepting connections (and Railway health checks pass)
+    # within milliseconds.  The background thread runs independently.
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(None, _run_all_startup_tasks)
+    print("[startup] Server ready — DB initialisation running in background")
     yield
 
 
