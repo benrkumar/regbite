@@ -28,7 +28,10 @@ async def lifespan(app: FastAPI):
     _promote_admin()
     # Seed rules and ingredients on first run
     _seed_initial_data()
-    _seed_demo_users()
+    try:
+        _seed_demo_users()
+    except Exception as e:
+        print(f"[demo] Non-fatal seeding error: {e}")
     yield
 
 
@@ -142,10 +145,12 @@ def _seed_demo_users():
       ben   / admin@123  — regular user, gets 5 demo products
       admin / admin@123  — super admin
     """
-    from app.routes.auth import hash_password, _seed_demo_products
-    from app.models import User
-    db = SessionLocal()
+    db = None
     try:
+        from app.routes.auth import hash_password, _seed_demo_products
+        from app.models import User
+        db = SessionLocal()
+
         # --- ben (regular user) ---
         ben = db.query(User).filter(User.email == "ben").first()
         if not ben:
@@ -166,6 +171,10 @@ def _seed_demo_users():
                 print("[demo] Seeded demo products for ben")
             except Exception as e:
                 print(f"[demo] Product seed failed: {e}")
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
         else:
             print("[demo] User ben already exists — skipped")
 
@@ -190,10 +199,18 @@ def _seed_demo_users():
             print("[demo] User admin already exists — skipped")
 
     except Exception as e:
-        db.rollback()
         print(f"[demo] User seed error: {e}")
+        if db:
+            try:
+                db.rollback()
+            except Exception:
+                pass
     finally:
-        db.close()
+        if db:
+            try:
+                db.close()
+            except Exception:
+                pass
 
 
 app = FastAPI(title="RegBite", lifespan=lifespan)
