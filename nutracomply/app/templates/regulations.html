@@ -1,19 +1,27 @@
 {% extends "base.html" %}
-{% block title %}FSSAI Regulation Database{% endblock %}
+{% block title %}Regulation Database{% endblock %}
 
 {% block content %}
+<style>
+.source-filter { display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1.2rem; }
+.src-btn { padding:0.3rem 0.85rem; border-radius:var(--r-full); font-size:0.78rem; font-weight:600;
+  border:1.5px solid var(--gray-200); background:rgba(255,255,255,0.75); color:var(--gray-500);
+  cursor:pointer; transition:all var(--t); }
+.src-btn.active { border-color:var(--primary); color:var(--primary); background:rgba(99,102,241,0.08); }
+.src-btn:hover:not(.active) { border-color:var(--primary); color:var(--primary); }
+.source-badge { display:inline-block; padding:0.12rem 0.5rem; border-radius:5px; font-size:0.68rem; font-weight:700; white-space:nowrap; }
+.sb-fssai { background:#dbeafe; color:#1e40af; }
+.sb-ayush { background:#dcfce7; color:#166534; }
+.sb-lm    { background:#fef3c7; color:#92400e; }
+.date-group-hdr { font-size:0.78rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+  color:var(--gray-400); margin:1.6rem 0 0.7rem; display:flex; align-items:center; gap:0.75rem; }
+.date-group-hdr::after { content:''; flex:1; height:1px; background:var(--gray-200); }
+</style>
+
 <div class="page-hdr">
   <div>
-    <h2>FSSAI Regulation Database</h2>
+    <h2>Regulation Database</h2>
     <p>{{ changes | length }} regulatory updates &middot; {{ rules | length }} active compliance rules</p>
-  </div>
-  <div style="display:flex;gap:0.5rem;">
-    <form method="post" action="/regulations/trigger-scrape" style="margin:0;">
-      <button type="submit" class="btn btn-outline btn-sm">&#x21BB; Run Scrape</button>
-    </form>
-    <form method="post" action="/regulations/trigger-recheck" style="margin:0;">
-      <button type="submit" class="btn btn-ghost btn-sm">Re-check All Labels</button>
-    </form>
   </div>
 </div>
 
@@ -22,9 +30,7 @@
   <a href="/regulations?tab=feed"
      class="tab{% if active_tab == 'feed' %} active{% endif %}">
     Update Feed
-    {% if changes | length > 0 %}
-      <span class="tab-badge">{{ changes | length }}</span>
-    {% endif %}
+    {% if changes | length > 0 %}<span class="tab-badge">{{ changes | length }}</span>{% endif %}
   </a>
   <a href="/regulations?tab=rules"
      class="tab{% if active_tab == 'rules' %} active{% endif %}">
@@ -39,26 +45,56 @@
    ══════════════════════════════════════════════════════════ #}
 {% if active_tab == 'feed' %}
 
+{# Sources monitored banner #}
 <div class="card card-flat no-hover" style="margin-bottom:1.5rem;font-size:0.83rem;color:var(--gray-600);">
   <strong style="color:var(--gray-800);">Sources monitored:</strong>
-  fssai.gov.in/cms/food-safety-and-standards-regulations.php &middot;
-  fssai.gov.in/cms/advisory.php &middot;
-  Gazette of India (Part III, Section 4)
-  <br/><span style="color:var(--gray-400);font-size:0.79rem;">SHA-256 change detection &mdash; new documents trigger automatic label re-checks.</span>
+  <span class="source-badge sb-fssai">FSSAI</span> fssai.gov.in &nbsp;&middot;&nbsp;
+  <span class="source-badge sb-ayush">AYUSH</span> ayush.gov.in &nbsp;&middot;&nbsp;
+  <span class="source-badge sb-lm">Legal Metrology</span> consumeraffairs.nic.in
+  <br/><span style="color:var(--gray-400);font-size:0.79rem;margin-top:0.3rem;display:block;">
+    SHA-256 change detection — new documents trigger automatic label re-checks. Updated daily at 6:00 AM IST.
+  </span>
 </div>
+
+{# Source filter #}
+{% if changes %}
+<div class="source-filter">
+  <button class="src-btn active" onclick="filterSource('all',this)">All Sources</button>
+  <button class="src-btn" onclick="filterSource('FSSAI',this)">&#x1F4CB; FSSAI</button>
+  <button class="src-btn" onclick="filterSource('AYUSH',this)">&#x1F33F; AYUSH</button>
+  <button class="src-btn" onclick="filterSource('LEGAL_METROLOGY',this)">&#x2696;&#xFE0F; Legal Metrology</button>
+</div>
+{% endif %}
 
 {% if not changes %}
 <div class="card no-hover">
   <div class="empty-state">
     <span class="empty-icon">&#x1F4DC;</span>
     <h3>No updates yet</h3>
-    <p>Click &ldquo;Run Scrape&rdquo; to trigger the first regulatory scan.</p>
+    <p>Regulation data will appear here after the daily 6 AM scrape runs.</p>
   </div>
 </div>
 {% endif %}
 
-{% for change in changes %}
-<div class="card no-hover" style="margin-bottom:1rem;border-left:4px solid
+{# ── Grouped by Month/Year ── #}
+{% for group in grouped_changes %}
+<div class="date-group-hdr" data-group="{{ group.label }}">{{ group.label }}</div>
+
+{% for change in group.changes %}
+{# Derive source org from URL #}
+{% set src_url = change.source_url or '' %}
+{% if 'ayush.gov.in' in src_url %}
+  {% set src_org = 'AYUSH' %}
+  {% set src_cls = 'sb-ayush' %}
+{% elif 'consumeraffairs.nic.in' in src_url or 'legalmetrology' in src_url.lower() %}
+  {% set src_org = 'LEGAL_METROLOGY' %}
+  {% set src_cls = 'sb-lm' %}
+{% else %}
+  {% set src_org = 'FSSAI' %}
+  {% set src_cls = 'sb-fssai' %}
+{% endif %}
+
+<div class="card no-hover reg-change-card" data-source="{{ src_org }}" style="margin-bottom:1rem;border-left:4px solid
   {% if change.severity.value == 'CRITICAL' %}var(--danger)
   {% elif change.severity.value == 'HIGH' %}#f97316
   {% elif change.severity.value == 'MEDIUM' %}var(--warning)
@@ -67,7 +103,12 @@
   <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
     <div>
       <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-        <strong style="font-size:0.9rem;color:var(--gray-800);">{{ change.change_type.value.replace('_', ' ') }}</strong>
+        <strong style="font-size:0.9rem;color:var(--gray-800);">{{ change.change_type.value.replace('_', ' ') | title }}</strong>
+        <span class="source-badge {{ src_cls }}">
+          {% if src_org == 'AYUSH' %}AYUSH
+          {% elif src_org == 'LEGAL_METROLOGY' %}Legal Metrology
+          {% else %}FSSAI{% endif %}
+        </span>
         {% if change.status == 'NEW' %}
           <span class="pill pill-new" style="font-size:0.68rem;">NEW</span>
         {% endif %}
@@ -109,6 +150,16 @@
   {% endif %}
 </div>
 {% endfor %}
+{% endfor %}
+
+<div id="no-source-results" style="display:none;" class="card no-hover">
+  <div class="empty-state">
+    <span class="empty-icon">&#x1F50D;</span>
+    <h3>No updates from this source</h3>
+    <p><button onclick="filterSource('all', document.querySelector('.src-btn'))"
+       style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:inherit;padding:0;">Show all sources</button></p>
+  </div>
+</div>
 
 
 {# ══════════════════════════════════════════════════════════
@@ -204,4 +255,38 @@
 {% endif %}
 
 {% endif %}
+
+<script>
+function filterSource(src, btn) {
+  document.querySelectorAll('.src-btn').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+
+  var cards = document.querySelectorAll('.reg-change-card');
+  var visible = 0;
+  cards.forEach(function(card) {
+    var show = (src === 'all' || card.dataset.source === src);
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+
+  // Show/hide date group headers
+  document.querySelectorAll('.date-group-hdr').forEach(function(hdr) {
+    var groupLabel = hdr.dataset.group;
+    // Check if any visible card follows this header
+    var next = hdr.nextElementSibling;
+    var hasVisible = false;
+    while (next && !next.classList.contains('date-group-hdr')) {
+      if (next.classList.contains('reg-change-card') && next.style.display !== 'none') {
+        hasVisible = true;
+        break;
+      }
+      next = next.nextElementSibling;
+    }
+    hdr.style.display = hasVisible ? '' : 'none';
+  });
+
+  var noRes = document.getElementById('no-source-results');
+  if (noRes) noRes.style.display = (visible === 0 && src !== 'all') ? 'block' : 'none';
+}
+</script>
 {% endblock %}

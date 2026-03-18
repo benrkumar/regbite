@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Admin{% endblock %} — RegBite Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    body { background: #f1f5f9 !important; }
+    body::before, body::after { display:none; }
+
+    .adm-wrap { display:flex; min-height:100vh; }
+
+    /* ── Sidebar ── */
+    .adm-sidebar {
+      width:230px; background:#0f172a; color:#cbd5e1;
+      display:flex; flex-direction:column; flex-shrink:0; position:sticky; top:0; height:100vh; overflow-y:auto;
+    }
+    .adm-brand {
+      padding:1.25rem 1.25rem 1rem; display:flex; align-items:center; gap:0.5rem;
+      border-bottom:1px solid #1e293b;
+    }
+    .adm-brand-name { font-size:1.05rem; font-weight:900; color:#f8fafc; letter-spacing:-0.02em; }
+    .adm-brand-badge {
+      font-size:0.62rem; font-weight:800; background:#6366f1; color:#fff;
+      border-radius:5px; padding:0.1rem 0.45rem; letter-spacing:0.04em;
+    }
+    .adm-nav { flex:1; padding:0.75rem 0; }
+    .adm-nav-section {
+      padding:0.8rem 1.2rem 0.3rem; font-size:0.66rem; font-weight:700;
+      letter-spacing:0.1em; text-transform:uppercase; color:#475569;
+    }
+    .adm-nav-link {
+      display:flex; align-items:center; gap:0.6rem;
+      padding:0.62rem 1.2rem; color:#94a3b8; font-size:0.86rem; font-weight:500;
+      text-decoration:none; border-left:3px solid transparent; transition:all 0.15s;
+    }
+    .adm-nav-link:hover { color:#e2e8f0; background:rgba(255,255,255,0.04); text-decoration:none; }
+    .adm-nav-link.active { color:#a5b4fc; background:rgba(99,102,241,0.12); border-left-color:#6366f1; font-weight:600; }
+    .adm-nav-icon { font-size:1rem; width:1.1rem; text-align:center; flex-shrink:0; }
+    .adm-sidebar-footer {
+      padding:1rem 1.2rem; border-top:1px solid #1e293b;
+      font-size:0.8rem; color:#64748b;
+    }
+    .adm-sidebar-footer a { color:#64748b; font-size:0.78rem; }
+    .adm-sidebar-footer a:hover { color:#94a3b8; text-decoration:none; }
+
+    /* ── Main area ── */
+    .adm-main { flex:1; display:flex; flex-direction:column; overflow:auto; min-width:0; }
+    .adm-topbar {
+      background:#fff; border-bottom:1px solid #e2e8f0;
+      padding:0.8rem 1.75rem; display:flex; align-items:center; justify-content:space-between;
+      position:sticky; top:0; z-index:100; box-shadow:0 1px 3px rgba(0,0,0,0.04);
+    }
+    .adm-topbar-title { font-weight:800; font-size:1.05rem; color:#0f172a; }
+    .adm-content { padding:1.75rem; flex:1; }
+
+    /* ── Stat cards ── */
+    .adm-stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:1rem; margin-bottom:1.75rem; }
+    .adm-stat {
+      background:#fff; border:1px solid #e2e8f0; border-radius:12px;
+      padding:1rem 1.2rem; transition:box-shadow 0.15s;
+    }
+    .adm-stat:hover { box-shadow:0 4px 16px rgba(0,0,0,0.06); }
+    .adm-stat-val { font-size:1.9rem; font-weight:800; line-height:1; color:#0f172a; }
+    .adm-stat-lbl { font-size:0.75rem; color:#64748b; margin-top:0.3rem; font-weight:500; }
+
+    /* ── Tables ── */
+    .adm-table-wrap { background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; }
+    .adm-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+    .adm-table th {
+      background:#f8fafc; padding:0.65rem 1rem; text-align:left;
+      font-size:0.72rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+      color:#64748b; border-bottom:1.5px solid #e2e8f0;
+    }
+    .adm-table td { padding:0.7rem 1rem; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    .adm-table tr:last-child td { border-bottom:none; }
+    .adm-table tbody tr:hover td { background:#fafafa; }
+
+    /* ── Badges ── */
+    .adm-badge {
+      display:inline-block; padding:0.15rem 0.55rem; border-radius:5px;
+      font-size:0.7rem; font-weight:700; white-space:nowrap;
+    }
+    .badge-green  { background:#dcfce7; color:#166534; }
+    .badge-red    { background:#fee2e2; color:#991b1b; }
+    .badge-blue   { background:#dbeafe; color:#1e40af; }
+    .badge-purple { background:#ede9fe; color:#5b21b6; }
+    .badge-yellow { background:#fef3c7; color:#92400e; }
+    .badge-gray   { background:#f1f5f9; color:#475569; }
+    .badge-orange { background:#ffedd5; color:#9a3412; }
+
+    /* ── Buttons ── */
+    .adm-btn {
+      display:inline-block; padding:0.3rem 0.7rem; font-size:0.78rem; border-radius:7px;
+      border:1px solid #e2e8f0; background:#fff; color:#374151; cursor:pointer;
+      text-decoration:none; font-weight:500; transition:background 0.15s; white-space:nowrap;
+    }
+    .adm-btn:hover { background:#f8fafc; text-decoration:none; }
+    .adm-btn-danger { border-color:#fca5a5; color:#dc2626; }
+    .adm-btn-danger:hover { background:#fee2e2; }
+    .adm-btn-primary { border-color:#6366f1; color:#fff; background:#6366f1; }
+    .adm-btn-primary:hover { background:#4f46e5; }
+    .adm-btn-success { border-color:#10b981; color:#fff; background:#10b981; }
+    .adm-btn-success:hover { background:#059669; }
+
+    /* ── Section title ── */
+    .adm-section-title { font-size:0.92rem; font-weight:700; color:#0f172a; margin:0 0 0.85rem; }
+
+    /* ── Flash ── */
+    .adm-flash {
+      margin-bottom:1.2rem; padding:0.7rem 1rem; border-radius:9px; font-size:0.85rem; font-weight:500;
+    }
+    .adm-flash-success { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+    .adm-flash-error   { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+    .adm-flash-info    { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+
+    @media (max-width: 768px) { .adm-sidebar { display:none; } }
+  </style>
+</head>
+<body>
+<div class="adm-wrap">
+
+  {# ── Sidebar ── #}
+  <aside class="adm-sidebar">
+    <div class="adm-brand">
+      <div>
+        <div class="adm-brand-name">&#x2B24; RegBite</div>
+        <span class="adm-brand-badge">ADMIN</span>
+      </div>
+    </div>
+    <nav class="adm-nav">
+      <div class="adm-nav-section">Overview</div>
+      <a href="/admin/dashboard" class="adm-nav-link {% if request.url.path == '/admin/dashboard' %}active{% endif %}">
+        <span class="adm-nav-icon">&#x1F4CA;</span> Dashboard
+      </a>
+
+      <div class="adm-nav-section">Manage</div>
+      <a href="/admin/users" class="adm-nav-link {% if '/admin/users' in request.url.path %}active{% endif %}">
+        <span class="adm-nav-icon">&#x1F465;</span> Users
+      </a>
+      <a href="/admin/rules" class="adm-nav-link {% if '/admin/rules' in request.url.path %}active{% endif %}">
+        <span class="adm-nav-icon">&#x1F4CB;</span> Compliance Rules
+      </a>
+      <a href="/admin/alerts" class="adm-nav-link {% if '/admin/alerts' in request.url.path %}active{% endif %}">
+        <span class="adm-nav-icon">&#x1F514;</span> Alerts
+        {% if unread_alerts is defined and unread_alerts > 0 %}
+        <span style="margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;padding:0.05rem 0.45rem;font-size:0.65rem;font-weight:700;">{{ unread_alerts }}</span>
+        {% endif %}
+      </a>
+
+      <div class="adm-nav-section">System</div>
+      <a href="/admin/system" class="adm-nav-link {% if '/admin/system' in request.url.path %}active{% endif %}">
+        <span class="adm-nav-icon">&#x2699;</span> System &amp; Controls
+      </a>
+      <a href="/regulations" class="adm-nav-link">
+        <span class="adm-nav-icon">&#x1F4DC;</span> Regulation Feed
+      </a>
+    </nav>
+    <div class="adm-sidebar-footer">
+      <div style="font-weight:600;color:#94a3b8;margin-bottom:0.3rem;">{{ user.name }}</div>
+      <a href="/dashboard">&#x2190; Back to App</a> &nbsp;&middot;&nbsp;
+      <a href="/logout">Sign out</a>
+    </div>
+  </aside>
+
+  {# ── Main ── #}
+  <main class="adm-main">
+    <div class="adm-topbar">
+      <div class="adm-topbar-title">{% block page_title %}Admin{% endblock %}</div>
+      <div style="display:flex;align-items:center;gap:1.2rem;">
+        {% if unread_alerts is defined and unread_alerts > 0 %}
+        <a href="/alerts" style="font-size:0.82rem;color:#dc2626;font-weight:600;text-decoration:none;">
+          &#x1F514; {{ unread_alerts }} unread
+        </a>
+        {% endif %}
+        <a href="/dashboard" style="font-size:0.82rem;color:#64748b;text-decoration:none;">&#x2B24; RegBite</a>
+      </div>
+    </div>
+
+    <div class="adm-content">
+      {% if flash_message is defined and flash_message %}
+      <div class="adm-flash adm-flash-{{ flash_type | default('info') }}">{{ flash_message }}</div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+</div>
+</body>
+</html>

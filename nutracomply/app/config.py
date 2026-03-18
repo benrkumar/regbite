@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     alert_from_email: str = "alerts@regbite.local"
     alert_to_email: str = ""
 
+    # Admin
+    admin_email: str = ""
+
     # File uploads
     upload_dir: str = "./uploads"
 

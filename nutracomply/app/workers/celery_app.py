@@ -18,10 +18,10 @@ celery_app.conf.update(
     timezone="Asia/Kolkata",
     enable_utc=True,
     beat_schedule={
-        # Run FSSAI scraper daily at 00:30 IST
+        # Run FSSAI/AYUSH/Legal Metrology scraper daily at 6:00 AM IST
         "daily-fssai-scrape": {
             "task": "app.workers.scrape_task.run_fssai_scrape",
-            "schedule": crontab(hour=0, minute=30),
+            "schedule": crontab(hour=6, minute=0),
         },
     },
 )

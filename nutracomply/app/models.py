@@ -93,6 +93,8 @@ class User(Base):
     name = Column(String(255), nullable=False)
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)
+    notification_emails = Column(JSON, default=list)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     products = relationship("Product", back_populates="owner")

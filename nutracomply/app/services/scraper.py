@@ -26,6 +26,9 @@ settings = get_settings()
 
 FSSAI_REGULATIONS_URL = "https://fssai.gov.in/cms/food-safety-and-standards-regulations.php"
 FSSAI_ADVISORIES_URL = "https://fssai.gov.in/cms/advisory.php"
+AYUSH_ADVISORIES_URL = "https://ayush.gov.in/advisories"
+AYUSH_REGULATIONS_URL = "https://ayush.gov.in/regulation-rules-and-acts"
+LEGAL_METROLOGY_URL = "https://consumeraffairs.nic.in/policies-rules/legal-metrology-packaged-commodities-rules-2011"
 
 # Simplified gazette search (FSSAI-related gazette items)
 GAZETTE_SEARCH_URL = "https://egazette.gov.in/Search.aspx"
@@ -42,13 +45,15 @@ HEADERS = {
 
 def scrape_fssai_pages() -> list[dict]:
     """
-    Scrapes FSSAI regulations and advisory pages.
+    Scrapes FSSAI, AYUSH and Legal Metrology pages.
     Returns list of discovered documents: {url, name, hash, is_new, text_excerpt}
     """
     discovered = []
 
     discovered += _scrape_regulations_page()
     discovered += _scrape_advisories_page()
+    discovered += _scrape_ayush_pages()
+    discovered += _scrape_legal_metrology_page()
 
     return discovered
 
@@ -96,6 +101,53 @@ def _scrape_advisories_page() -> list[dict]:
         print(f"[scraper] Advisories page error: {e}")
 
     return results[:30]
+
+
+def _scrape_ayush_pages() -> list[dict]:
+    """Scrape Ministry of AYUSH advisories and regulation pages."""
+    results = []
+    for url in [AYUSH_ADVISORIES_URL, AYUSH_REGULATIONS_URL]:
+        try:
+            resp = httpx.get(url, headers=HEADERS, timeout=30, follow_redirects=True)
+            soup = BeautifulSoup(resp.text, "lxml")
+            for link in soup.find_all("a", href=True):
+                href = link["href"]
+                if ".pdf" in href.lower() or any(kw in href.lower() for kw in
+                        ["advisory", "notification", "circular", "regulation", "guideline"]):
+                    full_url = _resolve_url(href, url)
+                    name = link.get_text(strip=True) or Path(href).name
+                    if name and len(name) > 5:
+                        results.append({
+                            "source_url": full_url,
+                            "document_name": name[:400],
+                            "section": "ayush"
+                        })
+        except Exception as e:
+            print(f"[scraper] AYUSH page error ({url}): {e}")
+    return results[:25]
+
+
+def _scrape_legal_metrology_page() -> list[dict]:
+    """Scrape Department of Consumer Affairs — Legal Metrology packaged commodities rules."""
+    results = []
+    try:
+        resp = httpx.get(LEGAL_METROLOGY_URL, headers=HEADERS, timeout=30, follow_redirects=True)
+        soup = BeautifulSoup(resp.text, "lxml")
+        for link in soup.find_all("a", href=True):
+            href = link["href"]
+            if ".pdf" in href.lower() or any(kw in href.lower() for kw in
+                    ["amendment", "rule", "notification", "circular", "packaged"]):
+                full_url = _resolve_url(href, LEGAL_METROLOGY_URL)
+                name = link.get_text(strip=True) or Path(href).name
+                if name and len(name) > 5:
+                    results.append({
+                        "source_url": full_url,
+                        "document_name": name[:400],
+                        "section": "legal_metrology"
+                    })
+    except Exception as e:
+        print(f"[scraper] Legal Metrology page error: {e}")
+    return results[:20]
 
 
 def _resolve_url(href: str, base_url: str) -> str:

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <h2>Account Settings</h2>
+    <p>Manage your notification preferences and account details</p>
+  </div>
+</div>
+
+{% if flash_message %}
+<div class="flash flash-{{ flash_type | default('info') }}">{{ flash_message }}</div>
+{% endif %}
+
+{# ── Notification Emails ── #}
+<div class="card" style="max-width:640px;margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1.2rem;">
+    <span style="font-size:1.4rem;">&#x1F4E7;</span>
+    <div>
+      <h3 style="margin:0;">Notification Emails</h3>
+      <p style="margin:0;font-size:0.83rem;color:var(--gray-500);">
+        Add up to 5 email addresses to receive compliance alerts and regulation updates.
+      </p>
+    </div>
+  </div>
+
+  <div class="info-box" style="margin-bottom:1.2rem;">
+    &#x2139; Alerts are sent when a product label fails compliance checks or when new FSSAI / AYUSH / Legal Metrology regulations are detected.
+  </div>
+
+  <form method="post" action="/settings/notifications">
+    {% set current_emails = user.notification_emails or [] %}
+    {% for i in range(1, 6) %}
+    {% set existing = current_emails[i-1] if i <= current_emails|length else '' %}
+    <div class="field" style="margin-bottom:0.75rem;">
+      <label class="field-label">Email {{ i }}{% if i == 1 %} <span style="color:var(--gray-400);font-weight:400;">(primary)</span>{% endif %}</label>
+      <input
+        type="email"
+        name="email_{{ i }}"
+        class="input"
+        value="{{ existing }}"
+        placeholder="name@company.com"
+        autocomplete="email"
+      />
+    </div>
+    {% endfor %}
+
+    <div style="display:flex;gap:0.6rem;margin-top:1.4rem;flex-wrap:wrap;">
+      <button type="submit" class="btn btn-primary">Save Notifications</button>
+      <a href="/dashboard" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{# ── Account Info (read-only) ── #}
+<div class="card card-flat no-hover" style="max-width:640px;">
+  <h4 style="margin-bottom:1rem;">Account Details</h4>
+  <div style="display:grid;gap:0.75rem;">
+    <div style="display:flex;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--gray-100);">
+      <span style="font-size:0.85rem;color:var(--gray-500);font-weight:500;">Name</span>
+      <span style="font-size:0.85rem;font-weight:600;">{{ user.name }}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--gray-100);">
+      <span style="font-size:0.85rem;color:var(--gray-500);font-weight:500;">Email</span>
+      <span style="font-size:0.85rem;font-weight:600;">{{ user.email }}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--gray-100);">
+      <span style="font-size:0.85rem;color:var(--gray-500);font-weight:500;">Account Status</span>
+      <span class="pill {% if user.is_active %}pill-good{% else %}pill-bad{% endif %}">
+        {{ 'Active' if user.is_active else 'Inactive' }}
+      </span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--gray-100);">
+      <span style="font-size:0.85rem;color:var(--gray-500);font-weight:500;">Role</span>
+      <span class="pill {% if user.is_admin %}pill-accent{% else %}pill-neutral{% endif %}">
+        {{ 'Super Admin' if user.is_admin else 'User' }}
+      </span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:0.6rem 0;">
+      <span style="font-size:0.85rem;color:var(--gray-500);font-weight:500;">Member Since</span>
+      <span style="font-size:0.85rem;font-weight:600;">{{ user.created_at.strftime('%d %B %Y') }}</span>
+    </div>
+  </div>
+
+  {% if user.is_admin %}
+  <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--gray-200);">
+    <a href="/admin/dashboard" class="btn btn-accent btn-sm">&#x1F6E1; Open Admin Panel &rarr;</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

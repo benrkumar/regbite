@@ -1,5 +1,6 @@
 import os
 import json
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -69,7 +70,7 @@ def _seed_initial_data():
                     **u,
                 ))
             db.commit()
-            print(f"[seed] Loaded {len(updates_data)} FSSAI regulation updates")
+            print(f"[seed] Loaded {len(updates_data)} regulation updates")
     except Exception as e:
         db.rollback()
         print(f"[seed] Error: {e}")
@@ -87,13 +88,15 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
 # Register routers
-from app.routes import auth, products, labels, alerts, regulations
+from app.routes import auth, products, labels, alerts, regulations, settings, admin
 
 app.include_router(auth.router)
 app.include_router(products.router)
 app.include_router(labels.router)
 app.include_router(alerts.router)
 app.include_router(regulations.router)
+app.include_router(settings.router)
+app.include_router(admin.router)
 
 
 @app.get("/")
@@ -105,7 +108,6 @@ async def root(request: Request):
 async def dashboard(request: Request):
     from app.routes.auth import get_current_user_from_cookie
     from app.database import get_db
-    from sqlalchemy.orm import Session
     from app.models import Product, Alert, AlertStatus
 
     db = next(get_db())
@@ -119,11 +121,23 @@ async def dashboard(request: Request):
         .all()
     )
 
-    # Force load label_versions and checks
+    # Force load label_versions and checks (avoids lazy-load issues)
     for p in products_list:
         _ = p.label_versions
         for lv in p.label_versions:
             _ = lv.checks
+
+    # Summary stats
+    total_products  = len(products_list)
+    compliant_list  = [p for p in products_list if p.compliance_score is not None and p.compliance_score >= 80]
+    flagged_list    = [p for p in products_list if p.compliance_score is not None and p.compliance_score < 80]
+    no_label_list   = [p for p in products_list if p.compliance_score is None]
+
+    # Category breakdown
+    categories: dict = defaultdict(list)
+    for p in products_list:
+        cat = p.category or "Nutraceutical"
+        categories[cat].append(p)
 
     unread_alerts = (
         db.query(Alert)
@@ -136,4 +150,9 @@ async def dashboard(request: Request):
         "user": user,
         "products": products_list,
         "unread_alerts": unread_alerts,
+        "total_products": total_products,
+        "compliant_count": len(compliant_list),
+        "flagged_count": len(flagged_list),
+        "no_label_count": len(no_label_list),
+        "categories": dict(categories),
     })

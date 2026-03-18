@@ -2,60 +2,201 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
+<style>
+.stat-strip { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+.stat-mini { background:var(--glass); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--glass-border); border-radius:var(--r-md); padding:1.1rem 1.2rem;
+  box-shadow:var(--glass-shadow); }
+.stat-mini .val { font-size:2rem; font-weight:800; line-height:1; }
+.stat-mini .lbl { font-size:0.76rem; color:var(--gray-500); margin-top:0.3rem; font-weight:500; }
+.cat-scroll { display:flex; gap:0.5rem; overflow-x:auto; padding-bottom:0.4rem; margin-bottom:1rem; scrollbar-width:none; }
+.cat-scroll::-webkit-scrollbar { display:none; }
+.cat-pill { display:inline-flex; align-items:center; gap:0.4rem; padding:0.35rem 0.85rem;
+  border-radius:var(--r-full); font-size:0.78rem; font-weight:600; white-space:nowrap;
+  background:rgba(255,255,255,0.75); border:1.5px solid var(--gray-200); color:var(--gray-600); }
+.filter-row { display:flex; gap:0.4rem; margin-bottom:1.2rem; flex-wrap:wrap; }
+.filter-btn { padding:0.35rem 1rem; border-radius:var(--r-full); font-size:0.82rem; font-weight:600;
+  border:1.5px solid var(--gray-200); background:rgba(255,255,255,0.75); color:var(--gray-500);
+  cursor:pointer; transition:all var(--t); }
+.filter-btn.active { background:var(--primary); border-color:var(--primary); color:#fff; }
+.filter-btn:hover:not(.active) { border-color:var(--primary); color:var(--primary); }
+.product-card { position:relative; overflow:hidden; display:flex; flex-direction:column; gap:0.85rem; }
+.flagged-ribbon { position:absolute; top:15px; right:-24px; background:#ef4444; color:#fff;
+  font-size:0.58rem; font-weight:900; letter-spacing:0.12em; padding:0.22rem 2.2rem;
+  transform:rotate(38deg); box-shadow:0 2px 8px rgba(239,68,68,0.45); z-index:2; pointer-events:none; }
+.top-viol { font-size:0.82rem; color:var(--danger-fg); background:var(--danger-bg);
+  border-radius:var(--r-md); padding:0.45rem 0.75rem; line-height:1.4;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.sev-chips { display:flex; gap:0.35rem; flex-wrap:wrap; }
+.sev-chip { font-size:0.68rem; font-weight:700; padding:0.14rem 0.5rem; border-radius:var(--r-full); white-space:nowrap; }
+.chip-c { background:#fce7f3; color:#9d174d; }
+.chip-h { background:#ffedd5; color:#9a3412; }
+.chip-m { background:var(--warning-bg); color:var(--warning-fg); }
+.chip-l { background:var(--gray-100); color:var(--gray-500); }
+.toast-alert { position:fixed; top:68px; right:1.5rem; background:#fff;
+  border:1px solid #fca5a5; border-left:4px solid var(--danger); border-radius:var(--r-md);
+  padding:0.85rem 1.1rem; box-shadow:0 8px 32px rgba(0,0,0,0.14); z-index:500;
+  display:flex; align-items:center; gap:0.75rem; max-width:300px;
+  animation:toastIn 0.28s ease; }
+@keyframes toastIn { from { opacity:0; transform:translateX(18px); } to { opacity:1; transform:translateX(0); } }
+.toast-close { background:none; border:none; color:var(--gray-400); cursor:pointer; font-size:1rem; padding:0; line-height:1; margin-left:0.25rem; }
+</style>
+
+{# ── Page Header ── #}
 <div class="page-hdr">
   <div>
     <h2>Compliance Dashboard</h2>
     <p>Welcome back, <strong>{{ user.name }}</strong></p>
   </div>
   <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
-    <a href="/products/bulk-upload" class="btn btn-outline btn-sm">+ Bulk Add Products</a>
+    <a href="/products/bulk-upload" class="btn btn-outline btn-sm">+ Bulk Add</a>
     <a href="/products" class="btn btn-primary btn-sm">+ Add Product</a>
   </div>
 </div>
 
+{# ── Toast: unread alerts ── #}
 {% if unread_alerts > 0 %}
-<div class="flash flash-error" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
-  <span>&#x1F514; <strong>{{ unread_alerts }} unread alert{{ 's' if unread_alerts != 1 }}</strong> require your attention</span>
-  <a href="/alerts" class="btn btn-sm btn-danger-soft">View Alerts &rarr;</a>
+<div class="toast-alert" id="alert-toast">
+  <span style="font-size:1.3rem;">&#x1F514;</span>
+  <div style="flex:1;min-width:0;">
+    <div style="font-weight:700;font-size:0.85rem;color:#991b1b;">
+      {{ unread_alerts }} Unread Alert{{ 's' if unread_alerts != 1 }}
+    </div>
+    <a href="/alerts" style="font-size:0.77rem;color:var(--danger);">View &amp; resolve &rarr;</a>
+  </div>
+  <button class="toast-close" onclick="document.getElementById('alert-toast').style.display='none'" title="Dismiss">&#x2715;</button>
 </div>
 {% endif %}
 
+{# ── Summary Strip ── #}
+<div class="stat-strip">
+  <div class="stat-mini">
+    <div class="val" style="color:var(--gray-900);">{{ total_products }}</div>
+    <div class="lbl">Total Products</div>
+  </div>
+  <div class="stat-mini" style="border-color:rgba(16,185,129,0.3);">
+    <div class="val" style="color:var(--success-fg);">{{ compliant_count }}</div>
+    <div class="lbl">&#x2705; Compliant</div>
+  </div>
+  <div class="stat-mini" style="border-color:rgba(239,68,68,0.3);">
+    <div class="val" style="color:var(--danger-fg);">{{ flagged_count }}</div>
+    <div class="lbl">&#x1F6A9; Flagged</div>
+  </div>
+  {% if no_label_count > 0 %}
+  <div class="stat-mini">
+    <div class="val" style="color:var(--gray-400);">{{ no_label_count }}</div>
+    <div class="lbl">&#x1F4CE; No Label</div>
+  </div>
+  {% endif %}
+</div>
+
+{# ── Category Breakdown Pills ── #}
+{% if categories %}
+<div class="cat-scroll">
+  {% for cat, cat_products in categories.items() %}
+  {% set cat_flagged = cat_products | selectattr('compliance_score', 'ne', None) | selectattr('compliance_score', 'lt', 80) | list %}
+  <span class="cat-pill">
+    {{ cat }}
+    {% if cat_flagged %}
+      <span style="background:var(--danger-bg);color:var(--danger-fg);border-radius:var(--r-full);padding:0.06rem 0.42rem;font-size:0.65rem;font-weight:800;">{{ cat_flagged|length }} &#x26A0;</span>
+    {% else %}
+      <span style="background:var(--success-bg);color:var(--success-fg);border-radius:var(--r-full);padding:0.06rem 0.42rem;font-size:0.65rem;font-weight:800;">{{ cat_products|length }} &#x2713;</span>
+    {% endif %}
+  </span>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Filter Tabs ── #}
 {% if products %}
-<div class="grid-cards">
+<div class="filter-row">
+  <button class="filter-btn active" onclick="filterCards('all',this)">All ({{ total_products }})</button>
+  {% if flagged_count > 0 %}
+  <button class="filter-btn" onclick="filterCards('flagged',this)">&#x1F6A9; Flagged ({{ flagged_count }})</button>
+  {% endif %}
+  {% if compliant_count > 0 %}
+  <button class="filter-btn" onclick="filterCards('compliant',this)">&#x2705; Compliant ({{ compliant_count }})</button>
+  {% endif %}
+  {% if no_label_count > 0 %}
+  <button class="filter-btn" onclick="filterCards('no-label',this)">No Label ({{ no_label_count }})</button>
+  {% endif %}
+</div>
+{% endif %}
+
+{# ── Product Cards ── #}
+{% if products %}
+<div class="grid-cards" id="products-grid">
   {% for p in products %}
-  {% set score = p.compliance_score %}
+  {% set score  = p.compliance_score %}
   {% set latest = p.latest_label %}
-  <div class="card" style="display:flex;flex-direction:column;gap:0.9rem;">
+
+  {# Determine status #}
+  {% if score is none %}{% set status = 'no-label' %}
+  {% elif score >= 80 %}{% set status = 'compliant' %}
+  {% else %}{% set status = 'flagged' %}{% endif %}
+
+  {# Pre-compute violation buckets #}
+  {% if latest %}
+    {% set failed     = latest.checks | selectattr("result","equalto","FAIL") | list %}
+    {% set crit_fails = failed | selectattr("rule") | selectattr("rule.severity","equalto","CRITICAL") | list %}
+    {% set high_fails = failed | selectattr("rule") | selectattr("rule.severity","equalto","HIGH") | list %}
+    {% set med_fails  = failed | selectattr("rule") | selectattr("rule.severity","equalto","MEDIUM") | list %}
+    {% set low_fails  = failed | selectattr("rule") | selectattr("rule.severity","equalto","LOW") | list %}
+    {% set top_viol   = (crit_fails or high_fails or med_fails or low_fails) | first %}
+  {% else %}
+    {% set failed = [] %}{% set crit_fails = [] %}{% set high_fails = [] %}
+    {% set med_fails = [] %}{% set low_fails = [] %}{% set top_viol = none %}
+  {% endif %}
+
+  <div class="card product-card" data-status="{{ status }}">
+    {% if status == 'flagged' %}
+    <div class="flagged-ribbon">FLAGGED</div>
+    {% endif %}
+
+    {# Name + Score #}
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;">
       <div style="flex:1;min-width:0;">
-        <a href="/products/{{ p.id }}" style="font-size:1rem;font-weight:700;color:var(--gray-900);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</a>
+        <a href="/products/{{ p.id }}"
+           style="font-size:1rem;font-weight:700;color:var(--gray-900);display:block;
+                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                  padding-right:{{ '2.5rem' if status == 'flagged' else '0' }};">{{ p.name }}</a>
         <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.35rem;">
           <span class="pill pill-primary">{{ p.category or "Nutraceutical" }}</span>
           {% if p.sku %}<span class="pill pill-neutral">{{ p.sku }}</span>{% endif %}
         </div>
       </div>
       {% if score is not none %}
-        <div class="score-circle {% if score >= 80 %}sc-good{% elif score >= 50 %}sc-warn{% else %}sc-bad{% endif %}">{{ score }}%</div>
+        <div class="score-circle {% if score >= 80 %}sc-good{% elif score >= 50 %}sc-warn{% else %}sc-bad{% endif %}" style="flex-shrink:0;">{{ score }}%</div>
       {% else %}
-        <div class="score-circle sc-none" style="font-size:0.72rem;font-weight:700;">No<br/>label</div>
+        <div class="score-circle sc-none" style="font-size:0.7rem;font-weight:700;flex-shrink:0;text-align:center;line-height:1.2;">No<br/>Label</div>
       {% endif %}
     </div>
 
+    {# Compliance info #}
     {% if latest %}
-      {% set failed = latest.checks | selectattr("result", "equalto", "FAIL") | list %}
       {% if failed %}
-        {% set critical = failed | selectattr("rule") | selectattr("rule.severity", "equalto", "CRITICAL") | list %}
-        <div style="font-size:0.84rem;color:var(--danger-fg);background:var(--danger-bg);border-radius:var(--r-md);padding:0.5rem 0.75rem;">
-          &#x26A0; {{ failed|length }} violation{{ 's' if failed|length != 1 }}{% if critical %} &mdash; <strong>{{ critical|length }} CRITICAL</strong>{% endif %}
+        <div class="top-viol">
+          &#x26A0; {% if top_viol and top_viol.message %}{{ top_viol.message[:100] }}{% else %}{{ failed|length }} compliance violation{{ 's' if failed|length != 1 }} found{% endif %}
+        </div>
+        <div class="sev-chips">
+          {% if crit_fails %}<span class="sev-chip chip-c">{{ crit_fails|length }} Critical</span>{% endif %}
+          {% if high_fails %}<span class="sev-chip chip-h">{{ high_fails|length }} High</span>{% endif %}
+          {% if med_fails  %}<span class="sev-chip chip-m">{{ med_fails|length }} Medium</span>{% endif %}
+          {% if low_fails  %}<span class="sev-chip chip-l">{{ low_fails|length }} Low</span>{% endif %}
         </div>
       {% else %}
-        <div style="font-size:0.84rem;color:var(--success-fg);background:var(--success-bg);border-radius:var(--r-md);padding:0.5rem 0.75rem;">
-          &#x2713; All checks passed
+        <div style="font-size:0.83rem;color:var(--success-fg);background:var(--success-bg);border-radius:var(--r-md);padding:0.45rem 0.7rem;">
+          &#x2713; All compliance checks passed
         </div>
       {% endif %}
+
       <div style="display:flex;gap:0.5rem;margin-top:auto;">
+        {% if status == 'flagged' %}
+        <a href="/labels/{{ latest.id }}" class="btn btn-danger-soft btn-sm" style="flex:1;justify-content:center;font-weight:700;">Fix Now &rarr;</a>
+        {% else %}
         <a href="/labels/{{ latest.id }}" class="btn btn-outline btn-sm" style="flex:1;justify-content:center;">View Report</a>
-        <a href="/products/{{ p.id }}/upload" class="btn btn-primary btn-sm" style="flex:1;justify-content:center;">Update Label</a>
+        {% endif %}
+        <a href="/products/{{ p.id }}/upload" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;">Update Label</a>
       </div>
     {% else %}
       <p style="font-size:0.84rem;color:var(--gray-400);">No label uploaded yet</p>
@@ -65,12 +206,23 @@
   {% endfor %}
 </div>
 
+<div id="no-filter-results" style="display:none;">
+  <div class="card no-hover" style="padding:0;">
+    <div class="empty-state">
+      <span class="empty-icon">&#x1F50D;</span>
+      <h3>No products match this filter</h3>
+      <p><button onclick="filterCards('all', document.querySelector('.filter-btn'))"
+           style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:inherit;padding:0;">Show all products</button></p>
+    </div>
+  </div>
+</div>
+
 {% else %}
 <div class="card no-hover" style="padding:0;">
   <div class="empty-state">
     <span class="empty-icon">&#x1F4CB;</span>
     <h3>No products yet</h3>
-    <p style="margin-bottom:1.2rem;">Add your first product SKU to start checking FSSAI compliance</p>
+    <p style="margin-bottom:1.2rem;">Add your first product SKU to start checking FSSAI compliance.</p>
     <div style="display:flex;gap:0.6rem;justify-content:center;flex-wrap:wrap;">
       <a href="/products" class="btn btn-primary">+ Add Product</a>
       <a href="/products/bulk-upload" class="btn btn-outline">Bulk Upload CSV</a>
@@ -80,8 +232,25 @@
 {% endif %}
 
 <hr class="divider" style="margin-top:2rem;" />
-<div style="display:flex;gap:1.5rem;font-size:0.84rem;">
-  <a href="/regulations">&#x1F4CB; FSSAI Regulation Feed &rarr;</a>
+<div style="display:flex;gap:1.5rem;font-size:0.84rem;flex-wrap:wrap;">
+  <a href="/regulations">&#x1F4CB; Regulation Feed &rarr;</a>
   <a href="/products">Manage Products &rarr;</a>
+  <a href="/settings">&#x2699;&#xFE0F; Notification Settings &rarr;</a>
 </div>
+
+<script>
+function filterCards(status, btn) {
+  document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  var cards = document.querySelectorAll('.product-card');
+  var visible = 0;
+  cards.forEach(function(card) {
+    var show = (status === 'all' || card.dataset.status === status);
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  var noRes = document.getElementById('no-filter-results');
+  if (noRes) noRes.style.display = (visible === 0 && status !== 'all') ? 'block' : 'none';
+}
+</script>
 {% endblock %}

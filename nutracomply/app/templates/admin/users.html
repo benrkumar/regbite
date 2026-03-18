@@ -1,0 +1,90 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Users{% endblock %}
+{% block page_title %}User Management{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.75rem;">
+  <p style="margin:0;color:#64748b;font-size:0.86rem;">{{ user_stats|length }} registered user{{ 's' if user_stats|length != 1 }}</p>
+</div>
+
+<div class="adm-table-wrap">
+  <table class="adm-table">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Products</th>
+        <th>Labels</th>
+        <th>Notifications</th>
+        <th>Joined</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in user_stats %}
+      {% set u = row.user %}
+      <tr>
+        <td>
+          <div style="font-weight:700;color:#0f172a;">{{ u.name }}</div>
+          <div style="font-size:0.76rem;color:#64748b;">{{ u.email }}</div>
+        </td>
+        <td>
+          {% if u.is_admin %}
+          <span class="adm-badge badge-purple">Super Admin</span>
+          {% else %}
+          <span class="adm-badge badge-gray">User</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if u.is_active %}
+          <span class="adm-badge badge-green">Active</span>
+          {% else %}
+          <span class="adm-badge badge-red">Inactive</span>
+          {% endif %}
+        </td>
+        <td style="font-weight:600;">{{ row.product_count }}</td>
+        <td style="font-weight:600;">{{ row.label_count }}</td>
+        <td style="font-size:0.78rem;color:#64748b;">
+          {% set emails = u.notification_emails or [] %}
+          {% if emails %}
+            {{ emails|length }} email{{ 's' if emails|length != 1 }}
+          {% else %}
+            <span style="color:#94a3b8;">None set</span>
+          {% endif %}
+        </td>
+        <td style="font-size:0.78rem;color:#64748b;">{{ u.created_at.strftime('%d %b %Y') }}</td>
+        <td>
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+            {% if u.id != user.id %}
+            {# Toggle active #}
+            <form method="post" action="/admin/users/{{ u.id }}/toggle-active" style="margin:0;">
+              <button type="submit" class="adm-btn {% if u.is_active %}adm-btn-danger{% endif %}"
+                      onclick="return confirm('{{ 'Deactivate' if u.is_active else 'Activate' }} user {{ u.name }}?')">
+                {{ 'Deactivate' if u.is_active else 'Activate' }}
+              </button>
+            </form>
+            {# Toggle admin #}
+            <form method="post" action="/admin/users/{{ u.id }}/toggle-admin" style="margin:0;">
+              <button type="submit" class="adm-btn"
+                      onclick="return confirm('{{ 'Revoke admin from' if u.is_admin else 'Grant admin to' }} {{ u.name }}?')">
+                {{ 'Revoke Admin' if u.is_admin else 'Make Admin' }}
+              </button>
+            </form>
+            {% else %}
+            <span style="font-size:0.76rem;color:#94a3b8;padding:0.3rem 0;">(you)</span>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" style="text-align:center;padding:2rem;color:#94a3b8;">No users found</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

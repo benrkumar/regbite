@@ -1,0 +1,146 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block page_title %}Platform Overview{% endblock %}
+
+{% block content %}
+
+{# ── Stats Grid ── #}
+<div class="adm-stat-grid">
+  <div class="adm-stat">
+    <div class="adm-stat-val">{{ stats.total_users }}</div>
+    <div class="adm-stat-lbl">&#x1F465; Total Users</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat-val" style="color:#16a34a;">{{ stats.active_users }}</div>
+    <div class="adm-stat-lbl">&#x2705; Active Users</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat-val">{{ stats.total_products }}</div>
+    <div class="adm-stat-lbl">&#x1F4E6; Products</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat-val">{{ stats.total_labels }}</div>
+    <div class="adm-stat-lbl">&#x1F3F7; Labels Analysed</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat-val" style="color:{% if stats.compliance_rate >= 80 %}#16a34a{% elif stats.compliance_rate >= 50 %}#d97706{% else %}#dc2626{% endif %};">{{ stats.compliance_rate }}%</div>
+    <div class="adm-stat-lbl">&#x1F4C8; Compliance Rate</div>
+  </div>
+  <div class="adm-stat" style="border-color:{% if stats.unread_alerts > 0 %}#fca5a5{% else %}#e2e8f0{% endif %};">
+    <div class="adm-stat-val" style="color:{% if stats.unread_alerts > 0 %}#dc2626{% else %}#0f172a{% endif %};">{{ stats.unread_alerts }}</div>
+    <div class="adm-stat-lbl">&#x1F514; Unread Alerts</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat-val">{{ stats.total_rules }}</div>
+    <div class="adm-stat-lbl">&#x1F4CB; Active Rules</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat-val">{{ stats.total_reg_changes }}</div>
+    <div class="adm-stat-lbl">&#x1F4DC; Reg. Updates</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+
+  {# ── Recent Users ── #}
+  <div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.85rem;">
+      <h4 class="adm-section-title" style="margin:0;">Recent Registrations</h4>
+      <a href="/admin/users" class="adm-btn">View all &rarr;</a>
+    </div>
+    <div class="adm-table-wrap">
+      <table class="adm-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Role</th>
+            <th>Joined</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in recent_users %}
+          <tr>
+            <td>
+              <div style="font-weight:600;color:#0f172a;font-size:0.86rem;">{{ u.name }}</div>
+              <div style="font-size:0.75rem;color:#64748b;">{{ u.email }}</div>
+            </td>
+            <td>
+              {% if u.is_admin %}
+              <span class="adm-badge badge-purple">Admin</span>
+              {% else %}
+              <span class="adm-badge badge-gray">User</span>
+              {% endif %}
+            </td>
+            <td style="color:#64748b;font-size:0.78rem;">{{ u.created_at.strftime('%d %b %Y') }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:1.5rem;">No users yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# ── Recent Alerts ── #}
+  <div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.85rem;">
+      <h4 class="adm-section-title" style="margin:0;">Recent Alerts</h4>
+      <a href="/admin/alerts" class="adm-btn">View all &rarr;</a>
+    </div>
+    <div class="adm-table-wrap">
+      <table class="adm-table">
+        <thead>
+          <tr>
+            <th>Alert</th>
+            <th>Severity</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in recent_alerts %}
+          <tr>
+            <td>
+              <div style="font-weight:600;color:#0f172a;font-size:0.83rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ a.title }}</div>
+              <div style="font-size:0.72rem;color:#64748b;">{{ a.created_at.strftime('%d %b %Y') }}</div>
+            </td>
+            <td>
+              {% if a.severity.value == 'CRITICAL' %}<span class="adm-badge badge-red">CRITICAL</span>
+              {% elif a.severity.value == 'HIGH' %}<span class="adm-badge badge-orange">HIGH</span>
+              {% elif a.severity.value == 'MEDIUM' %}<span class="adm-badge badge-yellow">MEDIUM</span>
+              {% else %}<span class="adm-badge badge-gray">LOW</span>{% endif %}
+            </td>
+            <td>
+              {% if a.status.value == 'UNREAD' %}
+              <span class="adm-badge badge-red">UNREAD</span>
+              {% else %}
+              <span class="adm-badge badge-gray">{{ a.status.value }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:1.5rem;">No alerts yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+{# ── Quick Actions ── #}
+<div style="margin-top:1.75rem;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.2rem 1.5rem;">
+  <h4 class="adm-section-title">Quick Actions</h4>
+  <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+    <form method="post" action="/admin/trigger-scrape" style="margin:0;">
+      <button type="submit" class="adm-btn adm-btn-primary">&#x21BB; Run Regulation Scrape Now</button>
+    </form>
+    <form method="post" action="/admin/trigger-recheck" style="margin:0;">
+      <button type="submit" class="adm-btn adm-btn-success">&#x1F504; Re-check All Labels</button>
+    </form>
+    <a href="/admin/users" class="adm-btn">&#x1F465; Manage Users</a>
+    <a href="/admin/rules" class="adm-btn">&#x1F4CB; View Compliance Rules</a>
+    <a href="/admin/system" class="adm-btn">&#x2699; System Info</a>
+  </div>
+</div>
+
+{% endblock %}
