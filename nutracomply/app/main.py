@@ -22,9 +22,31 @@ Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
 async def lifespan(app: FastAPI):
     # Create all DB tables
     Base.metadata.create_all(bind=engine)
+    # Run column migrations for tables that already existed before model changes
+    _run_migrations()
     # Seed rules and ingredients on first run
     _seed_initial_data()
     yield
+
+
+def _run_migrations():
+    """
+    Add new columns to existing tables that were created before model changes.
+    Uses ALTER TABLE ... ADD COLUMN IF NOT EXISTS — safe to run on every startup.
+    """
+    migrations = [
+        # Added in v2: admin flag + per-user notification emails
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS notification_emails JSON DEFAULT '[]'",
+    ]
+    with engine.connect() as conn:
+        for sql in migrations:
+            try:
+                conn.execute(__import__('sqlalchemy').text(sql))
+            except Exception as e:
+                print(f"[migrate] Warning: {e}")
+        conn.commit()
+    print("[migrate] Column migrations applied")
 
 
 def _seed_initial_data():
