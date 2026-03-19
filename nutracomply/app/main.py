@@ -85,6 +85,8 @@ def _run_migrations():
         # v2: admin flag + per-user notification emails
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS notification_emails JSON DEFAULT '[]'",
+        # v3: RBAC role column
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'account_admin'",
     ]
     for sql in migrations:
         try:
@@ -186,7 +188,7 @@ def _seed_demo_users():
     db = None
     try:
         from app.routes.auth import hash_password, _seed_demo_products
-        from app.models import User
+        from app.models import User, UserRole
         db = SessionLocal()
 
         # --- ben (regular user) ---
@@ -197,6 +199,7 @@ def _seed_demo_users():
                 email="ben",
                 hashed_password=hash_password("admin@123"),
                 is_admin=False,
+                role=UserRole.ACCOUNT_ADMIN,
                 is_active=True,
                 notification_emails=[],
             )
@@ -224,6 +227,7 @@ def _seed_demo_users():
                 email="admin",
                 hashed_password=hash_password("admin@123"),
                 is_admin=True,
+                role=UserRole.SUPER_ADMIN,
                 is_active=True,
                 notification_emails=[],
             )
@@ -266,6 +270,8 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 from app.routes import auth, products, labels, alerts, regulations, admin
 from app.routes import settings as settings_router
 from app.routes import renewals as renewals_router
+from app.routes import reports as reports_router
+from app.routes import checker as checker_router
 
 app.include_router(auth.router)
 app.include_router(products.router)
@@ -275,6 +281,8 @@ app.include_router(regulations.router)
 app.include_router(settings_router.router)
 app.include_router(admin.router)
 app.include_router(renewals_router.router)
+app.include_router(reports_router.router)
+app.include_router(checker_router.router)
 
 try:
     from app.routes import admin_llm
@@ -403,4 +411,36 @@ async def reg_alerts(request: Request):
         "alerts": alerts_list,
         "unread_alerts": unread_alerts,
         "current_severity": severity_filter,
+    })
+
+
+@app.get("/r/{token}")
+async def shared_report(token: str, request: Request):
+    from datetime import datetime
+    from app.database import get_db
+    from app.models import ComplianceReport
+
+    db = next(get_db())
+    report = db.query(ComplianceReport).filter(
+        ComplianceReport.share_token == token
+    ).first()
+
+    if not report:
+        return templates.TemplateResponse("shared_report_expired.html", {
+            "request": request,
+            "error": "This report link is invalid or has been revoked."
+        })
+
+    if report.share_expires_at and report.share_expires_at < datetime.utcnow():
+        return templates.TemplateResponse("shared_report_expired.html", {
+            "request": request,
+            "error": "This report link has expired. Please request a new link from the account holder."
+        })
+
+    _ = report.product
+
+    return templates.TemplateResponse("shared_report.html", {
+        "request": request,
+        "report": report,
+        "product": report.product,
     })

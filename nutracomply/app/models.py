@@ -83,6 +83,14 @@ class IngredientStatus(str, enum.Enum):
     REQUIRES_SUBSTANTIATION = "REQUIRES_SUBSTANTIATION"
 
 
+class UserRole(str, enum.Enum):
+    SUPER_ADMIN = "super_admin"
+    ACCOUNT_ADMIN = "account_admin"
+    EDITOR = "editor"
+    VIEWER = "viewer"
+    CONSULTANT = "consultant"
+
+
 # ─── Models ──────────────────────────────────────────────────────────────────
 
 class User(Base):
@@ -94,6 +102,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
     is_admin = Column(Boolean, default=False)
+    role = Column(SAEnum(UserRole), default=UserRole.ACCOUNT_ADMIN)
     notification_emails = Column(JSON, default=list)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -118,6 +127,10 @@ class Product(Base):
     label_versions = relationship(
         "LabelVersion", back_populates="product",
         order_by="LabelVersion.uploaded_at.desc()"
+    )
+    reports = relationship(
+        "ComplianceReport", back_populates="product",
+        foreign_keys="ComplianceReport.product_id"
     )
 
     @property
@@ -389,3 +402,26 @@ class PublishedAlert(Base):
     published_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+# ─── Compliance Reports ───────────────────────────────────────────────────────
+
+class ComplianceReport(Base):
+    __tablename__ = "compliance_reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    report_ref = Column(String(30), unique=True, index=True, nullable=False)  # RB-YYYYMMDD-NNNN
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    label_version_id = Column(Integer, ForeignKey("label_versions.id"), nullable=True)
+    score = Column(Integer, nullable=True)  # 0-100
+    verdict = Column(String(30), nullable=True)  # COMPLIANT / PARTIAL / NON_COMPLIANT
+    check_results = Column(JSON, default=list)  # full per-rule results
+    pdf_path = Column(String(500), nullable=True)
+    share_token = Column(String(64), unique=True, nullable=True, index=True)
+    share_expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    owner = relationship("User")
+    product = relationship("Product", back_populates="reports", foreign_keys=[product_id])
+    label_version = relationship("LabelVersion")

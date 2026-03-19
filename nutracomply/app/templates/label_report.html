@@ -10,6 +10,30 @@
   </ul>
 </nav>
 
+{% if not processing %}
+<!-- Reports section -->
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 18px;margin-bottom:1.2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+  <span style="font-size:1.1rem;">📄</span>
+  <div style="flex:1;">
+    {% if existing_report %}
+      <strong style="color:#15803d;">Report {{ existing_report.report_ref }}</strong>
+      <span style="font-size:0.85rem;color:#6b7280;margin-left:0.5rem;">generated {{ existing_report.created_at.strftime('%d %b %Y') }}</span>
+    {% else %}
+      <strong style="color:#1e293b;">Compliance Report</strong>
+      <span style="font-size:0.85rem;color:#6b7280;margin-left:0.5rem;">Generate a shareable PDF report for this label</span>
+    {% endif %}
+  </div>
+  <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+    {% if existing_report %}
+      <a href="/reports/{{ existing_report.id }}" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;padding:7px 16px;border-radius:7px;text-decoration:none;font-size:0.85rem;font-weight:600;">View Full Report</a>
+      <a href="/reports/{{ existing_report.id }}/download" style="background:#1e293b;color:#fff;padding:7px 16px;border-radius:7px;text-decoration:none;font-size:0.85rem;font-weight:600;">Download PDF</a>
+    {% else %}
+      <a href="/reports/generate/{{ label.id }}" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;padding:7px 16px;border-radius:7px;text-decoration:none;font-size:0.85rem;font-weight:600;">Generate Compliance Report</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
 {% if processing %}
 <article>
   <header><strong>⏳ Processing label...</strong></header>

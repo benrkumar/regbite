@@ -46,6 +46,12 @@
       <a href="/reg-alerts" class="sidebar-link{% if request.url.path == '/reg-alerts' %} active{% endif %}">
         <span class="sidebar-icon">📢</span> Reg. Alerts
       </a>
+      <a href="/checker" class="sidebar-link{% if request.url.path == '/checker' %} active{% endif %}">
+        <span class="sidebar-icon">🔍</span> Checker
+      </a>
+      <a href="/reports" class="sidebar-link{% if '/reports' in request.url.path %} active{% endif %}">
+        <span class="sidebar-icon">📄</span> Reports
+      </a>
 
       <div class="sidebar-section-label" style="margin-top:0.5rem;">Account</div>
 

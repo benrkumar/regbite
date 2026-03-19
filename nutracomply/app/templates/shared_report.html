@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ report.report_ref }} — RegBite Shared Report</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #111827; min-height: 100vh; }
+    .container { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+    table { width: 100%; border-collapse: collapse; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div style="background:#0f172a;border-radius:14px;padding:20px 24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div style="font-size:1.3rem;font-weight:900;color:#4ade80;letter-spacing:-0.03em;">🌿 RegBite</div>
+      <div style="font-size:0.78rem;color:#94a3b8;margin-top:2px;">Shared Compliance Report</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:0.9rem;font-weight:700;color:#f8fafc;font-family:monospace;">{{ report.report_ref }}</div>
+      <div style="font-size:0.73rem;color:#94a3b8;margin-top:2px;">Generated: {{ report.created_at.strftime('%d %b %Y, %H:%M UTC') if report.created_at else 'N/A' }}</div>
+    </div>
+  </div>
+
+  <!-- Product info -->
+  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 22px;margin-bottom:16px;">
+    <h2 style="font-size:1.25rem;font-weight:800;color:#0f172a;margin-bottom:8px;">{{ product.name }}</h2>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;">
+      {% if product.category %}
+      <span style="font-size:0.83rem;color:#6b7280;"><strong>Category:</strong> {{ product.category }}</span>
+      {% endif %}
+      {% if product.sku %}
+      <span style="font-size:0.83rem;color:#6b7280;"><strong>SKU:</strong> {{ product.sku }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Score + Verdict -->
+  {% set score = report.score or 0 %}
+  {% if score >= 90 %}
+    {% set sc = '#16a34a' %}
+    {% set sb = '#dcfce7' %}
+    {% set sd = 'All critical FSSAI compliance requirements met.' %}
+  {% elif score >= 60 %}
+    {% set sc = '#d97706' %}
+    {% set sb = '#fef3c7' %}
+    {% set sd = 'Some requirements need attention before market release.' %}
+  {% else %}
+    {% set sc = '#dc2626' %}
+    {% set sb = '#fee2e2' %}
+    {% set sd = 'Multiple critical violations require immediate correction.' %}
+  {% endif %}
+
+  <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;margin-bottom:16px;">
+    <div style="background:{{ sb }};border:2px solid {{ sc }};border-radius:12px;padding:20px 28px;text-align:center;min-width:120px;">
+      <div style="font-size:2.8rem;font-weight:900;color:{{ sc }};line-height:1;">{{ score }}%</div>
+      <div style="font-size:0.7rem;color:{{ sc }};font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-top:4px;">Score</div>
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:18px 22px;display:flex;flex-direction:column;justify-content:center;">
+      <div style="font-size:0.95rem;font-weight:800;color:#0f172a;margin-bottom:6px;">
+        Verdict: <span style="color:{{ sc }};">{{ (report.verdict or 'PENDING').replace('_', ' ') }}</span>
+      </div>
+      <div style="font-size:0.85rem;color:#6b7280;line-height:1.6;">{{ sd }}</div>
+      <div style="font-size:0.73rem;color:#9ca3af;margin-top:8px;">Checked against FSSAI (FSS 2022), Legal Metrology, AYUSH guidelines</div>
+    </div>
+  </div>
+
+  <!-- Certificate -->
+  {% if score >= 90 %}
+  <div style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #16a34a;border-radius:14px;padding:22px;margin-bottom:16px;text-align:center;">
+    <div style="font-size:2rem;margin-bottom:8px;">🏆</div>
+    <div style="font-size:1.1rem;font-weight:800;color:#15803d;margin-bottom:6px;">COMPLIANCE CERTIFICATE</div>
+    <div style="font-size:0.85rem;color:#166534;max-width:460px;margin:0 auto;">This product has achieved a compliance score of {{ score }}% and meets all critical FSSAI requirements.</div>
+    <div style="margin-top:10px;font-size:0.73rem;color:#4b5563;">Certificate valid for 90 days from generation date · Subject to regulatory amendments</div>
+  </div>
+  {% endif %}
+
+  <!-- Check results -->
+  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:20px;">
+    <div style="padding:14px 18px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:0.9rem;font-weight:700;color:#374151;">Detailed Check Results</span>
+      <span style="font-size:0.8rem;color:#6b7280;">{{ (report.check_results or []) | length }} checks</span>
+    </div>
+    {% if report.check_results %}
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr style="background:#f8fafc;">
+            <th style="padding:9px 14px;text-align:left;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.07em;color:#6b7280;font-weight:700;border-bottom:1px solid #e2e8f0;">Check</th>
+            <th style="padding:9px 14px;text-align:left;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.07em;color:#6b7280;font-weight:700;border-bottom:1px solid #e2e8f0;">Regulation</th>
+            <th style="padding:9px 14px;text-align:center;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.07em;color:#6b7280;font-weight:700;border-bottom:1px solid #e2e8f0;">Result</th>
+            <th style="padding:9px 14px;text-align:left;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.07em;color:#6b7280;font-weight:700;border-bottom:1px solid #e2e8f0;">Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cr in report.check_results %}
+            {% set result = cr.get('result', '') %}
+            {% if result == 'PASS' %}
+              {% set rc = '#16a34a' %} {% set rb = '#dcfce7' %} {% set ri = '✓' %}
+            {% elif result == 'FAIL' %}
+              {% set rc = '#dc2626' %} {% set rb = '#fee2e2' %} {% set ri = '✗' %}
+            {% else %}
+              {% set rc = '#d97706' %} {% set rb = '#fef3c7' %} {% set ri = '⚠' %}
+            {% endif %}
+            <tr style="border-bottom:1px solid #f8fafc;">
+              <td style="padding:9px 14px;font-size:0.82rem;color:#374151;">{{ cr.get('description', '')[:80] }}</td>
+              <td style="padding:9px 14px;font-size:0.75rem;color:#6b7280;">{{ cr.get('regulation_source', '')[:60] }}</td>
+              <td style="padding:9px 14px;text-align:center;">
+                <span style="background:{{ rb }};color:{{ rc }};padding:2px 9px;border-radius:10px;font-size:0.72rem;font-weight:700;">{{ ri }} {{ result }}</span>
+              </td>
+              <td style="padding:9px 14px;font-size:0.78rem;color:#374151;">{{ cr.get('message', '')[:120] }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="padding:28px;text-align:center;color:#6b7280;font-size:0.88rem;">No check results available.</div>
+    {% endif %}
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center;font-size:0.73rem;color:#9ca3af;line-height:1.7;padding:16px;">
+    <strong style="color:#6b7280;">View-only link</strong> · Generated by RegBite · Not legal advice<br/>
+    Report ID: <strong>{{ report.report_ref }}</strong> · This shared link expires {{ report.share_expires_at.strftime('%d %b %Y') if report.share_expires_at else 'N/A' }}
+  </div>
+
+</div>
+</body>
+</html>

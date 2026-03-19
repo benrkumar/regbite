@@ -8,7 +8,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Product, LabelVersion, Alert, AlertType, AlertStatus, CheckResult, Severity
+from app.models import Product, LabelVersion, Alert, AlertType, AlertStatus, CheckResult, Severity, ComplianceReport
 from app.routes.auth import get_current_user_from_cookie
 from app.services.ocr_service import extract_text_from_file
 from app.services.extraction_service import extract_label_data
@@ -202,6 +202,11 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
     warnings = [c for c in label.checks if c.result == CheckResult.WARNING]
     passed = [c for c in label.checks if c.result == CheckResult.PASS]
 
+    # Try to find existing compliance report for this label version
+    existing_report = db.query(ComplianceReport).filter(
+        ComplianceReport.label_version_id == label_id
+    ).first()
+
     return templates.TemplateResponse("label_report.html", {
         "request": request,
         "user": user,
@@ -214,4 +219,5 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
         "passed_checks": passed,
         "processing": bool(processing) and not label.extraction_json,
         "CheckResult": CheckResult,
+        "existing_report": existing_report,
     })

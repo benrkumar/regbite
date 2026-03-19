@@ -12,7 +12,7 @@ import bcrypt
 from app.database import get_db
 from app.models import (
     User, Product, LabelVersion, ComplianceCheck, Alert,
-    ComplianceRule, CheckResult, AlertType, AlertStatus, Severity
+    ComplianceRule, CheckResult, AlertType, AlertStatus, Severity, UserRole
 )
 from app.config import get_settings
 
@@ -443,6 +443,7 @@ async def register(
         email=email.lower().strip(),
         hashed_password=hash_password(password),
         is_admin=is_admin,
+        role=UserRole.SUPER_ADMIN if is_admin else UserRole.ACCOUNT_ADMIN,
         is_active=True,
         notification_emails=[],
     )
