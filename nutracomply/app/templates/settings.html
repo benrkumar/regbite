@@ -53,6 +53,54 @@
   </form>
 </div>
 
+{# ── Update Profile ── #}
+<div class="card" style="max-width:640px;margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1.2rem;">
+    <span style="font-size:1.4rem;">&#x1F464;</span>
+    <div>
+      <h3 style="margin:0;">Update Profile</h3>
+      <p style="margin:0;font-size:0.83rem;color:var(--gray-500);">Change your display name.</p>
+    </div>
+  </div>
+  <form method="post" action="/settings/profile">
+    <div class="field">
+      <label class="field-label">Full Name</label>
+      <input type="text" name="name" class="input" value="{{ user.name }}" required minlength="2" maxlength="100" />
+    </div>
+    <div style="margin-top:1rem;">
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+  </form>
+</div>
+
+{# ── Change Password ── #}
+<div class="card" style="max-width:640px;margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1.2rem;">
+    <span style="font-size:1.4rem;">&#x1F510;</span>
+    <div>
+      <h3 style="margin:0;">Change Password</h3>
+      <p style="margin:0;font-size:0.83rem;color:var(--gray-500);">Update your account password (minimum 8 characters).</p>
+    </div>
+  </div>
+  <form method="post" action="/settings/password">
+    <div class="field" style="margin-bottom:0.75rem;">
+      <label class="field-label">Current Password</label>
+      <input type="password" name="current_password" class="input" required autocomplete="current-password" />
+    </div>
+    <div class="field" style="margin-bottom:0.75rem;">
+      <label class="field-label">New Password <span style="color:var(--gray-400);font-weight:400;">(min 8 chars)</span></label>
+      <input type="password" name="new_password" class="input" required minlength="8" autocomplete="new-password" />
+    </div>
+    <div class="field" style="margin-bottom:0.75rem;">
+      <label class="field-label">Confirm New Password</label>
+      <input type="password" name="confirm_password" class="input" required minlength="8" autocomplete="new-password" />
+    </div>
+    <div style="margin-top:1rem;">
+      <button type="submit" class="btn btn-primary">Update Password</button>
+    </div>
+  </form>
+</div>
+
 {# ── Account Info (read-only) ── #}
 <div class="card card-flat no-hover" style="max-width:640px;">
   <h4 style="margin-bottom:1rem;">Account Details</h4>
@@ -74,7 +122,7 @@
     <div style="display:flex;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--gray-100);">
       <span style="font-size:0.85rem;color:var(--gray-500);font-weight:500;">Role</span>
       <span class="pill {% if user.is_admin %}pill-accent{% else %}pill-neutral{% endif %}">
-        {{ 'Super Admin' if user.is_admin else 'User' }}
+        {{ user.role.value.replace('_', ' ').title() if user.role else 'Account Admin' }}
       </span>
     </div>
     <div style="display:flex;justify-content:space-between;padding:0.6rem 0;">

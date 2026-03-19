@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accept Invite — RegBite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .accept-card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+      width: 100%;
+      max-width: 440px;
+      padding: 2.5rem 2rem;
+    }
+
+    .accept-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1.75rem;
+      justify-content: center;
+    }
+    .accept-brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #4ade80 0%, #16a34a 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      box-shadow: 0 4px 12px rgba(34,197,94,0.4);
+    }
+    .accept-brand-name {
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: -0.025em;
+    }
+
+    .accept-header {
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+    .accept-header h1 {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+    .accept-header p {
+      font-size: 0.875rem;
+      color: #64748b;
+      line-height: 1.55;
+    }
+
+    .invite-meta {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .invite-meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.83rem;
+    }
+    .invite-meta-row .label { color: #64748b; font-weight: 500; }
+    .invite-meta-row .value { font-weight: 700; color: #0f172a; }
+    .role-pill {
+      display: inline-block;
+      padding: 0.1rem 0.5rem;
+      border-radius: 4px;
+      background: #ede9fe;
+      color: #5b21b6;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .field { margin-bottom: 1rem; }
+    .field label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 0.35rem;
+    }
+    .field input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 9px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      color: #0f172a;
+      transition: border-color 0.15s;
+      outline: none;
+    }
+    .field input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+
+    .submit-btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-top: 0.5rem;
+    }
+    .submit-btn:hover { background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); transform: translateY(-1px); }
+    .submit-btn:active { transform: translateY(0); }
+
+    .error-card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+      width: 100%;
+      max-width: 420px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+    }
+    .error-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .error-card h2 { font-size: 1.3rem; font-weight: 800; color: #0f172a; margin-bottom: 0.75rem; }
+    .error-card p { font-size: 0.875rem; color: #64748b; margin-bottom: 1.5rem; line-height: 1.6; }
+    .error-box {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      color: #991b1b;
+      font-size: 0.85rem;
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+
+    .login-link {
+      display: block;
+      text-align: center;
+      margin-top: 1.25rem;
+      font-size: 0.83rem;
+      color: #64748b;
+    }
+    .login-link a { color: #6366f1; font-weight: 600; text-decoration: none; }
+    .login-link a:hover { text-decoration: underline; }
+
+    .form-error {
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      border-radius: 9px;
+      padding: 0.75rem 1rem;
+      color: #991b1b;
+      font-size: 0.83rem;
+      margin-bottom: 1.25rem;
+    }
+  </style>
+</head>
+<body>
+
+{% if error and not invite %}
+{# Invalid / expired token — show error card #}
+<div class="error-card">
+  <div class="error-icon">&#x26A0;&#xFE0F;</div>
+  <h2>Invite Not Valid</h2>
+  <div class="error-box">{{ error }}</div>
+  <p>If you believe this is a mistake, please contact the person who sent you the invite and ask for a new link.</p>
+  <a href="/login" style="display:inline-block;padding:0.65rem 1.5rem;background:#6366f1;color:#fff;border-radius:9px;font-weight:700;text-decoration:none;font-size:0.9rem;">
+    Go to Sign In
+  </a>
+</div>
+
+{% else %}
+{# Valid invite — show registration form #}
+<div class="accept-card">
+  <div class="accept-brand">
+    <div class="accept-brand-icon">&#x1F33F;</div>
+    <div class="accept-brand-name">RegBite</div>
+  </div>
+
+  <div class="accept-header">
+    <h1>You've been invited!</h1>
+    <p>Create your account to join your team on RegBite — India's FSSAI compliance platform.</p>
+  </div>
+
+  {% if invite %}
+  <div class="invite-meta">
+    <div class="invite-meta-row">
+      <span class="label">Invited by</span>
+      <span class="value">{{ inviter.name if inviter else 'Your team admin' }}</span>
+    </div>
+    <div class="invite-meta-row">
+      <span class="label">Your email</span>
+      <span class="value">{{ invite.email }}</span>
+    </div>
+    <div class="invite-meta-row">
+      <span class="label">Your role</span>
+      <span class="value"><span class="role-pill">{{ role_label }}</span></span>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if error %}
+  <div class="form-error">{{ error }}</div>
+  {% endif %}
+
+  <form method="post">
+    <div class="field">
+      <label>Full Name</label>
+      <input type="text" name="name" placeholder="Your full name" required minlength="2" maxlength="100" autocomplete="name" />
+    </div>
+    <div class="field">
+      <label>Password <span style="color:#94a3b8;font-weight:400;">(min 8 characters)</span></label>
+      <input type="password" name="password" placeholder="Create a strong password" required minlength="8" autocomplete="new-password" />
+    </div>
+    <div class="field">
+      <label>Confirm Password</label>
+      <input type="password" name="confirm_password" placeholder="Repeat your password" required minlength="8" autocomplete="new-password" />
+    </div>
+    <button type="submit" class="submit-btn">Accept &amp; Create Account &rarr;</button>
+  </form>
+
+  <p class="login-link">Already have an account? <a href="/login">Sign in here</a></p>
+</div>
+{% endif %}
+
+</body>
+</html>

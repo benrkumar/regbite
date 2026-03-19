@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RegBite — India's FSSAI Compliance Platform for Nutraceuticals</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:      #6366f1;
+      --primary-dark: #4f46e5;
+      --primary-deep: #3730a3;
+      --green:        #22c55e;
+      --green-dark:   #16a34a;
+      --gray-50:  #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-400: #94a3b8;
+      --gray-500: #64748b;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1e293b;
+      --gray-900: #0f172a;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      color: var(--gray-800);
+      background: #fff;
+      line-height: 1.6;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    p { color: var(--gray-600); }
+
+    /* ── Navbar ── */
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      padding: 0 2rem;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+      box-shadow: 0 1px 20px rgba(0,0,0,0.06);
+    }
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-right: auto;
+    }
+    .navbar-icon {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #4ade80 0%, #16a34a 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem;
+      box-shadow: 0 4px 12px rgba(34,197,94,0.4);
+    }
+    .navbar-name {
+      font-size: 1.2rem; font-weight: 900;
+      color: var(--gray-900); letter-spacing: -0.025em;
+    }
+    .navbar-actions { display: flex; align-items: center; gap: 0.75rem; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 0.55rem 1.25rem;
+      border-radius: 9px;
+      font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; border: none;
+      transition: all 0.15s ease;
+      font-family: var(--font);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--gray-600);
+      border: 1.5px solid var(--gray-200);
+    }
+    .btn-ghost:hover { background: var(--gray-100); color: var(--gray-900); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(99,102,241,0.35);
+    }
+    .btn-primary:hover { background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-deep) 100%); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(99,102,241,0.4); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-lg { padding: 0.8rem 1.75rem; font-size: 1rem; border-radius: 12px; }
+
+    .btn-outline-white {
+      background: transparent;
+      color: #fff;
+      border: 2px solid rgba(255,255,255,0.5);
+    }
+    .btn-outline-white:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.8); }
+
+    /* ── Hero ── */
+    .hero {
+      padding-top: 64px;
+      background: linear-gradient(160deg, #0f0b2e 0%, #1e1b4b 35%, #312e81 65%, #3730a3 100%);
+      position: relative;
+      overflow: hidden;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 800px; height: 800px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(99,102,241,0.18) 0%, transparent 70%);
+      top: -200px; right: -200px;
+      pointer-events: none;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(34,197,94,0.1) 0%, transparent 70%);
+      bottom: -150px; left: -100px;
+      pointer-events: none;
+    }
+    .hero-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 5rem 2rem 4rem;
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.35rem 1rem;
+      background: rgba(99,102,241,0.18);
+      border: 1px solid rgba(99,102,241,0.35);
+      border-radius: 999px;
+      font-size: 0.8rem; font-weight: 600;
+      color: #a5b4fc;
+      margin-bottom: 1.75rem;
+      letter-spacing: 0.03em;
+    }
+    .hero-badge-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #4ade80;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.85); }
+    }
+    .hero h1 {
+      font-size: clamp(2.1rem, 5vw, 3.6rem);
+      font-weight: 900;
+      line-height: 1.1;
+      color: #fff;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.25rem;
+    }
+    .hero h1 .accent {
+      background: linear-gradient(135deg, #a5b4fc 0%, #818cf8 50%, #4ade80 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: clamp(1rem, 2.2vw, 1.18rem);
+      color: rgba(255,255,255,0.72);
+      max-width: 660px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.65;
+    }
+    .hero-ctas {
+      display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+      margin-bottom: 3.5rem;
+    }
+    .hero-stats {
+      display: flex; gap: 2.5rem; justify-content: center; flex-wrap: wrap;
+    }
+    .hero-stat { text-align: center; }
+    .hero-stat-val {
+      font-size: 1.75rem; font-weight: 900;
+      color: #fff; letter-spacing: -0.03em; line-height: 1;
+    }
+    .hero-stat-lbl {
+      font-size: 0.76rem; color: rgba(255,255,255,0.5);
+      font-weight: 500; margin-top: 0.25rem;
+    }
+    .stat-divider {
+      width: 1px; background: rgba(255,255,255,0.15); align-self: stretch;
+    }
+
+    /* ── Section titles ── */
+    .section { padding: 5rem 2rem; }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+    .section-tag {
+      display: inline-block;
+      padding: 0.25rem 0.8rem;
+      background: #ede9fe;
+      color: var(--primary-dark);
+      border-radius: 999px;
+      font-size: 0.76rem; font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+    .section-title {
+      font-size: clamp(1.6rem, 3.5vw, 2.3rem);
+      font-weight: 900;
+      color: var(--gray-900);
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      margin-bottom: 0.75rem;
+    }
+    .section-sub {
+      font-size: 1rem;
+      color: var(--gray-500);
+      max-width: 560px;
+      line-height: 1.65;
+    }
+    .section-header { margin-bottom: 3rem; }
+
+    /* ── Features grid ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+    .feature-card {
+      background: #fff;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 16px;
+      padding: 1.75rem;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary) 0%, #818cf8 100%);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .feature-card:hover { border-color: #a5b4fc; box-shadow: 0 8px 30px rgba(99,102,241,0.12); transform: translateY(-2px); }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+    }
+    .feature-card h3 { font-size: 1rem; font-weight: 700; color: var(--gray-900); margin-bottom: 0.5rem; }
+    .feature-card p { font-size: 0.875rem; color: var(--gray-500); line-height: 1.6; }
+
+    /* ── Quick checker widget ── */
+    .checker-section { background: var(--gray-50); border-top: 1px solid var(--gray-200); border-bottom: 1px solid var(--gray-200); }
+    .checker-card {
+      background: #fff;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 20px;
+      padding: 2rem;
+      max-width: 640px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+    }
+    .checker-card h3 { font-size: 1.2rem; font-weight: 800; color: var(--gray-900); margin-bottom: 0.4rem; }
+    .checker-card .sub { font-size: 0.83rem; color: var(--gray-500); margin-bottom: 1.5rem; }
+    .form-field { margin-bottom: 1rem; }
+    .form-field label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.35rem; }
+    .form-input {
+      width: 100%;
+      padding: 0.6rem 0.85rem;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 9px;
+      font-size: 0.875rem;
+      font-family: var(--font);
+      color: var(--gray-900);
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    textarea.form-input { resize: vertical; min-height: 90px; }
+
+    /* ── Categories ── */
+    .categories-grid {
+      display: flex; flex-wrap: wrap; gap: 0.65rem;
+    }
+    .category-pill {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.45rem 1rem;
+      background: #fff;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 999px;
+      font-size: 0.83rem; font-weight: 600;
+      color: var(--gray-700);
+      transition: all 0.15s;
+    }
+    .category-pill:hover { border-color: var(--primary); color: var(--primary); background: #ede9fe; }
+    .category-pill .cat-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--primary);
+      flex-shrink: 0;
+    }
+
+    /* ── CTA Banner ── */
+    .cta-banner {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4f46e5 100%);
+      padding: 5rem 2rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-banner::before {
+      content: '';
+      position: absolute;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%);
+      top: -200px; right: -100px;
+      pointer-events: none;
+    }
+    .cta-banner-inner { position: relative; z-index: 1; }
+    .cta-banner h2 { font-size: clamp(1.6rem, 3.5vw, 2.4rem); font-weight: 900; color: #fff; letter-spacing: -0.025em; margin-bottom: 0.75rem; }
+    .cta-banner p { color: rgba(255,255,255,0.68); font-size: 1rem; max-width: 520px; margin: 0 auto 2rem; }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--gray-900);
+      padding: 1.5rem 2rem;
+      text-align: center;
+    }
+    footer p { color: var(--gray-500); font-size: 0.82rem; }
+    footer a { color: var(--gray-400); }
+    footer a:hover { color: #fff; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .hero-stats { gap: 1.5rem; }
+      .stat-divider { display: none; }
+      .features-grid { grid-template-columns: 1fr; }
+      .form-grid-2 { grid-template-columns: 1fr; }
+      .navbar { padding: 0 1.25rem; }
+      .navbar-actions .btn-ghost { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ Navbar ══ -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <div class="navbar-icon">&#x1F33F;</div>
+    <span class="navbar-name">RegBite</span>
+  </div>
+  <div class="navbar-actions">
+    <a href="/login" class="btn btn-ghost">Sign In</a>
+    <a href="/register" class="btn btn-primary">Get Started</a>
+  </div>
+</nav>
+
+<!-- ══ Hero ══ -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <div class="hero-badge-dot"></div>
+      AI-Powered FSSAI Compliance for India
+    </div>
+    <h1>
+      India's <span class="accent">FSSAI Compliance</span><br>
+      Platform for Nutraceuticals
+    </h1>
+    <p class="hero-sub">
+      Automatically scan product labels, track FSSAI regulations, and generate audit-ready compliance reports — powered by AI.
+    </p>
+    <div class="hero-ctas">
+      <a href="/register" class="btn btn-primary btn-lg">Start Free &rarr;</a>
+      <a href="/login" class="btn btn-outline-white btn-lg">Sign In</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-val">25+</div>
+        <div class="hero-stat-lbl">FSSAI Rule Checks</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">10</div>
+        <div class="hero-stat-lbl">Compliance Categories</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">AI</div>
+        <div class="hero-stat-lbl">Dual-Model Analysis</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">PDF</div>
+        <div class="hero-stat-lbl">Audit-Ready Reports</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ Features ══ -->
+<section class="section">
+  <div class="section-inner">
+    <div class="section-header">
+      <div class="section-tag">Features</div>
+      <h2 class="section-title">Everything you need for<br>FSSAI compliance</h2>
+      <p class="section-sub">From label scanning to license tracking — RegBite covers the full compliance lifecycle for India's nutraceutical industry.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">&#x1F50D;</div>
+        <h3>Label Scanner</h3>
+        <p>Upload product labels and get instant FSSAI compliance analysis powered by AI. Detect missing mandatory fields, prohibited claims, and allergen issues in seconds.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#x1F4CB;</div>
+        <h3>Regulation Feed</h3>
+        <p>Stay updated with FSSAI, AYUSH and Legal Metrology regulation changes. Never miss a critical amendment that affects your product portfolio.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#x1F4C4;</div>
+        <h3>Audit Reports</h3>
+        <p>Generate shareable PDF compliance reports with a single click. Ideal for internal audits, regulatory submissions, and distributor due-diligence.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#x1F5D3;</div>
+        <h3>License Tracker</h3>
+        <p>Never miss a license renewal with automated expiry countdown alerts. Track FSSAI central/state, AYUSH, IEC, and other regulatory licenses in one place.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#x1F916;</div>
+        <h3>AI-Powered</h3>
+        <p>Dual AI models trained on FSSAI regulations and your product data. Get contextual compliance advice with RAG-based retrieval for pinpoint accuracy.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#x1F3E2;</div>
+        <h3>Team Ready</h3>
+        <p>Invite your compliance team with role-based access control. Assign Editor, Viewer, or Consultant roles so everyone has the right level of access.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ Quick Checker Widget ══ -->
+<section class="section checker-section">
+  <div class="section-inner">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center;">
+      <div>
+        <div class="section-tag">Try It Free</div>
+        <h2 class="section-title" style="font-size:1.9rem;">Quick Label Check</h2>
+        <p class="section-sub" style="margin-bottom:1.5rem;">
+          Paste your product details and get an instant FSSAI compliance snapshot. No account required to try.
+        </p>
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:0.6rem;">
+          <li style="display:flex;align-items:center;gap:0.65rem;font-size:0.875rem;color:var(--gray-600);">
+            <span style="width:20px;height:20px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:#16a34a;font-weight:700;flex-shrink:0;">&#10003;</span>
+            Checks 25+ FSSAI labeling requirements
+          </li>
+          <li style="display:flex;align-items:center;gap:0.65rem;font-size:0.875rem;color:var(--gray-600);">
+            <span style="width:20px;height:20px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:#16a34a;font-weight:700;flex-shrink:0;">&#10003;</span>
+            Identifies prohibited health claims
+          </li>
+          <li style="display:flex;align-items:center;gap:0.65rem;font-size:0.875rem;color:var(--gray-600);">
+            <span style="width:20px;height:20px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:#16a34a;font-weight:700;flex-shrink:0;">&#10003;</span>
+            Flags allergen declaration gaps
+          </li>
+          <li style="display:flex;align-items:center;gap:0.65rem;font-size:0.875rem;color:var(--gray-600);">
+            <span style="width:20px;height:20px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:#16a34a;font-weight:700;flex-shrink:0;">&#10003;</span>
+            Instant remediation guidance
+          </li>
+        </ul>
+      </div>
+      <div>
+        <div class="checker-card">
+          <h3>&#x1F50D; Quick FSSAI Check</h3>
+          <p class="sub">Get instant compliance feedback for your product label.</p>
+          <form method="post" action="/checker/run">
+            <div class="form-grid-2">
+              <div class="form-field">
+                <label>Product Name</label>
+                <input type="text" name="product_name" class="form-input" placeholder="e.g. Omega-3 Fish Oil" />
+              </div>
+              <div class="form-field">
+                <label>Category</label>
+                <select name="category" class="form-input">
+                  <option value="">Select category…</option>
+                  <option>Health Supplement</option>
+                  <option>Ayurvedic Supplement</option>
+                  <option>Sports Nutrition</option>
+                  <option>Vitamin &amp; Mineral Supplement</option>
+                  <option>Digestive Health</option>
+                  <option>Herbal Product</option>
+                  <option>Protein Supplement</option>
+                  <option>Other Nutraceutical</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label>Ingredients (paste your ingredient list)</label>
+              <textarea name="ingredients" class="form-input" rows="3"
+                placeholder="e.g. Ashwagandha Root Extract (KSM-66, 5% Withanolides), Microcrystalline Cellulose, Magnesium Stearate…"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;padding:0.7rem;border-radius:10px;">
+              Quick Check &rarr;
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ Compliance Categories ══ -->
+<section class="section" style="padding-bottom:3rem;">
+  <div class="section-inner">
+    <div class="section-header" style="margin-bottom:2rem;">
+      <div class="section-tag">Coverage</div>
+      <h2 class="section-title">10 Compliance Categories We Check</h2>
+      <p class="section-sub">RegBite evaluates your products across every major FSSAI nutraceutical labeling requirement.</p>
+    </div>
+    <div class="categories-grid">
+      <div class="category-pill"><div class="cat-dot"></div> FSSAI License Number</div>
+      <div class="category-pill"><div class="cat-dot"></div> Labeling Requirements</div>
+      <div class="category-pill"><div class="cat-dot"></div> Health Claim Restrictions</div>
+      <div class="category-pill"><div class="cat-dot"></div> Ingredient Safety</div>
+      <div class="category-pill"><div class="cat-dot"></div> Nutritional Declarations</div>
+      <div class="category-pill"><div class="cat-dot"></div> Allergen Declarations</div>
+      <div class="category-pill"><div class="cat-dot"></div> Quantity Requirements</div>
+      <div class="category-pill"><div class="cat-dot"></div> Mandatory Warnings</div>
+      <div class="category-pill"><div class="cat-dot"></div> Format &amp; Font Requirements</div>
+      <div class="category-pill"><div class="cat-dot"></div> Claim Substantiation</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CTA Banner ══ -->
+<section class="cta-banner">
+  <div class="cta-banner-inner">
+    <h2>Ready to stay FSSAI compliant?</h2>
+    <p>Join nutraceutical brands using RegBite to automate their compliance workflows and avoid costly label rejections.</p>
+    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+      <a href="/register" class="btn btn-primary btn-lg">Create Free Account &rarr;</a>
+      <a href="/login" class="btn btn-outline-white btn-lg">Sign In</a>
+    </div>
+  </div>
+</section>
+
+<!-- ══ Footer ══ -->
+<footer>
+  <p>
+    RegBite &copy; 2025 &nbsp;&middot;&nbsp; FSSAI Compliance Platform for India
+    &nbsp;&middot;&nbsp; <a href="/login">Sign In</a>
+    &nbsp;&middot;&nbsp; <a href="/register">Register</a>
+    &nbsp;&middot;&nbsp; Not legal advice
+  </p>
+</footer>
+
+<script>
+// Smooth fade-in for hero elements
+document.addEventListener('DOMContentLoaded', function() {
+  var heroInner = document.querySelector('.hero-inner');
+  if (heroInner) {
+    heroInner.style.opacity = '0';
+    heroInner.style.transform = 'translateY(20px)';
+    heroInner.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        heroInner.style.opacity = '1';
+        heroInner.style.transform = 'translateY(0)';
+      });
+    });
+  }
+});
+</script>
+
+</body>
+</html>

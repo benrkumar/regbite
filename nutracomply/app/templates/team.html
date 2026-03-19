@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% block title %}Team Management{% endblock %}
+{% block page_subtitle %}Invite team members and manage roles{% endblock %}
+
+{% block content %}
+<style>
+.team-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+.team-stat {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.team-stat-val { font-size: 2rem; font-weight: 800; line-height: 1; color: var(--primary); }
+.team-stat-lbl { font-size: 0.75rem; color: var(--gray-500); font-weight: 500; }
+
+.team-table-wrap {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+.team-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.team-table th {
+  background: #f8fafc;
+  padding: 0.65rem 1rem;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gray-500);
+  border-bottom: 1.5px solid var(--border);
+}
+.team-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+.team-table tr:last-child td { border-bottom: none; }
+.team-table tbody tr:hover td { background: #fafafa; }
+
+.member-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.member-info { display: flex; align-items: center; gap: 0.65rem; }
+
+.role-badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #ede9fe;
+  color: #5b21b6;
+  white-space: nowrap;
+}
+
+.copy-btn {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.72rem;
+  background: var(--gray-100);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.copy-btn:hover { background: var(--gray-200); }
+
+.invite-link-text {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--gray-600);
+  word-break: break-all;
+  max-width: 220px;
+  display: inline-block;
+}
+
+.inline-role-form { display: flex; gap: 0.4rem; align-items: center; }
+.inline-select {
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: var(--gray-700);
+  background: #fff;
+}
+
+.invite-link-box {
+  background: var(--info-bg);
+  border: 1px solid #93c5fd;
+  border-radius: var(--r-md);
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+.invite-link-box .link-icon { font-size: 1.3rem; flex-shrink: 0; }
+.invite-link-box .link-body { flex: 1; min-width: 0; }
+.invite-link-box .link-title { font-weight: 700; color: var(--info-fg); font-size: 0.88rem; margin-bottom: 0.3rem; }
+.invite-link-box .link-url {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--info-fg);
+  word-break: break-all;
+  background: rgba(59,130,246,0.08);
+  padding: 0.3rem 0.5rem;
+  border-radius: 5px;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+@media (max-width: 640px) {
+  .team-table thead { display: none; }
+  .team-table, .team-table tbody, .team-table tr, .team-table td { display: block; width: 100%; }
+  .team-table td { padding: 0.45rem 0.9rem; border-bottom: none; }
+  .team-table tr { border-bottom: 1px solid var(--border); padding: 0.5rem 0; }
+}
+</style>
+
+{# ── Page header ── #}
+<div class="page-hdr">
+  <div>
+    <h2>Team Management</h2>
+    <p>Invite team members and manage roles</p>
+  </div>
+</div>
+
+{# ── Flash / invite link display ── #}
+{% if flash_message %}
+{% set msg_lower = flash_message | lower %}
+{% if 'invite+created' in msg_lower or 'invite created' in msg_lower or '/team/accept/' in flash_message %}
+  {# Extract the link from the flash message #}
+  {% set link_start = flash_message.find('/team/accept/') %}
+  {% if link_start >= 0 %}
+    {% set invite_link = flash_message[link_start:] %}
+    <div class="invite-link-box">
+      <div class="link-icon">&#x1F517;</div>
+      <div class="link-body">
+        <div class="link-title">Invite created! Share this link with your team member:</div>
+        <span class="link-url" id="invite-link-url">{{ request.url.scheme }}://{{ request.url.netloc }}{{ invite_link }}</span>
+        <button class="copy-btn" onclick="copyInviteLink()">&#x1F4CB; Copy Link</button>
+      </div>
+    </div>
+  {% else %}
+  <div class="flash flash-{{ flash_type | default('info') }}">{{ flash_message }}</div>
+  {% endif %}
+{% else %}
+<div class="flash flash-{{ flash_type | default('info') }}">{{ flash_message }}</div>
+{% endif %}
+{% endif %}
+
+{# ── Stats strip ── #}
+<div class="team-stats">
+  <div class="team-stat">
+    <div class="team-stat-val">{{ members | length }}</div>
+    <div class="team-stat-lbl">Team Members</div>
+  </div>
+  <div class="team-stat">
+    <div class="team-stat-val" style="color:var(--warning);">{{ pending_invites | length }}</div>
+    <div class="team-stat-lbl">Pending Invites</div>
+  </div>
+</div>
+
+{# ── Invite form card ── #}
+<div class="card" style="max-width:640px;margin-bottom:1.75rem;">
+  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1.2rem;">
+    <span style="font-size:1.4rem;">&#x2709;</span>
+    <div>
+      <h3 style="margin:0;">Invite a Team Member</h3>
+      <p style="margin:0;font-size:0.83rem;color:var(--gray-500);">
+        Send an invite link — no email is sent automatically in dev mode.
+      </p>
+    </div>
+  </div>
+  <form method="post" action="/team/invite">
+    <div style="display:grid;grid-template-columns:1fr auto;gap:0.75rem;align-items:end;">
+      <div class="field" style="margin:0;">
+        <label class="field-label">Email Address</label>
+        <input type="email" name="email" class="input" placeholder="colleague@company.com" required />
+      </div>
+      <div class="field" style="margin:0;">
+        <label class="field-label">Role</label>
+        <select name="role" class="input" style="min-width:120px;">
+          {% for role in invitable_roles %}
+          <option value="{{ role.value }}">{{ role_labels[role] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:1rem;">
+      <button type="submit" class="btn btn-primary">Generate Invite Link &rarr;</button>
+    </div>
+  </form>
+</div>
+
+{# ── Team members table ── #}
+{% if members %}
+<h3 style="margin-bottom:0.75rem;font-size:0.95rem;color:var(--gray-700);">Current Team Members</h3>
+<div class="team-table-wrap">
+  <table class="team-table">
+    <thead>
+      <tr>
+        <th>Member</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for member in members %}
+      <tr>
+        <td>
+          <div class="member-info">
+            <div class="member-avatar">{{ member.name[0].upper() }}</div>
+            <span style="font-weight:600;color:var(--gray-900);">{{ member.name }}</span>
+          </div>
+        </td>
+        <td style="color:var(--gray-600);font-size:0.82rem;">{{ member.email }}</td>
+        <td>
+          <form method="post" action="/team/members/{{ member.id }}/role" class="inline-role-form">
+            <select name="role" class="inline-select">
+              {% for role in invitable_roles %}
+              <option value="{{ role.value }}" {% if member.role == role %}selected{% endif %}>
+                {{ role_labels[role] }}
+              </option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm" style="padding:0.22rem 0.55rem;">Save</button>
+          </form>
+        </td>
+        <td>
+          <span class="pill {% if member.is_active %}pill-good{% else %}pill-bad{% endif %}">
+            {{ 'Active' if member.is_active else 'Inactive' }}
+          </span>
+        </td>
+        <td>
+          <form method="post" action="/team/members/{{ member.id }}/remove"
+                onsubmit="return confirm('Remove {{ member.name }} from your team?')">
+            <button type="submit" class="btn btn-outline btn-sm"
+                    style="color:#dc2626;border-color:#fca5a5;">Remove</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card no-hover" style="max-width:640px;padding:1.5rem;text-align:center;margin-bottom:1.5rem;">
+  <p style="color:var(--gray-400);margin:0;">No team members yet. Use the invite form above to add people.</p>
+</div>
+{% endif %}
+
+{# ── Pending invites table ── #}
+{% if pending_invites %}
+<h3 style="margin-bottom:0.75rem;font-size:0.95rem;color:var(--gray-700);">Pending Invites</h3>
+<div class="team-table-wrap">
+  <table class="team-table">
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Invited</th>
+        <th>Expires</th>
+        <th>Invite Link</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inv in pending_invites %}
+      <tr>
+        <td style="font-weight:500;color:var(--gray-800);">{{ inv.email }}</td>
+        <td><span class="role-badge">{{ role_labels[inv.role] }}</span></td>
+        <td style="font-size:0.8rem;color:var(--gray-500);">{{ inv.created_at.strftime('%d %b %Y') }}</td>
+        <td style="font-size:0.8rem;color:var(--gray-500);">{{ inv.expires_at.strftime('%d %b %Y') }}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <span class="invite-link-text" id="link-{{ inv.id }}">/team/accept/{{ inv.token }}</span>
+            <button class="copy-btn" onclick="copyText('link-{{ inv.id }}')">&#x1F4CB;</button>
+          </div>
+        </td>
+        <td>
+          <form method="post" action="/team/invites/{{ inv.id }}/revoke"
+                onsubmit="return confirm('Revoke this invite for {{ inv.email }}?')">
+            <button type="submit" class="btn btn-outline btn-sm"
+                    style="color:#dc2626;border-color:#fca5a5;">Revoke</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<script>
+function copyInviteLink() {
+  var el = document.getElementById('invite-link-url');
+  if (!el) return;
+  var text = el.textContent.trim();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() {
+      alert('Link copied to clipboard!');
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('Link copied!');
+  }
+}
+
+function copyText(elemId) {
+  var el = document.getElementById(elemId);
+  if (!el) return;
+  var text = window.location.origin + el.textContent.trim();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() {
+      alert('Link copied to clipboard!');
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('Link copied!');
+  }
+}
+</script>
+{% endblock %}

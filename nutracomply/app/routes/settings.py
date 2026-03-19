@@ -1,15 +1,16 @@
 """
-Settings Route — manages user profile settings, notification email addresses.
+Settings Route — manages user profile settings, notification email addresses,
+profile name updates, and password changes.
 """
 import re
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from pathlib import Path
 
 from app.database import get_db
-from app.routes.auth import get_current_user_from_cookie
+from app.routes.auth import get_current_user_from_cookie, hash_password, verify_password
 from app.models import Alert, AlertStatus
 
 router = APIRouter()
@@ -68,4 +69,82 @@ async def save_notification_emails(request: Request, db: Session = Depends(get_d
     return RedirectResponse(
         url="/settings?msg=Notification+emails+saved+successfully&type=success",
         status_code=302
+    )
+
+
+@router.post("/settings/profile")
+async def save_profile(
+    request: Request,
+    db: Session = Depends(get_db),
+    name: str = Form(...),
+):
+    """Update the user's display name."""
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+
+    name = name.strip()
+    if len(name) < 2:
+        return RedirectResponse(
+            url="/settings?msg=Name+must+be+at+least+2+characters&type=error",
+            status_code=302,
+        )
+    if len(name) > 100:
+        return RedirectResponse(
+            url="/settings?msg=Name+must+be+100+characters+or+fewer&type=error",
+            status_code=302,
+        )
+
+    user.name = name
+    db.commit()
+
+    return RedirectResponse(
+        url="/settings?msg=Profile+updated+successfully&type=success",
+        status_code=302,
+    )
+
+
+@router.post("/settings/password")
+async def change_password(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+):
+    """Change the user's password after verifying the current one."""
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+
+    if not verify_password(current_password, user.hashed_password):
+        return RedirectResponse(
+            url="/settings?msg=Current+password+is+incorrect&type=error",
+            status_code=302,
+        )
+
+    if new_password == current_password:
+        return RedirectResponse(
+            url="/settings?msg=New+password+must+be+different+from+current+password&type=error",
+            status_code=302,
+        )
+
+    if len(new_password) < 8:
+        return RedirectResponse(
+            url="/settings?msg=New+password+must+be+at+least+8+characters&type=error",
+            status_code=302,
+        )
+
+    if new_password != confirm_password:
+        return RedirectResponse(
+            url="/settings?msg=New+password+and+confirmation+do+not+match&type=error",
+            status_code=302,
+        )
+
+    user.hashed_password = hash_password(new_password)
+    db.commit()
+
+    return RedirectResponse(
+        url="/settings?msg=Password+updated+successfully&type=success",
+        status_code=302,
     )

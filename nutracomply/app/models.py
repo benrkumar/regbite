@@ -105,6 +105,7 @@ class User(Base):
     role = Column(SAEnum(UserRole), default=UserRole.ACCOUNT_ADMIN)
     notification_emails = Column(JSON, default=list)
     created_at = Column(DateTime, default=datetime.utcnow)
+    team_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # who invited/owns this sub-user
 
     products = relationship("Product", back_populates="owner")
     licenses = relationship("LicenseRenewal", back_populates="owner")
@@ -425,3 +426,20 @@ class ComplianceReport(Base):
     owner = relationship("User")
     product = relationship("Product", back_populates="reports", foreign_keys=[product_id])
     label_version = relationship("LabelVersion")
+
+
+# ─── Team Invites ─────────────────────────────────────────────────────────────
+
+class TeamInvite(Base):
+    __tablename__ = "team_invites"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    email       = Column(String(255), nullable=False, index=True)
+    role        = Column(SAEnum(UserRole), nullable=False, default=UserRole.VIEWER)
+    invited_by  = Column(Integer, ForeignKey("users.id"), nullable=False)
+    token       = Column(String(100), unique=True, nullable=False)
+    is_accepted = Column(Boolean, default=False)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+    expires_at  = Column(DateTime, nullable=False)
+
+    inviter = relationship("User", foreign_keys=[invited_by])

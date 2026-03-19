@@ -87,6 +87,21 @@ def _run_migrations():
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS notification_emails JSON DEFAULT '[]'",
         # v3: RBAC role column
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'account_admin'",
+        # v4: team_id for sub-user tracking
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES users(id) ON DELETE SET NULL",
+        # v4: team_invites table
+        """CREATE TABLE IF NOT EXISTS team_invites (
+            id SERIAL PRIMARY KEY,
+            email VARCHAR(255) NOT NULL,
+            role VARCHAR(50) NOT NULL DEFAULT 'viewer',
+            invited_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token VARCHAR(100) UNIQUE NOT NULL,
+            is_accepted BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT NOW(),
+            expires_at TIMESTAMP NOT NULL
+        )""",
+        "CREATE INDEX IF NOT EXISTS ix_team_invites_token ON team_invites (token)",
+        "CREATE INDEX IF NOT EXISTS ix_team_invites_email ON team_invites (email)",
     ]
     for sql in migrations:
         try:
@@ -272,6 +287,7 @@ from app.routes import settings as settings_router
 from app.routes import renewals as renewals_router
 from app.routes import reports as reports_router
 from app.routes import checker as checker_router
+from app.routes import team as team_router
 
 app.include_router(auth.router)
 app.include_router(products.router)
@@ -283,6 +299,7 @@ app.include_router(admin.router)
 app.include_router(renewals_router.router)
 app.include_router(reports_router.router)
 app.include_router(checker_router.router)
+app.include_router(team_router.router)
 
 try:
     from app.routes import admin_llm
@@ -295,7 +312,13 @@ except Exception as _llm_err:
 
 @app.get("/")
 async def root(request: Request):
-    return RedirectResponse(url="/dashboard")
+    from app.routes.auth import get_current_user_from_cookie
+    from app.database import get_db
+    db = next(get_db())
+    user = get_current_user_from_cookie(request, db)
+    if user:
+        return RedirectResponse(url="/dashboard")
+    return templates.TemplateResponse("landing.html", {"request": request})
 
 
 @app.get("/dashboard")
