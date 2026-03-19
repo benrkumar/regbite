@@ -120,14 +120,51 @@
     .adm-flash-error   { background:#FFF5F5; color:#991B1B; border-left:3px solid #FECACA; }
     .adm-flash-info    { background:#F5F5F5; color:#525252; border-left:3px solid #D4D4D4; }
 
-    @media (max-width: 768px) { .adm-sidebar { display:none; } }
+    /* Mobile hamburger */
+    .adm-hamburger {
+      display:none; background:none; border:1px solid #EBEBEB; border-radius:4px;
+      cursor:pointer; padding:0.3rem 0.5rem; color:#737373; font-size:1rem;
+      line-height:1; margin-right:0.75rem; transition:all 0.12s;
+    }
+    .adm-hamburger:hover { background:#F5F5F5; color:#111111; }
+
+    /* Mobile overlay */
+    .adm-overlay {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:199;
+    }
+    .adm-overlay.open { display:block; }
+
+    @media (max-width: 900px) {
+      .adm-sidebar {
+        position:fixed; top:0; left:0; bottom:0; z-index:200;
+        transform:translateX(-100%); transition:transform 0.25s ease;
+        box-shadow:none;
+      }
+      .adm-sidebar.open { transform:translateX(0); box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+      .adm-hamburger { display:inline-flex; align-items:center; justify-content:center; }
+      .adm-main { width:100%; }
+    }
+
+    @media (max-width: 768px) {
+      .adm-content { padding:1.25rem 1rem; }
+      .adm-topbar  { padding:0.7rem 1rem; }
+      .adm-stat-grid { grid-template-columns:repeat(2,1fr); }
+      .adm-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .adm-table th, .adm-table td { white-space:nowrap; }
+    }
+
+    @media (max-width: 480px) {
+      .adm-content { padding:1rem 0.85rem; }
+      .adm-stat-grid { grid-template-columns:1fr 1fr; gap:0.65rem; }
+      .adm-stat-val { font-size:1.4rem; }
+    }
   </style>
 </head>
 <body>
 <div class="adm-wrap">
 
   {# ── Sidebar ── #}
-  <aside class="adm-sidebar">
+  <aside class="adm-sidebar" id="admSidebar">
     <div class="adm-brand">
       <div>
         <div class="adm-brand-name">● RegBite</div>
@@ -180,10 +217,16 @@
     </div>
   </aside>
 
+  {# Mobile overlay #}
+  <div class="adm-overlay" id="admOverlay" onclick="admCloseSidebar()"></div>
+
   {# ── Main ── #}
   <main class="adm-main">
     <div class="adm-topbar">
-      <div class="adm-topbar-title">{% block page_title %}Admin{% endblock %}</div>
+      <div style="display:flex;align-items:center;gap:0;">
+        <button class="adm-hamburger" onclick="admToggleSidebar()" aria-label="Menu">☰</button>
+        <div class="adm-topbar-title">{% block page_title %}Admin{% endblock %}</div>
+      </div>
       <div style="display:flex;align-items:center;gap:1.2rem;">
         {% if unread_alerts is defined and unread_alerts > 0 %}
         <a href="/alerts" style="font-size:0.82rem;color:#991B1B;font-weight:500;text-decoration:none;">
@@ -203,5 +246,23 @@
   </main>
 
 </div>
+<script>
+function admToggleSidebar() {
+  var sb = document.getElementById('admSidebar');
+  var ov = document.getElementById('admOverlay');
+  var open = sb.classList.toggle('open');
+  ov.classList.toggle('open', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+function admCloseSidebar() {
+  document.getElementById('admSidebar').classList.remove('open');
+  document.getElementById('admOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+// Close on nav link tap (mobile UX)
+document.querySelectorAll('.adm-nav-link').forEach(function(a) {
+  a.addEventListener('click', admCloseSidebar);
+});
+</script>
 </body>
 </html>

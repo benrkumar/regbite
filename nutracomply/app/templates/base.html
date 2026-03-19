@@ -123,6 +123,34 @@
       RegBite &mdash; FSSAI Compliance Monitor &nbsp;&middot;&nbsp; Not legal advice
     </footer>
 
+    {# ── Mobile bottom nav (≤900px) ── #}
+    <nav class="mob-nav" aria-label="Mobile navigation">
+      <a href="/dashboard" class="mob-nav-item{% if request.url.path == '/dashboard' %} active{% endif %}">
+        <span class="mob-nav-icon">—</span>
+        <span class="mob-nav-lbl">Home</span>
+      </a>
+      <a href="/products" class="mob-nav-item{% if '/products' in request.url.path %} active{% endif %}">
+        <span class="mob-nav-icon">□</span>
+        <span class="mob-nav-lbl">Products</span>
+      </a>
+      <a href="/checker" class="mob-nav-item{% if request.url.path == '/checker' %} active{% endif %}">
+        <span class="mob-nav-icon">◇</span>
+        <span class="mob-nav-lbl">Checker</span>
+      </a>
+      <a href="/alerts" class="mob-nav-item{% if request.url.path == '/alerts' %} active{% endif %}">
+        <span class="mob-nav-icon">◎</span>
+        <span class="mob-nav-lbl">Alerts
+          {% if unread_alerts is defined and unread_alerts > 0 %}
+          <span class="mob-nav-badge">{{ unread_alerts }}</span>
+          {% endif %}
+        </span>
+      </a>
+      <button class="mob-nav-item" onclick="toggleSidebar()" aria-label="More">
+        <span class="mob-nav-icon">☰</span>
+        <span class="mob-nav-lbl">More</span>
+      </button>
+    </nav>
+
   </div><!-- /.main-area -->
 
 </div><!-- /.app-shell -->
