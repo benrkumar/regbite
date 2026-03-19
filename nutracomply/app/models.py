@@ -10,9 +10,15 @@ import enum
 from app.database import Base
 
 
-# SQLite-compatible SAEnum: stores values as VARCHAR, not DB-native enum
+# SQLite-compatible SAEnum: stores values as VARCHAR, not DB-native enum.
+# Explicitly sets values_callable so SQLAlchemy always uses enum.value (lowercase)
+# for storage — Python 3.11+ changed str(StrEnum.MEMBER) to return the NAME,
+# which caused SQLAlchemy to build its lookup from names (uppercase) instead.
 def SAEnum(*args, **kwargs):
     kwargs.setdefault("native_enum", False)
+    # Force value-based storage so lookup keys match the lowercase values in the DB
+    if args and isinstance(args[0], type) and issubclass(args[0], enum.Enum):
+        kwargs.setdefault("values_callable", lambda x: [e.value for e in x])
     return _SAEnumType(*args, **kwargs)
 
 

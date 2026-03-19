@@ -180,6 +180,12 @@ def _run_migrations():
         )""",
         "CREATE INDEX IF NOT EXISTS ix_notifications_user_id ON notifications (user_id)",
         "CREATE INDEX IF NOT EXISTS ix_notifications_is_read ON notifications (is_read)",
+        # Normalise role column to lowercase values (Python 3.11+ str-enum name/value fix)
+        "UPDATE users SET role = 'account_admin' WHERE role = 'ACCOUNT_ADMIN'",
+        "UPDATE users SET role = 'super_admin'   WHERE role = 'SUPER_ADMIN'",
+        "UPDATE users SET role = 'editor'        WHERE role = 'EDITOR'",
+        "UPDATE users SET role = 'viewer'        WHERE role = 'VIEWER'",
+        "UPDATE users SET role = 'consultant'    WHERE role = 'CONSULTANT'",
     ]
     for sql in migrations:
         try:
