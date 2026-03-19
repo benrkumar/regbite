@@ -103,6 +103,12 @@ async def upload_label(
     db.commit()
     db.refresh(label_version)
 
+    try:
+        from app.services.activity_service import log_action
+        log_action(user.id, "label_uploaded", "label", label_version.id, detail=f"Uploaded label for {product.name}")
+    except Exception:
+        pass
+
     # Run OCR + extraction + compliance check in background
     background_tasks.add_task(_process_label, label_version.id)
 

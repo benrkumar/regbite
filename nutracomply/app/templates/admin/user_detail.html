@@ -1,0 +1,194 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}User — {{ target.name }}{% endblock %}
+{% block page_title %}User Detail{% endblock %}
+
+{% block content %}
+
+{# Breadcrumb #}
+<div style="margin-bottom:1.2rem;font-size:0.84rem;color:#64748b;">
+  <a href="/admin/users" style="color:#6366f1;text-decoration:none;">Users</a>
+  <span style="margin:0 0.4rem;color:#cbd5e1;">/</span>
+  <span style="color:#0f172a;font-weight:600;">{{ target.name }}</span>
+</div>
+
+{# Profile Card #}
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:1.5rem;margin-bottom:1.25rem;display:flex;gap:1.25rem;flex-wrap:wrap;align-items:flex-start;">
+  {# Avatar circle #}
+  <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+    <span style="color:#fff;font-size:1.6rem;font-weight:800;">{{ target.name[0].upper() }}</span>
+  </div>
+
+  <div style="flex:1;min-width:200px;">
+    <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.3rem;">
+      <span style="font-size:1.15rem;font-weight:800;color:#0f172a;">{{ target.name }}</span>
+      {% if target.is_admin %}
+      <span class="adm-badge badge-purple">Super Admin</span>
+      {% else %}
+      <span class="adm-badge badge-gray">User</span>
+      {% endif %}
+      {% if target.is_active %}
+      <span class="adm-badge badge-green">Active</span>
+      {% else %}
+      <span class="adm-badge badge-red">Suspended</span>
+      {% endif %}
+    </div>
+    <div style="font-size:0.86rem;color:#64748b;margin-bottom:0.5rem;">{{ target.email }}</div>
+    <div style="font-size:0.82rem;color:#94a3b8;">
+      Member since {{ target.created_at.strftime('%d %B %Y') }}
+      {% if target.company_name %}&nbsp;&middot;&nbsp;{{ target.company_name }}{% endif %}
+      {% if target.company_gstin %}&nbsp;&middot;&nbsp;GSTIN: {{ target.company_gstin }}{% endif %}
+    </div>
+  </div>
+
+  {# Stats strip #}
+  <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center;">
+    <div style="text-align:center;">
+      <div style="font-size:1.5rem;font-weight:800;color:#0f172a;">{{ products|length }}</div>
+      <div style="font-size:0.73rem;color:#64748b;font-weight:500;">Products</div>
+    </div>
+    <div style="text-align:center;">
+      <div style="font-size:1.5rem;font-weight:800;color:#0f172a;">{{ report_count }}</div>
+      <div style="font-size:0.73rem;color:#64748b;font-weight:500;">Reports</div>
+    </div>
+    <div style="text-align:center;">
+      {% if recent_activity %}
+      <div style="font-size:0.84rem;font-weight:700;color:#0f172a;">{{ recent_activity[0].created_at.strftime('%d %b %Y') }}</div>
+      {% else %}
+      <div style="font-size:0.84rem;font-weight:700;color:#94a3b8;">No activity</div>
+      {% endif %}
+      <div style="font-size:0.73rem;color:#64748b;font-weight:500;">Last Active</div>
+    </div>
+  </div>
+</div>
+
+{# Actions #}
+{% if target.id != user.id %}
+<div style="display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+  <form method="post" action="/admin/users/{{ target.id }}/toggle-admin-detail" style="margin:0;">
+    <button type="submit" class="adm-btn {% if target.is_admin %}adm-btn-danger{% else %}adm-btn-primary{% endif %}"
+            onclick="return confirm('{{ 'Revoke admin from' if target.is_admin else 'Grant admin to' }} {{ target.name }}?')">
+      {{ 'Revoke Admin' if target.is_admin else 'Make Admin' }}
+    </button>
+  </form>
+  <form method="post" action="/admin/users/{{ target.id }}/toggle-active-detail" style="margin:0;">
+    <button type="submit" class="adm-btn {% if target.is_active %}adm-btn-danger{% endif %}"
+            onclick="return confirm('{{ 'Suspend' if target.is_active else 'Activate' }} {{ target.name }}?')">
+      {{ 'Suspend User' if target.is_active else 'Activate User' }}
+    </button>
+  </form>
+</div>
+{% endif %}
+
+{# Products Table #}
+<div style="margin-bottom:1.5rem;">
+  <div class="adm-section-title">Products ({{ products|length }})</div>
+  {% if products %}
+  <div class="adm-table-wrap">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Compliance Score</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td style="font-weight:600;color:#0f172a;">{{ p.name }}</td>
+          <td style="font-size:0.82rem;color:#64748b;">{{ p.category or '—' }}</td>
+          <td>
+            {% set score = p.compliance_score %}
+            {% if score is not none %}
+              {% if score >= 80 %}
+              <span class="adm-badge badge-green">{{ score }}%</span>
+              {% elif score >= 50 %}
+              <span class="adm-badge badge-yellow">{{ score }}%</span>
+              {% else %}
+              <span class="adm-badge badge-red">{{ score }}%</span>
+              {% endif %}
+            {% else %}
+            <span class="adm-badge badge-gray">No label</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if p.is_active %}
+            <span class="adm-badge badge-green">Active</span>
+            {% else %}
+            <span class="adm-badge badge-gray">Inactive</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:1.5rem;text-align:center;color:#94a3b8;font-size:0.86rem;">
+    No active products for this user.
+  </div>
+  {% endif %}
+</div>
+
+{# Recent Activity #}
+<div>
+  <div class="adm-section-title">Recent Activity (last 20 events)</div>
+  {% if recent_activity %}
+  <div class="adm-table-wrap">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Action</th>
+          <th>Resource</th>
+          <th>Detail</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in recent_activity %}
+        <tr>
+          <td style="font-size:0.78rem;color:#64748b;white-space:nowrap;">
+            {{ log.created_at.strftime('%d %b %Y %H:%M') }}
+          </td>
+          <td>
+            {% set action = log.action %}
+            {% if action in ['login', 'logout'] %}
+            <span class="adm-badge badge-blue">{{ action }}</span>
+            {% elif action in ['label_uploaded', 'compliance_checked'] %}
+            <span class="adm-badge badge-purple">{{ action }}</span>
+            {% elif action in ['report_generated', 'report_shared'] %}
+            <span class="adm-badge badge-green">{{ action }}</span>
+            {% elif action in ['product_created', 'product_deleted'] %}
+            <span class="adm-badge badge-yellow">{{ action }}</span>
+            {% elif action == 'rule_updated' %}
+            <span class="adm-badge badge-orange">{{ action }}</span>
+            {% elif action in ['api_key_created', 'password_changed'] %}
+            <span class="adm-badge badge-red">{{ action }}</span>
+            {% else %}
+            <span class="adm-badge badge-gray">{{ action }}</span>
+            {% endif %}
+          </td>
+          <td style="font-size:0.82rem;color:#475569;">
+            {% if log.resource_type %}
+            {{ log.resource_type }}{% if log.resource_id %} #{{ log.resource_id }}{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:0.82rem;color:#64748b;">{{ log.detail or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:1.5rem;text-align:center;color:#94a3b8;font-size:0.86rem;">
+    No activity recorded for this user.
+  </div>
+  {% endif %}
+</div>
+
+<div style="margin-top:1.5rem;">
+  <a href="/admin/users" class="adm-btn">&larr; Back to Users</a>
+</div>
+
+{% endblock %}

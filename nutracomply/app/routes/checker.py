@@ -152,6 +152,12 @@ async def run_check(
     db.commit()
     db.refresh(label)
 
+    try:
+        from app.services.activity_service import log_action
+        log_action(user.id, "compliance_checked", "product", product.id, detail=f"Checker run for {product_name}")
+    except Exception:
+        pass
+
     # Generate report
     try:
         from app.services.report_service import get_or_create_report

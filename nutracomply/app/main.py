@@ -102,6 +102,38 @@ def _run_migrations():
         )""",
         "CREATE INDEX IF NOT EXISTS ix_team_invites_token ON team_invites (token)",
         "CREATE INDEX IF NOT EXISTS ix_team_invites_email ON team_invites (email)",
+        # v5: activity logs
+        """CREATE TABLE IF NOT EXISTS activity_logs (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            action VARCHAR(100) NOT NULL,
+            resource_type VARCHAR(50),
+            resource_id INTEGER,
+            detail VARCHAR(500),
+            ip_address VARCHAR(45),
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS ix_activity_logs_user_id ON activity_logs (user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_activity_logs_action ON activity_logs (action)",
+        "CREATE INDEX IF NOT EXISTS ix_activity_logs_created_at ON activity_logs (created_at)",
+        # v5: api keys
+        """CREATE TABLE IF NOT EXISTS api_keys (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name VARCHAR(100) NOT NULL,
+            key_prefix VARCHAR(10) NOT NULL,
+            key_hash VARCHAR(200) NOT NULL,
+            last_used_at TIMESTAMP,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS ix_api_keys_user_id ON api_keys (user_id)",
+        # v6: onboarding columns
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_complete BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_gstin VARCHAR(20)",
+        # v6: product brand column
+        "ALTER TABLE products ADD COLUMN IF NOT EXISTS brand VARCHAR(255)",
     ]
     for sql in migrations:
         try:
@@ -288,6 +320,7 @@ from app.routes import renewals as renewals_router
 from app.routes import reports as reports_router
 from app.routes import checker as checker_router
 from app.routes import team as team_router
+from app.routes import onboarding as onboarding_router
 
 app.include_router(auth.router)
 app.include_router(products.router)
@@ -300,6 +333,7 @@ app.include_router(renewals_router.router)
 app.include_router(reports_router.router)
 app.include_router(checker_router.router)
 app.include_router(team_router.router)
+app.include_router(onboarding_router.router)
 
 try:
     from app.routes import admin_llm
@@ -332,6 +366,10 @@ async def dashboard(request: Request):
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/login")
+
+    # Redirect new users to onboarding (skip demo accounts ben/admin)
+    if not user.onboarding_complete and user.email not in ("ben", "admin"):
+        return RedirectResponse(url="/onboarding")
 
     products_list = (
         db.query(Product)
@@ -435,6 +473,15 @@ async def reg_alerts(request: Request):
         "unread_alerts": unread_alerts,
         "current_severity": severity_filter,
     })
+
+
+@app.get("/pricing")
+async def pricing_page(request: Request):
+    from app.routes.auth import get_current_user_from_cookie
+    from app.database import get_db
+    db = next(get_db())
+    user = get_current_user_from_cookie(request, db)
+    return templates.TemplateResponse("pricing.html", {"request": request, "user": user})
 
 
 @app.get("/r/{token}")

@@ -446,3 +446,110 @@ async def archive_alert(alert_id: int, request: Request, db: Session = Depends(g
         db.commit()
 
     return RedirectResponse(url="/admin/published-alerts", status_code=302)
+
+
+# ── Activity Log ──────────────────────────────────────────────────────────────
+
+@router.get("/activity")
+async def activity_log(request: Request, db: Session = Depends(get_db)):
+    user, redir = _require_admin(request, db)
+    if redir:
+        return redir
+    from app.models import ActivityLog
+    from datetime import timedelta
+
+    since = request.query_params.get("since", "")
+    page = int(request.query_params.get("page", 1))
+    per_page = 50
+
+    q = db.query(ActivityLog)
+    if since == "24h":
+        cutoff = datetime.utcnow() - timedelta(hours=24)
+        q = q.filter(ActivityLog.created_at >= cutoff)
+    elif since == "7d":
+        cutoff = datetime.utcnow() - timedelta(days=7)
+        q = q.filter(ActivityLog.created_at >= cutoff)
+
+    total = q.count()
+    logs = (
+        q
+        .order_by(ActivityLog.created_at.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+    # eager-load user names
+    for log in logs:
+        _ = log.user
+
+    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    return templates.TemplateResponse("admin/activity_log.html", {
+        "request": request,
+        "user": user,
+        "logs": logs,
+        "page": page,
+        "total": total,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page,
+        "unread_alerts": unread_alerts,
+        "since": since,
+    })
+
+
+# ── User Detail ───────────────────────────────────────────────────────────────
+
+@router.get("/users/{user_id}")
+async def admin_user_detail(user_id: int, request: Request, db: Session = Depends(get_db)):
+    user, redir = _require_admin(request, db)
+    if redir:
+        return redir
+    from app.models import ActivityLog, ComplianceReport
+
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        return RedirectResponse(url="/admin/users?msg=User+not+found&type=error")
+    products = db.query(Product).filter(Product.user_id == user_id, Product.is_active == True).all()
+    recent_activity = (
+        db.query(ActivityLog)
+        .filter(ActivityLog.user_id == user_id)
+        .order_by(ActivityLog.created_at.desc())
+        .limit(20)
+        .all()
+    )
+    report_count = db.query(ComplianceReport).filter(ComplianceReport.user_id == user_id).count()
+    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    return templates.TemplateResponse("admin/user_detail.html", {
+        "request": request,
+        "user": user,
+        "target": target,
+        "products": products,
+        "recent_activity": recent_activity,
+        "report_count": report_count,
+        "unread_alerts": unread_alerts,
+        "flash_message": request.query_params.get("msg"),
+        "flash_type": request.query_params.get("type", "info"),
+    })
+
+
+@router.post("/users/{user_id}/toggle-admin-detail")
+async def admin_toggle_admin(user_id: int, request: Request, db: Session = Depends(get_db)):
+    user, redir = _require_admin(request, db)
+    if redir:
+        return redir
+    target = db.query(User).filter(User.id == user_id).first()
+    if target and target.id != user.id:  # can't demote yourself
+        target.is_admin = not target.is_admin
+        db.commit()
+    return RedirectResponse(url=f"/admin/users/{user_id}?msg=Updated&type=success", status_code=302)
+
+
+@router.post("/users/{user_id}/toggle-active-detail")
+async def admin_toggle_active(user_id: int, request: Request, db: Session = Depends(get_db)):
+    user, redir = _require_admin(request, db)
+    if redir:
+        return redir
+    target = db.query(User).filter(User.id == user_id).first()
+    if target and target.id != user.id:  # can't deactivate yourself
+        target.is_active = not target.is_active
+        db.commit()
+    return RedirectResponse(url=f"/admin/users/{user_id}?msg=Updated&type=success", status_code=302)

@@ -3,6 +3,7 @@ Settings Route — manages user profile settings, notification email addresses,
 profile name updates, and password changes.
 """
 import re
+import secrets
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -11,7 +12,7 @@ from pathlib import Path
 
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie, hash_password, verify_password
-from app.models import Alert, AlertStatus
+from app.models import Alert, AlertStatus, APIKey
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -148,3 +149,82 @@ async def change_password(
         url="/settings?msg=Password+updated+successfully&type=success",
         status_code=302,
     )
+
+
+# ── API Keys ──────────────────────────────────────────────────────────────────
+
+@router.get("/settings/api-keys")
+async def api_keys_page(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    keys = db.query(APIKey).filter(APIKey.user_id == user.id, APIKey.is_active == True).order_by(APIKey.created_at.desc()).all()
+    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    new_key = request.query_params.get("new_key")  # shown once after creation
+    return templates.TemplateResponse("api_keys.html", {
+        "request": request,
+        "user": user,
+        "keys": keys,
+        "new_key": new_key,
+        "unread_alerts": unread_alerts,
+        "flash_message": request.query_params.get("msg"),
+        "flash_type": request.query_params.get("type", "info"),
+    })
+
+
+@router.post("/settings/api-keys/create")
+async def create_api_key(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    if not name:
+        return RedirectResponse(url="/settings/api-keys?msg=Key+name+is+required&type=error", status_code=302)
+
+    # Check limit: max 5 active keys
+    active_count = db.query(APIKey).filter(APIKey.user_id == user.id, APIKey.is_active == True).count()
+    if active_count >= 5:
+        return RedirectResponse(url="/settings/api-keys?msg=Maximum+5+API+keys+allowed&type=error", status_code=302)
+
+    # Generate key: rb_live_{32 random chars}
+    raw_key = f"rb_live_{secrets.token_urlsafe(24)}"
+    key_prefix = raw_key[:10]
+
+    # Hash the key (use passlib bcrypt same as passwords)
+    key_hash = hash_password(raw_key)
+
+    api_key = APIKey(
+        user_id=user.id,
+        name=name,
+        key_prefix=key_prefix,
+        key_hash=key_hash,
+    )
+    db.add(api_key)
+    db.commit()
+    db.refresh(api_key)
+
+    try:
+        from app.services.activity_service import log_action
+        log_action(user.id, "api_key_created", "api_key", api_key.id, detail=f"Created API key '{name}'")
+    except Exception:
+        pass
+
+    # Pass the raw key in the redirect query param (shown once only)
+    from urllib.parse import quote
+    return RedirectResponse(url=f"/settings/api-keys?new_key={quote(raw_key)}&msg=API+key+created+successfully&type=success", status_code=302)
+
+
+@router.post("/settings/api-keys/{key_id}/revoke")
+async def revoke_api_key(key_id: int, request: Request, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+
+    key = db.query(APIKey).filter(APIKey.id == key_id, APIKey.user_id == user.id).first()
+    if key:
+        key.is_active = False
+        db.commit()
+
+    return RedirectResponse(url="/settings/api-keys?msg=API+key+revoked&type=success", status_code=302)

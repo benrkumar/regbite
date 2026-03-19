@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to RegBite — Setup</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:      #6366f1;
+      --primary-dark: #4f46e5;
+      --primary-deep: #3730a3;
+      --gray-50:  #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-400: #94a3b8;
+      --gray-500: #64748b;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1e293b;
+      --gray-900: #0f172a;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    html { font-size: 16px; }
+    body {
+      font-family: var(--font);
+      background: var(--gray-50);
+      color: var(--gray-800);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .wizard-wrap {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    /* Logo */
+    .wizard-logo {
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+    .wizard-logo-inner {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+    }
+    .wizard-logo-icon {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #4ade80 0%, #16a34a 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      box-shadow: 0 4px 12px rgba(34,197,94,0.35);
+    }
+    .wizard-logo-name {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--primary);
+      letter-spacing: -0.03em;
+    }
+
+    /* Progress bar */
+    .progress-wrap {
+      margin-bottom: 1.75rem;
+    }
+    .progress-steps {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 0.6rem;
+    }
+    .progress-step {
+      flex: 1;
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--gray-400);
+      position: relative;
+    }
+    .progress-step.active { color: var(--primary); }
+    .progress-step.done   { color: var(--gray-500); }
+    .progress-step-dot {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--gray-200);
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 0.35rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--gray-400);
+      transition: all 0.2s;
+    }
+    .progress-step.active .progress-step-dot {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 0 0 4px rgba(99,102,241,0.15);
+    }
+    .progress-step.done .progress-step-dot {
+      border-color: #22c55e;
+      background: #22c55e;
+      color: #fff;
+    }
+    .progress-line {
+      flex: 1;
+      height: 2px;
+      background: var(--gray-200);
+      margin-bottom: 1.5rem;
+      transition: background 0.3s;
+    }
+    .progress-line.done { background: #22c55e; }
+
+    .progress-bar-track {
+      height: 4px;
+      background: var(--gray-200);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--primary) 0%, #818cf8 100%);
+      transition: width 0.4s ease;
+    }
+
+    /* Card */
+    .wizard-card {
+      background: #fff;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 20px;
+      padding: 2.25rem 2.5rem 2rem;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    }
+
+    .step-heading {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--gray-900);
+      letter-spacing: -0.025em;
+      margin-bottom: 0.4rem;
+    }
+    .step-sub {
+      font-size: 0.875rem;
+      color: var(--gray-500);
+      margin-bottom: 1.75rem;
+      line-height: 1.55;
+    }
+
+    /* Form elements */
+    .form-field { margin-bottom: 1.1rem; }
+    .form-field label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-bottom: 0.38rem;
+    }
+    .form-field .optional {
+      font-size: 0.72rem;
+      font-weight: 400;
+      color: var(--gray-400);
+      margin-left: 0.35rem;
+    }
+    .form-input {
+      width: 100%;
+      padding: 0.65rem 0.9rem;
+      border: 1.5px solid var(--gray-200);
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-family: var(--font);
+      color: var(--gray-900);
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    }
+    .form-input::placeholder { color: var(--gray-400); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.65rem 1.5rem;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+      font-family: var(--font);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(99,102,241,0.3);
+      width: 100%;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-deep) 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(99,102,241,0.38);
+    }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-outline {
+      background: transparent;
+      color: var(--primary);
+      border: 1.5px solid var(--primary);
+      width: 100%;
+    }
+    .btn-outline:hover { background: #ede9fe; }
+
+    .btn-actions { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1.5rem; }
+    .btn-actions-row { display: flex; gap: 0.75rem; }
+    .btn-actions-row .btn { flex: 1; }
+
+    .skip-link {
+      display: block;
+      text-align: center;
+      margin-top: 0.85rem;
+      font-size: 0.82rem;
+      color: var(--gray-400);
+      cursor: pointer;
+    }
+    .skip-link:hover { color: var(--gray-600); }
+    .skip-form { display: inline; }
+
+    /* Step 3 success */
+    .success-icon {
+      font-size: 3.5rem;
+      text-align: center;
+      margin-bottom: 1rem;
+      line-height: 1;
+    }
+    .success-heading {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--gray-900);
+      letter-spacing: -0.025em;
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+    .success-sub {
+      font-size: 0.9rem;
+      color: var(--gray-500);
+      text-align: center;
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 600px) {
+      .wizard-card { padding: 1.75rem 1.25rem 1.5rem; }
+      .btn-actions-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="wizard-wrap">
+
+  <!-- Logo -->
+  <div class="wizard-logo">
+    <div class="wizard-logo-inner">
+      <div class="wizard-logo-icon">&#x1F33F;</div>
+      <span class="wizard-logo-name">RegBite</span>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-wrap">
+    <div class="progress-steps">
+      <div class="progress-step {% if step >= 1 %}{% if step > 1 %}done{% else %}active{% endif %}{% endif %}">
+        <div class="progress-step-dot">{% if step > 1 %}&#10003;{% else %}1{% endif %}</div>
+        Company
+      </div>
+      <div class="progress-line {% if step > 1 %}done{% endif %}"></div>
+      <div class="progress-step {% if step >= 2 %}{% if step > 2 %}done{% else %}active{% endif %}{% endif %}">
+        <div class="progress-step-dot">{% if step > 2 %}&#10003;{% else %}2{% endif %}</div>
+        First Product
+      </div>
+      <div class="progress-line {% if step > 2 %}done{% endif %}"></div>
+      <div class="progress-step {% if step == 3 %}active{% endif %}">
+        <div class="progress-step-dot">3</div>
+        Done
+      </div>
+    </div>
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" style="width: {% if step == 1 %}33{% elif step == 2 %}66{% else %}100{% endif %}%;"></div>
+    </div>
+  </div>
+
+  <!-- Card -->
+  <div class="wizard-card">
+
+    {% if step == 1 %}
+    <!-- ── Step 1: Company Setup ── -->
+    <div class="step-heading">Welcome to RegBite!</div>
+    <p class="step-sub">Let&rsquo;s set up your account. This takes less than a minute.</p>
+
+    <form method="post" action="/onboarding/step1">
+      <div class="form-field">
+        <label>Company Name <span class="optional">(required)</span></label>
+        <input type="text" name="company_name" class="form-input" placeholder="e.g. HealthFirst Nutrition Pvt. Ltd." required
+               value="{{ user.company_name or '' }}" />
+      </div>
+      <div class="form-field">
+        <label>GSTIN <span class="optional">optional</span></label>
+        <input type="text" name="company_gstin" class="form-input" placeholder="22AAAAA0000A1Z5"
+               value="{{ user.company_gstin or '' }}" maxlength="20" />
+      </div>
+      <div class="btn-actions">
+        <button type="submit" class="btn btn-primary">Continue &rarr;</button>
+      </div>
+    </form>
+
+    <form method="post" action="/onboarding/skip" class="skip-form">
+      <button type="submit" class="skip-link" style="background:none;border:none;padding:0;font-family:inherit;">Skip for now</button>
+    </form>
+
+    {% elif step == 2 %}
+    <!-- ── Step 2: First Product ── -->
+    <div class="step-heading">Add your first product to check</div>
+    <p class="step-sub">Tell us about a product you want to run compliance checks on.</p>
+
+    <form method="post" action="/onboarding/step2">
+      <div class="form-field">
+        <label>Product Name <span class="optional">(required)</span></label>
+        <input type="text" name="product_name" class="form-input" placeholder="e.g. Omega-3 Fish Oil 1000mg" required />
+      </div>
+      <div class="form-field">
+        <label>Category</label>
+        <select name="category" class="form-input">
+          <option value="Nutraceutical">Nutraceutical</option>
+          <option value="Dietary Supplement">Dietary Supplement</option>
+          <option value="Herbal Product">Herbal Product</option>
+          <option value="Sports Nutrition">Sports Nutrition</option>
+          <option value="Functional Food">Functional Food</option>
+          <option value="Beverage">Beverage</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Brand Name <span class="optional">optional</span></label>
+        <input type="text" name="brand" class="form-input" placeholder="e.g. HealthFirst" />
+      </div>
+      <div class="btn-actions">
+        <button type="submit" class="btn btn-primary">Continue &rarr;</button>
+      </div>
+    </form>
+
+    <form method="post" action="/onboarding/skip" class="skip-form">
+      <button type="submit" class="skip-link" style="background:none;border:none;padding:0;font-family:inherit;">Skip for now</button>
+    </form>
+
+    {% else %}
+    <!-- ── Step 3: All Set ── -->
+    <div class="success-icon">&#x2705;</div>
+    <div class="success-heading">You&rsquo;re all set!</div>
+    <p class="success-sub">Your account is ready. Let&rsquo;s check your first product label.</p>
+
+    <div class="btn-actions">
+      <div class="btn-actions-row">
+        <form method="post" action="/onboarding/step3" style="flex:1;display:flex;">
+          <button type="submit" class="btn btn-primary">Go to Dashboard &rarr;</button>
+        </form>
+        <a href="/products" class="btn btn-outline">Upload a Label</a>
+      </div>
+    </div>
+    {% endif %}
+
+  </div><!-- /.wizard-card -->
+
+</div><!-- /.wizard-wrap -->
+
+</body>
+</html>

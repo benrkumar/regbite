@@ -101,6 +101,9 @@ class User(Base):
     name = Column(String(255), nullable=False)
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
+    onboarding_complete = Column(Boolean, nullable=True)
+    company_name = Column(String(255), nullable=True)
+    company_gstin = Column(String(20), nullable=True)
     is_admin = Column(Boolean, default=False)
     role = Column(SAEnum(UserRole), default=UserRole.ACCOUNT_ADMIN)
     notification_emails = Column(JSON, default=list)
@@ -118,6 +121,7 @@ class Product(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     name = Column(String(255), nullable=False)
     sku = Column(String(100), index=True)
+    brand = Column(String(255), nullable=True)
     category = Column(String(100))
     description = Column(Text)
     is_active = Column(Boolean, default=True)
@@ -443,3 +447,33 @@ class TeamInvite(Base):
     expires_at  = Column(DateTime, nullable=False)
 
     inviter = relationship("User", foreign_keys=[invited_by])
+
+
+# ─── Activity Log ─────────────────────────────────────────────────────────────
+
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+    id            = Column(Integer, primary_key=True, index=True)
+    user_id       = Column(Integer, ForeignKey("users.id"), nullable=True)  # nullable for system events
+    action        = Column(String(100), nullable=False, index=True)
+    resource_type = Column(String(50), nullable=True)   # "product", "label", "report", "rule", etc.
+    resource_id   = Column(Integer, nullable=True)
+    detail        = Column(String(500), nullable=True)  # human-readable description
+    ip_address    = Column(String(45), nullable=True)
+    created_at    = Column(DateTime, default=datetime.utcnow, index=True)
+    user          = relationship("User", foreign_keys=[user_id])
+
+
+# ─── API Keys ─────────────────────────────────────────────────────────────────
+
+class APIKey(Base):
+    __tablename__ = "api_keys"
+    id           = Column(Integer, primary_key=True, index=True)
+    user_id      = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name         = Column(String(100), nullable=False)          # e.g. "Production", "Dev laptop"
+    key_prefix   = Column(String(10), nullable=False)           # first 8 chars, shown in UI
+    key_hash     = Column(String(200), nullable=False)          # bcrypt hash of full key
+    last_used_at = Column(DateTime, nullable=True)
+    is_active    = Column(Boolean, default=True)
+    created_at   = Column(DateTime, default=datetime.utcnow)
+    user         = relationship("User", foreign_keys=[user_id])

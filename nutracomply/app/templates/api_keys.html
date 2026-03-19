@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}API Keys{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <h2>API Keys</h2>
+    <p>Generate keys for programmatic API access</p>
+  </div>
+</div>
+
+{% if flash_message %}
+<div class="flash flash-{{ flash_type | default('info') }}">{{ flash_message }}</div>
+{% endif %}
+
+{# ── New Key Banner (shown once after creation) ── #}
+{% if new_key %}
+<div style="background:#fefce8;border:1.5px solid #fbbf24;border-radius:10px;padding:1.1rem 1.25rem;margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;">
+    <span style="font-size:1.1rem;">&#x26A0;&#xFE0F;</span>
+    <strong style="color:#92400e;">Copy your API key now. It will not be shown again.</strong>
+  </div>
+  <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+    <code id="new-key-display" style="background:#fff;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.75rem;font-family:monospace;font-size:0.88rem;color:#1e293b;word-break:break-all;flex:1;min-width:200px;">{{ new_key }}</code>
+    <button onclick="copyKey()" style="background:#f59e0b;color:#fff;border:none;border-radius:7px;padding:0.4rem 0.9rem;cursor:pointer;font-weight:600;font-size:0.84rem;white-space:nowrap;">&#x1F4CB; Copy</button>
+  </div>
+</div>
+<script>
+function copyKey() {
+  var key = document.getElementById('new-key-display').innerText;
+  navigator.clipboard.writeText(key).then(function() {
+    alert('API key copied to clipboard!');
+  }).catch(function() {
+    var ta = document.createElement('textarea');
+    ta.value = key;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('API key copied!');
+  });
+}
+</script>
+{% endif %}
+
+{# ── Info Box ── #}
+<div class="info-box" style="max-width:640px;margin-bottom:1.5rem;">
+  &#x2139; API keys provide full access to your RegBite account. Keep them secret and never share them in public repositories or client-side code.
+</div>
+
+{# ── Create New Key ── #}
+<div class="card" style="max-width:640px;margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1.1rem;">
+    <span style="font-size:1.3rem;">&#x2795;</span>
+    <div>
+      <h3 style="margin:0;">Create New Key</h3>
+      <p style="margin:0;font-size:0.83rem;color:var(--gray-500);">Max 5 active keys per account.</p>
+    </div>
+  </div>
+  <form method="post" action="/settings/api-keys/create">
+    <div class="field" style="margin-bottom:0.9rem;">
+      <label class="field-label">Key Name <span style="color:var(--gray-400);font-weight:400;">(e.g. Production, Dev laptop)</span></label>
+      <input type="text" name="name" class="input" placeholder="My API Key" required maxlength="100" />
+    </div>
+    <button type="submit" class="btn btn-primary">Generate Key</button>
+  </form>
+</div>
+
+{# ── Active Keys Table ── #}
+<div style="max-width:900px;margin-bottom:1.5rem;">
+  <h3 style="font-size:0.96rem;font-weight:700;color:#0f172a;margin-bottom:0.85rem;">Active Keys</h3>
+
+  {% if keys %}
+  <div style="background:#fff;border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+      <thead>
+        <tr style="background:#f8fafc;">
+          <th style="padding:0.65rem 1rem;text-align:left;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1.5px solid var(--gray-200);">Name</th>
+          <th style="padding:0.65rem 1rem;text-align:left;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1.5px solid var(--gray-200);">Key Prefix</th>
+          <th style="padding:0.65rem 1rem;text-align:left;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1.5px solid var(--gray-200);">Created</th>
+          <th style="padding:0.65rem 1rem;text-align:left;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1.5px solid var(--gray-200);">Last Used</th>
+          <th style="padding:0.65rem 1rem;text-align:left;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1.5px solid var(--gray-200);">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for key in keys %}
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:0.7rem 1rem;font-weight:600;color:#0f172a;">{{ key.name }}</td>
+          <td style="padding:0.7rem 1rem;">
+            <code style="background:#f1f5f9;border-radius:5px;padding:0.2rem 0.5rem;font-family:monospace;font-size:0.82rem;color:#0f172a;">{{ key.key_prefix }}...</code>
+          </td>
+          <td style="padding:0.7rem 1rem;font-size:0.82rem;color:#64748b;">{{ key.created_at.strftime('%d %b %Y') }}</td>
+          <td style="padding:0.7rem 1rem;font-size:0.82rem;color:#64748b;">
+            {% if key.last_used_at %}{{ key.last_used_at.strftime('%d %b %Y') }}{% else %}<span style="color:#cbd5e1;">Never</span>{% endif %}
+          </td>
+          <td style="padding:0.7rem 1rem;">
+            <form method="post" action="/settings/api-keys/{{ key.id }}/revoke" style="margin:0;">
+              <button type="submit"
+                      style="background:#fff;border:1px solid #fca5a5;color:#dc2626;border-radius:7px;padding:0.25rem 0.65rem;font-size:0.78rem;cursor:pointer;font-weight:500;"
+                      onclick="return confirm('Revoke API key \'{{ key.name }}\'? This cannot be undone.')">
+                Revoke
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="background:#fff;border:1px solid var(--gray-200);border-radius:12px;padding:2rem;text-align:center;color:#94a3b8;">
+    <div style="font-size:2rem;margin-bottom:0.5rem;">&#x1F511;</div>
+    <div style="font-weight:600;margin-bottom:0.3rem;color:#64748b;">No API keys yet.</div>
+    <div style="font-size:0.84rem;">Create your first key above.</div>
+  </div>
+  {% endif %}
+</div>
+
+<div style="max-width:640px;">
+  <a href="/settings" class="btn btn-ghost">&larr; Back to Settings</a>
+</div>
+{% endblock %}

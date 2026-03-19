@@ -399,11 +399,22 @@ async def login(
     token = create_access_token({"sub": user.email})
     response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie("access_token", token, httponly=True, max_age=settings.access_token_expire_minutes * 60)
+    try:
+        from app.services.activity_service import log_action
+        log_action(user.id, "login", detail=f"User {user.email} logged in", ip_address=request.client.host if request.client else None)
+    except Exception:
+        pass
     return response
 
 
 @router.get("/logout")
-async def logout():
+async def logout(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    try:
+        from app.services.activity_service import log_action
+        log_action(user.id if user else None, "logout")
+    except Exception:
+        pass
     response = RedirectResponse(url="/login", status_code=302)
     response.delete_cookie("access_token")
     return response
@@ -462,6 +473,6 @@ async def register(
             pass
 
     token = create_access_token({"sub": user.email})
-    response = RedirectResponse(url="/dashboard", status_code=302)
+    response = RedirectResponse(url="/onboarding", status_code=302)
     response.set_cookie("access_token", token, httponly=True, max_age=settings.access_token_expire_minutes * 60)
     return response
