@@ -443,8 +443,7 @@ class ComplianceReport(Base):
     share_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    owner = relationship("User", foreign_keys=[user_id])
-    user = relationship("User", foreign_keys=[user_id], overlaps="owner")
+    user = relationship("User", foreign_keys=[user_id])
     product = relationship("Product", back_populates="reports", foreign_keys=[product_id])
     label_version = relationship("LabelVersion")
 

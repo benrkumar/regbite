@@ -406,20 +406,18 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return templates.TemplateResponse("500.html", {"request": request}, status_code=exc.status_code)
 
 
-@app.exception_handler(Exception)
-async def general_exception_handler(request: Request, exc: Exception):
-    print(f"[error] Unhandled exception: {exc}")
-    return templates.TemplateResponse("500.html", {"request": request}, status_code=500)
-
-
 # ── Core page routes (defined AFTER routers but must survive any router error) ─
 
 @app.get("/")
 async def root(request: Request):
     from app.routes.auth import get_current_user_from_cookie
     from app.database import get_db
-    db = next(get_db())
-    user = get_current_user_from_cookie(request, db)
+    try:
+        db = next(get_db())
+        user = get_current_user_from_cookie(request, db)
+    except Exception as e:
+        print(f"[root] DB not ready: {e}")
+        user = None
     if user:
         return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse("landing.html", {"request": request})
