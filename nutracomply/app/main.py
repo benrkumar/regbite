@@ -134,6 +134,39 @@ def _run_migrations():
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_gstin VARCHAR(20)",
         # v6: product brand column
         "ALTER TABLE products ADD COLUMN IF NOT EXISTS brand VARCHAR(255)",
+        # v7: white-label report branding columns
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS report_brand_name VARCHAR(255)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS report_brand_color VARCHAR(10)",
+        # v8: billing — subscriptions and payment records
+        """CREATE TABLE IF NOT EXISTS subscriptions (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+            plan VARCHAR(20) NOT NULL DEFAULT 'free',
+            status VARCHAR(20) NOT NULL DEFAULT 'active',
+            razorpay_order_id VARCHAR(100),
+            razorpay_payment_id VARCHAR(100),
+            razorpay_sub_id VARCHAR(100),
+            current_period_start TIMESTAMP,
+            current_period_end TIMESTAMP,
+            trial_ends_at TIMESTAMP,
+            cancelled_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS payment_records (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            razorpay_payment_id VARCHAR(100),
+            razorpay_order_id VARCHAR(100),
+            amount_paise INTEGER NOT NULL,
+            currency VARCHAR(5) DEFAULT 'INR',
+            plan VARCHAR(20) NOT NULL,
+            status VARCHAR(50) NOT NULL DEFAULT 'created',
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS ix_subscriptions_user_id ON subscriptions (user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_payment_records_user_id ON payment_records (user_id)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS plan VARCHAR(20) DEFAULT 'free'",
     ]
     for sql in migrations:
         try:
@@ -321,6 +354,7 @@ from app.routes import reports as reports_router
 from app.routes import checker as checker_router
 from app.routes import team as team_router
 from app.routes import onboarding as onboarding_router
+from app.routes import billing as billing_router
 
 app.include_router(auth.router)
 app.include_router(products.router)
@@ -334,6 +368,7 @@ app.include_router(reports_router.router)
 app.include_router(checker_router.router)
 app.include_router(team_router.router)
 app.include_router(onboarding_router.router)
+app.include_router(billing_router.router)
 
 try:
     from app.routes import admin_llm

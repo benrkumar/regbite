@@ -138,6 +138,33 @@
   {% endif %}
 </div>
 
+{# ── Report Branding ── #}
+<div class="card" style="max-width:640px;margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1.2rem;">
+    <span style="font-size:1.4rem;">&#x1F3A8;</span>
+    <div>
+      <h3 style="margin:0;">Report Branding</h3>
+      <p style="margin:0;font-size:0.83rem;color:var(--gray-500);">Customise the brand name and accent colour shown on compliance reports.</p>
+    </div>
+  </div>
+  <form method="post" action="/settings/branding">
+    <div class="field" style="margin-bottom:0.75rem;">
+      <label class="field-label">Brand Name <span style="font-weight:400;color:var(--gray-400);">(shown on reports instead of "RegBite")</span></label>
+      <input type="text" name="brand_name" class="input" value="{{ user.report_brand_name or '' }}" maxlength="255" placeholder="Your Company Name" />
+    </div>
+    <div class="field" style="margin-bottom:0.75rem;">
+      <label class="field-label">Accent Colour</label>
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        <input type="color" name="brand_color" value="{{ user.report_brand_color or '#6366f1' }}" style="width:3rem;height:2.2rem;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer;padding:0.1rem;" />
+        <span style="font-size:0.82rem;color:var(--gray-400);">Used for headers and score rings in PDF reports</span>
+      </div>
+    </div>
+    <div style="margin-top:1rem;">
+      <button type="submit" class="btn btn-primary">Save Branding</button>
+    </div>
+  </form>
+</div>
+
 <div style="max-width:640px;margin-top:0.5rem;">
   <a href="/settings/api-keys" class="btn btn-ghost">&#x1F511; Manage API Keys &rarr;</a>
 </div>

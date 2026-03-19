@@ -63,6 +63,9 @@
       <a href="/settings" class="sidebar-link{% if request.url.path == '/settings' %} active{% endif %}">
         <span class="sidebar-icon">⚙️</span> Settings
       </a>
+      <a href="/billing" class="sidebar-link{% if request.url.path == '/billing' %} active{% endif %}">
+        <span class="sidebar-icon">💳</span> Billing
+      </a>
       {% if user.role and user.role.value in ['super_admin', 'account_admin'] %}
       <a href="/team" class="sidebar-link{% if request.url.path == '/team' %} active{% endif %}">
         <span class="sidebar-icon">👥</span> Team

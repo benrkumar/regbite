@@ -384,6 +384,18 @@ async def login(
     password: str = Form(...),
     db: Session = Depends(get_db),
 ):
+    try:
+        from app.services.rate_limiter import limiter
+        client_ip = request.client.host if request.client else "unknown"
+        allowed, retry_after = limiter.check("login", client_ip, limit=10, window=300)  # 10 per 5 min
+        if not allowed:
+            return templates.TemplateResponse("login.html", {
+                "request": request,
+                "error": f"Too many login attempts. Please wait {retry_after} seconds.",
+            }, status_code=429)
+    except Exception:
+        pass  # fail open
+
     user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(password, user.hashed_password):
         return templates.TemplateResponse("login.html", {

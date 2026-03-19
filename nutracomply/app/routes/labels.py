@@ -60,6 +60,15 @@ async def upload_label(
     if not user:
         return RedirectResponse(url="/login")
 
+    try:
+        from app.services.rate_limiter import limiter
+        client_ip = request.client.host if request.client else "unknown"
+        allowed, retry_after = limiter.check("upload", client_ip, limit=30, window=3600)  # 30/hr
+        if not allowed:
+            return RedirectResponse(url=f"/products?error=Upload+rate+limit+exceeded.", status_code=302)
+    except Exception:
+        pass
+
     product = db.query(Product).filter(
         Product.id == product_id, Product.user_id == user.id
     ).first()

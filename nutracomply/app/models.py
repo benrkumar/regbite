@@ -91,6 +91,19 @@ class UserRole(str, enum.Enum):
     CONSULTANT = "consultant"
 
 
+class PlanType(str, enum.Enum):
+    FREE       = "free"
+    GROWTH     = "growth"
+    ENTERPRISE = "enterprise"
+
+
+class SubscriptionStatus(str, enum.Enum):
+    ACTIVE    = "active"
+    CANCELLED = "cancelled"
+    PAST_DUE  = "past_due"
+    TRIALING  = "trialing"
+
+
 # ─── Models ──────────────────────────────────────────────────────────────────
 
 class User(Base):
@@ -104,8 +117,11 @@ class User(Base):
     onboarding_complete = Column(Boolean, nullable=True)
     company_name = Column(String(255), nullable=True)
     company_gstin = Column(String(20), nullable=True)
+    report_brand_name = Column(String(255), nullable=True)   # overrides "RegBite" in reports
+    report_brand_color = Column(String(10), nullable=True)   # hex color e.g. "#6366f1"
     is_admin = Column(Boolean, default=False)
     role = Column(SAEnum(UserRole), default=UserRole.ACCOUNT_ADMIN)
+    plan = Column(SAEnum(PlanType), nullable=True)   # denormalized for fast checks
     notification_emails = Column(JSON, default=list)
     created_at = Column(DateTime, default=datetime.utcnow)
     team_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # who invited/owns this sub-user
@@ -427,7 +443,8 @@ class ComplianceReport(Base):
     share_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    owner = relationship("User")
+    owner = relationship("User", foreign_keys=[user_id])
+    user = relationship("User", foreign_keys=[user_id], overlaps="owner")
     product = relationship("Product", back_populates="reports", foreign_keys=[product_id])
     label_version = relationship("LabelVersion")
 
@@ -477,3 +494,37 @@ class APIKey(Base):
     is_active    = Column(Boolean, default=True)
     created_at   = Column(DateTime, default=datetime.utcnow)
     user         = relationship("User", foreign_keys=[user_id])
+
+
+# ─── Billing / Subscriptions ──────────────────────────────────────────────────
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+    id                   = Column(Integer, primary_key=True, index=True)
+    user_id              = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    plan                 = Column(SAEnum(PlanType), nullable=False, default=PlanType.FREE)
+    status               = Column(SAEnum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.ACTIVE)
+    razorpay_order_id    = Column(String(100), nullable=True)
+    razorpay_payment_id  = Column(String(100), nullable=True)
+    razorpay_sub_id      = Column(String(100), nullable=True)
+    current_period_start = Column(DateTime, nullable=True)
+    current_period_end   = Column(DateTime, nullable=True)
+    trial_ends_at        = Column(DateTime, nullable=True)
+    cancelled_at         = Column(DateTime, nullable=True)
+    created_at           = Column(DateTime, default=datetime.utcnow)
+    updated_at           = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    user                 = relationship("User", foreign_keys=[user_id])
+
+
+class PaymentRecord(Base):
+    __tablename__ = "payment_records"
+    id                  = Column(Integer, primary_key=True, index=True)
+    user_id             = Column(Integer, ForeignKey("users.id"), nullable=False)
+    razorpay_payment_id = Column(String(100), nullable=True)
+    razorpay_order_id   = Column(String(100), nullable=True)
+    amount_paise        = Column(Integer, nullable=False)   # amount in paise (₹1 = 100 paise)
+    currency            = Column(String(5), default="INR")
+    plan                = Column(SAEnum(PlanType), nullable=False)
+    status              = Column(String(50), nullable=False, default="created")  # created/paid/failed
+    created_at          = Column(DateTime, default=datetime.utcnow)
+    user                = relationship("User", foreign_keys=[user_id])

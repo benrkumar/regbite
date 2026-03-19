@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     alert_from_email: str = "alerts@regbite.local"
     alert_to_email: str = ""
 
+    # Razorpay
+    razorpay_key_id: str = ""
+    razorpay_key_secret: str = ""
+    razorpay_webhook_secret: str = ""
+
     # Admin
     admin_email: str = ""
 

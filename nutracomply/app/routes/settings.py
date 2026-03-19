@@ -151,6 +151,24 @@ async def change_password(
     )
 
 
+@router.post("/settings/branding")
+async def save_branding(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+    form = await request.form()
+    brand_name = (form.get("brand_name") or "").strip()[:255]
+    brand_color = (form.get("brand_color") or "").strip()[:10]
+    # Validate hex color
+    import re
+    if brand_color and not re.match(r'^#[0-9A-Fa-f]{6}$', brand_color):
+        brand_color = ""
+    user.report_brand_name = brand_name or None
+    user.report_brand_color = brand_color or None
+    db.commit()
+    return RedirectResponse(url="/settings?msg=Report+branding+saved&type=success", status_code=302)
+
+
 # ── API Keys ──────────────────────────────────────────────────────────────────
 
 @router.get("/settings/api-keys")

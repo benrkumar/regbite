@@ -7,7 +7,7 @@ from datetime import datetime
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from pathlib import Path
 
 from app.database import get_db
@@ -110,17 +110,27 @@ async def download_report_pdf(report_id: int, request: Request, db: Session = De
     if not user:
         return RedirectResponse(url="/login")
 
-    report = db.query(ComplianceReport).filter(
-        ComplianceReport.id == report_id,
-        ComplianceReport.user_id == user.id
-    ).first()
+    report = (
+        db.query(ComplianceReport)
+        .options(joinedload(ComplianceReport.user))
+        .filter(
+            ComplianceReport.id == report_id,
+            ComplianceReport.user_id == user.id,
+        )
+        .first()
+    )
     if not report:
         return RedirectResponse(url="/reports")
 
     product = report.product
 
+    # Pass branding from the report owner's profile
+    _ = report.user
+    brand_name = report.user.report_brand_name if report.user else None
+    brand_color = report.user.report_brand_color if report.user else None
+
     # Generate HTML for PDF
-    html_content = generate_pdf_html(report, product)
+    html_content = generate_pdf_html(report, product, brand_name=brand_name, brand_color=brand_color)
 
     # Try to generate actual PDF using weasyprint if available
     try:

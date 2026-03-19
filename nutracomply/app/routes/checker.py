@@ -87,6 +87,15 @@ async def run_check(
     if not user:
         return RedirectResponse(url="/login")
 
+    try:
+        from app.services.rate_limiter import limiter
+        client_ip = request.client.host if request.client else "unknown"
+        allowed, retry_after = limiter.check("checker", client_ip, limit=20, window=3600)  # 20/hr
+        if not allowed:
+            return RedirectResponse(url=f"/checker?error=Rate+limit+exceeded.+Try+again+in+{retry_after}+seconds.", status_code=302)
+    except Exception:
+        pass
+
     # Build extraction_json from form data (same structure as OCR extraction)
     ingredient_list = [i.strip() for i in ingredients.split(",") if i.strip()]
     health_claims = [c.strip() for c in label_claims.split(",") if c.strip()] if label_claims else []

@@ -107,9 +107,12 @@ def generate_share_token(db: Session, report: "ComplianceReport") -> str:
     return token
 
 
-def generate_pdf_html(report: "ComplianceReport", product: "Product") -> str:
+def generate_pdf_html(report: "ComplianceReport", product: "Product", brand_name=None, brand_color=None) -> str:
     """Generate the HTML content for a PDF report."""
     from datetime import datetime
+
+    _brand_name = brand_name or "RegBite"
+    _brand_color = brand_color or "#6366f1"
 
     score = report.score or 0
     verdict = report.verdict or "PENDING"
@@ -197,7 +200,7 @@ def generate_pdf_html(report: "ComplianceReport", product: "Product") -> str:
   <!-- Header -->
   <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:#0f172a;border-radius:10px;margin-bottom:20px;">
     <div>
-      <div style="font-size:20px;font-weight:900;color:#4ade80;letter-spacing:-0.03em;">RegBite</div>
+      <div style="font-size:20px;font-weight:900;color:#4ade80;letter-spacing:-0.03em;">{_brand_name}</div>
       <div style="font-size:10px;color:#94a3b8;margin-top:2px;">India Nutraceutical Compliance Platform</div>
     </div>
     <div style="text-align:right;">
@@ -253,9 +256,9 @@ def generate_pdf_html(report: "ComplianceReport", product: "Product") -> str:
   <!-- Footer disclaimer -->
   <div style="border-top:1px solid #e2e8f0;padding-top:12px;font-size:9px;color:#9ca3af;text-align:center;line-height:1.6;">
     <strong>DISCLAIMER:</strong> This compliance report is generated for informational purposes only and does not constitute legal, regulatory, or professional advice.
-    RegBite outputs should be verified against primary regulatory sources before making any business decisions.
-    RegBite is not liable for any regulatory actions taken or not taken on the basis of this report.
-    <br/>Report ID: {report.report_ref} · Platform: RegBite v3.0 · <b>Not a substitute for professional regulatory advice</b>
+    {_brand_name} outputs should be verified against primary regulatory sources before making any business decisions.
+    {_brand_name} is not liable for any regulatory actions taken or not taken on the basis of this report.
+    <br/>Report ID: {report.report_ref} · Platform: {_brand_name} v3.0 · <b>Not a substitute for professional regulatory advice</b>
   </div>
 </div>
 </body>
