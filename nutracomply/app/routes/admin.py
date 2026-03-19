@@ -16,6 +16,7 @@ from app.models import (
     User, Product, LabelVersion, ComplianceCheck, ComplianceRule,
     Alert, AlertStatus, AlertType, RegulationChange, Severity, CheckResult,
     PublishedAlert, PublishedAlertSeverity, PublishedAlertStatus,
+    ComplianceReport, PlanType,
 )
 
 router = APIRouter(prefix="/admin")
@@ -49,7 +50,7 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
 
     total_users    = db.query(User).count()
     active_users   = db.query(User).filter(User.is_active == True).count()
-    total_products = db.query(Product).count()
+    total_products = db.query(Product).filter(Product.is_active == True).count()
     total_labels   = db.query(LabelVersion).count()
     total_alerts   = db.query(Alert).count()
     unread_alerts  = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
@@ -60,8 +61,14 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     passed_checks = db.query(ComplianceCheck).filter(ComplianceCheck.result == CheckResult.PASS).count()
     compliance_rate = round((passed_checks / total_checks) * 100) if total_checks else 0
 
-    recent_users  = db.query(User).order_by(User.created_at.desc()).limit(6).all()
-    recent_alerts = db.query(Alert).order_by(Alert.created_at.desc()).limit(6).all()
+    total_scans   = db.query(LabelVersion).count()
+    total_reports = db.query(ComplianceReport).count()
+    growth_users  = db.query(User).filter(User.plan == PlanType.GROWTH).count()
+    revenue_estimate = growth_users * 2999
+
+    recent_users   = db.query(User).order_by(User.created_at.desc()).limit(6).all()
+    recent_alerts  = db.query(Alert).order_by(Alert.created_at.desc()).limit(6).all()
+    recent_signups = db.query(User).order_by(User.created_at.desc()).limit(5).all()
 
     return templates.TemplateResponse("admin/dashboard.html", {
         "request": request,
@@ -78,9 +85,14 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
             "total_checks": total_checks,
             "total_rules": total_rules,
             "total_reg_changes": total_reg_changes,
+            "total_scans": total_scans,
+            "total_reports": total_reports,
+            "growth_users": growth_users,
+            "revenue_estimate": revenue_estimate,
         },
         "recent_users": recent_users,
         "recent_alerts": recent_alerts,
+        "recent_signups": recent_signups,
     })
 
 

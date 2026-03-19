@@ -376,6 +376,18 @@ async def process_invite_accept(
     db.commit()
     db.refresh(new_user)
 
+    # Send welcome notifications
+    try:
+        from app.services.notify_service import push
+        push(new_user.id, "Welcome to RegBite!",
+             "Your account has been created. Start by adding your first product.",
+             ntype="success", link="/products")
+        # Also notify the inviter
+        push(invite.invited_by, f"{name} accepted your invite",
+             f"{invite.email} has joined your team.", ntype="info", link="/team")
+    except Exception:
+        pass
+
     # Log them in immediately
     token_val = create_access_token({"sub": new_user.email})
     response = RedirectResponse(url="/dashboard", status_code=302)

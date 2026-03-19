@@ -3,6 +3,30 @@
 {% block page_subtitle %}Track your product compliance status{% endblock %}
 
 {% block content %}
+{% if request.query_params.get('welcome') == '1' %}
+<div id="welcome-banner" style="
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #fff; border-radius: 14px; padding: 1.2rem 1.5rem;
+  margin-bottom: 1.5rem; display: flex; align-items: center;
+  justify-content: space-between; gap: 1rem;
+  box-shadow: 0 4px 20px rgba(99,102,241,0.3);
+">
+  <div>
+    <div style="font-size:1.1rem;font-weight:800;margin-bottom:0.2rem;">
+      🎉 Welcome to RegBite, {{ user.name.split()[0] }}!
+    </div>
+    <div style="font-size:0.875rem;opacity:0.9;">
+      Your account is set up. Upload your first product label to run a compliance check.
+    </div>
+  </div>
+  <div style="display:flex;gap:0.6rem;flex-shrink:0;flex-wrap:wrap;">
+    <a href="/products" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:0.4rem 0.9rem;font-size:0.82rem;font-weight:600;text-decoration:none;">
+      Add Product →
+    </a>
+    <button onclick="document.getElementById('welcome-banner').remove()" style="background:transparent;border:none;color:#fff;opacity:0.7;cursor:pointer;font-size:1.2rem;padding:0.2rem 0.4rem;">✕</button>
+  </div>
+</div>
+{% endif %}
 <style>
 /* ── Dashboard-local styles ── */
 .cat-scroll { display:flex; gap:0.5rem; overflow-x:auto; padding-bottom:0.4rem; margin-bottom:1rem; scrollbar-width:none; }

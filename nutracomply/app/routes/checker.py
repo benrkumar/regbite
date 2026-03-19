@@ -60,6 +60,8 @@ async def checker_form(request: Request, db: Session = Depends(get_db)):
         "unread_alerts": unread_alerts,
         "categories": PRODUCT_CATEGORIES,
         "target_groups": TARGET_GROUPS,
+        "flash_message": request.query_params.get("msg"),
+        "flash_type": request.query_params.get("type", "info"),
     })
 
 
@@ -93,6 +95,16 @@ async def run_check(
         allowed, retry_after = limiter.check("checker", client_ip, limit=20, window=3600)  # 20/hr
         if not allowed:
             return RedirectResponse(url=f"/checker?error=Rate+limit+exceeded.+Try+again+in+{retry_after}+seconds.", status_code=302)
+    except Exception:
+        pass
+
+    # Quota check
+    try:
+        from app.services.quota_service import check_scan_limit
+        allowed, quota_msg = check_scan_limit(user, db)
+        if not allowed:
+            from urllib.parse import quote
+            return RedirectResponse(url=f"/checker?msg={quote(quota_msg)}&type=error", status_code=302)
     except Exception:
         pass
 

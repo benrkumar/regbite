@@ -145,6 +145,14 @@ async def verify_payment(request: Request, db: Session = Depends(get_db)):
     except Exception:
         pass
 
+    try:
+        from app.services.notify_service import push
+        push(user.id, "Subscription activated!",
+             "You're now on the Growth plan. Enjoy unlimited access.",
+             ntype="success", link="/billing")
+    except Exception:
+        pass
+
     return RedirectResponse(
         url="/billing?msg=Payment+successful!+Welcome+to+Growth+plan&type=success",
         status_code=302,

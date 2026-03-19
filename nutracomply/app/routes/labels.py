@@ -69,6 +69,16 @@ async def upload_label(
     except Exception:
         pass
 
+    # Quota check
+    try:
+        from app.services.quota_service import check_scan_limit
+        allowed, quota_msg = check_scan_limit(user, db)
+        if not allowed:
+            from urllib.parse import quote
+            return RedirectResponse(url=f"/products/{product_id}?msg={quote(quota_msg)}&type=error", status_code=302)
+    except Exception:
+        pass
+
     product = db.query(Product).filter(
         Product.id == product_id, Product.user_id == user.id
     ).first()

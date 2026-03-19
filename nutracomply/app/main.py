@@ -167,6 +167,19 @@ def _run_migrations():
         "CREATE INDEX IF NOT EXISTS ix_subscriptions_user_id ON subscriptions (user_id)",
         "CREATE INDEX IF NOT EXISTS ix_payment_records_user_id ON payment_records (user_id)",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS plan VARCHAR(20) DEFAULT 'free'",
+        # v9: in-app notifications
+        """CREATE TABLE IF NOT EXISTS notifications (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            title VARCHAR(200) NOT NULL,
+            message VARCHAR(500),
+            ntype VARCHAR(20) DEFAULT 'info',
+            is_read BOOLEAN DEFAULT FALSE,
+            link VARCHAR(300),
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS ix_notifications_user_id ON notifications (user_id)",
+        "CREATE INDEX IF NOT EXISTS ix_notifications_is_read ON notifications (is_read)",
     ]
     for sql in migrations:
         try:
@@ -355,6 +368,7 @@ from app.routes import checker as checker_router
 from app.routes import team as team_router
 from app.routes import onboarding as onboarding_router
 from app.routes import billing as billing_router
+from app.routes import notifications as notifications_router
 
 app.include_router(auth.router)
 app.include_router(products.router)
@@ -369,12 +383,33 @@ app.include_router(checker_router.router)
 app.include_router(team_router.router)
 app.include_router(onboarding_router.router)
 app.include_router(billing_router.router)
+app.include_router(notifications_router.router)
 
 try:
     from app.routes import admin_llm
     app.include_router(admin_llm.router)
 except Exception as _llm_err:
     print(f"[warning] LLM Studio router failed to load: {_llm_err}")
+
+
+# ── Exception handlers ─────────────────────────────────────────────────────────
+
+from fastapi.responses import HTMLResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == 404:
+        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+    return templates.TemplateResponse("500.html", {"request": request}, status_code=exc.status_code)
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    print(f"[error] Unhandled exception: {exc}")
+    return templates.TemplateResponse("500.html", {"request": request}, status_code=500)
 
 
 # ── Core page routes (defined AFTER routers but must survive any router error) ─
@@ -395,7 +430,7 @@ async def dashboard(request: Request):
     from datetime import datetime
     from app.routes.auth import get_current_user_from_cookie
     from app.database import get_db
-    from app.models import Product, Alert, AlertStatus, LicenseRenewal, PublishedAlert, PublishedAlertStatus
+    from app.models import Product, Alert, AlertStatus, LicenseRenewal, PublishedAlert, PublishedAlertStatus, Notification
 
     db = next(get_db())
     user = get_current_user_from_cookie(request, db)
@@ -436,6 +471,12 @@ async def dashboard(request: Request):
         .count()
     )
 
+    unread_notifications = (
+        db.query(Notification)
+        .filter(Notification.user_id == user.id, Notification.is_read == False)
+        .count()
+    )
+
     # Licenses expiring in the next 90 days
     from datetime import timedelta
     cutoff = datetime.utcnow() + timedelta(days=90)
@@ -464,6 +505,7 @@ async def dashboard(request: Request):
         "user": user,
         "products": products_list,
         "unread_alerts": unread_alerts,
+        "unread_notifications": unread_notifications,
         "total_products": total_products,
         "compliant_count": len(compliant_list),
         "flagged_count": len(flagged_list),

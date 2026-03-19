@@ -40,6 +40,8 @@ async def products_list(request: Request, db: Session = Depends(get_db)):
         "request": request,
         "user": user,
         "products": products,
+        "flash_message": request.query_params.get("msg"),
+        "flash_type": request.query_params.get("type", "info"),
     })
 
 
@@ -55,6 +57,16 @@ async def add_product(
     user = require_user(request, db)
     if not user:
         return RedirectResponse(url="/login")
+
+    # Quota check
+    try:
+        from app.services.quota_service import check_product_limit
+        allowed, quota_msg = check_product_limit(user, db)
+        if not allowed:
+            from urllib.parse import quote
+            return RedirectResponse(url=f"/products?msg={quote(quota_msg)}&type=error", status_code=302)
+    except Exception:
+        pass
 
     product = Product(
         user_id=user.id,
@@ -166,6 +178,8 @@ async def product_detail(product_id: int, request: Request, db: Session = Depend
         "request": request,
         "user": user,
         "product": product,
+        "flash_message": request.query_params.get("msg"),
+        "flash_type": request.query_params.get("type", "info"),
     })
 
 

@@ -528,3 +528,25 @@ class PaymentRecord(Base):
     status              = Column(String(50), nullable=False, default="created")  # created/paid/failed
     created_at          = Column(DateTime, default=datetime.utcnow)
     user                = relationship("User", foreign_keys=[user_id])
+
+
+# ─── In-App Notifications ─────────────────────────────────────────────────────
+
+class NotificationType(str, enum.Enum):
+    INFO    = "info"
+    SUCCESS = "success"
+    WARNING = "warning"
+    ALERT   = "alert"
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    title      = Column(String(200), nullable=False)
+    message    = Column(String(500), nullable=True)
+    ntype      = Column(SAEnum(NotificationType), default=NotificationType.INFO)
+    is_read    = Column(Boolean, default=False, index=True)
+    link       = Column(String(300), nullable=True)   # optional deep link
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    user       = relationship("User", foreign_keys=[user_id])
