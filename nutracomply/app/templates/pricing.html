@@ -4,481 +4,214 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pricing — RegBite FSSAI Compliance Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --primary:      #6366f1;
-      --primary-dark: #4f46e5;
-      --primary-deep: #3730a3;
-      --green:        #22c55e;
-      --green-dark:   #16a34a;
-      --gray-50:  #f8fafc;
-      --gray-100: #f1f5f9;
-      --gray-200: #e2e8f0;
-      --gray-300: #cbd5e1;
-      --gray-400: #94a3b8;
-      --gray-500: #64748b;
-      --gray-600: #475569;
-      --gray-700: #334155;
-      --gray-800: #1e293b;
-      --gray-900: #0f172a;
-      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      --ink:    #111111;
+      --border: #EBEBEB;
+      --bg:     #F8F8F8;
+      --gray-3: #D4D4D4;
+      --gray-4: #A3A3A3;
+      --gray-5: #737373;
+      --gray-6: #525252;
     }
-
     html { font-size: 16px; scroll-behavior: smooth; }
-    body {
-      font-family: var(--font);
-      color: var(--gray-800);
-      background: #fff;
-      line-height: 1.6;
-    }
-
+    body { font-family: var(--font); color: var(--ink); background: #FFFFFF; line-height: 1.7; letter-spacing: 0.01em; }
     a { color: inherit; text-decoration: none; }
-    p { color: var(--gray-600); }
+    p { color: var(--gray-5); }
 
     /* ── Navbar ── */
     .navbar {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      height: 64px;
-      display: flex;
-      align-items: center;
-      padding: 0 2rem;
-      background: rgba(255,255,255,0.92);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(255,255,255,0.2);
-      box-shadow: 0 1px 20px rgba(0,0,0,0.06);
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: 60px; display: flex; align-items: center; padding: 0 2rem;
+      background: #FFFFFF; border-bottom: 1px solid var(--border);
     }
-    .navbar-brand {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      margin-right: auto;
-    }
-    .navbar-icon {
-      width: 34px; height: 34px;
-      border-radius: 9px;
-      background: linear-gradient(135deg, #4ade80 0%, #16a34a 100%);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.9rem;
-      box-shadow: 0 4px 12px rgba(34,197,94,0.4);
-    }
-    .navbar-name {
-      font-size: 1.2rem; font-weight: 900;
-      color: var(--gray-900); letter-spacing: -0.025em;
-    }
-    .navbar-links {
-      display: flex;
-      align-items: center;
-      gap: 1.5rem;
-      margin-right: 1.5rem;
-    }
-    .navbar-link {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--gray-600);
-      transition: color 0.15s;
-    }
-    .navbar-link:hover { color: var(--gray-900); }
-    .navbar-link.active { color: var(--primary); font-weight: 600; }
-    .navbar-actions { display: flex; align-items: center; gap: 0.75rem; }
-
+    .navbar-brand { display: flex; align-items: center; gap: 0.5rem; margin-right: auto; }
+    .navbar-name  { font-size: 1rem; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+    .navbar-actions { display: flex; align-items: center; gap: 0.65rem; }
+    .navbar-link { font-size: 0.875rem; color: var(--gray-5); transition: color 0.12s; }
+    .navbar-link:hover { color: var(--ink); }
     .btn {
       display: inline-flex; align-items: center; justify-content: center;
-      padding: 0.55rem 1.25rem;
-      border-radius: 9px;
-      font-size: 0.875rem; font-weight: 600;
-      cursor: pointer; border: none;
-      transition: all 0.15s ease;
-      font-family: var(--font);
-      text-decoration: none;
-      white-space: nowrap;
+      padding: 0.45rem 1.1rem; border-radius: 5px;
+      font-size: 0.82rem; font-weight: 500; cursor: pointer;
+      border: 1px solid transparent; transition: all 0.12s;
+      font-family: var(--font); text-decoration: none; white-space: nowrap; line-height: 1;
     }
-    .btn-ghost {
-      background: transparent;
-      color: var(--gray-600);
-      border: 1.5px solid var(--gray-200);
+    .btn-ghost   { background: transparent; color: var(--gray-6); border-color: var(--gray-3); }
+    .btn-ghost:hover { background: #F5F5F5; color: var(--ink); }
+    .btn-primary { background: var(--ink); color: #FFFFFF; border-color: var(--ink); }
+    .btn-primary:hover { background: #404040; border-color: #404040; }
+    .btn-outline { background: transparent; color: var(--ink); border: 1px solid var(--gray-3); }
+    .btn-outline:hover { background: #F5F5F5; }
+    .btn-outline-white {
+      background: transparent; color: #FFFFFF; border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 5px; padding: 0.6rem 1.4rem; font-size: 0.875rem; font-weight: 400;
+      display: inline-flex; align-items: center; cursor: pointer;
+      transition: all 0.12s; font-family: var(--font); text-decoration: none;
     }
-    .btn-ghost:hover { background: var(--gray-100); color: var(--gray-900); }
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: #fff;
-      box-shadow: 0 4px 14px rgba(99,102,241,0.35);
-    }
-    .btn-primary:hover { background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-deep) 100%); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(99,102,241,0.4); }
-    .btn-primary:active { transform: translateY(0); }
-    .btn-outline-primary {
-      background: transparent;
-      color: var(--primary);
-      border: 1.5px solid var(--primary);
-    }
-    .btn-outline-primary:hover { background: #ede9fe; }
-    .btn-full { width: 100%; }
-    .btn-lg { padding: 0.8rem 1.75rem; font-size: 1rem; border-radius: 12px; }
+    .btn-outline-white:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.7); }
+    .btn-full { width: 100%; justify-content: center; }
+    .btn-lg { padding: 0.65rem 1.5rem; font-size: 0.9rem; }
 
     /* ── Hero ── */
     .pricing-hero {
-      padding-top: 64px;
-      background: var(--gray-50);
-      border-bottom: 1px solid var(--gray-200);
-      text-align: center;
-      padding-bottom: 3.5rem;
+      padding-top: 60px; background: var(--bg);
+      border-bottom: 1px solid var(--border); text-align: center; padding-bottom: 3rem;
     }
-    .pricing-hero-inner {
-      max-width: 680px;
-      margin: 0 auto;
-      padding: 4rem 2rem 0;
-    }
-    .pricing-hero-tag {
-      display: inline-block;
-      padding: 0.25rem 0.8rem;
-      background: #ede9fe;
-      color: var(--primary-dark);
-      border-radius: 999px;
-      font-size: 0.76rem; font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      margin-bottom: 1.1rem;
+    .pricing-hero-inner { max-width: 600px; margin: 0 auto; padding: 3.5rem 2rem 0; }
+    .section-tag {
+      display: inline-block; padding: 0.2rem 0.7rem;
+      background: #F5F5F5; color: var(--gray-6); border: 1px solid var(--border);
+      border-radius: 999px; font-size: 0.72rem; font-weight: 500;
+      letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1rem;
     }
     .pricing-hero h1 {
-      font-size: clamp(1.9rem, 4vw, 2.8rem);
-      font-weight: 900;
-      color: var(--gray-900);
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      margin-bottom: 0.85rem;
+      font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 300; color: var(--ink);
+      letter-spacing: -0.03em; line-height: 1.2; margin-bottom: 0.75rem;
     }
-    .pricing-hero p {
-      font-size: 1.05rem;
-      color: var(--gray-500);
-      margin-bottom: 2.25rem;
-    }
+    .pricing-hero p { font-size: 0.95rem; color: var(--gray-5); margin-bottom: 2rem; }
 
-    /* ── Billing toggle ── */
+    /* Billing toggle */
     .billing-toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.75rem;
-      background: #fff;
-      border: 1.5px solid var(--gray-200);
-      border-radius: 999px;
-      padding: 0.4rem 1rem;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--gray-600);
-      user-select: none;
-      cursor: pointer;
+      display: inline-flex; align-items: center; gap: 0.65rem;
+      background: #FFFFFF; border: 1px solid var(--border);
+      border-radius: 999px; padding: 0.35rem 1rem;
+      font-size: 0.82rem; font-weight: 400; color: var(--gray-6);
+      cursor: pointer; user-select: none;
     }
-    .billing-toggle-lbl { font-weight: 600; color: var(--gray-900); }
-    .toggle-switch {
-      position: relative;
-      width: 40px; height: 22px;
-    }
+    .billing-toggle-lbl { font-weight: 500; color: var(--ink); }
+    .toggle-switch { position: relative; width: 36px; height: 20px; }
     .toggle-switch input { opacity: 0; width: 0; height: 0; }
     .toggle-slider {
-      position: absolute;
-      cursor: pointer;
-      inset: 0;
-      background: var(--gray-200);
-      border-radius: 999px;
-      transition: background 0.2s;
+      position: absolute; cursor: pointer; inset: 0;
+      background: var(--gray-3); border-radius: 999px; transition: background 0.2s;
     }
     .toggle-slider::before {
-      content: '';
-      position: absolute;
-      width: 16px; height: 16px;
-      border-radius: 50%;
-      background: #fff;
-      left: 3px; top: 3px;
-      transition: transform 0.2s;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      content: ''; position: absolute;
+      width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF;
+      left: 3px; top: 3px; transition: transform 0.2s;
     }
-    .toggle-switch input:checked + .toggle-slider { background: var(--primary); }
-    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+    .toggle-switch input:checked + .toggle-slider { background: var(--ink); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
     .save-badge {
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: var(--green-dark);
-      background: #dcfce7;
-      padding: 0.15rem 0.5rem;
-      border-radius: 999px;
+      font-size: 0.68rem; font-weight: 600; color: #065F46;
+      background: #D1FAE5; padding: 0.1rem 0.45rem; border-radius: 999px;
     }
 
-    /* ── Pricing cards ── */
-    .pricing-section {
-      padding: 4rem 2rem 5rem;
-    }
+    /* Pricing cards */
+    .pricing-section { padding: 3.5rem 2rem 5rem; }
     .pricing-grid {
-      max-width: 1080px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.5rem;
-      align-items: stretch;
+      max-width: 1000px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; align-items: stretch;
     }
     .pricing-card {
-      background: #fff;
-      border: 1.5px solid var(--gray-200);
-      border-radius: 20px;
-      padding: 2rem;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      transition: box-shadow 0.2s;
+      background: #FFFFFF; border: 1px solid var(--border); border-radius: 6px;
+      padding: 1.75rem; display: flex; flex-direction: column; position: relative;
+      transition: box-shadow 0.12s;
     }
-    .pricing-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
-    .pricing-card.popular {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(99,102,241,0.12), 0 8px 30px rgba(99,102,241,0.1);
-    }
+    .pricing-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+    .pricing-card.popular { border-color: var(--ink); border-width: 1.5px; }
     .popular-ribbon {
-      position: absolute;
-      top: -1px; right: 1.5rem;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: #fff;
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 0.3rem 0.75rem;
-      border-radius: 0 0 8px 8px;
-      letter-spacing: 0.03em;
+      position: absolute; top: -1px; right: 1.25rem;
+      background: var(--ink); color: #FFFFFF;
+      font-size: 0.65rem; font-weight: 600; padding: 0.25rem 0.65rem;
+      border-radius: 0 0 5px 5px; letter-spacing: 0.04em;
     }
-
     .plan-badge {
-      display: inline-block;
-      padding: 0.22rem 0.65rem;
-      border-radius: 999px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      margin-bottom: 1rem;
+      display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px;
+      font-size: 0.68rem; font-weight: 600; letter-spacing: 0.03em; margin-bottom: 0.85rem;
     }
-    .badge-free     { background: #dcfce7; color: #166534; }
-    .badge-popular  { background: #ede9fe; color: #5b21b6; }
-    .badge-enterprise { background: #f1f5f9; color: #334155; }
-
-    .plan-name {
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: var(--gray-900);
-      letter-spacing: -0.02em;
-      margin-bottom: 0.6rem;
-    }
-    .plan-price {
-      display: flex;
-      align-items: baseline;
-      gap: 0.3rem;
-      margin-bottom: 0.35rem;
-    }
-    .plan-price-currency {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--gray-700);
-    }
-    .plan-price-amount {
-      font-size: 2.4rem;
-      font-weight: 900;
-      color: var(--gray-900);
-      letter-spacing: -0.03em;
-      line-height: 1;
-    }
-    .plan-price-amount.custom {
-      font-size: 1.6rem;
-    }
-    .plan-price-period {
-      font-size: 0.82rem;
-      color: var(--gray-400);
-      font-weight: 500;
-    }
-    .plan-desc {
-      font-size: 0.82rem;
-      color: var(--gray-400);
-      margin-bottom: 1.5rem;
-      min-height: 1.2rem;
-    }
-
-    .plan-divider {
-      height: 1px;
-      background: var(--gray-100);
-      margin-bottom: 1.25rem;
-    }
-
-    .plan-features {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-      margin-bottom: 1.75rem;
-      flex: 1;
-    }
-    .plan-features li {
-      display: flex;
-      align-items: flex-start;
-      gap: 0.55rem;
-      font-size: 0.865rem;
-      color: var(--gray-700);
-    }
+    .badge-free       { background: #D1FAE5; color: #065F46; }
+    .badge-popular    { background: #F5F5F5; color: #525252; border: 1px solid var(--border); }
+    .badge-enterprise { background: #F5F5F5; color: #525252; border: 1px solid var(--border); }
+    .plan-name  { font-size: 1.1rem; font-weight: 500; color: var(--ink); margin-bottom: 0.55rem; letter-spacing: -0.02em; }
+    .plan-price { display: flex; align-items: baseline; gap: 0.25rem; margin-bottom: 0.3rem; }
+    .plan-price-currency { font-size: 1rem; font-weight: 500; color: var(--gray-5); }
+    .plan-price-amount  { font-size: 2.2rem; font-weight: 700; color: var(--ink); letter-spacing: -0.03em; line-height: 1; }
+    .plan-price-amount.custom { font-size: 1.4rem; font-weight: 400; }
+    .plan-price-period  { font-size: 0.78rem; color: var(--gray-4); }
+    .plan-desc { font-size: 0.8rem; color: var(--gray-4); margin-bottom: 1.25rem; min-height: 1.1rem; }
+    .plan-divider { height: 1px; background: var(--border); margin-bottom: 1.1rem; }
+    .plan-features { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 1.5rem; flex: 1; }
+    .plan-features li { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.845rem; color: var(--gray-6); }
     .plan-features li .check {
-      width: 18px; height: 18px;
-      border-radius: 50%;
-      background: #dcfce7;
+      width: 16px; height: 16px; border-radius: 50%; background: #D1FAE5;
       display: flex; align-items: center; justify-content: center;
-      font-size: 0.6rem;
-      color: #166534;
-      font-weight: 700;
-      flex-shrink: 0;
-      margin-top: 2px;
+      font-size: 0.55rem; color: #065F46; font-weight: 700; flex-shrink: 0; margin-top: 2px;
     }
-
     .plan-cta { margin-top: auto; }
-    .plan-trial-note {
-      text-align: center;
-      font-size: 0.75rem;
-      color: var(--gray-400);
-      margin-top: 0.5rem;
-    }
+    .plan-trial-note { text-align: center; font-size: 0.72rem; color: var(--gray-4); margin-top: 0.45rem; }
 
-    /* ── FAQ ── */
-    .faq-section {
-      padding: 5rem 2rem;
-      background: var(--gray-50);
-      border-top: 1px solid var(--gray-200);
-    }
-    .faq-inner {
-      max-width: 720px;
-      margin: 0 auto;
-    }
-    .faq-header {
-      text-align: center;
-      margin-bottom: 2.5rem;
-    }
-    .faq-title {
-      font-size: clamp(1.4rem, 3vw, 2rem);
-      font-weight: 900;
-      color: var(--gray-900);
-      letter-spacing: -0.025em;
-      margin-bottom: 0.5rem;
-    }
-    .faq-sub {
-      font-size: 0.9rem;
-      color: var(--gray-500);
-    }
+    /* FAQ */
+    .faq-section { padding: 4rem 2rem; background: var(--bg); border-top: 1px solid var(--border); }
+    .faq-inner { max-width: 680px; margin: 0 auto; }
+    .faq-header { text-align: center; margin-bottom: 2.25rem; }
+    .faq-title  { font-size: clamp(1.25rem, 3vw, 1.6rem); font-weight: 400; color: var(--ink); letter-spacing: -0.02em; margin-bottom: 0.4rem; }
+    .faq-sub    { font-size: 0.875rem; color: var(--gray-5); }
     .faq-item {
-      background: #fff;
-      border: 1.5px solid var(--gray-200);
-      border-radius: 12px;
-      margin-bottom: 0.85rem;
-      overflow: hidden;
+      background: #FFFFFF; border: 1px solid var(--border); border-radius: 5px;
+      margin-bottom: 0.65rem; overflow: hidden;
     }
     .faq-question {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1rem 1.25rem;
-      cursor: pointer;
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--gray-900);
-      user-select: none;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.9rem 1.1rem; cursor: pointer; font-size: 0.875rem;
+      font-weight: 500; color: var(--ink); user-select: none;
     }
-    .faq-question:hover { background: var(--gray-50); }
-    .faq-icon {
-      font-size: 1.1rem;
-      font-weight: 300;
-      color: var(--gray-400);
-      transition: transform 0.2s;
-      flex-shrink: 0;
-    }
+    .faq-question:hover { background: var(--bg); }
+    .faq-icon { font-size: 1rem; font-weight: 300; color: var(--gray-4); transition: transform 0.2s; flex-shrink: 0; }
     .faq-answer {
-      display: none;
-      padding: 0 1.25rem 1rem;
-      font-size: 0.875rem;
-      color: var(--gray-500);
-      line-height: 1.65;
-      border-top: 1px solid var(--gray-100);
-      padding-top: 0.85rem;
+      display: none; padding: 0 1.1rem 0.9rem; font-size: 0.845rem;
+      color: var(--gray-5); line-height: 1.7;
+      border-top: 1px solid var(--border); padding-top: 0.75rem;
     }
     .faq-item.open .faq-answer { display: block; }
-    .faq-item.open .faq-icon { transform: rotate(45deg); }
+    .faq-item.open .faq-icon   { transform: rotate(45deg); }
 
-    /* ── CTA Banner ── */
-    .cta-banner {
-      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4f46e5 100%);
-      padding: 4.5rem 2rem;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-    .cta-banner::before {
-      content: '';
-      position: absolute;
-      width: 600px; height: 600px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%);
-      top: -200px; right: -100px;
-      pointer-events: none;
-    }
-    .cta-banner-inner { position: relative; z-index: 1; }
-    .cta-banner h2 { font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 900; color: #fff; letter-spacing: -0.025em; margin-bottom: 0.75rem; }
-    .cta-banner p { color: rgba(255,255,255,0.68); font-size: 0.95rem; max-width: 480px; margin: 0 auto 2rem; }
-    .btn-outline-white {
-      background: transparent;
-      color: #fff;
-      border: 2px solid rgba(255,255,255,0.5);
-    }
-    .btn-outline-white:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.8); }
+    /* CTA */
+    .cta-banner { background: var(--ink); padding: 4.5rem 2rem; text-align: center; }
+    .cta-banner h2 { font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 300; color: #FFFFFF; letter-spacing: -0.02em; margin-bottom: 0.65rem; }
+    .cta-banner p  { color: rgba(255,255,255,0.55); font-size: 0.9rem; max-width: 440px; margin: 0 auto 2rem; }
 
-    /* ── Footer ── */
-    footer {
-      background: var(--gray-900);
-      padding: 1.5rem 2rem;
-      text-align: center;
-    }
-    footer p { color: var(--gray-500); font-size: 0.82rem; }
-    footer a { color: var(--gray-400); }
-    footer a:hover { color: #fff; }
+    /* Footer */
+    footer { background: #FFFFFF; border-top: 1px solid var(--border); padding: 1.4rem 2rem; text-align: center; }
+    footer p { color: var(--gray-4); font-size: 0.78rem; }
+    footer a { color: var(--gray-5); }
+    footer a:hover { color: var(--ink); }
 
-    /* ── Responsive ── */
-    @media (max-width: 900px) {
-      .pricing-grid { grid-template-columns: 1fr; max-width: 480px; }
-    }
+    /* Responsive */
+    @media (max-width: 900px) { .pricing-grid { grid-template-columns: 1fr; max-width: 420px; } }
     @media (max-width: 640px) {
       .navbar { padding: 0 1.25rem; }
-      .navbar-links { display: none; }
-      .navbar-actions .btn-ghost { display: none; }
-      .pricing-section { padding: 2.5rem 1rem 4rem; }
+      .pricing-section { padding: 2.5rem 1rem 3.5rem; }
     }
   </style>
 </head>
 <body>
 
-<!-- ══ Navbar ══ -->
 <nav class="navbar">
   <div class="navbar-brand">
-    <a href="/" style="display:flex;align-items:center;gap:0.6rem;">
-      <div class="navbar-icon">&#x1F33F;</div>
+    <a href="/" style="display:flex;align-items:center;gap:0.45rem;">
+      <span style="font-size:0.55rem;color:#111111;">●</span>
       <span class="navbar-name">RegBite</span>
     </a>
   </div>
-  <div class="navbar-links">
-    <a href="/pricing" class="navbar-link active">Pricing</a>
-  </div>
   <div class="navbar-actions">
-    <a href="/login" class="btn btn-ghost">Sign In</a>
+    <a href="/pricing" class="navbar-link" style="margin-right:0.5rem;">Pricing</a>
+    <a href="/login"    class="btn btn-ghost">Sign In</a>
     <a href="/register" class="btn btn-primary">Get Started</a>
   </div>
 </nav>
 
-<!-- ══ Hero ══ -->
 <section class="pricing-hero">
   <div class="pricing-hero-inner">
-    <div class="pricing-hero-tag">Pricing</div>
-    <h1>Simple, Transparent Pricing</h1>
-    <p>No hidden fees. Cancel anytime. Start free — upgrade when you&rsquo;re ready.</p>
+    <div class="section-tag">Pricing</div>
+    <h1>Simple, transparent pricing</h1>
+    <p>Start free — upgrade when you&rsquo;re ready. No hidden fees. Cancel anytime.</p>
     <label class="billing-toggle" onclick="toggleBilling()">
       <span class="billing-toggle-lbl">Monthly</span>
       <div class="toggle-switch">
@@ -491,11 +224,9 @@
   </div>
 </section>
 
-<!-- ══ Pricing Cards ══ -->
 <section class="pricing-section">
   <div class="pricing-grid">
 
-    <!-- Starter -->
     <div class="pricing-card">
       <div class="plan-badge badge-free">Free Forever</div>
       <div class="plan-name">Starter</div>
@@ -504,7 +235,7 @@
         <span class="plan-price-amount" data-monthly="0" data-annual="0">0</span>
         <span class="plan-price-period">/ month</span>
       </div>
-      <div class="plan-desc">Perfect for individuals and small teams getting started.</div>
+      <div class="plan-desc">For individuals getting started with compliance.</div>
       <div class="plan-divider"></div>
       <ul class="plan-features">
         <li><span class="check">&#10003;</span> Up to 3 products</li>
@@ -518,10 +249,9 @@
       </div>
     </div>
 
-    <!-- Growth (Popular) -->
     <div class="pricing-card popular">
-      <div class="popular-ribbon">&#11088; Most Popular</div>
-      <div class="plan-badge badge-popular">Most Popular</div>
+      <div class="popular-ribbon">Most Popular</div>
+      <div class="plan-badge badge-popular">Growth</div>
       <div class="plan-name">Growth</div>
       <div class="plan-price">
         <span class="plan-price-currency">&#8377;</span>
@@ -546,34 +276,31 @@
       </div>
     </div>
 
-    <!-- Enterprise -->
     <div class="pricing-card">
-      <div class="plan-badge badge-enterprise">For Large Teams</div>
+      <div class="plan-badge badge-enterprise">Enterprise</div>
       <div class="plan-name">Enterprise</div>
       <div class="plan-price">
-        <span class="plan-price-amount custom" style="font-size:1.6rem;">Custom</span>
+        <span class="plan-price-amount custom">Custom</span>
       </div>
-      <div class="plan-desc">Tailored pricing for large organisations and enterprise workflows.</div>
+      <div class="plan-desc">Tailored pricing for large organisations.</div>
       <div class="plan-divider"></div>
       <ul class="plan-features">
-        <li><span class="check">&#10003;</span> Unlimited products</li>
-        <li><span class="check">&#10003;</span> Unlimited scans</li>
+        <li><span class="check">&#10003;</span> Unlimited products &amp; scans</li>
         <li><span class="check">&#10003;</span> White-label reports</li>
         <li><span class="check">&#10003;</span> Custom compliance rules</li>
         <li><span class="check">&#10003;</span> Dedicated support</li>
         <li><span class="check">&#10003;</span> API access</li>
         <li><span class="check">&#10003;</span> SSO integration</li>
-        <li><span class="check">&#10003;</span> Audit trail</li>
+        <li><span class="check">&#10003;</span> Full audit trail</li>
       </ul>
       <div class="plan-cta">
-        <a href="mailto:sales@regbite.com" class="btn btn-outline-primary btn-full">Contact Sales</a>
+        <a href="mailto:sales@regbite.com" class="btn btn-outline btn-full">Contact Sales</a>
       </div>
     </div>
 
   </div>
 </section>
 
-<!-- ══ FAQ ══ -->
 <section class="faq-section">
   <div class="faq-inner">
     <div class="faq-header">
@@ -587,7 +314,7 @@
         <span class="faq-icon">+</span>
       </div>
       <div class="faq-answer">
-        Yes, you can upgrade or downgrade your plan at any time from your account settings. Upgrades take effect immediately; downgrades take effect at the next billing cycle.
+        Yes, you can upgrade or downgrade at any time from account settings. Upgrades take effect immediately; downgrades at the next billing cycle.
       </div>
     </div>
 
@@ -597,7 +324,7 @@
         <span class="faq-icon">+</span>
       </div>
       <div class="faq-answer">
-        Yes! The Growth plan comes with a 14-day free trial &mdash; no credit card required. You can explore all features and decide if it&rsquo;s right for you before committing.
+        Yes. The Growth plan comes with a 14-day free trial — no credit card required.
       </div>
     </div>
 
@@ -607,7 +334,7 @@
         <span class="faq-icon">+</span>
       </div>
       <div class="faq-answer">
-        Absolutely. All invoices are GST-compliant with proper HSN codes. You can add your GSTIN to your account profile and all future invoices will include it for ITC claims.
+        All invoices are GST-compliant with HSN codes. Add your GSTIN to your profile and it will appear on all future invoices for ITC claims.
       </div>
     </div>
 
@@ -617,65 +344,41 @@
         <span class="faq-icon">+</span>
       </div>
       <div class="faq-answer">
-        We accept all major payment methods including credit/debit cards (Visa, Mastercard, RuPay), UPI, net banking, and bank transfers for Enterprise plans. All payments are processed securely via Razorpay.
+        Credit/debit cards (Visa, Mastercard, RuPay), UPI, net banking, and bank transfers for Enterprise. All payments processed via Razorpay.
       </div>
     </div>
   </div>
 </section>
 
-<!-- ══ CTA Banner ══ -->
 <section class="cta-banner">
-  <div class="cta-banner-inner">
-    <h2>Ready to stay FSSAI compliant?</h2>
-    <p>Start free today &mdash; no credit card required.</p>
-    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
-      <a href="/register" class="btn btn-primary btn-lg">Create Free Account &rarr;</a>
-      <a href="/login" class="btn btn-outline-white btn-lg">Sign In</a>
-    </div>
+  <h2>Ready to stay FSSAI compliant?</h2>
+  <p>Start free today — no credit card required.</p>
+  <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
+    <a href="/register" class="btn btn-primary btn-lg">Create Free Account &rarr;</a>
+    <a href="/login" class="btn-outline-white">Sign In</a>
   </div>
 </section>
 
-<!-- ══ Footer ══ -->
 <footer>
-  <p>
-    RegBite &copy; 2025 &nbsp;&middot;&nbsp; FSSAI Compliance Platform for India
+  <p>RegBite &copy; 2026 &nbsp;&middot;&nbsp; FSSAI Compliance Platform for India
     &nbsp;&middot;&nbsp; <a href="/login">Sign In</a>
     &nbsp;&middot;&nbsp; <a href="/register">Register</a>
-    &nbsp;&middot;&nbsp; <a href="/pricing">Pricing</a>
-    &nbsp;&middot;&nbsp; Not legal advice
-  </p>
+    &nbsp;&middot;&nbsp; Not legal advice</p>
 </footer>
 
 <script>
 function toggleBilling() {
   var cb = document.getElementById('billingToggle');
   var isAnnual = cb.checked;
-
   document.querySelectorAll('.plan-price-amount[data-monthly]').forEach(function(el) {
-    var monthly = parseInt(el.getAttribute('data-monthly'), 10);
-    var annual  = parseInt(el.getAttribute('data-annual'),  10);
-    if (monthly === 0) {
-      el.textContent = '0';
-    } else if (isAnnual) {
-      el.textContent = (annual).toLocaleString('en-IN');
-    } else {
-      el.textContent = monthly.toLocaleString('en-IN');
-    }
+    var m = parseInt(el.getAttribute('data-monthly'), 10);
+    var a = parseInt(el.getAttribute('data-annual'),  10);
+    el.textContent = (m === 0) ? '0' : (isAnnual ? a : m).toLocaleString('en-IN');
   });
-
-  document.querySelectorAll('.annual-note').forEach(function(el) {
-    el.style.display = isAnnual ? '' : 'none';
-  });
-  document.querySelectorAll('.monthly-note').forEach(function(el) {
-    el.style.display = isAnnual ? 'none' : '';
-  });
+  document.querySelectorAll('.annual-note').forEach(function(el) { el.style.display = isAnnual ? '' : 'none'; });
+  document.querySelectorAll('.monthly-note').forEach(function(el) { el.style.display = isAnnual ? 'none' : ''; });
 }
-
-function toggleFaq(el) {
-  var item = el.closest('.faq-item');
-  item.classList.toggle('open');
-}
+function toggleFaq(el) { el.closest('.faq-item').classList.toggle('open'); }
 </script>
-
 </body>
 </html>

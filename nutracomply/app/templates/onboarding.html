@@ -4,268 +4,141 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Welcome to RegBite — Setup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --primary:      #6366f1;
-      --primary-dark: #4f46e5;
-      --primary-deep: #3730a3;
-      --gray-50:  #f8fafc;
-      --gray-100: #f1f5f9;
-      --gray-200: #e2e8f0;
-      --gray-300: #cbd5e1;
-      --gray-400: #94a3b8;
-      --gray-500: #64748b;
-      --gray-600: #475569;
-      --gray-700: #334155;
-      --gray-800: #1e293b;
-      --gray-900: #0f172a;
-      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      --ink:    #111111;
+      --border: #EBEBEB;
+      --gray-3: #D4D4D4;
+      --gray-4: #A3A3A3;
+      --gray-5: #737373;
     }
-
     html { font-size: 16px; }
     body {
       font-family: var(--font);
-      background: var(--gray-50);
-      color: var(--gray-800);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem 1rem;
+      background: #F8F8F8; color: var(--ink);
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 2rem 1rem; letter-spacing: 0.01em; line-height: 1.7;
     }
+    .wizard-wrap { width: 100%; max-width: 520px; }
 
-    .wizard-wrap {
-      width: 100%;
-      max-width: 560px;
+    /* Brand */
+    .wizard-brand {
+      text-align: center; margin-bottom: 2rem;
+      font-size: 1rem; font-weight: 700; color: var(--ink); letter-spacing: -0.02em;
     }
+    .wizard-brand span { font-size: 0.6rem; margin-right: 0.3rem; }
 
-    /* Logo */
-    .wizard-logo {
-      text-align: center;
-      margin-bottom: 1.75rem;
-    }
-    .wizard-logo-inner {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.55rem;
-    }
-    .wizard-logo-icon {
-      width: 38px; height: 38px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #4ade80 0%, #16a34a 100%);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1rem;
-      box-shadow: 0 4px 12px rgba(34,197,94,0.35);
-    }
-    .wizard-logo-name {
-      font-size: 1.4rem;
-      font-weight: 900;
-      color: var(--primary);
-      letter-spacing: -0.03em;
-    }
-
-    /* Progress bar */
-    .progress-wrap {
-      margin-bottom: 1.75rem;
-    }
+    /* Progress */
+    .progress-wrap { margin-bottom: 1.75rem; }
     .progress-steps {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      margin-bottom: 0.6rem;
+      display: flex; align-items: center; margin-bottom: 0.75rem;
     }
     .progress-step {
-      flex: 1;
-      text-align: center;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--gray-400);
-      position: relative;
+      flex: 1; text-align: center;
+      font-size: 0.72rem; font-weight: 500; color: var(--gray-4);
     }
-    .progress-step.active { color: var(--primary); }
-    .progress-step.done   { color: var(--gray-500); }
+    .progress-step.active { color: var(--ink); font-weight: 700; }
+    .progress-step.done   { color: var(--gray-5); }
     .progress-step-dot {
-      width: 28px; height: 28px;
-      border-radius: 50%;
-      border: 2px solid var(--gray-200);
-      background: #fff;
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 1.5px solid var(--border); background: #FFFFFF;
       display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 0.35rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: var(--gray-400);
+      margin: 0 auto 0.3rem;
+      font-size: 0.7rem; font-weight: 700; color: var(--gray-4);
       transition: all 0.2s;
     }
     .progress-step.active .progress-step-dot {
-      border-color: var(--primary);
-      background: var(--primary);
-      color: #fff;
-      box-shadow: 0 0 0 4px rgba(99,102,241,0.15);
+      border-color: var(--ink); background: var(--ink); color: #FFFFFF;
     }
     .progress-step.done .progress-step-dot {
-      border-color: #22c55e;
-      background: #22c55e;
-      color: #fff;
+      border-color: #065F46; background: #D1FAE5; color: #065F46;
     }
     .progress-line {
-      flex: 1;
-      height: 2px;
-      background: var(--gray-200);
-      margin-bottom: 1.5rem;
-      transition: background 0.3s;
+      flex: 1; height: 1px; background: var(--border);
+      margin-bottom: 1.2rem; transition: background 0.3s;
     }
-    .progress-line.done { background: #22c55e; }
-
+    .progress-line.done { background: #D4D4D4; }
     .progress-bar-track {
-      height: 4px;
-      background: var(--gray-200);
-      border-radius: 999px;
-      overflow: hidden;
+      height: 2px; background: var(--border); border-radius: 999px; overflow: hidden;
     }
     .progress-bar-fill {
-      height: 100%;
-      border-radius: 999px;
-      background: linear-gradient(90deg, var(--primary) 0%, #818cf8 100%);
-      transition: width 0.4s ease;
+      height: 100%; border-radius: 999px;
+      background: var(--ink); transition: width 0.4s ease;
     }
 
     /* Card */
     .wizard-card {
-      background: #fff;
-      border: 1.5px solid var(--gray-200);
-      border-radius: 20px;
-      padding: 2.25rem 2.5rem 2rem;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+      background: #FFFFFF; border: 1px solid var(--border);
+      border-radius: 6px; padding: 2rem 2.25rem 1.75rem;
     }
-
     .step-heading {
-      font-size: 1.35rem;
-      font-weight: 800;
-      color: var(--gray-900);
-      letter-spacing: -0.025em;
-      margin-bottom: 0.4rem;
+      font-size: 1.2rem; font-weight: 500; color: var(--ink);
+      letter-spacing: -0.02em; margin-bottom: 0.35rem;
     }
-    .step-sub {
-      font-size: 0.875rem;
-      color: var(--gray-500);
-      margin-bottom: 1.75rem;
-      line-height: 1.55;
-    }
+    .step-sub { font-size: 0.85rem; color: var(--gray-5); margin-bottom: 1.5rem; line-height: 1.6; }
 
-    /* Form elements */
-    .form-field { margin-bottom: 1.1rem; }
+    /* Form */
+    .form-field { margin-bottom: 1rem; }
     .form-field label {
-      display: block;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--gray-700);
-      margin-bottom: 0.38rem;
+      display: block; font-size: 0.78rem; font-weight: 500;
+      color: #404040; margin-bottom: 0.28rem; letter-spacing: 0.03em;
     }
-    .form-field .optional {
-      font-size: 0.72rem;
-      font-weight: 400;
-      color: var(--gray-400);
-      margin-left: 0.35rem;
-    }
+    .form-field .optional { font-size: 0.72rem; font-weight: 400; color: var(--gray-4); margin-left: 0.3rem; }
     .form-input {
-      width: 100%;
-      padding: 0.65rem 0.9rem;
-      border: 1.5px solid var(--gray-200);
-      border-radius: 10px;
-      font-size: 0.9rem;
-      font-family: var(--font);
-      color: var(--gray-900);
-      background: #fff;
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%; padding: 0.55rem 0.85rem;
+      border: 1px solid var(--gray-3); border-radius: 5px;
+      font-size: 0.85rem; font-family: var(--font); color: var(--ink);
+      background: #FFFFFF; outline: none; transition: border-color 0.12s; appearance: none;
     }
-    .form-input:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    .form-input:focus { border-color: var(--ink); }
+    .form-input::placeholder { color: var(--gray-3); }
+    select.form-input {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%23A3A3A3' stroke-width='1.5' stroke-linecap='round' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 0.9rem center; padding-right: 2.5rem;
     }
-    .form-input::placeholder { color: var(--gray-400); }
 
     /* Buttons */
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0.65rem 1.5rem;
-      border-radius: 10px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: all 0.15s ease;
-      font-family: var(--font);
-      text-decoration: none;
-      white-space: nowrap;
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 0.55rem 1.25rem; border-radius: 5px;
+      font-size: 0.85rem; font-weight: 500; cursor: pointer;
+      border: 1px solid transparent; transition: all 0.12s;
+      font-family: var(--font); text-decoration: none; white-space: nowrap; line-height: 1;
     }
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: #fff;
-      box-shadow: 0 4px 14px rgba(99,102,241,0.3);
-      width: 100%;
+    .btn-primary { background: var(--ink); color: #FFFFFF; border-color: var(--ink); width: 100%; justify-content: center; }
+    .btn-primary:hover { background: #404040; border-color: #404040; }
+    .btn-outline  {
+      background: transparent; color: var(--ink); border-color: var(--gray-3);
+      width: 100%; justify-content: center;
     }
-    .btn-primary:hover {
-      background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-deep) 100%);
-      transform: translateY(-1px);
-      box-shadow: 0 6px 18px rgba(99,102,241,0.38);
-    }
-    .btn-primary:active { transform: translateY(0); }
-    .btn-outline {
-      background: transparent;
-      color: var(--primary);
-      border: 1.5px solid var(--primary);
-      width: 100%;
-    }
-    .btn-outline:hover { background: #ede9fe; }
-
-    .btn-actions { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1.5rem; }
-    .btn-actions-row { display: flex; gap: 0.75rem; }
+    .btn-outline:hover { background: #F5F5F5; }
+    .btn-actions { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 1.4rem; }
+    .btn-actions-row { display: flex; gap: 0.65rem; }
     .btn-actions-row .btn { flex: 1; }
 
     .skip-link {
-      display: block;
-      text-align: center;
-      margin-top: 0.85rem;
-      font-size: 0.82rem;
-      color: var(--gray-400);
-      cursor: pointer;
+      display: block; text-align: center; margin-top: 0.75rem;
+      font-size: 0.8rem; color: var(--gray-4); cursor: pointer; background: none;
+      border: none; padding: 0; font-family: inherit; width: 100%;
     }
-    .skip-link:hover { color: var(--gray-600); }
-    .skip-form { display: inline; }
+    .skip-link:hover { color: var(--gray-5); }
 
     /* Step 3 success */
-    .success-icon {
-      font-size: 3.5rem;
-      text-align: center;
-      margin-bottom: 1rem;
-      line-height: 1;
-    }
+    .success-icon { font-size: 2.5rem; text-align: center; margin-bottom: 0.85rem; line-height: 1; }
     .success-heading {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: var(--gray-900);
-      letter-spacing: -0.025em;
-      text-align: center;
-      margin-bottom: 0.5rem;
+      font-size: 1.2rem; font-weight: 500; color: var(--ink);
+      letter-spacing: -0.02em; text-align: center; margin-bottom: 0.4rem;
     }
-    .success-sub {
-      font-size: 0.9rem;
-      color: var(--gray-500);
-      text-align: center;
-      margin-bottom: 2rem;
-      line-height: 1.6;
-    }
+    .success-sub { font-size: 0.875rem; color: var(--gray-5); text-align: center; margin-bottom: 1.75rem; line-height: 1.6; }
 
-    @media (max-width: 600px) {
-      .wizard-card { padding: 1.75rem 1.25rem 1.5rem; }
+    @media (max-width: 560px) {
+      .wizard-card { padding: 1.5rem 1.25rem 1.25rem; }
       .btn-actions-row { flex-direction: column; }
     }
   </style>
@@ -274,15 +147,8 @@
 
 <div class="wizard-wrap">
 
-  <!-- Logo -->
-  <div class="wizard-logo">
-    <div class="wizard-logo-inner">
-      <div class="wizard-logo-icon">&#x1F33F;</div>
-      <span class="wizard-logo-name">RegBite</span>
-    </div>
-  </div>
+  <div class="wizard-brand"><span>●</span> RegBite</div>
 
-  <!-- Progress -->
   <div class="progress-wrap">
     <div class="progress-steps">
       <div class="progress-step {% if step >= 1 %}{% if step > 1 %}done{% else %}active{% endif %}{% endif %}">
@@ -301,43 +167,35 @@
       </div>
     </div>
     <div class="progress-bar-track">
-      <div class="progress-bar-fill" style="width: {% if step == 1 %}33{% elif step == 2 %}66{% else %}100{% endif %}%;"></div>
+      <div class="progress-bar-fill" style="width:{% if step == 1 %}33{% elif step == 2 %}66{% else %}100{% endif %}%;"></div>
     </div>
   </div>
 
-  <!-- Card -->
   <div class="wizard-card">
 
     {% if step == 1 %}
-    <!-- ── Step 1: Company Setup ── -->
-    <div class="step-heading">Welcome to RegBite!</div>
-    <p class="step-sub">Let&rsquo;s set up your account. This takes less than a minute.</p>
-
+    <div class="step-heading">Welcome to RegBite</div>
+    <p class="step-sub">Set up your account in under a minute.</p>
     <form method="post" action="/onboarding/step1">
       <div class="form-field">
         <label>Company Name <span class="optional">(required)</span></label>
-        <input type="text" name="company_name" class="form-input" placeholder="e.g. HealthFirst Nutrition Pvt. Ltd." required
-               value="{{ user.company_name or '' }}" />
+        <input type="text" name="company_name" class="form-input" placeholder="e.g. HealthFirst Nutrition Pvt. Ltd." required value="{{ user.company_name or '' }}" />
       </div>
       <div class="form-field">
         <label>GSTIN <span class="optional">optional</span></label>
-        <input type="text" name="company_gstin" class="form-input" placeholder="22AAAAA0000A1Z5"
-               value="{{ user.company_gstin or '' }}" maxlength="20" />
+        <input type="text" name="company_gstin" class="form-input" placeholder="22AAAAA0000A1Z5" value="{{ user.company_gstin or '' }}" maxlength="20" />
       </div>
       <div class="btn-actions">
         <button type="submit" class="btn btn-primary">Continue &rarr;</button>
       </div>
     </form>
-
-    <form method="post" action="/onboarding/skip" class="skip-form">
-      <button type="submit" class="skip-link" style="background:none;border:none;padding:0;font-family:inherit;">Skip for now</button>
+    <form method="post" action="/onboarding/skip">
+      <button type="submit" class="skip-link">Skip for now</button>
     </form>
 
     {% elif step == 2 %}
-    <!-- ── Step 2: First Product ── -->
-    <div class="step-heading">Add your first product to check</div>
+    <div class="step-heading">Add your first product</div>
     <p class="step-sub">Tell us about a product you want to run compliance checks on.</p>
-
     <form method="post" action="/onboarding/step2">
       <div class="form-field">
         <label>Product Name <span class="optional">(required)</span></label>
@@ -363,17 +221,14 @@
         <button type="submit" class="btn btn-primary">Continue &rarr;</button>
       </div>
     </form>
-
-    <form method="post" action="/onboarding/skip" class="skip-form">
-      <button type="submit" class="skip-link" style="background:none;border:none;padding:0;font-family:inherit;">Skip for now</button>
+    <form method="post" action="/onboarding/skip">
+      <button type="submit" class="skip-link">Skip for now</button>
     </form>
 
     {% else %}
-    <!-- ── Step 3: All Set ── -->
-    <div class="success-icon">&#x2705;</div>
-    <div class="success-heading">You&rsquo;re all set!</div>
-    <p class="success-sub">Your account is ready. Let&rsquo;s check your first product label.</p>
-
+    <div class="success-icon">○</div>
+    <div class="success-heading">You&rsquo;re all set</div>
+    <p class="success-sub">Your account is ready. Upload a label to run your first compliance check.</p>
     <div class="btn-actions">
       <div class="btn-actions-row">
         <form method="post" action="/onboarding/step3" style="flex:1;display:flex;">
@@ -384,9 +239,8 @@
     </div>
     {% endif %}
 
-  </div><!-- /.wizard-card -->
+  </div>
 
-</div><!-- /.wizard-wrap -->
-
+</div>
 </body>
 </html>
