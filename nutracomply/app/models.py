@@ -98,6 +98,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     products = relationship("Product", back_populates="owner")
+    licenses = relationship("LicenseRenewal", back_populates="owner")
 
 
 class Product(Base):
@@ -292,5 +293,99 @@ class LLMConversation(Base):
     kb_type    = Column(SAEnum(KBType), nullable=False)
     admin_id   = Column(Integer, ForeignKey("users.id"), nullable=False)
     messages   = Column(JSON, default=list)     # [{"role":"user"|"model","content":"..."}]
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+# ─── License Renewal Tracker ─────────────────────────────────────────────────
+
+class LicenseType(str, enum.Enum):
+    FSSAI = "FSSAI"
+    AYUSH = "AYUSH"
+    IEC = "IEC"
+    BIS = "BIS"
+    STATE = "State License"
+    OTHER = "Other"
+
+
+class LicenseStatus(str, enum.Enum):
+    ACTIVE = "ACTIVE"
+    EXPIRING_SOON = "EXPIRING_SOON"
+    EXPIRED = "EXPIRED"
+    RENEWED = "RENEWED"
+
+
+class LicenseRenewal(Base):
+    __tablename__ = "license_renewals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    license_name = Column(String(255), nullable=False)
+    license_type = Column(SAEnum(LicenseType), nullable=False)
+    license_number = Column(String(100))
+    expiry_date = Column(DateTime, nullable=False)
+    issued_date = Column(DateTime, nullable=True)
+    notes = Column(Text)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    owner = relationship("User", back_populates="licenses")
+
+    @property
+    def days_until_expiry(self):
+        delta = self.expiry_date - datetime.utcnow()
+        return delta.days
+
+    @property
+    def status(self):
+        days = self.days_until_expiry
+        if days < 0:
+            return LicenseStatus.EXPIRED
+        elif days <= 30:
+            return LicenseStatus.EXPIRING_SOON
+        else:
+            return LicenseStatus.ACTIVE
+
+    @property
+    def status_color(self):
+        days = self.days_until_expiry
+        if days < 0:
+            return "danger"
+        elif days <= 30:
+            return "danger"
+        elif days <= 60:
+            return "warning"
+        else:
+            return "success"
+
+
+# ─── Published Alerts (Admin-composed regulation alerts) ──────────────────────
+
+class PublishedAlertSeverity(str, enum.Enum):
+    INFORMATIONAL = "Informational"
+    IMPORTANT = "Important"
+    URGENT = "Urgent"
+
+
+class PublishedAlertStatus(str, enum.Enum):
+    DRAFT = "Draft"
+    PUBLISHED = "Published"
+    ARCHIVED = "Archived"
+
+
+class PublishedAlert(Base):
+    __tablename__ = "published_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(500), nullable=False)
+    summary = Column(Text, nullable=False)
+    source_url = Column(String(1000))
+    source_title = Column(String(500))
+    affected_categories = Column(JSON, default=list)
+    severity = Column(SAEnum(PublishedAlertSeverity), nullable=False, default=PublishedAlertSeverity.INFORMATIONAL)
+    status = Column(SAEnum(PublishedAlertStatus), default=PublishedAlertStatus.DRAFT)
+    published_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    published_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

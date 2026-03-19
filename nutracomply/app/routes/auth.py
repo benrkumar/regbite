@@ -407,3 +407,60 @@ async def logout():
     response = RedirectResponse(url="/login", status_code=302)
     response.delete_cookie("access_token")
     return response
+
+
+@router.get("/register")
+async def register_page(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request, "error": None})
+
+
+@router.post("/register")
+async def register(
+    request: Request,
+    name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    # Check if email already taken
+    existing = db.query(User).filter(User.email == email.lower().strip()).first()
+    if existing:
+        return templates.TemplateResponse("register.html", {
+            "request": request,
+            "error": "An account with that email already exists. Please sign in.",
+        })
+
+    if len(password) < 8:
+        return templates.TemplateResponse("register.html", {
+            "request": request,
+            "error": "Password must be at least 8 characters.",
+        })
+
+    is_admin = bool(settings.admin_email and email.lower().strip() == settings.admin_email.lower().strip())
+
+    user = User(
+        name=name.strip(),
+        email=email.lower().strip(),
+        hashed_password=hash_password(password),
+        is_admin=is_admin,
+        is_active=True,
+        notification_emails=[],
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    # Seed demo products for new regular users
+    try:
+        _seed_demo_products(user, db)
+    except Exception as e:
+        print(f"[register] Demo product seed failed: {e}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+    token = create_access_token({"sub": user.email})
+    response = RedirectResponse(url="/dashboard", status_code=302)
+    response.set_cookie("access_token", token, httponly=True, max_age=settings.access_token_expire_minutes * 60)
+    return response

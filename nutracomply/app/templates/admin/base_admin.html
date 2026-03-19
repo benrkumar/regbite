@@ -144,11 +144,14 @@
       <a href="/admin/rules" class="adm-nav-link {% if '/admin/rules' in request.url.path %}active{% endif %}">
         <span class="adm-nav-icon">&#x1F4CB;</span> Compliance Rules
       </a>
-      <a href="/admin/alerts" class="adm-nav-link {% if '/admin/alerts' in request.url.path %}active{% endif %}">
+      <a href="/admin/alerts" class="adm-nav-link {% if '/admin/alerts' in request.url.path and '/admin/published-alerts' not in request.url.path %}active{% endif %}">
         <span class="adm-nav-icon">&#x1F514;</span> Alerts
         {% if unread_alerts is defined and unread_alerts > 0 %}
         <span style="margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;padding:0.05rem 0.45rem;font-size:0.65rem;font-weight:700;">{{ unread_alerts }}</span>
         {% endif %}
+      </a>
+      <a href="/admin/published-alerts" class="adm-nav-link {% if '/admin/published-alerts' in request.url.path %}active{% endif %}">
+        <span class="adm-nav-icon">&#x1F4E2;</span> Alert Composer
       </a>
 
       <div class="adm-nav-section">AI Studio</div>

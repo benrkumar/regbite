@@ -313,11 +313,99 @@
       {% endif %}
     </div>
 
+    {# ── Renewal Countdown Widget ── #}
+    {% if expiring_licenses is defined and expiring_licenses %}
+    <div class="card no-hover">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="activity-header">License Renewals</div>
+        <a href="/renewals" style="font-size:0.75rem;color:var(--green-600);font-weight:600;">View all →</a>
+      </div>
+      {% for lic in expiring_licenses %}
+      {% set days = lic.days_until_expiry %}
+      <div class="activity-item">
+        <div class="activity-avatar"
+             style="background:{% if days < 0 %}#fee2e2{% elif days <= 30 %}#ffedd5{% elif days <= 60 %}#fef3c7{% else %}#dcfce7{% endif %};
+                    color:{% if days < 0 %}#991b1b{% elif days <= 30 %}#9a3412{% elif days <= 60 %}#92400e{% else %}#166534{% endif %};">
+          🗓️
+        </div>
+        <div class="activity-text">
+          <div class="activity-name" style="font-size:0.8rem;">{{ lic.license_name[:35] }}{% if lic.license_name|length > 35 %}…{% endif %}</div>
+          <div class="activity-desc">
+            {% if days < 0 %}EXPIRED {{ days|abs }} days ago
+            {% elif days == 0 %}Expires today!
+            {% else %}Expires in {{ days }} day{{ 's' if days != 1 }}{% endif %}
+          </div>
+        </div>
+        <a href="/renewals" style="font-size:0.72rem;font-weight:600;flex-shrink:0;white-space:nowrap;
+           color:{% if days <= 30 %}var(--danger-fg){% else %}var(--green-600){% endif %};">
+          Renew →
+        </a>
+      </div>
+      {% endfor %}
+      <div style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--border);">
+        <a href="/renewals" class="btn btn-primary btn-sm btn-full"
+           style="background:linear-gradient(135deg,#4ade80,#16a34a);color:#fff;box-shadow:0 3px 12px rgba(34,197,94,0.38);justify-content:center;">
+          + Add License
+        </a>
+      </div>
+    </div>
+    {% else %}
+    <div class="card no-hover">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="activity-header">License Renewals</div>
+        <a href="/renewals" style="font-size:0.75rem;color:var(--green-600);font-weight:600;">View all →</a>
+      </div>
+      <div style="text-align:center;padding:0.8rem 0 0.4rem;font-size:0.82rem;color:var(--gray-400);">
+        No licenses expiring soon
+      </div>
+      <a href="/renewals" class="btn btn-primary btn-sm btn-full"
+         style="background:linear-gradient(135deg,#4ade80,#16a34a);color:#fff;box-shadow:0 3px 12px rgba(34,197,94,0.38);justify-content:center;margin-top:0.5rem;">
+        + Add License
+      </a>
+    </div>
+    {% endif %}
+
+    {# ── Regulation Alerts Widget ── #}
+    {% if recent_reg_alerts is defined and recent_reg_alerts %}
+    <div class="card no-hover">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="activity-header">Reg. Alerts</div>
+        <a href="/reg-alerts" style="font-size:0.75rem;color:var(--green-600);font-weight:600;">View all →</a>
+      </div>
+      {% for ra in recent_reg_alerts %}
+      {% set sev = ra.severity.value %}
+      <div class="activity-item">
+        <div class="activity-avatar"
+             style="background:{% if sev == 'Urgent' %}#fee2e2{% elif sev == 'Important' %}#fef3c7{% else %}#dbeafe{% endif %};
+                    color:{% if sev == 'Urgent' %}#991b1b{% elif sev == 'Important' %}#92400e{% else %}#1e40af{% endif %};">
+          📢
+        </div>
+        <div class="activity-text">
+          <div class="activity-name" style="font-size:0.8rem;">{{ ra.title[:40] }}{% if ra.title|length > 40 %}…{% endif %}</div>
+          <div class="activity-desc">
+            <span style="font-weight:700;{% if sev == 'Urgent' %}color:#dc2626;{% elif sev == 'Important' %}color:#d97706;{% else %}color:#3b82f6;{% endif %}">{{ sev }}</span>
+            {% if ra.published_at %} · {{ ra.published_at.strftime('%d %b') }}{% endif %}
+          </div>
+        </div>
+        <a href="/reg-alerts" style="font-size:0.72rem;color:var(--green-600);font-weight:600;flex-shrink:0;white-space:nowrap;">View →</a>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     {# Quick links #}
     <div class="card no-hover">
       <div class="activity-header">Quick Links</div>
       <a href="/regulations" class="quick-link">
         <span class="quick-link-icon">📋</span> Regulation Feed
+        <span style="margin-left:auto;font-size:0.75rem;color:var(--gray-400);">→</span>
+      </a>
+      <a href="/reg-alerts" class="quick-link">
+        <span class="quick-link-icon">📢</span> Reg. Alerts
+        <span style="margin-left:auto;font-size:0.75rem;color:var(--gray-400);">→</span>
+      </a>
+      <a href="/renewals" class="quick-link">
+        <span class="quick-link-icon">🗓️</span> License Renewals
         <span style="margin-left:auto;font-size:0.75rem;color:var(--gray-400);">→</span>
       </a>
       <a href="/products" class="quick-link">

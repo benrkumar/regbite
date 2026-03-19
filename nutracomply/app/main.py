@@ -265,6 +265,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 # module-level `settings = get_settings()` config object.
 from app.routes import auth, products, labels, alerts, regulations, admin
 from app.routes import settings as settings_router
+from app.routes import renewals as renewals_router
 
 app.include_router(auth.router)
 app.include_router(products.router)
@@ -273,6 +274,7 @@ app.include_router(alerts.router)
 app.include_router(regulations.router)
 app.include_router(settings_router.router)
 app.include_router(admin.router)
+app.include_router(renewals_router.router)
 
 try:
     from app.routes import admin_llm
@@ -290,9 +292,10 @@ async def root(request: Request):
 
 @app.get("/dashboard")
 async def dashboard(request: Request):
+    from datetime import datetime
     from app.routes.auth import get_current_user_from_cookie
     from app.database import get_db
-    from app.models import Product, Alert, AlertStatus
+    from app.models import Product, Alert, AlertStatus, LicenseRenewal, PublishedAlert, PublishedAlertStatus
 
     db = next(get_db())
     user = get_current_user_from_cookie(request, db)
@@ -329,6 +332,29 @@ async def dashboard(request: Request):
         .count()
     )
 
+    # Licenses expiring in the next 90 days
+    from datetime import timedelta
+    cutoff = datetime.utcnow() + timedelta(days=90)
+    expiring_licenses = (
+        db.query(LicenseRenewal)
+        .filter(
+            LicenseRenewal.user_id == user.id,
+            LicenseRenewal.is_active == True,
+            LicenseRenewal.expiry_date <= cutoff,
+        )
+        .order_by(LicenseRenewal.expiry_date.asc())
+        .all()
+    )
+
+    # Latest 3 published regulation alerts
+    recent_reg_alerts = (
+        db.query(PublishedAlert)
+        .filter(PublishedAlert.status == PublishedAlertStatus.PUBLISHED)
+        .order_by(PublishedAlert.published_at.desc())
+        .limit(3)
+        .all()
+    )
+
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "user": user,
@@ -339,4 +365,42 @@ async def dashboard(request: Request):
         "flagged_count": len(flagged_list),
         "no_label_count": len(no_label_list),
         "categories": dict(categories),
+        "expiring_licenses": expiring_licenses,
+        "recent_reg_alerts": recent_reg_alerts,
+    })
+
+
+@app.get("/reg-alerts")
+async def reg_alerts(request: Request):
+    from app.routes.auth import get_current_user_from_cookie
+    from app.database import get_db
+    from app.models import Alert, AlertStatus, PublishedAlert, PublishedAlertStatus, PublishedAlertSeverity
+
+    db = next(get_db())
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+
+    severity_filter = request.query_params.get("severity", "")
+    q = db.query(PublishedAlert).filter(PublishedAlert.status == PublishedAlertStatus.PUBLISHED)
+    if severity_filter:
+        try:
+            q = q.filter(PublishedAlert.severity == PublishedAlertSeverity(severity_filter))
+        except ValueError:
+            pass
+
+    alerts_list = q.order_by(PublishedAlert.published_at.desc()).all()
+
+    unread_alerts = (
+        db.query(Alert)
+        .filter(Alert.status == AlertStatus.UNREAD)
+        .count()
+    )
+
+    return templates.TemplateResponse("reg_alerts.html", {
+        "request": request,
+        "user": user,
+        "alerts": alerts_list,
+        "unread_alerts": unread_alerts,
+        "current_severity": severity_filter,
     })

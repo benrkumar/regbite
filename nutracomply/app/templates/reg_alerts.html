@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Regulation Alerts{% endblock %}
+{% block page_subtitle %}Published regulatory alerts and notices{% endblock %}
+
+{% block content %}
+<style>
+.reg-alert-card {
+  background:#fff; border:1px solid var(--border); border-radius:var(--r-lg);
+  padding:1.25rem 1.4rem; margin-bottom:1rem;
+  border-left:4px solid var(--border);
+  transition:box-shadow var(--t);
+}
+.reg-alert-card:hover { box-shadow:0 4px 18px rgba(0,0,0,0.07); }
+.reg-alert-card.sev-urgent    { border-left-color:#dc2626; }
+.reg-alert-card.sev-important { border-left-color:#d97706; }
+.reg-alert-card.sev-info      { border-left-color:#3b82f6; }
+
+.sev-pill {
+  display:inline-block; padding:0.18rem 0.65rem; border-radius:var(--r-full);
+  font-size:0.72rem; font-weight:700; white-space:nowrap;
+}
+.pill-urgent    { background:#fee2e2; color:#991b1b; }
+.pill-important { background:#fef3c7; color:#92400e; }
+.pill-info      { background:#dbeafe; color:#1e40af; }
+
+.filter-bar { display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1.4rem; }
+.filter-chip {
+  padding:0.3rem 0.85rem; border-radius:var(--r-full); font-size:0.8rem; font-weight:600;
+  border:1.5px solid var(--border); background:#fff; color:var(--gray-500);
+  cursor:pointer; transition:all var(--t); text-decoration:none;
+}
+.filter-chip:hover { border-color:var(--green-500); color:var(--green-600); text-decoration:none; }
+.filter-chip.active {
+  background: linear-gradient(135deg,#4ade80,#16a34a);
+  border-color:transparent; color:#fff;
+  box-shadow:0 3px 12px rgba(34,197,94,0.38);
+}
+
+.cat-tag {
+  display:inline-block; padding:0.12rem 0.48rem; border-radius:5px;
+  font-size:0.68rem; font-weight:600; background:#ede9fe; color:#5b21b6;
+  white-space:nowrap;
+}
+
+.alert-meta { font-size:0.75rem; color:var(--gray-400); display:flex; gap:0.8rem; flex-wrap:wrap; align-items:center; }
+.alert-summary { font-size:0.87rem; color:var(--gray-600); line-height:1.55; margin:0.6rem 0 0.8rem; }
+</style>
+
+{# ── Page header ── #}
+<div class="page-hdr">
+  <div>
+    <h2>Regulation Alerts</h2>
+    <p>{{ alerts|length }} published alert{{ 's' if alerts|length != 1 }}</p>
+  </div>
+</div>
+
+{# ── Filter bar ── #}
+<div class="filter-bar">
+  <a href="/reg-alerts" class="filter-chip {% if not current_severity %}active{% endif %}">All</a>
+  <a href="/reg-alerts?severity=Urgent"        class="filter-chip {% if current_severity == 'Urgent' %}active{% endif %}">🔴 Urgent</a>
+  <a href="/reg-alerts?severity=Important"     class="filter-chip {% if current_severity == 'Important' %}active{% endif %}">🟡 Important</a>
+  <a href="/reg-alerts?severity=Informational" class="filter-chip {% if current_severity == 'Informational' %}active{% endif %}">🔵 Informational</a>
+</div>
+
+{# ── Alerts feed ── #}
+{% if alerts %}
+{% for a in alerts %}
+{% set sev = a.severity.value %}
+<div class="reg-alert-card {% if sev == 'Urgent' %}sev-urgent{% elif sev == 'Important' %}sev-important{% else %}sev-info{% endif %}">
+
+  <div style="display:flex;align-items:flex-start;gap:0.75rem;justify-content:space-between;flex-wrap:wrap;">
+    <div style="flex:1;min-width:0;">
+      <div style="display:flex;align-items:center;gap:0.55rem;flex-wrap:wrap;margin-bottom:0.45rem;">
+        {% if sev == 'Urgent' %}
+        <span class="sev-pill pill-urgent">Urgent</span>
+        {% elif sev == 'Important' %}
+        <span class="sev-pill pill-important">Important</span>
+        {% else %}
+        <span class="sev-pill pill-info">Informational</span>
+        {% endif %}
+        {% if a.affected_categories %}
+          {% for cat in a.affected_categories[:3] %}
+          <span class="cat-tag">{{ cat }}</span>
+          {% endfor %}
+          {% if a.affected_categories|length > 3 %}
+          <span style="font-size:0.68rem;color:var(--gray-400);">+{{ a.affected_categories|length - 3 }} more</span>
+          {% endif %}
+        {% endif %}
+      </div>
+      <h3 style="font-size:0.98rem;font-weight:700;color:var(--gray-900);margin:0 0 0.1rem;">{{ a.title }}</h3>
+    </div>
+    <div style="font-size:0.75rem;color:var(--gray-400);white-space:nowrap;flex-shrink:0;">
+      {% if a.published_at %}{{ a.published_at.strftime('%d %b %Y') }}{% else %}{{ a.created_at.strftime('%d %b %Y') }}{% endif %}
+    </div>
+  </div>
+
+  <p class="alert-summary">{{ a.summary }}</p>
+
+  <div class="alert-meta">
+    {% if a.source_title or a.source_url %}
+    <span>
+      📄 {% if a.source_title %}{{ a.source_title }}{% endif %}
+      {% if a.source_url %}
+      — <a href="{{ a.source_url }}" target="_blank" rel="noopener" style="color:var(--green-600);font-weight:600;">Read source ↗</a>
+      {% endif %}
+    </span>
+    {% endif %}
+  </div>
+
+</div>
+{% endfor %}
+
+{% else %}
+<div class="card no-hover" style="padding:0;">
+  <div class="empty-state">
+    <span class="empty-icon">📢</span>
+    <h3>No regulation alerts published yet</h3>
+    <p>Check back here for FSSAI and other regulatory updates published by your compliance team.</p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

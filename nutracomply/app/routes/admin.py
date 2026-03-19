@@ -3,7 +3,8 @@ Super Admin Panel Routes
 All routes require is_admin=True on the current user.
 Admin is designated by matching ADMIN_EMAIL env var on registration.
 """
-from fastapi import APIRouter, Request, Depends
+from datetime import datetime
+from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -13,7 +14,8 @@ from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
 from app.models import (
     User, Product, LabelVersion, ComplianceCheck, ComplianceRule,
-    Alert, AlertStatus, AlertType, RegulationChange, Severity, CheckResult
+    Alert, AlertStatus, AlertType, RegulationChange, Severity, CheckResult,
+    PublishedAlert, PublishedAlertSeverity, PublishedAlertStatus,
 )
 
 router = APIRouter(prefix="/admin")
@@ -354,3 +356,93 @@ async def admin_trigger_recheck(request: Request, db: Session = Depends(get_db))
         t = "error"
 
     return RedirectResponse(url=f"/admin/system?msg={msg}&type={t}", status_code=302)
+
+
+# ── Published Alerts (Regulation Alert Composer) ──────────────────────────────
+
+@router.get("/published-alerts")
+async def admin_published_alerts(request: Request, db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    alerts = db.query(PublishedAlert).order_by(PublishedAlert.created_at.desc()).all()
+    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+
+    return templates.TemplateResponse("admin/published_alerts.html", {
+        "request": request,
+        "user": user,
+        "published_alerts": alerts,
+        "unread_alerts": unread_alerts,
+        "severities": [s.value for s in PublishedAlertSeverity],
+        "product_categories": [
+            "Health Supplement", "Sports Nutrition", "Herbal/Ayurvedic",
+            "Functional Food", "Medical Nutrition", "Infant Nutrition",
+            "Vitamin & Mineral Supplement", "Digestive Health", "All Categories"
+        ],
+    })
+
+
+@router.post("/published-alerts/create")
+async def create_published_alert(
+    request: Request,
+    title: str = Form(...),
+    summary: str = Form(...),
+    severity: str = Form(...),
+    source_url: str = Form(""),
+    source_title: str = Form(""),
+    publish_now: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    form_data = await request.form()
+    categories = list(form_data.getlist("categories"))
+
+    alert = PublishedAlert(
+        title=title,
+        summary=summary,
+        severity=PublishedAlertSeverity(severity),
+        source_url=source_url or None,
+        source_title=source_title or None,
+        affected_categories=categories,
+        status=PublishedAlertStatus.PUBLISHED if publish_now else PublishedAlertStatus.DRAFT,
+        published_by=user.id,
+        published_at=datetime.utcnow() if publish_now else None,
+    )
+    db.add(alert)
+    db.commit()
+
+    return RedirectResponse(url="/admin/published-alerts", status_code=302)
+
+
+@router.post("/published-alerts/{alert_id}/publish")
+async def publish_alert(alert_id: int, request: Request, db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    alert = db.query(PublishedAlert).filter(PublishedAlert.id == alert_id).first()
+    if alert:
+        alert.status = PublishedAlertStatus.PUBLISHED
+        alert.published_at = datetime.utcnow()
+        alert.published_by = user.id
+        db.commit()
+
+    return RedirectResponse(url="/admin/published-alerts", status_code=302)
+
+
+@router.post("/published-alerts/{alert_id}/archive")
+async def archive_alert(alert_id: int, request: Request, db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    alert = db.query(PublishedAlert).filter(PublishedAlert.id == alert_id).first()
+    if alert:
+        alert.status = PublishedAlertStatus.ARCHIVED
+        db.commit()
+
+    return RedirectResponse(url="/admin/published-alerts", status_code=302)

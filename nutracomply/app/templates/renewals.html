@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block title %}License Renewals{% endblock %}
+{% block page_subtitle %}Track and manage your license expiry dates{% endblock %}
+
+{% block content %}
+<style>
+.renewal-stats { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:1rem; margin-bottom:1.75rem; }
+.renewal-stat {
+  background:#fff; border:1px solid var(--border); border-radius:var(--r-lg);
+  padding:1rem 1.2rem; display:flex; flex-direction:column; gap:0.3rem;
+}
+.renewal-stat-val { font-size:2rem; font-weight:800; line-height:1; }
+.renewal-stat-lbl { font-size:0.75rem; color:var(--gray-500); font-weight:500; }
+.val-danger { color:#dc2626; }
+.val-warning { color:#d97706; }
+.val-success { color:#16a34a; }
+.val-neutral { color:var(--gray-400); }
+
+.add-form-card { margin-bottom:1.5rem; }
+.form-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:0.85rem; }
+.form-grid-full { grid-column:1/-1; }
+
+.lic-table-wrap { background:#fff; border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; }
+.lic-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+.lic-table th {
+  background:#f8fafc; padding:0.65rem 1rem; text-align:left;
+  font-size:0.72rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
+  color:var(--gray-500); border-bottom:1.5px solid var(--border);
+}
+.lic-table td { padding:0.7rem 1rem; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+.lic-table tr:last-child td { border-bottom:none; }
+.lic-table tbody tr:hover td { background:#fafafa; }
+
+.days-badge {
+  display:inline-block; padding:0.18rem 0.6rem; border-radius:var(--r-full);
+  font-size:0.73rem; font-weight:700; white-space:nowrap;
+}
+.days-expired  { background:#fee2e2; color:#991b1b; }
+.days-soon     { background:#ffedd5; color:#9a3412; }
+.days-warning  { background:#fef3c7; color:#92400e; }
+.days-ok       { background:#dcfce7; color:#166534; }
+
+.type-badge {
+  display:inline-block; padding:0.15rem 0.55rem; border-radius:5px;
+  font-size:0.7rem; font-weight:700; background:#ede9fe; color:#5b21b6; white-space:nowrap;
+}
+
+.renew-inline-form { display:flex; gap:0.4rem; align-items:center; }
+.renew-input {
+  padding:0.25rem 0.5rem; border:1px solid var(--border); border-radius:6px;
+  font-size:0.78rem; color:var(--gray-700);
+}
+.action-row { display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center; }
+
+/* Accordion add-form toggle */
+.add-form-toggle { cursor:pointer; user-select:none; }
+.add-form-body { display:none; padding-top:1rem; }
+.add-form-body.open { display:block; }
+
+@media (max-width:640px) {
+  .lic-table thead { display:none; }
+  .lic-table, .lic-table tbody, .lic-table tr, .lic-table td { display:block; width:100%; }
+  .lic-table td { padding:0.45rem 0.9rem; border-bottom:none; }
+  .lic-table tr { border-bottom:1px solid var(--border); padding:0.5rem 0; }
+}
+</style>
+
+{# ── Page header ── #}
+<div class="page-hdr">
+  <div>
+    <h2>License Renewals</h2>
+    <p>{{ licenses|length }} license{{ 's' if licenses|length != 1 }} tracked</p>
+  </div>
+  <button class="btn btn-primary btn-sm add-form-toggle" onclick="toggleAddForm()">+ Add License</button>
+</div>
+
+{# ── Stats strip ── #}
+<div class="renewal-stats">
+  <div class="renewal-stat">
+    <div class="renewal-stat-val val-neutral">{{ licenses|length }}</div>
+    <div class="renewal-stat-lbl">Total Licenses</div>
+  </div>
+  <div class="renewal-stat">
+    <div class="renewal-stat-val val-danger">{{ expired|length }}</div>
+    <div class="renewal-stat-lbl">Expired</div>
+  </div>
+  <div class="renewal-stat">
+    <div class="renewal-stat-val" style="color:#d97706;">{{ expiring_soon|length }}</div>
+    <div class="renewal-stat-lbl">Expiring in 30 days</div>
+  </div>
+  <div class="renewal-stat">
+    <div class="renewal-stat-val" style="color:#ca8a04;">{{ expiring_60|length }}</div>
+    <div class="renewal-stat-lbl">Expiring in 60 days</div>
+  </div>
+  <div class="renewal-stat">
+    <div class="renewal-stat-val val-success">{{ active|length }}</div>
+    <div class="renewal-stat-lbl">Active</div>
+  </div>
+</div>
+
+{# ── Add License form (collapsible) ── #}
+<div class="card add-form-card" id="add-form-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleAddForm()">
+    <div class="activity-header" style="margin:0;">Add New License</div>
+    <span id="add-form-chevron" style="font-size:0.9rem;color:var(--gray-400);transition:transform 0.2s;">▼</span>
+  </div>
+  <div class="add-form-body" id="add-form-body">
+    <form method="post" action="/renewals/add">
+      <div class="form-grid" style="margin-top:0.25rem;">
+        <div>
+          <label class="form-label">License Name *</label>
+          <input class="form-input" type="text" name="license_name" placeholder="e.g. FSSAI Central License" required />
+        </div>
+        <div>
+          <label class="form-label">License Type *</label>
+          <select class="form-input" name="license_type" required>
+            <option value="" disabled selected>Select type…</option>
+            {% for lt in license_types %}
+            <option value="{{ lt }}">{{ lt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">License Number</label>
+          <input class="form-input" type="text" name="license_number" placeholder="e.g. 10-19-XXXXXXXXX" />
+        </div>
+        <div>
+          <label class="form-label">Expiry Date *</label>
+          <input class="form-input" type="date" name="expiry_date" required />
+        </div>
+        <div>
+          <label class="form-label">Issued Date</label>
+          <input class="form-input" type="date" name="issued_date" />
+        </div>
+        <div class="form-grid-full">
+          <label class="form-label">Notes</label>
+          <textarea class="form-input" name="notes" rows="2" placeholder="Any renewal notes or reminders…" style="resize:vertical;"></textarea>
+        </div>
+        <div class="form-grid-full" style="display:flex;gap:0.5rem;justify-content:flex-end;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="toggleAddForm()">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save License</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Licenses table ── #}
+{% if licenses %}
+<div class="lic-table-wrap">
+  <table class="lic-table">
+    <thead>
+      <tr>
+        <th>License</th>
+        <th>Type</th>
+        <th>License No.</th>
+        <th>Expiry Date</th>
+        <th>Days Left</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for lic in licenses %}
+      {% set days = lic.days_until_expiry %}
+      <tr>
+        <td>
+          <div style="font-weight:600;color:var(--gray-900);">{{ lic.license_name }}</div>
+          {% if lic.notes %}
+          <div style="font-size:0.75rem;color:var(--gray-400);margin-top:0.15rem;">{{ lic.notes[:60] }}{% if lic.notes|length > 60 %}…{% endif %}</div>
+          {% endif %}
+        </td>
+        <td><span class="type-badge">{{ lic.license_type.value }}</span></td>
+        <td style="font-family:monospace;font-size:0.82rem;color:var(--gray-600);">
+          {{ lic.license_number or '—' }}
+        </td>
+        <td style="font-size:0.83rem;color:var(--gray-700);">
+          {{ lic.expiry_date.strftime('%d %b %Y') }}
+          {% if lic.issued_date %}
+          <div style="font-size:0.72rem;color:var(--gray-400);">Issued: {{ lic.issued_date.strftime('%d %b %Y') }}</div>
+          {% endif %}
+        </td>
+        <td>
+          {% if days < 0 %}
+          <span class="days-badge days-expired">{{ days|abs }} days ago</span>
+          {% elif days == 0 %}
+          <span class="days-badge days-expired">Today!</span>
+          {% elif days <= 30 %}
+          <span class="days-badge days-soon">{{ days }} day{{ 's' if days != 1 }}</span>
+          {% elif days <= 60 %}
+          <span class="days-badge days-warning">{{ days }} days</span>
+          {% else %}
+          <span class="days-badge days-ok">{{ days }} days</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if days < 0 %}
+          <span class="days-badge days-expired">EXPIRED</span>
+          {% elif days <= 30 %}
+          <span class="days-badge days-soon">EXPIRING SOON</span>
+          {% elif days <= 60 %}
+          <span class="days-badge days-warning">WATCH</span>
+          {% else %}
+          <span class="days-badge days-ok">ACTIVE</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="action-row">
+            {# Quick renew inline form #}
+            <form method="post" action="/renewals/{{ lic.id }}/renew" class="renew-inline-form">
+              <input class="renew-input" type="date" name="new_expiry_date" required title="New expiry date" />
+              <button type="submit" class="btn btn-primary btn-sm" title="Renew license">Renew</button>
+            </form>
+            <form method="post" action="/renewals/{{ lic.id }}/delete"
+                  onsubmit="return confirm('Remove this license from tracking?')">
+              <button type="submit" class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fca5a5;" title="Remove">✕</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% else %}
+<div class="card no-hover" style="padding:0;">
+  <div class="empty-state">
+    <span class="empty-icon">🗓️</span>
+    <h3>No licenses tracked yet</h3>
+    <p style="margin-bottom:1.2rem;">Add your FSSAI, AYUSH, IEC, or other regulatory licenses to track their expiry dates.</p>
+    <button class="btn btn-primary" onclick="toggleAddForm()">+ Add Your First License</button>
+  </div>
+</div>
+{% endif %}
+
+<script>
+function toggleAddForm() {
+  var body = document.getElementById('add-form-body');
+  var chev = document.getElementById('add-form-chevron');
+  var isOpen = body.classList.toggle('open');
+  chev.style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+  if (isOpen) {
+    document.getElementById('add-form-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+// Auto-open form if there are no licenses
+{% if not licenses %}
+window.addEventListener('DOMContentLoaded', function() { toggleAddForm(); });
+{% endif %}
+</script>
+{% endblock %}
