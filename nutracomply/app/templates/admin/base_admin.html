@@ -184,14 +184,11 @@
       <a href="/admin/rules" class="adm-nav-link {% if '/admin/rules' in request.url.path %}active{% endif %}">
         <span class="adm-nav-icon">≡</span> Compliance Rules
       </a>
-      <a href="/admin/alerts" class="adm-nav-link {% if '/admin/alerts' in request.url.path and '/admin/published-alerts' not in request.url.path %}active{% endif %}">
+      <a href="/admin/alerts" class="adm-nav-link {% if '/admin/alerts' in request.url.path %}active{% endif %}">
         <span class="adm-nav-icon">◎</span> Alerts
         {% if unread_alerts is defined and unread_alerts > 0 %}
         <span style="margin-left:auto;background:#991B1B;color:#fff;border-radius:99px;padding:0.05rem 0.45rem;font-size:0.65rem;font-weight:700;">{{ unread_alerts }}</span>
         {% endif %}
-      </a>
-      <a href="/admin/published-alerts" class="adm-nav-link {% if '/admin/published-alerts' in request.url.path %}active{% endif %}">
-        <span class="adm-nav-icon">△</span> Alert Composer
       </a>
 
       <div class="adm-nav-section">AI Studio</div>
@@ -200,14 +197,8 @@
       </a>
 
       <div class="adm-nav-section">System</div>
-      <a href="/admin/activity" class="adm-nav-link {% if '/admin/activity' in request.url.path %}active{% endif %}">
-        <span class="adm-nav-icon">▤</span> Activity Log
-      </a>
       <a href="/admin/system" class="adm-nav-link {% if '/admin/system' in request.url.path %}active{% endif %}">
         <span class="adm-nav-icon">○</span> System &amp; Controls
-      </a>
-      <a href="/regulations" class="adm-nav-link">
-        <span class="adm-nav-icon">▤</span> Regulation Feed
       </a>
     </nav>
     <div class="adm-sidebar-footer">

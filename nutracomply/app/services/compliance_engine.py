@@ -1,5 +1,6 @@
 """
-Compliance Engine — runs all active FSSAI rules against an extracted label JSON.
+Compliance Engine — runs all active rules against an extracted label JSON.
+Covers FSSAI, Legal Metrology, and AYUSH (ASU) regulations.
 Returns a list of ComplianceCheck results with PASS/FAIL/WARNING + remediation.
 """
 

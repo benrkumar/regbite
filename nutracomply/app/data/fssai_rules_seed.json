@@ -589,5 +589,277 @@
     },
     "severity": "MEDIUM",
     "remediation_template": "If the product is not suitable for pregnant or nursing women, children, or any specific group, explicitly state: 'Not suitable for [pregnant women / nursing mothers / children under X years]'."
+  },
+
+  {
+    "rule_code": "LM-PKG-001",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Legal Metrology (Packaged Commodities) Rules 2011, Rule 6(1)",
+    "description": "Name and address of the manufacturer/packer/importer must be declared on pre-packaged commodity",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "manufacturer_details"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Declare the complete name and address (including PIN code) of the manufacturer, packer, or importer on the package as per Legal Metrology (Packaged Commodities) Rules 2011."
+  },
+  {
+    "rule_code": "LM-PKG-002",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Legal Metrology (Packaged Commodities) Rules 2011, Rule 6(1)(b)",
+    "description": "Net quantity must be declared in standard metric units (g, kg, mL, L) on principal display panel",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "net_quantity",
+      "description": "Must be in standard metric units per Legal Metrology rules"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Declare net quantity on the principal display panel in standard metric units (g/kg for solids, mL/L for liquids). Font size must meet Legal Metrology height requirements based on package area."
+  },
+  {
+    "rule_code": "LM-PKG-003",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Legal Metrology (Packaged Commodities) Rules 2011, Rule 6(1)(d)",
+    "description": "Maximum Retail Price (MRP) inclusive of all taxes must be declared",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "mrp",
+      "description": "MRP inclusive of all taxes"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Declare the Maximum Retail Price (MRP) inclusive of all taxes on the package. Format: 'MRP ₹XXX (incl. all taxes)'. This is mandatory under Legal Metrology rules for all pre-packaged commodities sold in India."
+  },
+  {
+    "rule_code": "LM-PKG-004",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Legal Metrology (Packaged Commodities) Rules 2011, Rule 6(1)(e)",
+    "description": "Month and year of manufacture or packing must be declared",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "manufacturing_date"
+    },
+    "severity": "HIGH",
+    "remediation_template": "Declare the month and year of manufacture (or packing/import). Format: 'Mfg.: MM/YYYY' or 'Pkg.: MM/YYYY'. Required under Legal Metrology rules."
+  },
+  {
+    "rule_code": "LM-PKG-005",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Legal Metrology (Packaged Commodities) Rules 2011, Rule 6(1)(f)",
+    "description": "Best before or use by date must be declared",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "expiry_date"
+    },
+    "severity": "HIGH",
+    "remediation_template": "Declare 'Best Before' or 'Use By' date. For products with shelf life > 3 months, month/year is acceptable. For products with shelf life ≤ 3 months, declare day/month/year."
+  },
+  {
+    "rule_code": "LM-PKG-006",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Legal Metrology (Packaged Commodities) Rules 2011, Rule 6(1)(a)",
+    "description": "Common or generic name of the commodity must be declared",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "product_name"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Declare the common or generic name of the commodity on the package. This should clearly identify what the product is, distinct from brand/trade name."
+  },
+  {
+    "rule_code": "LM-PKG-007",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Legal Metrology (Packaged Commodities) Rules 2011, Rule 6(2)",
+    "description": "Consumer care details (address, phone, email) must be declared",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "customer_care_details",
+      "description": "Customer/consumer care contact information"
+    },
+    "severity": "MEDIUM",
+    "remediation_template": "Include consumer care / customer complaint contact details: email address and/or phone number, along with the registered office address."
+  },
+  {
+    "rule_code": "LM-PKG-008",
+    "category": "FORMAT_REQUIREMENT",
+    "regulation_source": "Legal Metrology (Packaged Commodities) Rules 2011, Rule 5",
+    "description": "All declarations must be in Hindi and English (or regional language) and must be legible",
+    "check_type": "FORMAT",
+    "check_config": {
+      "description": "Verify mandatory declarations are bilingual (Hindi + English or regional language) and clearly legible as per Legal Metrology requirements."
+    },
+    "severity": "MEDIUM",
+    "remediation_template": "Ensure all mandatory declarations are printed in both Hindi and English (or a regional language per state of sale). Text must be clear, prominent, and indelible."
+  },
+  {
+    "rule_code": "LM-PKG-009",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Legal Metrology (Packaged Commodities) Rules 2011, Rule 6(1)(g)",
+    "description": "Country of origin must be declared for imported products",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "country_of_origin",
+      "applies_to": "imported_products"
+    },
+    "severity": "HIGH",
+    "remediation_template": "For imported products, declare 'Country of Origin: [country]' on the package along with the name and address of the Indian importer."
+  },
+
+  {
+    "rule_code": "AYUSH-ASU-LBL-001",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Drugs and Cosmetics Act 1940, Rule 161(2) — Ayurvedic, Siddha and Unani Drugs",
+    "description": "ASU drug label must declare the name of the drug in the language of the authoritative text and English",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "product_name"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Declare the name of the ASU drug as given in the authoritative text/formulary (e.g., Ayurvedic Pharmacopoeia) along with its English name on the label."
+  },
+  {
+    "rule_code": "AYUSH-ASU-LBL-002",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Drugs and Cosmetics Act 1940, Rule 161(2)(b)",
+    "description": "ASU drug label must state the name and address of the manufacturer and manufacturing license number",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "manufacturer_details"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Declare the manufacturer's name, address, and ASU manufacturing license number on the label. The license number format is typically state-code/ASU-type/year."
+  },
+  {
+    "rule_code": "AYUSH-ASU-LBL-003",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Drugs and Cosmetics Act 1940, Rule 161(2)(c)",
+    "description": "Batch or lot number must be declared on ASU drug label",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "batch_number"
+    },
+    "severity": "HIGH",
+    "remediation_template": "Declare the batch or lot number on the ASU drug label to ensure traceability."
+  },
+  {
+    "rule_code": "AYUSH-ASU-LBL-004",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Drugs and Cosmetics Act 1940, Rule 161(2)(d)",
+    "description": "Date of manufacture and expiry/best before date must be declared on ASU drug label",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "manufacturing_date"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Declare both the date of manufacture and expiry date (or best before date) on the ASU label. For classical formulations, shelf life as per the authoritative text must be followed."
+  },
+  {
+    "rule_code": "AYUSH-ASU-LBL-005",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Drugs and Cosmetics Act 1940, Rule 161(2)(e)",
+    "description": "Therapeutic indications and dosage must be declared on ASU drug label",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "serving_size",
+      "description": "Dosage / Anupana (adjuvant) and therapeutic indication for ASU drugs"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Declare the therapeutic indication (what condition the drug is used for), dosage (e.g., 1-2 tablets twice daily), and Anupana (adjuvant, e.g., 'with warm water/milk') as per the authoritative text."
+  },
+  {
+    "rule_code": "AYUSH-ASU-LBL-006",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Drugs and Cosmetics Act 1940, Rule 161(2)(f)",
+    "description": "Complete list of ingredients with quantities must be declared on ASU drug label",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "ingredient_list"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Declare the complete list of ingredients with their Sanskrit/vernacular names (as per authoritative text) and quantities per dosage unit. For proprietary medicines, quantitative formula must be disclosed."
+  },
+  {
+    "rule_code": "AYUSH-ASU-LBL-007",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Drugs and Cosmetics Act 1940, Rule 161(2)",
+    "description": "ASU drug label must reference the authoritative book/formulary",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "formulation_reference",
+      "description": "Reference to authoritative text like AFI, API, CCRAS formulary, BPN, etc."
+    },
+    "severity": "HIGH",
+    "remediation_template": "Declare the authoritative text reference from which the formulation is derived (e.g., 'As per Ayurvedic Formulary of India, Part I', 'Ref: Bhaishajya Ratnavali'). For proprietary formulations, state 'Proprietary Medicine'."
+  },
+  {
+    "rule_code": "AYUSH-ASU-LBL-008",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Drugs and Cosmetics Act 1940, Rule 161(2)(h)",
+    "description": "Storage conditions must be declared on ASU drug label",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "storage_conditions"
+    },
+    "severity": "MEDIUM",
+    "remediation_template": "Declare storage conditions on the label (e.g., 'Store in a cool dry place', 'Protect from light and moisture'). For Bhasma/Rasa preparations, specific storage instructions may be required."
+  },
+  {
+    "rule_code": "AYUSH-ASU-WARN-001",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Drugs and Cosmetics Act 1940, Rule 161-B — Schedule E(1) drugs",
+    "description": "ASU drugs containing Schedule E(1) ingredients must carry the caution: 'To be taken under medical supervision'",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "warnings",
+      "required_text": "medical supervision",
+      "description": "Mandatory for Schedule E(1) drugs containing potent/toxic ingredients like Vatsanabha, Ahiphena etc."
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "If the formulation contains any Schedule E(1) ingredient (e.g., Vatsanabha, Bhallataka, Ahiphena/Opium, Dhatura), add the caution: 'CAUTION: To be taken under medical supervision only.' in bold."
+  },
+  {
+    "rule_code": "AYUSH-ASU-WARN-002",
+    "category": "PROHIBITED_CLAIM",
+    "regulation_source": "Drugs and Magic Remedies (Objectionable Advertisements) Act 1954",
+    "description": "ASU drugs must not advertise claims for Schedule J diseases (cancer, diabetes, heart disease, etc.)",
+    "check_type": "ABSENCE",
+    "check_config": {
+      "field": "health_claims",
+      "prohibited_patterns": [
+        "cures?\\s+(cancer|diabetes|AIDS|epilepsy|leucoderma|obesity|paralysis|blindness)",
+        "permanent cure",
+        "guaranteed cure",
+        "100%.*effective"
+      ]
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "Remove all claims referencing Schedule J diseases (cancer, diabetes, heart disease, AIDS, epilepsy, obesity, paralysis etc.). The Drugs and Magic Remedies Act prohibits advertising cures for these conditions."
+  },
+  {
+    "rule_code": "AYUSH-ASU-ING-001",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "Drugs and Cosmetics Act 1940, Schedule E(1)",
+    "description": "Ingredients from Schedule E(1) must not exceed the maximum permitted dose specified",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "ingredient_list",
+      "monitored_items": ["vatsanabha", "aconitum", "bhallataka", "semecarpus", "ahiphena", "opium", "dhatura", "jayapala", "croton", "kupilu", "strychnos nux-vomica", "arka", "calotropis"],
+      "note": "Flag for manual dose verification against Schedule E(1) limits"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "This formulation contains a Schedule E(1) ingredient with restricted dose limits. Verify that the quantity per dosage unit does not exceed the maximum permitted dose in Schedule E(1). Label must carry 'To be taken under medical supervision'."
+  },
+  {
+    "rule_code": "AYUSH-ASU-METAL-001",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "Drugs and Cosmetics Rules — ASU Drug Quality Standards",
+    "description": "Bhasma/Rasa preparations containing heavy metals must meet prescribed quality standards and declare metal content",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "ingredient_list",
+      "monitored_items": ["bhasma", "rasa", "sindoor", "parada", "mercury", "swarna", "gold", "rajata", "silver", "tamra", "copper", "loha", "iron bhasma", "naga", "lead", "vanga", "tin"],
+      "note": "Flag for heavy metal content testing and quality certificate verification"
+    },
+    "severity": "CRITICAL",
+    "remediation_template": "This product contains mineral/metal-based ingredients (Bhasma/Rasa). Ensure: (1) Heavy metal content is within prescribed limits per API/AFI standards, (2) Certificate of analysis for heavy metals (As, Pb, Hg, Cd) is maintained, (3) The label declares 'Contains processed minerals/metals'."
   }
 ]

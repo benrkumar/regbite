@@ -232,15 +232,19 @@ def _seed_initial_data():
     from app.models import ComplianceRule, Ingredient, RegulationChange, Severity, ChangeType
     db = SessionLocal()
     try:
-        # Seed compliance rules
-        if db.query(ComplianceRule).count() == 0:
-            rules_path = Path(__file__).parent / "data" / "fssai_rules_seed.json"
-            with open(rules_path, encoding="utf-8") as f:
-                rules_data = json.load(f)
-            for r in rules_data:
+        # Seed compliance rules (insert any new rules that don't exist yet)
+        rules_path = Path(__file__).parent / "data" / "fssai_rules_seed.json"
+        with open(rules_path, encoding="utf-8") as f:
+            rules_data = json.load(f)
+        existing_codes = {r.rule_code for r in db.query(ComplianceRule.rule_code).all()}
+        new_rules = [r for r in rules_data if r["rule_code"] not in existing_codes]
+        if new_rules:
+            for r in new_rules:
                 db.add(ComplianceRule(**r))
             db.commit()
-            print(f"[seed] Loaded {len(rules_data)} FSSAI compliance rules")
+            print(f"[seed] Loaded {len(new_rules)} new compliance rules (FSSAI + Legal Metrology + AYUSH)")
+        elif not existing_codes:
+            print("[seed] No compliance rules found — seed file may be empty")
 
         # Seed ingredients
         if db.query(Ingredient).count() == 0:

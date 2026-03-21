@@ -198,6 +198,13 @@ def _process_label(label_version_id: int):
             except Exception as e:
                 print(f"[alert] Email failed: {e}")
 
+        # Step 5: Feed product into LLM knowledge base
+        try:
+            from app.routes.products import _feed_product_to_llm
+            _feed_product_to_llm(label_version.product_id, db)
+        except Exception as e:
+            print(f"[llm-feed] Error: {e}")
+
     except Exception as e:
         print(f"[process_label] Error: {e}")
         db.rollback()

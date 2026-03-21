@@ -15,7 +15,7 @@
     <summary style="font-size:0.95rem;font-weight:700;color:var(--gray-800);padding:0.2rem 0;">
       + Add New Product
     </summary>
-    <form method="post" action="/products/add" style="margin-top:1.2rem;">
+    <form method="post" action="/products/add" enctype="multipart/form-data" style="margin-top:1.2rem;">
       <div class="two-col">
         <div class="field">
           <label class="field-label">Product Name *</label>
@@ -34,16 +34,44 @@
           <option>Functional Food</option>
           <option>Food for Special Dietary Use</option>
           <option>Novel Food</option>
+          <option>Ayurvedic / ASU</option>
         </select>
       </div>
       <div class="field">
         <label class="field-label">Description</label>
         <textarea class="input" name="description" placeholder="Optional product description" rows="2"></textarea>
       </div>
+
+      {# ── File upload ── #}
+      <div class="field">
+        <label class="field-label">Upload Label / Product File</label>
+        <div id="drop-zone" style="border:1.5px dashed var(--border);border-radius:6px;padding:1.2rem;text-align:center;cursor:pointer;transition:border-color 0.15s;background:#FAFAFA;"
+             ondragover="event.preventDefault();this.style.borderColor='#111111';"
+             ondragleave="this.style.borderColor='var(--border)';"
+             ondrop="event.preventDefault();this.style.borderColor='var(--border)';document.getElementById('product-file').files=event.dataTransfer.files;showFileName();">
+          <div style="font-size:0.82rem;color:var(--gray-500);margin-bottom:0.3rem;">
+            Drag &amp; drop or <span style="color:#111111;font-weight:600;text-decoration:underline;cursor:pointer;" onclick="document.getElementById('product-file').click()">browse files</span>
+          </div>
+          <div style="font-size:0.72rem;color:var(--gray-400);">
+            Image (JPG, PNG, WebP) · PDF · CSV · Excel (.xlsx)
+          </div>
+          <div id="file-name-display" style="margin-top:0.5rem;font-size:0.8rem;font-weight:600;color:#111111;display:none;"></div>
+        </div>
+        <input type="file" id="product-file" name="file" accept=".jpg,.jpeg,.png,.webp,.tiff,.tif,.pdf,.csv,.xlsx,.xls" style="display:none;" onchange="showFileName()" />
+      </div>
+
       <button type="submit" class="btn btn-primary">Add Product</button>
     </form>
   </details>
 </div>
+<script>
+function showFileName(){
+  var f=document.getElementById('product-file');
+  var d=document.getElementById('file-name-display');
+  if(f.files&&f.files.length>0){d.textContent=f.files[0].name;d.style.display='block';}
+  else{d.style.display='none';}
+}
+</script>
 
 {% if products %}
 <div class="table-wrap">
