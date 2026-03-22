@@ -150,7 +150,11 @@ async def _save_label_file(file: UploadFile, suffix: str, product_id: int, db: S
 
 
 def _process_label_bg(label_version_id: int):
-    """Background: OCR → extract → compliance check → alerts → feed LLM."""
+    """Background: OCR → extract → compliance check → alerts → feed LLM.
+
+    Token-saving: Stores extraction results permanently. On re-analysis,
+    if confidence >= 0.85 the stored extraction is reused (zero API tokens).
+    """
     from app.database import SessionLocal
     from app.services.ocr_service import extract_text_from_file
     from app.services.extraction_service import extract_label_data, extract_label_data_from_image
@@ -163,25 +167,36 @@ def _process_label_bg(label_version_id: int):
         if not label_version:
             return
 
-        # Step 1: OCR
-        raw_text, _ = extract_text_from_file(label_version.file_path)
-        label_version.ocr_raw_text = raw_text
+        # Check if we can re-use existing high-confidence extraction (saves tokens)
+        reuse_extraction = (
+            label_version.extraction_json
+            and label_version.extraction_confidence
+            and label_version.extraction_confidence >= 0.85
+        )
 
-        # Step 2: Structured extraction — try Vision API first for images
-        extraction = None
-        confidence = 0.0
-        if label_version.file_type == "image":
-            try:
-                extraction, confidence = extract_label_data_from_image(label_version.file_path)
-            except Exception as e:
-                print(f"[extraction] Vision fallback: {e}")
+        if reuse_extraction:
+            print(f"[process_label] Re-using cached extraction (confidence={label_version.extraction_confidence}) — 0 API tokens")
+            extraction = label_version.extraction_json
+        else:
+            # Step 1: OCR
+            raw_text, _ = extract_text_from_file(label_version.file_path)
+            label_version.ocr_raw_text = raw_text
 
-        if not extraction or confidence < 0.5:
-            extraction, confidence = extract_label_data(raw_text)
+            # Step 2: Structured extraction — try Vision API first for images
+            extraction = None
+            confidence = 0.0
+            if label_version.file_type == "image":
+                try:
+                    extraction, confidence = extract_label_data_from_image(label_version.file_path)
+                except Exception as e:
+                    print(f"[extraction] Vision fallback: {e}")
 
-        label_version.extraction_json = extraction
-        label_version.extraction_confidence = confidence
-        db.commit()
+            if not extraction or confidence < 0.5:
+                extraction, confidence = extract_label_data(raw_text)
+
+            label_version.extraction_json = extraction
+            label_version.extraction_confidence = confidence
+            db.commit()
 
         # Step 3: Compliance check
         checks = run_compliance_check(label_version, db)
@@ -240,7 +255,13 @@ def _process_label_bg(label_version_id: int):
 
 
 def _feed_product_to_llm(product_id: int, db):
-    """Ingest/update this product's data into the Products LLM knowledge base."""
+    """Ingest/update this product's data + extraction into the Products LLM KB.
+
+    Stores the full extraction JSON, compliance results, and OCR text so the
+    LLM can reference all learned data without making additional API calls.
+    This is the 'learning' step — every scan result is permanently stored.
+    """
+    import json as _json
     from app.models import KBDocument, KBChunk, KBType, Product, LabelVersion, ComplianceCheck, ComplianceRule, CheckResult
     from app.services.llm_service import _ingest_document
 
@@ -251,7 +272,7 @@ def _feed_product_to_llm(product_id: int, db):
     # Remove any existing KB document for this product
     existing = db.query(KBDocument).filter(
         KBDocument.kb_type == KBType.PRODUCTS,
-        KBDocument.source == f"db:product:{product.id}",
+        KBDocument.source.like(f"db:product:{product.id}%"),
     ).all()
     for doc in existing:
         db.query(KBChunk).filter(KBChunk.document_id == doc.id).delete()
@@ -266,6 +287,7 @@ def _feed_product_to_llm(product_id: int, db):
     )
 
     checks_summary = ""
+    extraction_text = ""
     if latest_lv:
         checks = (
             db.query(ComplianceCheck)
@@ -291,6 +313,16 @@ def _feed_product_to_llm(product_id: int, db):
             + f"\nOCR Text Preview: {(latest_lv.ocr_raw_text or '')[:400]}"
         )
 
+        # Store full extraction data so the LLM learns from every scan
+        if latest_lv.extraction_json:
+            try:
+                extraction_text = (
+                    f"\n\nExtracted Label Data (confidence: {latest_lv.extraction_confidence or 0:.0%}):\n"
+                    + _json.dumps(latest_lv.extraction_json, indent=2, ensure_ascii=False)[:3000]
+                )
+            except Exception:
+                pass
+
     content = (
         f"Product: {product.name}\n"
         f"SKU: {product.sku or 'N/A'}\n"
@@ -298,6 +330,7 @@ def _feed_product_to_llm(product_id: int, db):
         f"Description: {product.description or 'N/A'}\n"
         f"Created: {product.created_at.strftime('%Y-%m-%d')}"
         + checks_summary
+        + extraction_text
     )
 
     _ingest_document(

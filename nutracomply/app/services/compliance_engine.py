@@ -13,11 +13,27 @@ from app.models import ComplianceRule, ComplianceCheck, LabelVersion, CheckType,
 
 def run_compliance_check(label_version: LabelVersion, db: Session) -> list[ComplianceCheck]:
     """
-    Runs all active rules against the label_version's extraction_json.
+    Runs applicable active rules against the label_version's extraction_json.
+    Rules are filtered by product category:
+      - FSSAI-NUTRA rules → all food/supplement categories
+      - LM-PKG rules → all packaged products
+      - AYUSH-ASU rules → only "Ayurvedic / ASU" category
     Saves and returns ComplianceCheck records.
     """
     extraction = label_version.extraction_json or {}
-    rules = db.query(ComplianceRule).filter(ComplianceRule.active == True).all()
+    all_rules = db.query(ComplianceRule).filter(ComplianceRule.active == True).all()
+
+    # Filter rules by product category
+    product_category = (label_version.product.category or "").lower().strip()
+    is_ayurvedic = "ayurvedic" in product_category or "asu" in product_category
+
+    rules = []
+    for rule in all_rules:
+        code = rule.rule_code or ""
+        # AYUSH rules only apply to Ayurvedic/ASU products
+        if code.startswith("AYUSH-") and not is_ayurvedic:
+            continue
+        rules.append(rule)
 
     # Delete previous checks for this label version
     db.query(ComplianceCheck).filter(
@@ -83,6 +99,14 @@ def _check_presence(rule: ComplianceRule, config: dict, extraction: dict):
     if not field:
         return CheckResult.SKIPPED, None, "No field specified in rule config"
 
+    # Handle conditional applicability (e.g. "applies_to": "imported_products")
+    applies_to = config.get("applies_to")
+    if applies_to == "imported_products":
+        # Only enforce for imported products; skip for domestic or unknown
+        country = extraction.get("country_of_origin", "")
+        if not country or "india" in str(country).lower():
+            return CheckResult.PASS, "Domestic product", "Country of origin check — not applicable (domestic product)"
+
     value = extraction.get(field)
 
     # Boolean fields (e.g. not_for_medicinal_use)
@@ -92,14 +116,31 @@ def _check_presence(rule: ComplianceRule, config: dict, extraction: dict):
         else:
             return CheckResult.FAIL, "false", f"Required statement not found on label"
 
-    # Required text pattern within a list of strings
+    # Required text pattern within a list of strings (or any string field)
     required_text = config.get("required_text")
-    if required_text and isinstance(value, list):
-        combined = " ".join(str(v).lower() for v in value)
+    if required_text:
+        if isinstance(value, list):
+            combined = " ".join(str(v).lower() for v in value)
+        elif isinstance(value, str):
+            combined = value.lower()
+        else:
+            combined = ""
+
         if required_text.lower() in combined:
             return CheckResult.PASS, required_text, f"Required text '{required_text}' found"
-        else:
-            return CheckResult.FAIL, None, f"Required text '{required_text}' not found in {field}"
+
+        # Cross-check: for "NOT FOR MEDICINAL USE" also check the boolean field
+        rt_lower = required_text.lower()
+        if "not for medicinal use" in rt_lower and extraction.get("not_for_medicinal_use") is True:
+            return CheckResult.PASS, "not_for_medicinal_use=true", f"'{required_text}' confirmed via boolean field"
+        if "not to exceed" in rt_lower and extraction.get("not_exceed_daily_usage_advisory") is True:
+            return CheckResult.PASS, "not_exceed_daily_usage_advisory=true", f"'{required_text}' confirmed via boolean field"
+        if "consult" in rt_lower and ("doctor" in rt_lower or "physician" in rt_lower) and extraction.get("consult_doctor_advisory") is True:
+            return CheckResult.PASS, "consult_doctor_advisory=true", f"'{required_text}' confirmed via boolean field"
+
+        if not combined:
+            return CheckResult.FAIL, None, f"Required text '{required_text}' not found — field '{field}' is empty"
+        return CheckResult.FAIL, None, f"Required text '{required_text}' not found in {field}"
 
     # Allowed values
     allowed_values = config.get("allowed_values")
@@ -108,6 +149,18 @@ def _check_presence(rule: ComplianceRule, config: dict, extraction: dict):
             if av.lower() in value.lower():
                 return CheckResult.PASS, value, f"Valid product type declaration found: '{value}'"
         return CheckResult.FAIL, value, f"Product type declaration must be one of: {allowed_values}"
+
+    # Allergen declarations: empty list is acceptable if product may not contain allergens
+    if field == "allergen_declarations" and isinstance(value, list) and len(value) == 0:
+        # Check if any known allergens appear in the ingredient list
+        ingredients = extraction.get("ingredient_list", [])
+        common_allergens = config.get("common_allergens", [])
+        if ingredients and common_allergens:
+            ing_text = " ".join(str(i).lower() for i in ingredients)
+            found = [a for a in common_allergens if a.lower() in ing_text]
+            if found:
+                return CheckResult.FAIL, str(found), f"Possible allergens found in ingredients ({found}) but no allergen declaration"
+        return CheckResult.PASS, "No allergens detected", "No allergen declaration needed — no common allergens found in ingredients"
 
     # Simple non-empty check
     if value and (not isinstance(value, (list, dict)) or len(value) > 0):

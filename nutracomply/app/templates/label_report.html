@@ -75,7 +75,7 @@
 <div class="rpt-hdr">
   <div>
     <h2 style="margin:0 0 0.25rem;font-size:1.25rem;font-weight:600;">Compliance Report</h2>
-    <p style="margin:0;font-size:0.82rem;color:#737373;">{{ product.name }} · Uploaded {{ label.uploaded_at.strftime('%d %b %Y, %H:%M') }}</p>
+    <p style="margin:0;font-size:0.82rem;color:#737373;">{{ product.name }} · Uploaded {{ label.uploaded_at.strftime('%d %b %Y, %H:%M') }}{% if label.extraction_confidence %} · Extraction confidence: {{ (label.extraction_confidence * 100)|int }}%{% endif %}</p>
   </div>
   {% if score is not none %}
   <div class="rpt-score">
@@ -229,7 +229,10 @@
 {# ── Navigation ── #}
 <div class="rpt-nav">
   <form method="post" action="/labels/{{ label.id }}/reanalyze" style="margin:0;">
-    <button type="submit" class="btn btn-primary btn-sm" onclick="this.disabled=true;this.textContent='Re-analyzing...';this.closest('form').submit();">Re-analyze Label</button>
+    <button type="submit" class="btn btn-primary btn-sm" onclick="this.disabled=true;this.textContent='Re-analyzing...';this.closest('form').submit();">Re-analyze Rules</button>
+  </form>
+  <form method="post" action="/labels/{{ label.id }}/reanalyze?force_extract=1" style="margin:0;">
+    <button type="submit" class="btn btn-outline btn-sm" onclick="this.disabled=true;this.textContent='Re-extracting...';this.closest('form').submit();">Re-extract & Analyze</button>
   </form>
   <a href="/products/{{ product.id }}/upload" class="btn btn-outline btn-sm">Upload New Label Version</a>
   <a href="/products/{{ product.id }}" class="btn btn-outline btn-sm">Back to Product</a>

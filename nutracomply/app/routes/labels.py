@@ -135,7 +135,12 @@ async def upload_label(
 
 
 def _process_label(label_version_id: int):
-    """Background task: OCR → extract → compliance check → create alerts."""
+    """Background task: OCR → extract → compliance check → create alerts.
+
+    Token-saving: If a previous extraction with confidence >= 0.85 exists,
+    skip the Gemini API call and re-use the stored extraction data.
+    Only re-runs the compliance rules engine (zero API tokens).
+    """
     from app.database import SessionLocal
 
     db = SessionLocal()
@@ -144,25 +149,36 @@ def _process_label(label_version_id: int):
         if not label_version:
             return
 
-        # Step 1: OCR
-        raw_text, _ = extract_text_from_file(label_version.file_path)
-        label_version.ocr_raw_text = raw_text
+        # Check if we can re-use existing high-confidence extraction (saves tokens)
+        reuse_extraction = (
+            label_version.extraction_json
+            and label_version.extraction_confidence
+            and label_version.extraction_confidence >= 0.85
+        )
 
-        # Step 2: Structured extraction — try Vision API first for images
-        extraction = None
-        confidence = 0.0
-        if label_version.file_type == "image":
-            try:
-                extraction, confidence = extract_label_data_from_image(label_version.file_path)
-            except Exception as e:
-                print(f"[extraction] Vision fallback: {e}")
+        if reuse_extraction:
+            print(f"[process_label] Re-using cached extraction (confidence={label_version.extraction_confidence}) — 0 API tokens")
+            extraction = label_version.extraction_json
+        else:
+            # Step 1: OCR
+            raw_text, _ = extract_text_from_file(label_version.file_path)
+            label_version.ocr_raw_text = raw_text
 
-        if not extraction or confidence < 0.5:
-            extraction, confidence = extract_label_data(raw_text)
+            # Step 2: Structured extraction — try Vision API first for images
+            extraction = None
+            confidence = 0.0
+            if label_version.file_type == "image":
+                try:
+                    extraction, confidence = extract_label_data_from_image(label_version.file_path)
+                except Exception as e:
+                    print(f"[extraction] Vision fallback: {e}")
 
-        label_version.extraction_json = extraction
-        label_version.extraction_confidence = confidence
-        db.commit()
+            if not extraction or confidence < 0.5:
+                extraction, confidence = extract_label_data(raw_text)
+
+            label_version.extraction_json = extraction
+            label_version.extraction_confidence = confidence
+            db.commit()
 
         # Step 3: Compliance check
         checks = run_compliance_check(label_version, db)
@@ -229,7 +245,12 @@ async def reanalyze_label(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    """Re-run OCR + extraction + compliance check on an existing label."""
+    """Re-run compliance check on an existing label.
+
+    Token-saving: If the label already has a high-confidence extraction
+    (>= 0.85), only re-runs the rules engine — zero Gemini API tokens.
+    Pass ?force_extract=1 to force a fresh Vision/OCR extraction.
+    """
     user = require_user(request, db)
     if not user:
         return RedirectResponse(url="/login")
@@ -238,10 +259,13 @@ async def reanalyze_label(
     if not label or label.product.user_id != user.id:
         return RedirectResponse(url="/products")
 
-    # Clear existing extraction so processing indicator shows
-    label.extraction_json = None
-    label.extraction_confidence = None
-    db.commit()
+    force_extract = request.query_params.get("force_extract") == "1"
+
+    if force_extract or not label.extraction_json or (label.extraction_confidence or 0) < 0.85:
+        # Clear extraction to trigger fresh Vision/OCR extraction
+        label.extraction_json = None
+        label.extraction_confidence = None
+        db.commit()
 
     background_tasks.add_task(_process_label, label.id)
     return RedirectResponse(url=f"/labels/{label.id}?processing=1", status_code=302)
