@@ -233,6 +233,57 @@ async def edit_rule(rule_id: int, request: Request, db: Session = Depends(get_db
     )
 
 
+# ── Regulations Knowledge ─────────────────────────────────────────────────────
+
+@router.get("/regulations-kb")
+async def admin_regulations_kb(request: Request, db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    from app.models import KBDocument, KBChunk, KBType
+
+    # Get all active rules grouped by framework
+    rules = db.query(ComplianceRule).filter(ComplianceRule.active == True).order_by(ComplianceRule.rule_code).all()
+
+    fssai_rules = [r for r in rules if r.rule_code.startswith("FSSAI")]
+    lm_rules = [r for r in rules if r.rule_code.startswith("LM")]
+    ayush_rules = [r for r in rules if r.rule_code.startswith("AYUSH")]
+
+    # Get KB stats
+    reg_docs = db.query(KBDocument).filter(
+        KBDocument.kb_type == KBType.REGULATIONS,
+        KBDocument.is_active == True,
+    ).all()
+    reg_chunks = db.query(KBChunk).filter(KBChunk.kb_type == KBType.REGULATIONS).count()
+
+    prod_docs = db.query(KBDocument).filter(
+        KBDocument.kb_type == KBType.PRODUCTS,
+        KBDocument.is_active == True,
+    ).count()
+    prod_chunks = db.query(KBChunk).filter(KBChunk.kb_type == KBType.PRODUCTS).count()
+
+    # Get regulation changes
+    reg_changes = db.query(RegulationChange).order_by(RegulationChange.effective_date.desc()).all()
+
+    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+
+    return templates.TemplateResponse("admin/regulations_kb.html", {
+        "request": request,
+        "user": user,
+        "unread_alerts": unread_alerts,
+        "fssai_rules": fssai_rules,
+        "lm_rules": lm_rules,
+        "ayush_rules": ayush_rules,
+        "total_rules": len(rules),
+        "reg_docs": reg_docs,
+        "reg_chunks": reg_chunks,
+        "prod_docs": prod_docs,
+        "prod_chunks": prod_chunks,
+        "reg_changes": reg_changes,
+    })
+
+
 # ── Alerts ────────────────────────────────────────────────────────────────────
 
 @router.get("/alerts")

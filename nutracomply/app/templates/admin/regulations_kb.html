@@ -1,0 +1,183 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Regulations Knowledge Base{% endblock %}
+{% block page_title %}Regulations Knowledge Base{% endblock %}
+
+{% block content %}
+<style>
+  .kb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.85rem; margin-bottom:1.75rem; }
+  .kb-stat { background:#fff; border:1px solid #EBEBEB; border-radius:5px; padding:1rem; }
+  .kb-stat-val { font-size:1.5rem; font-weight:700; color:#111111; line-height:1; }
+  .kb-stat-lbl { font-size:0.68rem; color:#A3A3A3; margin-top:0.25rem; font-weight:500; letter-spacing:0.04em; }
+
+  .fw-card { background:#fff; border:1px solid #EBEBEB; border-radius:6px; margin-bottom:1rem; overflow:hidden; }
+  .fw-card-hdr { padding:1rem 1.25rem; border-bottom:1px solid #EBEBEB; display:flex; align-items:center; justify-content:space-between; }
+  .fw-card-title { font-size:0.92rem; font-weight:600; color:#111111; }
+  .fw-card-count { font-size:0.72rem; color:#A3A3A3; font-weight:500; }
+  .fw-rule-row { padding:0.6rem 1.25rem; border-bottom:1px solid #F5F5F5; display:flex; align-items:flex-start; gap:0.75rem; font-size:0.8rem; }
+  .fw-rule-row:last-child { border-bottom:none; }
+  .fw-rule-row:hover { background:#FAFAFA; }
+  .fw-rule-code { font-family:monospace; font-size:0.72rem; color:#A3A3A3; min-width:130px; flex-shrink:0; padding-top:0.1rem; }
+  .fw-rule-desc { flex:1; color:#525252; line-height:1.5; }
+  .fw-rule-src { font-size:0.68rem; color:#A3A3A3; margin-top:0.15rem; }
+  .fw-sev { font-size:0.6rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:3px; white-space:nowrap; flex-shrink:0; }
+  .fw-sev-CRITICAL { background:#FEE2E2; color:#991B1B; }
+  .fw-sev-HIGH { background:#FEF3C7; color:#92400E; }
+  .fw-sev-MEDIUM { background:#FEF9C3; color:#854D0E; }
+  .fw-sev-LOW { background:#F5F5F5; color:#737373; }
+
+  .kb-doc-row { padding:0.55rem 1.25rem; border-bottom:1px solid #F5F5F5; display:flex; align-items:center; gap:0.75rem; font-size:0.8rem; }
+  .kb-doc-row:last-child { border-bottom:none; }
+  .kb-doc-title { flex:1; color:#111111; font-weight:500; }
+  .kb-doc-src { font-size:0.7rem; color:#A3A3A3; font-family:monospace; }
+  .kb-doc-chunks { font-size:0.68rem; color:#737373; white-space:nowrap; }
+
+  .rc-row { padding:0.65rem 1.25rem; border-bottom:1px solid #F5F5F5; }
+  .rc-row:last-child { border-bottom:none; }
+  .rc-title { font-size:0.85rem; font-weight:600; color:#111111; margin-bottom:0.2rem; }
+  .rc-meta { font-size:0.72rem; color:#A3A3A3; }
+  .rc-summary { font-size:0.78rem; color:#525252; margin-top:0.3rem; line-height:1.5; }
+</style>
+
+{# ── KB Stats ── #}
+<div class="kb-grid">
+  <div class="kb-stat">
+    <div class="kb-stat-val">{{ total_rules }}</div>
+    <div class="kb-stat-lbl">Active Rules</div>
+  </div>
+  <div class="kb-stat">
+    <div class="kb-stat-val">{{ fssai_rules|length }}</div>
+    <div class="kb-stat-lbl">FSSAI Rules</div>
+  </div>
+  <div class="kb-stat">
+    <div class="kb-stat-val">{{ lm_rules|length }}</div>
+    <div class="kb-stat-lbl">Legal Metrology</div>
+  </div>
+  <div class="kb-stat">
+    <div class="kb-stat-val">{{ ayush_rules|length }}</div>
+    <div class="kb-stat-lbl">AYUSH / ASU</div>
+  </div>
+  <div class="kb-stat">
+    <div class="kb-stat-val">{{ reg_docs|length }}</div>
+    <div class="kb-stat-lbl">KB Documents</div>
+  </div>
+  <div class="kb-stat">
+    <div class="kb-stat-val">{{ reg_chunks }}</div>
+    <div class="kb-stat-lbl">KB Chunks</div>
+  </div>
+  <div class="kb-stat">
+    <div class="kb-stat-val">{{ prod_docs }}</div>
+    <div class="kb-stat-lbl">Product Docs</div>
+  </div>
+  <div class="kb-stat">
+    <div class="kb-stat-val">{{ prod_chunks }}</div>
+    <div class="kb-stat-lbl">Product Chunks</div>
+  </div>
+</div>
+
+{# ── FSSAI Rules ── #}
+<div class="fw-card">
+  <div class="fw-card-hdr">
+    <div class="fw-card-title">FSSAI — Food Safety &amp; Standards</div>
+    <div class="fw-card-count">{{ fssai_rules|length }} rules</div>
+  </div>
+  {% for rule in fssai_rules %}
+  <div class="fw-rule-row">
+    <div class="fw-rule-code">{{ rule.rule_code }}</div>
+    <div class="fw-rule-desc">
+      {{ rule.description }}
+      <div class="fw-rule-src">{{ rule.regulation_source }}</div>
+    </div>
+    <span class="fw-sev fw-sev-{{ rule.severity.value }}">{{ rule.severity.value }}</span>
+  </div>
+  {% endfor %}
+</div>
+
+{# ── Legal Metrology Rules ── #}
+<div class="fw-card">
+  <div class="fw-card-hdr">
+    <div class="fw-card-title">Legal Metrology — Packaged Commodities Rules</div>
+    <div class="fw-card-count">{{ lm_rules|length }} rules</div>
+  </div>
+  {% for rule in lm_rules %}
+  <div class="fw-rule-row">
+    <div class="fw-rule-code">{{ rule.rule_code }}</div>
+    <div class="fw-rule-desc">
+      {{ rule.description }}
+      <div class="fw-rule-src">{{ rule.regulation_source }}</div>
+    </div>
+    <span class="fw-sev fw-sev-{{ rule.severity.value }}">{{ rule.severity.value }}</span>
+  </div>
+  {% endfor %}
+</div>
+
+{# ── AYUSH Rules ── #}
+<div class="fw-card">
+  <div class="fw-card-hdr">
+    <div class="fw-card-title">AYUSH — Ayurvedic, Siddha &amp; Unani Drugs</div>
+    <div class="fw-card-count">{{ ayush_rules|length }} rules</div>
+  </div>
+  {% for rule in ayush_rules %}
+  <div class="fw-rule-row">
+    <div class="fw-rule-code">{{ rule.rule_code }}</div>
+    <div class="fw-rule-desc">
+      {{ rule.description }}
+      <div class="fw-rule-src">{{ rule.regulation_source }}</div>
+    </div>
+    <span class="fw-sev fw-sev-{{ rule.severity.value }}">{{ rule.severity.value }}</span>
+  </div>
+  {% endfor %}
+</div>
+
+{# ── LLM Knowledge Base Documents ── #}
+{% if reg_docs %}
+<div class="fw-card">
+  <div class="fw-card-hdr">
+    <div class="fw-card-title">LLM Knowledge Base — Regulation Documents</div>
+    <div class="fw-card-count">{{ reg_docs|length }} documents · {{ reg_chunks }} chunks</div>
+  </div>
+  {% for doc in reg_docs[:50] %}
+  <div class="kb-doc-row">
+    <div class="kb-doc-title">{{ doc.title }}</div>
+    <div class="kb-doc-src">{{ doc.source }}</div>
+    <div class="kb-doc-chunks">{{ doc.chunk_count or 0 }} chunks</div>
+  </div>
+  {% endfor %}
+  {% if reg_docs|length > 50 %}
+  <div style="padding:0.75rem 1.25rem;font-size:0.78rem;color:#A3A3A3;text-align:center;">
+    ... and {{ reg_docs|length - 50 }} more documents
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{# ── Regulation Changes ── #}
+{% if reg_changes %}
+<div class="fw-card">
+  <div class="fw-card-hdr">
+    <div class="fw-card-title">Regulation Updates &amp; Changes</div>
+    <div class="fw-card-count">{{ reg_changes|length }} updates tracked</div>
+  </div>
+  {% for rc in reg_changes %}
+  <div class="rc-row">
+    <div class="rc-title">{{ rc.document_name or 'Regulation Update' }}</div>
+    <div class="rc-meta">
+      {{ rc.change_type.value }} ·
+      <span class="fw-sev fw-sev-{{ rc.severity.value }}">{{ rc.severity.value }}</span> ·
+      Effective: {{ rc.effective_date.strftime('%d %b %Y') if rc.effective_date else 'TBD' }}
+      {% if rc.source_url %} · <a href="{{ rc.source_url }}" target="_blank" style="color:#111111;">Source ↗</a>{% endif %}
+    </div>
+    {% if rc.summary_text %}
+    <div class="rc-summary">{{ rc.summary_text[:300] }}{% if rc.summary_text|length > 300 %}...{% endif %}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Actions ── #}
+<div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:1rem;">
+  <a href="/admin/llm" class="adm-btn adm-btn-primary">Open LLM Studio →</a>
+  <a href="/admin/rules" class="adm-btn">Manage Rules →</a>
+</div>
+
+{% endblock %}

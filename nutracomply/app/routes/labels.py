@@ -11,7 +11,7 @@ from app.database import get_db
 from app.models import Product, LabelVersion, Alert, AlertType, AlertStatus, CheckResult, Severity, ComplianceReport
 from app.routes.auth import get_current_user_from_cookie
 from app.services.ocr_service import extract_text_from_file
-from app.services.extraction_service import extract_label_data
+from app.services.extraction_service import extract_label_data, extract_label_data_from_image
 from app.services.compliance_engine import run_compliance_check, calculate_compliance_score, get_violation_summary
 from app.config import get_settings
 
@@ -148,8 +148,18 @@ def _process_label(label_version_id: int):
         raw_text, _ = extract_text_from_file(label_version.file_path)
         label_version.ocr_raw_text = raw_text
 
-        # Step 2: Structured extraction
-        extraction, confidence = extract_label_data(raw_text)
+        # Step 2: Structured extraction — try Vision API first for images
+        extraction = None
+        confidence = 0.0
+        if label_version.file_type == "image":
+            try:
+                extraction, confidence = extract_label_data_from_image(label_version.file_path)
+            except Exception as e:
+                print(f"[extraction] Vision fallback: {e}")
+
+        if not extraction or confidence < 0.5:
+            extraction, confidence = extract_label_data(raw_text)
+
         label_version.extraction_json = extraction
         label_version.extraction_confidence = confidence
         db.commit()
@@ -210,6 +220,31 @@ def _process_label(label_version_id: int):
         db.rollback()
     finally:
         db.close()
+
+
+@router.post("/labels/{label_id}/reanalyze")
+async def reanalyze_label(
+    label_id: int,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Re-run OCR + extraction + compliance check on an existing label."""
+    user = require_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+
+    label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
+    if not label or label.product.user_id != user.id:
+        return RedirectResponse(url="/products")
+
+    # Clear existing extraction so processing indicator shows
+    label.extraction_json = None
+    label.extraction_confidence = None
+    db.commit()
+
+    background_tasks.add_task(_process_label, label.id)
+    return RedirectResponse(url=f"/labels/{label.id}?processing=1", status_code=302)
 
 
 @router.get("/labels/{label_id}")

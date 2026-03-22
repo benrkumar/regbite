@@ -153,7 +153,7 @@ def _process_label_bg(label_version_id: int):
     """Background: OCR → extract → compliance check → alerts → feed LLM."""
     from app.database import SessionLocal
     from app.services.ocr_service import extract_text_from_file
-    from app.services.extraction_service import extract_label_data
+    from app.services.extraction_service import extract_label_data, extract_label_data_from_image
     from app.services.compliance_engine import run_compliance_check, calculate_compliance_score
     from app.models import Alert, AlertType, AlertStatus, CheckResult, Severity, Product
 
@@ -167,8 +167,18 @@ def _process_label_bg(label_version_id: int):
         raw_text, _ = extract_text_from_file(label_version.file_path)
         label_version.ocr_raw_text = raw_text
 
-        # Step 2: Structured extraction
-        extraction, confidence = extract_label_data(raw_text)
+        # Step 2: Structured extraction — try Vision API first for images
+        extraction = None
+        confidence = 0.0
+        if label_version.file_type == "image":
+            try:
+                extraction, confidence = extract_label_data_from_image(label_version.file_path)
+            except Exception as e:
+                print(f"[extraction] Vision fallback: {e}")
+
+        if not extraction or confidence < 0.5:
+            extraction, confidence = extract_label_data(raw_text)
+
         label_version.extraction_json = extraction
         label_version.extraction_confidence = confidence
         db.commit()

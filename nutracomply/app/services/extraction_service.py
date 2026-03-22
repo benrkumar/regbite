@@ -1,6 +1,8 @@
 """
-Extraction Service — sends OCR text to Google Gemini Flash and extracts
-a structured JSON representation of the label.
+Extraction Service — sends OCR text (or label image directly) to Google Gemini
+and extracts a structured JSON representation of the label.
+
+Supports FSSAI, Legal Metrology, and AYUSH regulation fields.
 """
 
 import json
@@ -11,38 +13,55 @@ from app.config import get_settings
 settings = get_settings()
 
 EXTRACTION_PROMPT = """
-You are a regulatory expert specializing in FSSAI (Food Safety and Standards Authority of India)
-compliance for nutraceutical products.
+You are a regulatory compliance expert for Indian packaged goods — specializing in
+FSSAI (nutraceuticals, health supplements), Legal Metrology (packaged commodities),
+and AYUSH (Ayurvedic/Siddha/Unani drugs).
 
-Analyze the following product label text and extract ALL available information into a structured JSON.
-If a field is not present on the label, set it to null.
-For list fields (ingredients, health_claims, warnings), return empty lists [] if not found.
+Analyze the following product label text VERY CAREFULLY and extract ALL information
+present into a structured JSON. Read every line of the label text — key information
+may be anywhere: front panel, back panel, side panels, footer areas.
+
+IMPORTANT RULES:
+- Only set a field to null if the information is genuinely NOT present on the label.
+- For boolean fields: set true if the statement/declaration IS present, false only if
+  you're certain it's absent after reading the full label.
+- For ingredient_list: extract EVERY ingredient mentioned, including "Other Ingredients"
+  or excipients like Magnesium Stearate, Silicon Dioxide, etc.
+- For warnings: extract ALL warning/advisory/disclaimer text, each as separate list items.
+- For health_claims: extract any benefit/function claims like "Improve Endurance", etc.
+- For nutritional_table: extract EVERY row from the nutrition facts table.
+- For manufacturer_details: include BOTH marketer and manufacturer if both are listed.
+- For MRP: look for "MRP", "M.R.P.", or "Maximum Retail Price" declarations.
+- For customer_care: look for email addresses, phone numbers, website URLs.
 
 Return ONLY valid JSON with no markdown formatting, no code blocks, just raw JSON.
 
 Required JSON structure:
 {
   "product_name": "string or null",
-  "product_type_declaration": "string (e.g. 'HEALTH SUPPLEMENT', 'NUTRACEUTICAL') or null",
+  "product_type_declaration": "string (e.g. 'HEALTH SUPPLEMENT', 'NUTRACEUTICAL', 'AYURVEDIC MEDICINE') or null",
   "fssai_license_number": "14-digit string or null",
-  "net_quantity": "string (e.g. '60 capsules', '500g') or null",
-  "serving_size": "string (e.g. '1 capsule', '2 tablets') or null",
+  "net_quantity": "string (e.g. '60 Tablets', '500g') or null",
+  "serving_size": "string (e.g. '2 tablets', '1 capsule daily') or null",
   "manufacturing_date": "string or null",
   "expiry_date": "string or null",
   "batch_number": "string or null",
-  "manufacturer_details": "string (name + address) or null",
+  "manufacturer_details": "string (all manufacturer/marketer names + addresses) or null",
   "country_of_origin": "string or null",
   "storage_conditions": "string or null",
-  "target_consumer": "string (e.g. 'Adults above 18 years') or null",
+  "target_consumer": "string (e.g. 'FOR ADULTS', 'Men & Women') or null",
   "veg_nonveg_mark": "VEG or NON-VEG or null",
-  "ingredient_list": ["ingredient name with quantity if available"],
+  "mrp": "string (e.g. '₹599', 'MRP ₹1299') or null",
+  "customer_care_details": "string (email, phone, website) or null",
+  "formulation_reference": "string (for AYUSH: authoritative text reference) or null",
+  "ingredient_list": ["ingredient 1", "ingredient 2", ...],
   "nutritional_table": [
     {"nutrient": "string", "per_serving": "string", "per_100g": "string or null", "rda_percent": "string or null"}
   ],
   "rda_percentages": true or false,
   "health_claims": ["claim 1", "claim 2"],
-  "warnings": ["warning 1", "warning 2"],
-  "allergen_declarations": ["allergen 1", "allergen 2"],
+  "warnings": ["warning 1", "warning 2", ...],
+  "allergen_declarations": ["allergen 1"],
   "not_for_medicinal_use": true or false,
   "consult_doctor_advisory": true or false,
   "keep_out_of_reach_children": true or false,
@@ -77,6 +96,47 @@ def extract_label_data(ocr_text: str) -> tuple[dict, float]:
     return _rule_based_extraction(ocr_text), 0.50
 
 
+def extract_label_data_from_image(image_path: str) -> tuple[dict, float]:
+    """
+    Send label image directly to Gemini Vision for extraction.
+    More accurate than OCR → text → extraction pipeline.
+    Falls back to standard OCR pipeline if Vision fails.
+    """
+    if not settings.gemini_api_key:
+        return {}, 0.0
+
+    try:
+        import google.generativeai as genai
+        from pathlib import Path
+        import PIL.Image
+
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel("gemini-1.5-pro")
+
+        img = PIL.Image.open(image_path)
+
+        vision_prompt = EXTRACTION_PROMPT.replace(
+            "Label text to analyze:\n---\n{label_text}\n---",
+            "Analyze the product label in this image and extract all information."
+        )
+
+        response = model.generate_content(
+            [vision_prompt, img],
+            generation_config={"temperature": 0.1, "max_output_tokens": 4096},
+        )
+
+        raw = response.text.strip()
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```$", "", raw)
+
+        result = json.loads(raw)
+        return result, 0.92
+
+    except Exception as e:
+        print(f"[extraction] Gemini Vision failed: {e}")
+        return {}, 0.0
+
+
 def _call_gemini(ocr_text: str) -> Optional[dict]:
     import google.generativeai as genai
 
@@ -87,7 +147,7 @@ def _call_gemini(ocr_text: str) -> Optional[dict]:
 
     response = model.generate_content(
         prompt,
-        generation_config={"temperature": 0.1, "max_output_tokens": 2048},
+        generation_config={"temperature": 0.1, "max_output_tokens": 4096},
     )
 
     raw = response.text.strip()
@@ -140,7 +200,7 @@ def _rule_based_extraction(text: str) -> dict:
 
     # Product type
     product_type = None
-    for pt in ["HEALTH SUPPLEMENT", "NUTRACEUTICAL", "FUNCTIONAL FOOD", "NOVEL FOOD"]:
+    for pt in ["HEALTH SUPPLEMENT", "NUTRACEUTICAL", "FUNCTIONAL FOOD", "NOVEL FOOD", "AYURVEDIC"]:
         if pt.lower() in text_lower:
             product_type = pt
             break
@@ -151,6 +211,10 @@ def _rule_based_extraction(text: str) -> dict:
         veg_mark = "NON-VEG"
     elif re.search(r'\bveg(?:etarian)?\b', text_lower):
         veg_mark = "VEG"
+
+    # MRP
+    mrp_match = re.search(r'(?:MRP|M\.R\.P\.?)[:\s]*[₹Rs\.]*\s*([0-9,]+)', text, re.IGNORECASE)
+    mrp = mrp_match.group(0).strip() if mrp_match else None
 
     # Boolean flags
     def has(phrase):
@@ -170,6 +234,9 @@ def _rule_based_extraction(text: str) -> dict:
         "storage_conditions": None,
         "target_consumer": None,
         "veg_nonveg_mark": veg_mark,
+        "mrp": mrp,
+        "customer_care_details": None,
+        "formulation_reference": None,
         "ingredient_list": [],
         "nutritional_table": [],
         "rda_percentages": has("%rda") or has("% rda") or has("recommended daily"),
@@ -177,7 +244,7 @@ def _rule_based_extraction(text: str) -> dict:
         "warnings": [],
         "allergen_declarations": [],
         "not_for_medicinal_use": has("not for medicinal use"),
-        "consult_doctor_advisory": has("consult") and (has("doctor") or has("physician")),
+        "consult_doctor_advisory": has("consult") and (has("doctor") or has("physician") or has("dietician")),
         "keep_out_of_reach_children": has("out of reach of children"),
         "not_exceed_daily_usage_advisory": has("not to exceed"),
     }
