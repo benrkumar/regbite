@@ -38,6 +38,25 @@
   .rc-summary { font-size:0.78rem; color:#525252; margin-top:0.3rem; line-height:1.5; }
 </style>
 
+{# ── Flash message ── #}
+{% set flash_msg = request.query_params.get('msg') %}
+{% if flash_msg %}
+<div class="adm-flash adm-flash-{{ request.query_params.get('type', 'info') }}">{{ flash_msg }}</div>
+{% endif %}
+
+{# ── Action Buttons ── #}
+<div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+  <form method="post" action="/admin/regulations-kb/sync-rules" style="margin:0;">
+    <button type="submit" class="adm-btn adm-btn-primary" onclick="this.disabled=true;this.textContent='Syncing...';this.closest('form').submit();">Sync Rules from Seed File</button>
+  </form>
+  <form method="post" action="/admin/regulations-kb/seed-llm" style="margin:0;">
+    <button type="submit" class="adm-btn adm-btn-success" onclick="this.disabled=true;this.textContent='Seeding...';this.closest('form').submit();">Seed Regulations LLM KB</button>
+  </form>
+  <form method="post" action="/admin/regulations-kb/reseed-llm" style="margin:0;">
+    <button type="submit" class="adm-btn" onclick="return confirm('This will clear and rebuild the Regulations LLM KB. Continue?') && (this.disabled=true,this.textContent='Re-seeding...',true);">Re-seed LLM KB (Full Rebuild)</button>
+  </form>
+</div>
+
 {# ── KB Stats ── #}
 <div class="kb-grid">
   <div class="kb-stat">
@@ -73,6 +92,16 @@
     <div class="kb-stat-lbl">Product Chunks</div>
   </div>
 </div>
+
+{# ── Warning if frameworks are missing ── #}
+{% if lm_rules|length == 0 or ayush_rules|length == 0 %}
+<div class="adm-flash adm-flash-error" style="margin-bottom:1rem;">
+  <strong>Missing regulations:</strong>
+  {% if lm_rules|length == 0 %}Legal Metrology rules not loaded.{% endif %}
+  {% if ayush_rules|length == 0 %}AYUSH rules not loaded.{% endif %}
+  Click <strong>"Sync Rules from Seed File"</strong> above to import them.
+</div>
+{% endif %}
 
 {# ── FSSAI Rules ── #}
 <div class="fw-card">

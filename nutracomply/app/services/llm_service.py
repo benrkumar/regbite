@@ -121,24 +121,30 @@ def _ingest_document(db, kb_type: str, title: str, source: str,
 def seed_regulations_kb(db) -> dict:
     """
     Auto-populate the Regulations knowledge base from existing DB rows.
-    Idempotent — skips if any documents already exist for this KB type.
+    Additive — only inserts documents whose source doesn't already exist.
+    Data is permanently stored and never auto-deleted.
     Sources: ComplianceRule, RegulationChange, Ingredient.
     """
     from app.models import KBDocument, KBType, ComplianceRule, RegulationChange, Ingredient
 
-    existing = db.query(KBDocument).filter(
-        KBDocument.kb_type == KBType.REGULATIONS,
-        KBDocument.is_active == True,
-    ).count()
-    if existing > 0:
-        return {"status": "already_seeded", "document_count": existing}
+    # Get existing sources to avoid duplicates
+    existing_sources = {
+        d.source for d in
+        db.query(KBDocument.source).filter(
+            KBDocument.kb_type == KBType.REGULATIONS,
+            KBDocument.is_active == True,
+        ).all()
+    }
 
     count = 0
 
     # ── Compliance Rules ──────────────────────────────────────────────────────
     for rule in db.query(ComplianceRule).filter(ComplianceRule.active == True).all():
+        source = f"db:compliance_rule:{rule.id}"
+        if source in existing_sources:
+            continue
         content = (
-            f"FSSAI Compliance Rule: {rule.rule_code}\n"
+            f"Compliance Rule: {rule.rule_code}\n"
             f"Category: {rule.category.value}\n"
             f"Regulation Source: {rule.regulation_source or 'N/A'}\n"
             f"Severity: {rule.severity.value}\n"
@@ -156,6 +162,9 @@ def seed_regulations_kb(db) -> dict:
 
     # ── Regulation Changes ────────────────────────────────────────────────────
     for change in db.query(RegulationChange).all():
+        source = f"db:regulation_change:{change.id}"
+        if source in existing_sources:
+            continue
         eff = change.effective_date.strftime("%Y-%m-%d") if change.effective_date else "TBD"
         content = (
             f"Regulation Update: {change.document_name or 'Unnamed'}\n"
@@ -170,13 +179,16 @@ def seed_regulations_kb(db) -> dict:
         _ingest_document(
             db, "regulations",
             title=f"Reg Change: {(change.document_name or 'Update')[:70]}",
-            source=f"db:regulation_change:{change.id}",
+            source=source,
             content=content,
         )
         count += 1
 
     # ── Ingredients ───────────────────────────────────────────────────────────
     for ing in db.query(Ingredient).all():
+        source = f"db:ingredient:{ing.id}"
+        if source in existing_sources:
+            continue
         content = (
             f"Ingredient: {ing.name}\n"
             f"Status: {ing.status.value}\n"
@@ -189,32 +201,38 @@ def seed_regulations_kb(db) -> dict:
         _ingest_document(
             db, "regulations",
             title=f"Ingredient: {ing.name}",
-            source=f"db:ingredient:{ing.id}",
+            source=source,
             content=content,
         )
         count += 1
 
-    return {"status": "seeded", "document_count": count}
+    total = len(existing_sources) + count
+    return {"status": "seeded" if count > 0 else "up_to_date", "document_count": total, "new_documents": count}
 
 
 def seed_products_kb(db) -> dict:
     """
     Auto-populate the Products knowledge base from existing DB rows.
-    Idempotent — skips if any documents already exist for this KB type.
+    Additive — only inserts products whose source doesn't already exist.
+    Data is permanently stored and never auto-deleted.
     Sources: Product + latest LabelVersion + ComplianceCheck failures.
     """
     from app.models import KBDocument, KBType, Product, LabelVersion, ComplianceCheck, ComplianceRule, CheckResult
 
-    existing = db.query(KBDocument).filter(
-        KBDocument.kb_type == KBType.PRODUCTS,
-        KBDocument.is_active == True,
-    ).count()
-    if existing > 0:
-        return {"status": "already_seeded", "document_count": existing}
+    existing_sources = {
+        d.source for d in
+        db.query(KBDocument.source).filter(
+            KBDocument.kb_type == KBType.PRODUCTS,
+            KBDocument.is_active == True,
+        ).all()
+    }
 
     count = 0
 
     for product in db.query(Product).filter(Product.is_active == True).all():
+        source = f"db:product:{product.id}"
+        if source in existing_sources:
+            continue
         latest_lv = (
             db.query(LabelVersion)
             .filter(LabelVersion.product_id == product.id,
@@ -262,12 +280,13 @@ def seed_products_kb(db) -> dict:
         _ingest_document(
             db, "products",
             title=f"Product: {product.name}",
-            source=f"db:product:{product.id}",
+            source=source,
             content=content,
         )
         count += 1
 
-    return {"status": "seeded", "document_count": count}
+    total = len(existing_sources) + count
+    return {"status": "seeded" if count > 0 else "up_to_date", "document_count": total, "new_documents": count}
 
 
 # ─── Context retrieval ────────────────────────────────────────────────────────
