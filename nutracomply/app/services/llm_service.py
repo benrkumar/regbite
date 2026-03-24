@@ -3,48 +3,82 @@ LLM Studio — RAG service layer
 ================================
 Two knowledge bases (Regulations + Products), each backed by Gemini via
 Retrieval-Augmented Generation.  Retrieval uses PostgreSQL LIKE-based
-full-text scoring — no pgvector required.
+full-text scoring with stopword filtering and title boosting — no pgvector required.
+
+v2 improvements:
+  - Upgraded models (gemini-2.5-pro for regulations, gemini-2.0-flash for products)
+  - Better retrieval: stopword filtering, title boosting, minimum relevance threshold
+  - Enhanced system prompts with citation and formatting instructions
+  - Higher max_output_tokens for complex regulatory answers
+  - Relevance scores included in context for LLM transparency
 
 Models used:
-  regulations → gemini-1.5-pro   (precision for legal/regulatory reasoning)
-  products    → gemini-2.0-flash  (fast for structured product/label data)
+  regulations → gemini-2.5-pro-preview-06-05  (precision for legal/regulatory reasoning)
+  products    → gemini-2.0-flash               (fast for structured product/label data)
 """
 from __future__ import annotations
 
 # ─── Per-KB Gemini model names ────────────────────────────────────────────────
 
 MODELS: dict[str, str] = {
-    "regulations": "gemini-1.5-pro",
+    "regulations": "gemini-2.5-pro-preview-06-05",
     "products":    "gemini-2.0-flash",
 }
+
+# ─── Stopwords to filter from search queries ─────────────────────────────────
+
+STOPWORDS = frozenset({
+    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+    "have", "has", "had", "do", "does", "did", "will", "would", "could",
+    "should", "may", "might", "can", "shall", "to", "of", "in", "for",
+    "on", "with", "at", "by", "from", "as", "into", "through", "during",
+    "before", "after", "above", "below", "between", "out", "off", "over",
+    "under", "again", "further", "then", "once", "here", "there", "when",
+    "where", "why", "how", "all", "each", "every", "both", "few", "more",
+    "most", "other", "some", "such", "only", "own", "same", "than", "too",
+    "very", "just", "because", "not", "but", "and", "or", "nor", "so",
+    "what", "which", "who", "whom", "this", "that", "these", "those",
+    "about", "it", "its", "if", "up", "any", "also", "tell", "me",
+})
 
 # ─── System prompts ───────────────────────────────────────────────────────────
 
 SYSTEM_PROMPTS: dict[str, str] = {
     "regulations": (
-        "You are RegBite's Regulatory Compliance Expert for India. "
-        "Your knowledge base covers three regulatory frameworks: "
-        "(1) FSSAI — Food Safety and Standards Authority of India regulations for health supplements, "
-        "nutraceuticals, food labelling, and ingredient restrictions; "
-        "(2) Legal Metrology — Packaged Commodities Rules 2011 covering MRP, net quantity, "
-        "manufacturer details, bilingual declarations, and consumer care requirements; "
-        "(3) AYUSH — Ayurvedic, Siddha, and Unani (ASU) drug regulations under the Drugs and Cosmetics Act 1940 "
+        "You are RegBite's Regulatory Compliance Expert for India — an authoritative AI assistant "
+        "specializing in Indian food and supplement regulations.\n\n"
+        "YOUR KNOWLEDGE BASE covers three regulatory frameworks:\n"
+        "1. **FSSAI** — Food Safety and Standards Authority of India regulations for health supplements, "
+        "nutraceuticals, food labelling, ingredient restrictions, and health claims (FSS Act 2006, "
+        "FSS Health Supplements Regulations 2016/2022, FSS Labelling & Display Regulations 2020).\n"
+        "2. **Legal Metrology** — Packaged Commodities Rules 2011 covering MRP declarations, net quantity, "
+        "manufacturer/importer details, bilingual declarations, and consumer care requirements.\n"
+        "3. **AYUSH** — Ayurvedic, Siddha, and Unani (ASU) drug regulations under the Drugs and Cosmetics Act 1940, "
         "covering formulation labelling, Schedule E(1) restricted ingredients, Bhasma/Rasa metal content, "
-        "and the Drugs and Magic Remedies Act prohibitions. "
-        "Answer questions accurately using ONLY the provided context. "
-        "Always cite the relevant rule code or regulation source when available. "
-        "If the context does not contain enough information, say so clearly — "
-        "do not hallucinate rule details."
+        "and the Drugs and Magic Remedies Act 1954 prohibitions.\n\n"
+        "RESPONSE GUIDELINES:\n"
+        "- Answer using ONLY the provided context. If context is insufficient, say so explicitly.\n"
+        "- Always cite the specific rule code (e.g. FSSAI-NUTRA-LBL-003) and regulation source.\n"
+        "- Format citations as: **[RULE_CODE]** — regulation source.\n"
+        "- When multiple rules apply, list them in order of severity (CRITICAL → HIGH → MEDIUM → LOW).\n"
+        "- For remediation questions, provide specific, actionable steps the manufacturer should take.\n"
+        "- Do NOT hallucinate rule codes, regulation numbers, or section references.\n"
+        "- Use bullet points and bold text for readability."
     ),
     "products": (
-        "You are RegBite's Product Compliance Analyst. "
-        "Your knowledge base contains product data, label analysis results, "
-        "and compliance check outcomes for nutraceutical, health supplement, and AYUSH products "
-        "on the RegBite platform. Products are checked against FSSAI, Legal Metrology, "
-        "and AYUSH regulations. "
-        "Answer questions about specific products, their compliance scores, "
-        "failing checks, and remediation steps. "
-        "Keep responses factual and reference product names or SKUs when available."
+        "You are RegBite's Product Compliance Analyst — an AI assistant that helps "
+        "administrators understand product compliance status on the RegBite platform.\n\n"
+        "YOUR KNOWLEDGE BASE contains:\n"
+        "- Product data (names, SKUs, categories, descriptions)\n"
+        "- Label analysis results (extracted label fields, extraction confidence)\n"
+        "- Compliance check outcomes (PASS/FAIL/WARNING per rule, scores, remediation)\n\n"
+        "RESPONSE GUIDELINES:\n"
+        "- Always reference products by name and SKU when available.\n"
+        "- Quote compliance scores and specific failing rule codes.\n"
+        "- For failing checks, include the remediation steps from the knowledge base.\n"
+        "- Compare products when asked (e.g. 'which product has the most violations?').\n"
+        "- Keep responses factual — do not invent compliance data.\n"
+        "- Use tables or bullet points for multi-product comparisons."
     ),
 }
 
@@ -291,18 +325,29 @@ def seed_products_kb(db) -> dict:
 
 # ─── Context retrieval ────────────────────────────────────────────────────────
 
-def retrieve_context(kb_type: str, query: str, db, top_k: int = 8) -> list[dict]:
+def retrieve_context(kb_type: str, query: str, db, top_k: int = 10) -> list[dict]:
     """
     Search kb_chunks for the most relevant chunks matching *query* using
-    LIKE-based multi-word scoring.  No pgvector required.
+    LIKE-based multi-word scoring with title boosting and stopword filtering.
+    No pgvector required.
 
-    Returns a list of dicts: {"chunk_id", "content", "document_title"}.
+    v2 improvements:
+      - Stopword filtering for better signal-to-noise
+      - Title matching gives 2x boost (document titles are high-signal)
+      - Minimum relevance threshold filters low-quality matches
+      - Returns relevance scores for LLM context transparency
+
+    Returns a list of dicts: {"chunk_id", "content", "document_title", "relevance_score"}.
     """
     from app.models import KBChunk, KBDocument, KBType
     from sqlalchemy import or_, case
 
-    # Tokenize: keep words ≥ 3 chars, cap at 8 terms
-    words = [w.strip().lower() for w in query.split() if len(w.strip()) >= 3][:8]
+    # Tokenize: remove stopwords, keep words ≥ 3 chars, cap at 10 terms
+    words = [
+        w.strip().lower()
+        for w in query.split()
+        if len(w.strip()) >= 3 and w.strip().lower() not in STOPWORDS
+    ][:10]
 
     if not words:
         # Fallback: return most recently added chunks
@@ -317,41 +362,71 @@ def retrieve_context(kb_type: str, query: str, db, top_k: int = 8) -> list[dict]
         )
         return [
             {"chunk_id": c.id, "content": c.content,
-             "document_title": c.document.title if c.document else "Unknown"}
+             "document_title": c.document.title if c.document else "Unknown",
+             "relevance_score": 0}
             for c in rows
         ]
 
-    # Build score expression: sum of per-word CASE expressions
-    # Using + (not Python sum()) because SQLAlchemy 2.x doesn't support sum() over column exprs
-    score = case((KBChunk.content.ilike(f"%{words[0]}%"), 1), else_=0)
+    # Build content score: sum of per-word CASE expressions (1 point each)
+    content_score = case((KBChunk.content.ilike(f"%{words[0]}%"), 1), else_=0)
     for word in words[1:]:
-        score = score + case((KBChunk.content.ilike(f"%{word}%"), 1), else_=0)
+        content_score = content_score + case((KBChunk.content.ilike(f"%{word}%"), 1), else_=0)
 
-    or_conditions = or_(*[KBChunk.content.ilike(f"%{w}%") for w in words])
+    # Build title score: 2x boost for matches in document title (titles are high-signal)
+    title_score = case((KBDocument.title.ilike(f"%{words[0]}%"), 2), else_=0)
+    for word in words[1:]:
+        title_score = title_score + case((KBDocument.title.ilike(f"%{word}%"), 2), else_=0)
+
+    total_score = content_score + title_score
+
+    or_conditions = or_(
+        *[KBChunk.content.ilike(f"%{w}%") for w in words],
+        *[KBDocument.title.ilike(f"%{w}%") for w in words],
+    )
 
     results = (
-        db.query(KBChunk, score.label("score"))
+        db.query(KBChunk, total_score.label("score"))
         .join(KBDocument, KBChunk.document_id == KBDocument.id)
         .filter(
             KBChunk.kb_type == KBType(kb_type),
             KBDocument.is_active == True,
             or_conditions,
         )
-        .order_by(score.desc(), KBChunk.id)
-        .limit(top_k)
+        .order_by(total_score.desc(), KBChunk.id)
+        .limit(top_k * 2)  # fetch extra, then filter by minimum relevance
         .all()
     )
 
-    return [
+    # Minimum relevance threshold: at least 20% of search terms should match
+    min_score = max(1, len(words) // 5)
+    filtered = [
         {
             "chunk_id": row.KBChunk.id,
             "content":  row.KBChunk.content,
             "document_title": (
                 row.KBChunk.document.title if row.KBChunk.document else "Unknown"
             ),
+            "relevance_score": row.score,
         }
         for row in results
-    ]
+        if row.score >= min_score
+    ][:top_k]
+
+    # If filtering was too aggressive, return top results anyway
+    if not filtered and results:
+        filtered = [
+            {
+                "chunk_id": row.KBChunk.id,
+                "content":  row.KBChunk.content,
+                "document_title": (
+                    row.KBChunk.document.title if row.KBChunk.document else "Unknown"
+                ),
+                "relevance_score": row.score,
+            }
+            for row in results
+        ][:top_k]
+
+    return filtered
 
 
 # ─── Gemini call ──────────────────────────────────────────────────────────────
@@ -359,6 +434,12 @@ def retrieve_context(kb_type: str, query: str, db, top_k: int = 8) -> list[dict]
 def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
     """
     RAG pipeline: retrieve context → build prompt → call Gemini.
+
+    v2 improvements:
+      - Context includes relevance scores for LLM transparency
+      - Higher max_output_tokens (2048) for complex regulatory answers
+      - Separate system instruction from context (uses Gemini system_instruction param)
+      - Context quality indicator warns LLM when retrieval is weak
 
     Args:
         kb_type:  "regulations" or "products"
@@ -376,7 +457,7 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
     if not settings.gemini_api_key:
         return {
             "reply": (
-                "⚠️ Gemini API key is not configured. "
+                "Gemini API key is not configured. "
                 "Please set GEMINI_API_KEY in your Railway environment variables."
             ),
             "context_used": [],
@@ -384,27 +465,52 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
         }
 
     # Retrieve relevant chunks
-    context_chunks = retrieve_context(kb_type, query, db, top_k=8)
-    context_text = "\n\n---\n\n".join(
-        f"[Source: {c['document_title']}]\n{c['content']}"
-        for c in context_chunks
-    )
+    context_chunks = retrieve_context(kb_type, query, db, top_k=10)
+
+    # Format context with relevance scores for LLM transparency
+    if context_chunks:
+        max_score = max(c["relevance_score"] for c in context_chunks) or 1
+        context_parts = []
+        for c in context_chunks:
+            relevance = "HIGH" if c["relevance_score"] >= max_score * 0.7 else (
+                "MEDIUM" if c["relevance_score"] >= max_score * 0.4 else "LOW"
+            )
+            context_parts.append(
+                f"[Source: {c['document_title']} | Relevance: {relevance}]\n{c['content']}"
+            )
+        context_text = "\n\n---\n\n".join(context_parts)
+
+        # Assess overall context quality
+        high_relevance_count = sum(
+            1 for c in context_chunks if c["relevance_score"] >= max_score * 0.7
+        )
+        if high_relevance_count >= 3:
+            context_quality = "Strong context available — answer with confidence."
+        elif high_relevance_count >= 1:
+            context_quality = "Partial context available — answer what you can, note gaps."
+        else:
+            context_quality = "Weak context match — be cautious, acknowledge limitations."
+    else:
+        context_text = "[No relevant context found in knowledge base]"
+        context_quality = "No context found — tell the user you don't have this information."
 
     system_prompt = SYSTEM_PROMPTS.get(kb_type, SYSTEM_PROMPTS["regulations"])
     model_name    = MODELS.get(kb_type, "gemini-2.0-flash")
 
-    # Full prompt: system instruction + retrieved context + user question
-    full_prompt = (
-        f"{system_prompt}\n\n"
-        f"KNOWLEDGE BASE CONTEXT (use this to answer):\n"
-        f"{context_text if context_text else '[No relevant context found in knowledge base]'}\n\n"
+    # Build user message with context (system prompt goes as system_instruction)
+    user_message = (
+        f"KNOWLEDGE BASE CONTEXT ({context_quality}):\n"
+        f"{context_text}\n\n"
         f"USER QUESTION: {query}"
     )
 
     try:
         import google.generativeai as genai
         genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel(model_name)
+        model = genai.GenerativeModel(
+            model_name,
+            system_instruction=system_prompt,
+        )
 
         # Build Gemini history from last 10 turns (roles: "user" / "model")
         gemini_history = [
@@ -414,8 +520,8 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
 
         chat     = model.start_chat(history=gemini_history)
         response = chat.send_message(
-            full_prompt,
-            generation_config={"temperature": 0.2, "max_output_tokens": 1024},
+            user_message,
+            generation_config={"temperature": 0.2, "max_output_tokens": 2048},
         )
         reply = response.text.strip()
 

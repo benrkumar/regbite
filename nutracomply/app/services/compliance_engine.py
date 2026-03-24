@@ -2,6 +2,11 @@
 Compliance Engine — runs all active rules against an extracted label JSON.
 Covers FSSAI, Legal Metrology, and AYUSH (ASU) regulations.
 Returns a list of ComplianceCheck results with PASS/FAIL/WARNING + remediation.
+
+v2 improvements:
+  - Severity-weighted compliance scoring (CRITICAL=4x, HIGH=3x, MEDIUM=2x, LOW=1x)
+  - LLM-assisted FORMAT checks (verifies format via Gemini instead of blanket WARNING)
+  - Smarter field normalization before comparisons
 """
 
 import re
@@ -9,6 +14,14 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.models import ComplianceRule, ComplianceCheck, LabelVersion, CheckType, CheckResult, Severity
+
+# Severity weights for compliance scoring — not all rules are equal
+SEVERITY_WEIGHTS = {
+    Severity.CRITICAL: 4,
+    Severity.HIGH: 3,
+    Severity.MEDIUM: 2,
+    Severity.LOW: 1,
+}
 
 
 def run_compliance_check(label_version: LabelVersion, db: Session) -> list[ComplianceCheck]:
@@ -74,9 +87,7 @@ def _evaluate_rule(rule: ComplianceRule, extraction: dict, label_version_id: int
             result, actual_value, message = _check_value_in_list(rule, config, extraction)
 
         elif rule.check_type == CheckType.FORMAT:
-            # Format checks are advisory — mark as WARNING if we can't verify automatically
-            result = CheckResult.WARNING
-            message = f"Manual verification required: {config.get('description', rule.description)}"
+            result, actual_value, message = _check_format_llm(rule, config, extraction)
 
     except Exception as e:
         result = CheckResult.SKIPPED
@@ -266,14 +277,108 @@ def _check_value_in_list(rule: ComplianceRule, config: dict, extraction: dict):
     return CheckResult.FAIL, str(value), f"'{field}' value not in allowed list: {allowed}"
 
 
+def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
+    """
+    LLM-assisted format verification — uses Gemini to evaluate whether
+    the extracted label data meets a format/layout requirement that can't
+    be checked with simple regex (e.g. font size, prominence, bilingual text).
+
+    Falls back to WARNING if Gemini is unavailable.
+    """
+    field = config.get("field")
+    description = config.get("description", rule.description)
+
+    # Gather relevant extracted data for context
+    if field:
+        value = extraction.get(field)
+        if not value and value is not False:
+            return CheckResult.FAIL, None, f"Required field '{field}' is missing — cannot verify format"
+        context_data = f"Field '{field}' extracted value: {str(value)[:500]}"
+    else:
+        # No specific field — send broader extraction context
+        relevant_keys = [k for k in extraction if extraction[k] and k != "_extraction_warnings"]
+        context_data = "\n".join(f"  {k}: {str(extraction[k])[:200]}" for k in relevant_keys[:15])
+
+    try:
+        from app.config import get_settings
+        settings = get_settings()
+        if not settings.gemini_api_key:
+            raise ValueError("No API key")
+
+        import google.generativeai as genai
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel("gemini-2.0-flash")
+
+        prompt = (
+            "You are an FSSAI/Legal Metrology compliance auditor for Indian product labels.\n\n"
+            f"RULE: {rule.rule_code} — {description}\n"
+            f"REGULATION: {rule.regulation_source or 'N/A'}\n\n"
+            f"EXTRACTED LABEL DATA:\n{context_data}\n\n"
+            "Based on the extracted data, can you determine if this format/layout requirement "
+            "is likely met? Consider that you're working from extracted text — you cannot verify "
+            "visual elements like font size or color, but you CAN verify:\n"
+            "- Whether required text/declarations are present\n"
+            "- Whether bilingual requirements are met (Hindi + English)\n"
+            "- Whether numerical formats are correct\n"
+            "- Whether required ordering/structure is followed\n\n"
+            "Respond with ONLY valid JSON (no markdown):\n"
+            '{"verdict": "PASS" or "FAIL" or "WARNING", '
+            '"reason": "1-2 sentence explanation"}'
+        )
+
+        response = model.generate_content(
+            prompt,
+            generation_config={"temperature": 0.1, "max_output_tokens": 256},
+        )
+
+        import json
+        raw = response.text.strip()
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```$", "", raw)
+        result_json = json.loads(raw)
+
+        verdict = result_json.get("verdict", "WARNING").upper()
+        reason = result_json.get("reason", description)
+
+        if verdict == "PASS":
+            return CheckResult.PASS, str(value)[:200] if field else "verified", f"Format check passed: {reason}"
+        elif verdict == "FAIL":
+            return CheckResult.FAIL, str(value)[:200] if field else None, f"Format check failed: {reason}"
+        else:
+            return CheckResult.WARNING, str(value)[:200] if field else None, f"Format check inconclusive: {reason}"
+
+    except Exception as e:
+        print(f"[compliance] LLM format check failed for {rule.rule_code}: {e}")
+        # Graceful fallback to WARNING
+        return CheckResult.WARNING, None, f"Manual verification required: {description}"
+
+
 # ─── Compliance Score ─────────────────────────────────────────────────────────
 
 def calculate_compliance_score(checks: list[ComplianceCheck]) -> int:
+    """
+    Severity-weighted compliance score.
+    CRITICAL rules count 4x, HIGH 3x, MEDIUM 2x, LOW 1x.
+    This means failing a CRITICAL rule drops the score much more than failing a LOW rule.
+    """
     if not checks:
         return 0
-    total = len(checks)
-    passed = sum(1 for c in checks if c.result == CheckResult.PASS)
-    return round((passed / total) * 100)
+
+    weighted_earned = 0
+    weighted_total = 0
+
+    for check in checks:
+        weight = SEVERITY_WEIGHTS.get(check.rule.severity, 1) if check.rule else 1
+        weighted_total += weight
+        if check.result == CheckResult.PASS:
+            weighted_earned += weight
+        elif check.result == CheckResult.WARNING:
+            # Warnings get half credit — not a failure, but not confirmed
+            weighted_earned += weight * 0.5
+
+    if weighted_total == 0:
+        return 0
+    return round((weighted_earned / weighted_total) * 100)
 
 
 def get_violation_summary(checks: list[ComplianceCheck]) -> dict:
