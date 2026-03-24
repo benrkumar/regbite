@@ -3,6 +3,12 @@ Extraction Service — sends OCR text (or label image directly) to Google Gemini
 and extracts a structured JSON representation of the label.
 
 Supports FSSAI, Legal Metrology, and AYUSH regulation fields.
+
+v2 improvements:
+  - Upgraded to Gemini 2.5 Pro (vision) and 2.0 Flash (text)
+  - Dynamic confidence scoring based on field completeness
+  - Post-extraction validation with missing-field warnings
+  - Unified, richer prompts for both vision and text pipelines
 """
 
 import json
@@ -12,27 +18,55 @@ from app.config import get_settings
 
 settings = get_settings()
 
+# ─── Critical fields that heavily affect compliance scoring ──────────────────
+CRITICAL_FIELDS = [
+    "product_name", "product_type_declaration", "fssai_license_number",
+    "net_quantity", "expiry_date", "manufacturer_details", "ingredient_list",
+]
+IMPORTANT_FIELDS = [
+    "serving_size", "manufacturing_date", "batch_number", "storage_conditions",
+    "veg_nonveg_mark", "mrp", "nutritional_table", "warnings",
+]
+ALL_EXPECTED_FIELDS = [
+    "product_name", "product_type_declaration", "fssai_license_number",
+    "net_quantity", "serving_size", "manufacturing_date", "expiry_date",
+    "batch_number", "manufacturer_details", "country_of_origin",
+    "storage_conditions", "target_consumer", "veg_nonveg_mark", "mrp",
+    "customer_care_details", "formulation_reference", "ingredient_list",
+    "nutritional_table", "rda_percentages", "health_claims", "warnings",
+    "allergen_declarations", "not_for_medicinal_use", "consult_doctor_advisory",
+    "keep_out_of_reach_children", "not_exceed_daily_usage_advisory",
+]
+
 EXTRACTION_PROMPT = """
 You are a regulatory compliance expert for Indian packaged goods — specializing in
 FSSAI (nutraceuticals, health supplements), Legal Metrology (packaged commodities),
 and AYUSH (Ayurvedic/Siddha/Unani drugs).
 
-Analyze the following product label text VERY CAREFULLY and extract ALL information
-present into a structured JSON. Read every line of the label text — key information
-may be anywhere: front panel, back panel, side panels, footer areas.
+Analyze the following product label VERY CAREFULLY and extract ALL information
+present into a structured JSON. Read every line — key information may be anywhere:
+front panel, back panel, side panels, footer areas, cap/lid text.
 
 IMPORTANT RULES:
 - Only set a field to null if the information is genuinely NOT present on the label.
 - For boolean fields: set true if the statement/declaration IS present, false only if
   you're certain it's absent after reading the full label.
 - For ingredient_list: extract EVERY ingredient mentioned, including "Other Ingredients"
-  or excipients like Magnesium Stearate, Silicon Dioxide, etc.
+  or excipients like Magnesium Stearate, Silicon Dioxide, HPMC capsule shells, etc.
+  Include dosages/amounts if printed (e.g. "Ashwagandha Extract 500mg").
 - For warnings: extract ALL warning/advisory/disclaimer text, each as separate list items.
-- For health_claims: extract any benefit/function claims like "Improve Endurance", etc.
+  Include "Not for medicinal use", "Consult doctor", "Keep out of reach" etc.
+- For health_claims: extract any benefit/function claims like "Improve Endurance",
+  "Supports joint health", etc. Include the EXACT wording from the label.
 - For nutritional_table: extract EVERY row from the nutrition facts table.
+  Include units (mg, mcg, IU, etc.) in per_serving and per_100g values.
 - For manufacturer_details: include BOTH marketer and manufacturer if both are listed.
+  Include full addresses, license numbers, contact info.
 - For MRP: look for "MRP", "M.R.P.", or "Maximum Retail Price" declarations.
-- For customer_care: look for email addresses, phone numbers, website URLs.
+  Include "inclusive of all taxes" if stated.
+- For customer_care: look for email addresses, phone numbers, website URLs, toll-free numbers.
+- For allergen_declarations: look for "Contains:", "May contain:", allergen boxes/panels.
+- For formulation_reference: AYUSH products cite texts like AFI, API, Charaka Samhita — extract the reference.
 
 Return ONLY valid JSON with no markdown formatting, no code blocks, just raw JSON.
 
@@ -51,15 +85,15 @@ Required JSON structure:
   "storage_conditions": "string or null",
   "target_consumer": "string (e.g. 'FOR ADULTS', 'Men & Women') or null",
   "veg_nonveg_mark": "VEG or NON-VEG or null",
-  "mrp": "string (e.g. '₹599', 'MRP ₹1299') or null",
+  "mrp": "string (e.g. '₹599', 'MRP ₹1299 inclusive of all taxes') or null",
   "customer_care_details": "string (email, phone, website) or null",
   "formulation_reference": "string (for AYUSH: authoritative text reference) or null",
-  "ingredient_list": ["ingredient 1", "ingredient 2", ...],
+  "ingredient_list": ["ingredient 1 with amount if shown", "ingredient 2", ...],
   "nutritional_table": [
-    {"nutrient": "string", "per_serving": "string", "per_100g": "string or null", "rda_percent": "string or null"}
+    {"nutrient": "string", "per_serving": "string with unit", "per_100g": "string or null", "rda_percent": "string or null"}
   ],
   "rda_percentages": true or false,
-  "health_claims": ["claim 1", "claim 2"],
+  "health_claims": ["exact claim text 1", "exact claim text 2"],
   "warnings": ["warning 1", "warning 2", ...],
   "allergen_declarations": ["allergen 1"],
   "not_for_medicinal_use": true or false,
@@ -67,7 +101,16 @@ Required JSON structure:
   "keep_out_of_reach_children": true or false,
   "not_exceed_daily_usage_advisory": true or false
 }
+"""
 
+VISION_PROMPT = EXTRACTION_PROMPT + """
+Analyze the product label in this image. Look at ALL visible panels — front, back,
+sides, top, bottom. Zoom into fine print areas for batch numbers, FSSAI license,
+manufacturing dates, and warnings. If text is partially obscured or blurry, extract
+what you can read and note uncertainty in the value (e.g. "Batch: B2024-0?? (partially obscured)").
+"""
+
+TEXT_PROMPT = EXTRACTION_PROMPT + """
 Label text to analyze:
 ---
 {label_text}
@@ -75,9 +118,85 @@ Label text to analyze:
 """
 
 
+def _calculate_confidence(extraction: dict, source: str) -> float:
+    """
+    Calculate dynamic confidence score based on field completeness.
+    Source: 'vision' (base 0.90), 'text' (base 0.82), 'fallback' (base 0.40).
+    Adjusts ±0.10 based on how many critical/important fields were extracted.
+    """
+    base_scores = {"vision": 0.90, "text": 0.82, "fallback": 0.40}
+    base = base_scores.get(source, 0.50)
+
+    if not extraction:
+        return 0.0
+
+    # Critical fields: each missing one drops confidence significantly
+    critical_present = 0
+    for f in CRITICAL_FIELDS:
+        val = extraction.get(f)
+        if val and val is not True and val != []:
+            critical_present += 1
+        elif val is True:  # boolean field
+            critical_present += 1
+    critical_ratio = critical_present / len(CRITICAL_FIELDS)
+
+    # Important fields: secondary weight
+    important_present = 0
+    for f in IMPORTANT_FIELDS:
+        val = extraction.get(f)
+        if val and val is not True and val != []:
+            important_present += 1
+        elif val is True:
+            important_present += 1
+    important_ratio = important_present / len(IMPORTANT_FIELDS)
+
+    # Weighted adjustment: critical fields matter 3x more
+    completeness = (critical_ratio * 0.75 + important_ratio * 0.25)
+    # Adjust confidence: ±0.10 from base
+    confidence = base + (completeness - 0.5) * 0.20
+    return round(max(0.10, min(0.99, confidence)), 2)
+
+
+def _validate_extraction(extraction: dict) -> list[str]:
+    """
+    Post-extraction validation. Returns list of warning messages
+    about missing or suspicious fields.
+    """
+    warnings = []
+
+    # Check for missing critical fields
+    for f in CRITICAL_FIELDS:
+        val = extraction.get(f)
+        if val is None or val == "" or val == []:
+            warnings.append(f"Critical field '{f}' not found on label")
+
+    # FSSAI license format validation
+    fssai = extraction.get("fssai_license_number")
+    if fssai and not re.match(r'^\d{14}$', str(fssai).strip()):
+        warnings.append(f"FSSAI license '{fssai}' doesn't match expected 14-digit format")
+
+    # Ingredient list sanity check
+    ingredients = extraction.get("ingredient_list", [])
+    if isinstance(ingredients, list) and len(ingredients) == 1:
+        # Might be a comma-separated string that wasn't split
+        if "," in ingredients[0]:
+            warnings.append("Ingredient list may not be properly split (single item with commas)")
+
+    # Nutritional table sanity check
+    nt = extraction.get("nutritional_table", [])
+    if isinstance(nt, list) and len(nt) > 0:
+        for row in nt[:3]:  # spot-check first 3 rows
+            if isinstance(row, dict) and not row.get("per_serving"):
+                warnings.append("Nutritional table has rows missing 'per_serving' values")
+                break
+
+    return warnings
+
+
 def extract_label_data(ocr_text: str) -> tuple[dict, float]:
     """
     Sends OCR text to Gemini, returns (structured_dict, confidence_score).
+    Confidence is dynamically calculated based on extraction completeness.
     Falls back to rule-based extraction if API call fails.
     """
     if not ocr_text.strip():
@@ -88,18 +207,26 @@ def extract_label_data(ocr_text: str) -> tuple[dict, float]:
         try:
             result = _call_gemini(ocr_text)
             if result:
-                return result, 0.85
+                result = _normalize_extraction(result)
+                confidence = _calculate_confidence(result, "text")
+                warnings = _validate_extraction(result)
+                if warnings:
+                    result["_extraction_warnings"] = warnings
+                    print(f"[extraction] Warnings: {warnings}")
+                return result, confidence
         except Exception as e:
             print(f"[extraction] Gemini API failed: {e}")
 
     # Fallback: rule-based extraction
-    return _rule_based_extraction(ocr_text), 0.50
+    fallback = _rule_based_extraction(ocr_text)
+    confidence = _calculate_confidence(fallback, "fallback")
+    return fallback, confidence
 
 
 def extract_label_data_from_image(image_path: str) -> tuple[dict, float]:
     """
     Send label image directly to Gemini Vision for extraction.
-    More accurate than OCR → text → extraction pipeline.
+    Uses Gemini 2.5 Pro for best accuracy on image understanding.
     Falls back to standard OCR pipeline if Vision fails.
     """
     if not settings.gemini_api_key:
@@ -111,18 +238,13 @@ def extract_label_data_from_image(image_path: str) -> tuple[dict, float]:
         import PIL.Image
 
         genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel("gemini-1.5-pro")
+        model = genai.GenerativeModel("gemini-2.5-pro-preview-06-05")
 
         img = PIL.Image.open(image_path)
 
-        vision_prompt = EXTRACTION_PROMPT.replace(
-            "Label text to analyze:\n---\n{label_text}\n---",
-            "Analyze the product label in this image and extract all information."
-        )
-
         response = model.generate_content(
-            [vision_prompt, img],
-            generation_config={"temperature": 0.1, "max_output_tokens": 4096},
+            [VISION_PROMPT, img],
+            generation_config={"temperature": 0.1, "max_output_tokens": 8192},
         )
 
         raw = response.text.strip()
@@ -130,7 +252,13 @@ def extract_label_data_from_image(image_path: str) -> tuple[dict, float]:
         raw = re.sub(r"\s*```$", "", raw)
 
         result = json.loads(raw)
-        return result, 0.92
+        result = _normalize_extraction(result)
+        confidence = _calculate_confidence(result, "vision")
+        warnings = _validate_extraction(result)
+        if warnings:
+            result["_extraction_warnings"] = warnings
+            print(f"[extraction] Vision warnings: {warnings}")
+        return result, confidence
 
     except Exception as e:
         print(f"[extraction] Gemini Vision failed: {e}")
@@ -141,13 +269,13 @@ def _call_gemini(ocr_text: str) -> Optional[dict]:
     import google.generativeai as genai
 
     genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.0-flash")
 
-    prompt = EXTRACTION_PROMPT.format(label_text=ocr_text[:8000])  # token limit safety
+    prompt = TEXT_PROMPT.format(label_text=ocr_text[:12000])  # increased from 8000
 
     response = model.generate_content(
         prompt,
-        generation_config={"temperature": 0.1, "max_output_tokens": 4096},
+        generation_config={"temperature": 0.1, "max_output_tokens": 8192},
     )
 
     raw = response.text.strip()
@@ -157,6 +285,39 @@ def _call_gemini(ocr_text: str) -> Optional[dict]:
     raw = re.sub(r"\s*```$", "", raw)
 
     return json.loads(raw)
+
+
+def _normalize_extraction(data: dict) -> dict:
+    """
+    Post-process extraction to fix common LLM output quirks:
+    - Split comma-joined ingredient lists
+    - Ensure all expected fields exist (fill missing with None/[]/False)
+    - Strip whitespace from string values
+    """
+    # Ensure all expected fields present
+    for field in ALL_EXPECTED_FIELDS:
+        if field not in data:
+            if field in ("ingredient_list", "nutritional_table", "health_claims",
+                        "warnings", "allergen_declarations"):
+                data[field] = []
+            elif field in ("rda_percentages", "not_for_medicinal_use",
+                          "consult_doctor_advisory", "keep_out_of_reach_children",
+                          "not_exceed_daily_usage_advisory"):
+                data[field] = False
+            else:
+                data[field] = None
+
+    # Fix ingredient list: sometimes LLM returns single comma-separated string
+    ingredients = data.get("ingredient_list", [])
+    if isinstance(ingredients, list) and len(ingredients) == 1 and "," in str(ingredients[0]):
+        data["ingredient_list"] = [i.strip() for i in str(ingredients[0]).split(",") if i.strip()]
+
+    # Strip whitespace from string fields
+    for key, val in data.items():
+        if isinstance(val, str):
+            data[key] = val.strip()
+
+    return data
 
 
 def _rule_based_extraction(text: str) -> dict:
