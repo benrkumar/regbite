@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean, DateTime,
-    Float, ForeignKey, JSON, Enum as _SAEnumType
+    Float, ForeignKey, JSON, Enum as _SAEnumType, Index
 )
 from sqlalchemy.orm import relationship
 import enum
@@ -150,6 +150,10 @@ class Product(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    __table_args__ = (
+        Index("ix_products_user_active", "user_id", "is_active"),
+    )
+
     owner = relationship("User", back_populates="products")
     label_versions = relationship(
         "LabelVersion", back_populates="product",
@@ -190,6 +194,10 @@ class LabelVersion(Base):
     extraction_confidence = Column(Float)
     is_current = Column(Boolean, default=True)
 
+    __table_args__ = (
+        Index("ix_labels_product_current", "product_id", "is_current"),
+    )
+
     product = relationship("Product", back_populates="label_versions")
     checks = relationship(
         "ComplianceCheck", back_populates="label_version",
@@ -227,6 +235,10 @@ class ComplianceCheck(Base):
     message = Column(Text)
     remediation = Column(Text)
     checked_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_checks_label_version", "label_version_id"),
+    )
 
     label_version = relationship("LabelVersion", back_populates="checks")
     rule = relationship("ComplianceRule", back_populates="checks")

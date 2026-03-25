@@ -80,8 +80,14 @@
   {% if score is not none %}
   <div class="rpt-score">
     <div class="rpt-score-num {% if score >= 80 %}sc-good{% elif score >= 50 %}sc-warn{% else %}sc-bad{% endif %}">{{ score }}%</div>
-    <div class="rpt-score-lbl">Compliance Score</div>
+    <div class="rpt-score-lbl">Weighted Score</div>
   </div>
+  {% if critical is defined and not critical.critical_pass %}
+  <div class="rpt-score" style="margin-left:0.75rem;">
+    <div class="rpt-score-num sc-bad">{{ critical.critical_failures }}</div>
+    <div class="rpt-score-lbl" style="color:#DC2626;font-weight:600;">Critical Failures</div>
+  </div>
+  {% endif %}
   {% endif %}
 </div>
 

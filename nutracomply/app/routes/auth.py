@@ -29,6 +29,19 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
+def _validate_password(password: str) -> str | None:
+    """Return error message if password is too weak, else None."""
+    if len(password) < 10:
+        return "Password must be at least 10 characters."
+    if not any(c.isupper() for c in password):
+        return "Password must contain at least one uppercase letter."
+    if not any(c.islower() for c in password):
+        return "Password must contain at least one lowercase letter."
+    if not any(c.isdigit() for c in password):
+        return "Password must contain at least one digit."
+    return None
+
+
 def create_access_token(data: dict) -> str:
     expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
     return jwt.encode({**data, "exp": expire}, settings.secret_key, algorithm=settings.algorithm)
@@ -387,7 +400,9 @@ async def login(
     try:
         from app.services.rate_limiter import limiter
         client_ip = request.client.host if request.client else "unknown"
-        allowed, retry_after = limiter.check("login", client_ip, limit=10, window=300)  # 10 per 5 min
+        # Rate limit by both IP and email to prevent brute-force on specific accounts
+        rate_key = f"{client_ip}:{email.lower().strip()}"
+        allowed, retry_after = limiter.check("login", rate_key, limit=5, window=300)  # 5 per 5 min
         if not allowed:
             return templates.TemplateResponse("login.html", {
                 "request": request,
@@ -453,10 +468,11 @@ async def register(
             "error": "An account with that email already exists. Please sign in.",
         })
 
-    if len(password) < 8:
+    pw_error = _validate_password(password)
+    if pw_error:
         return templates.TemplateResponse("register.html", {
             "request": request,
-            "error": "Password must be at least 8 characters.",
+            "error": pw_error,
         })
 
     is_admin = bool(settings.admin_email and email.lower().strip() == settings.admin_email.lower().strip())

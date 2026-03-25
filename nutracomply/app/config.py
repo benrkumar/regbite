@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # Security
     secret_key: str = "change-this-secret"
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 480
+    access_token_expire_minutes: int = 120
 
     # Gemini
     gemini_api_key: str = ""
@@ -35,6 +35,12 @@ class Settings(BaseSettings):
 
     # Admin
     admin_email: str = ""
+
+    # Database pool
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+    db_pool_timeout: int = 15
+    db_statement_timeout: int = 30000  # ms
 
     # File uploads
     upload_dir: str = "./uploads"

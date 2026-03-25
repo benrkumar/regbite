@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import asyncio
 from collections import defaultdict
 from contextlib import asynccontextmanager
@@ -8,12 +9,24 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 
 from app.config import get_settings
 from app.database import engine, Base, SessionLocal
+from app.logging_config import setup_logging, get_logger
+
+setup_logging()
+log = get_logger("regbite")
 
 settings = get_settings()
+
+# Warn if SECRET_KEY is still the default
+if settings.secret_key == "change-this-secret":
+    import warnings
+    warnings.warn(
+        "SECRET_KEY is still the default! Set a strong SECRET_KEY env var in production.",
+        stacklevel=1,
+    )
 
 # Ensure upload directory exists
 Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
@@ -41,9 +54,9 @@ def _run_all_startup_tasks():
     for fn, name in tasks:
         try:
             fn()
-            print(f"[startup] {name} OK")
+            log.info("[startup] %s OK", name)
         except Exception as exc:
-            print(f"[startup] {name} error: {exc}")
+            log.error("[startup] %s error: %s", name, exc)
 
 
 @asynccontextmanager
@@ -53,7 +66,7 @@ async def lifespan(app: FastAPI):
     # within milliseconds.  The background thread runs independently.
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, _run_all_startup_tasks)
-    print("[startup] Server ready — DB initialisation running in background")
+    log.info("[startup] Server ready — DB initialisation running in background")
     yield
 
 
@@ -75,7 +88,7 @@ def _run_migrations():
 
     _sqlite = settings.database_url.startswith("sqlite")
     if _sqlite:
-        print("[migrate] SQLite — skipping raw SQL migrations (handled by create_all)")
+        log.info("[migrate] SQLite — skipping raw SQL migrations (handled by create_all)")
         return
 
     # PostgreSQL only: add columns that may be missing from pre-v2 databases.
@@ -216,16 +229,21 @@ def _run_migrations():
         "UPDATE users SET role = 'editor'        WHERE role = 'EDITOR'",
         "UPDATE users SET role = 'viewer'        WHERE role = 'VIEWER'",
         "UPDATE users SET role = 'consultant'    WHERE role = 'CONSULTANT'",
+        # v11: Performance indexes
+        "CREATE INDEX IF NOT EXISTS ix_products_user_active ON products (user_id, is_active)",
+        "CREATE INDEX IF NOT EXISTS ix_labels_product_current ON label_versions (product_id, is_current)",
+        "CREATE INDEX IF NOT EXISTS ix_checks_label_version ON compliance_checks (label_version_id)",
+        "CREATE INDEX IF NOT EXISTS ix_notifications_user_read ON notifications (user_id, is_read)",
     ]
     for sql in migrations:
         try:
             with engine.connect() as conn:
                 conn.execute(text(sql))
                 conn.commit()
-            print(f"[migrate] OK: {sql}")
+            log.info("[migrate] OK: %s", sql[:80])
         except Exception as e:
-            print(f"[migrate] Skipped ({e})")
-    print("[migrate] Column migrations complete")
+            log.debug("[migrate] Skipped (%s)", e)
+    log.info("[migrate] Column migrations complete")
 
 
 def _promote_admin():
@@ -390,6 +408,36 @@ def _seed_demo_users():
 
 app = FastAPI(title="RegBite", lifespan=lifespan)
 
+# Request logging middleware
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        start = time.time()
+        response = await call_next(request)
+        duration_ms = round((time.time() - start) * 1000)
+        # Skip static/upload paths for less noise
+        path = request.url.path
+        if not path.startswith(("/static/", "/uploads/")):
+            log.info(
+                "%s %s %s %dms",
+                request.method, path, response.status_code, duration_ms,
+                extra={
+                    "method": request.method,
+                    "path": path,
+                    "status": response.status_code,
+                    "duration_ms": duration_ms,
+                    "ip": request.client.host if request.client else None,
+                },
+            )
+        return response
+
+app.add_middleware(RequestLoggingMiddleware)
+
+# CSRF protection
+from app.services.csrf import CSRFMiddleware, COOKIE_NAME as CSRF_COOKIE, generate_csrf_token
+app.add_middleware(CSRFMiddleware)
+
 # Static files
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(exist_ok=True)
@@ -401,6 +449,14 @@ uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+
+# Make csrf_token() available in all templates
+def _csrf_input(request: Request) -> str:
+    """Return an HTML hidden input with the CSRF token."""
+    token = request.cookies.get(CSRF_COOKIE, generate_csrf_token())
+    return f'<input type="hidden" name="csrf_token" value="{token}">'
+
+templates.env.globals["csrf_input"] = _csrf_input
 
 # Register routers
 # NOTE: import settings route as settings_router to avoid shadowing the
@@ -436,7 +492,7 @@ try:
     from app.routes import admin_llm
     app.include_router(admin_llm.router)
 except Exception as _llm_err:
-    print(f"[warning] LLM Studio router failed to load: {_llm_err}")
+    log.warning("[warning] LLM Studio router failed to load: %s", _llm_err)
 
 
 # ── Exception handlers ─────────────────────────────────────────────────────────
@@ -451,6 +507,21 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     if exc.status_code == 404:
         return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
     return templates.TemplateResponse("500.html", {"request": request}, status_code=exc.status_code)
+
+
+# ── Health check ─────────────────────────────────────────────────────────────
+
+@app.get("/health")
+async def health_check():
+    """Railway healthcheck — verifies DB connectivity."""
+    from sqlalchemy import text
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        return JSONResponse({"status": "ok"})
+    except Exception as exc:
+        return JSONResponse({"status": "error", "detail": str(exc)}, status_code=503)
 
 
 # ── Core page routes (defined AFTER routers but must survive any router error) ─
@@ -475,7 +546,8 @@ async def dashboard(request: Request):
     from datetime import datetime
     from app.routes.auth import get_current_user_from_cookie
     from app.database import get_db
-    from app.models import Product, Alert, AlertStatus, LicenseRenewal, PublishedAlert, PublishedAlertStatus, Notification
+    from app.models import Product, Alert, AlertStatus, LabelVersion, ComplianceCheck, LicenseRenewal, PublishedAlert, PublishedAlertStatus, Notification
+    from sqlalchemy.orm import selectinload
 
     db = next(get_db())
     user = get_current_user_from_cookie(request, db)
@@ -486,17 +558,16 @@ async def dashboard(request: Request):
     if not user.onboarding_complete and user.email not in ("ben", "admin"):
         return RedirectResponse(url="/onboarding")
 
+    # Eager-load label_versions→checks in 2 queries instead of N+1
     products_list = (
         db.query(Product)
+        .options(
+            selectinload(Product.label_versions)
+            .selectinload(LabelVersion.checks)
+        )
         .filter(Product.user_id == user.id, Product.is_active == True)
         .all()
     )
-
-    # Force load label_versions and checks (avoids lazy-load issues)
-    for p in products_list:
-        _ = p.label_versions
-        for lv in p.label_versions:
-            _ = lv.checks
 
     # Summary stats
     total_products  = len(products_list)

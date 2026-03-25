@@ -10,12 +10,42 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from pathlib import Path
 
+import nh3
+
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
 from app.models import (
     BlogPost, BlogCategory, BlogPostStatus,
     Alert, AlertStatus, User,
 )
+
+# Allowed HTML tags/attributes for blog content (Quill.js output)
+_BLOG_ALLOWED_TAGS = {
+    "p", "br", "strong", "em", "u", "s", "a", "ul", "ol", "li",
+    "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre", "code",
+    "img", "figure", "figcaption", "table", "thead", "tbody", "tr", "th", "td",
+    "span", "div", "sup", "sub", "hr",
+}
+_BLOG_ALLOWED_ATTRS = {
+    "a": {"href", "target", "rel"},
+    "img": {"src", "alt", "width", "height"},
+    "span": {"class", "style"},
+    "div": {"class"},
+    "pre": {"class"},
+    "code": {"class"},
+    "td": {"colspan", "rowspan"},
+    "th": {"colspan", "rowspan"},
+}
+
+
+def _sanitize_html(html: str) -> str:
+    """Sanitize HTML content, keeping safe tags for blog posts."""
+    return nh3.clean(
+        html,
+        tags=_BLOG_ALLOWED_TAGS,
+        attributes=_BLOG_ALLOWED_ATTRS,
+        link_rel="noopener noreferrer",
+    )
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -273,10 +303,10 @@ async def admin_blog_create(
     post_status = BlogPostStatus(status) if status in [s.value for s in BlogPostStatus] else BlogPostStatus.DRAFT
 
     post = BlogPost(
-        title=title.strip(),
+        title=title.strip()[:300],
         slug=final_slug,
-        excerpt=excerpt.strip() or None,
-        content=content,
+        excerpt=(excerpt.strip() or None)[:500] if excerpt.strip() else None,
+        content=_sanitize_html(content),
         status=post_status,
         category_id=int(category_id) if category_id else None,
         featured_image=featured_image.strip() or None,
@@ -322,7 +352,7 @@ async def admin_blog_update(
     if not post:
         return RedirectResponse(url="/admin/blog?msg=Post+not+found&type=error")
 
-    post.title = title.strip()
+    post.title = title.strip()[:300]
     if slug.strip() and slug.strip() != post.slug:
         new_slug = slug.strip()
         existing = db.query(BlogPost).filter(BlogPost.slug == new_slug, BlogPost.id != post_id).first()
@@ -330,8 +360,8 @@ async def admin_blog_update(
             new_slug = f"{new_slug}-{int(datetime.utcnow().timestamp())}"
         post.slug = new_slug
 
-    post.excerpt = excerpt.strip() or None
-    post.content = content
+    post.excerpt = (excerpt.strip() or None)[:500] if excerpt.strip() else None
+    post.content = _sanitize_html(content)
     post.category_id = int(category_id) if category_id else None
     post.featured_image = featured_image.strip() or None
     post.is_featured = bool(is_featured)

@@ -122,12 +122,17 @@ async def add_product(
 
 async def _save_label_file(file: UploadFile, suffix: str, product_id: int, db: Session) -> LabelVersion:
     """Save uploaded file to disk and create a LabelVersion record."""
+    content = await file.read()
+
+    # Reject files over 50 MB
+    if len(content) > 50 * 1024 * 1024:
+        raise ValueError("File too large (max 50 MB)")
+
     upload_dir = Path(settings.upload_dir) / str(product_id)
     upload_dir.mkdir(parents=True, exist_ok=True)
     file_name = f"{uuid.uuid4().hex}{suffix}"
     file_path = upload_dir / file_name
 
-    content = await file.read()
     with open(file_path, "wb") as f:
         f.write(content)
 

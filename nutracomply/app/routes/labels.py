@@ -12,7 +12,7 @@ from app.models import Product, LabelVersion, Alert, AlertType, AlertStatus, Che
 from app.routes.auth import get_current_user_from_cookie
 from app.services.ocr_service import extract_text_from_file
 from app.services.extraction_service import extract_label_data, extract_label_data_from_image
-from app.services.compliance_engine import run_compliance_check, calculate_compliance_score, get_violation_summary
+from app.services.compliance_engine import run_compliance_check, calculate_compliance_score, calculate_critical_score, get_violation_summary
 from app.config import get_settings
 
 router = APIRouter()
@@ -95,13 +95,45 @@ async def upload_label(
             "error": f"Unsupported file type '{suffix}'. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
         })
 
+    # Read file with size limit (50 MB)
+    MAX_FILE_SIZE = 50 * 1024 * 1024
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        return templates.TemplateResponse("label_upload.html", {
+            "request": request,
+            "user": user,
+            "product": product,
+            "error": "File too large. Maximum size is 50 MB."
+        })
+
+    # Validate MIME type via file magic bytes
+    MAGIC_SIGNATURES = {
+        b"\xff\xd8\xff": ".jpg",       # JPEG
+        b"\x89PNG\r\n\x1a\n": ".png",  # PNG
+        b"%PDF": ".pdf",               # PDF
+        b"II\x2a\x00": ".tiff",        # TIFF (little-endian)
+        b"MM\x00\x2a": ".tiff",        # TIFF (big-endian)
+        b"RIFF": ".webp",              # WebP (inside RIFF container)
+    }
+    detected_ext = None
+    for sig, ext in MAGIC_SIGNATURES.items():
+        if content[:len(sig)] == sig:
+            detected_ext = ext
+            break
+    if detected_ext is None:
+        return templates.TemplateResponse("label_upload.html", {
+            "request": request,
+            "user": user,
+            "product": product,
+            "error": "File content doesn't match a supported image or PDF format."
+        })
+
     # Save file
     upload_dir = Path(settings.upload_dir) / str(product_id)
     upload_dir.mkdir(parents=True, exist_ok=True)
     file_name = f"{uuid.uuid4().hex}{suffix}"
     file_path = upload_dir / file_name
 
-    content = await file.read()
     with open(file_path, "wb") as f:
         f.write(content)
 
@@ -286,6 +318,7 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
         _ = check.rule
 
     score = calculate_compliance_score(label.checks) if label.checks else None
+    critical = calculate_critical_score(label.checks) if label.checks else {"critical_pass": True, "critical_score": 100, "critical_failures": 0}
     violation_summary = get_violation_summary(label.checks) if label.checks else {}
 
     # Group checks by result
@@ -304,6 +337,7 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
         "label": label,
         "product": label.product,
         "score": score,
+        "critical": critical,
         "violation_summary": violation_summary,
         "failed_checks": sorted(failed, key=lambda c: c.rule.severity.value if c.rule else ""),
         "warning_checks": warnings,
