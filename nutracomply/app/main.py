@@ -180,6 +180,36 @@ def _run_migrations():
         )""",
         "CREATE INDEX IF NOT EXISTS ix_notifications_user_id ON notifications (user_id)",
         "CREATE INDEX IF NOT EXISTS ix_notifications_is_read ON notifications (is_read)",
+        # v10: Blog tables
+        """CREATE TABLE IF NOT EXISTS blog_categories (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL UNIQUE,
+            slug VARCHAR(120) NOT NULL UNIQUE,
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS ix_blog_categories_slug ON blog_categories (slug)",
+        """CREATE TABLE IF NOT EXISTS blog_posts (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(300) NOT NULL,
+            slug VARCHAR(350) NOT NULL UNIQUE,
+            excerpt TEXT,
+            content TEXT NOT NULL,
+            featured_image VARCHAR(500),
+            status VARCHAR(20) NOT NULL DEFAULT 'draft',
+            is_featured BOOLEAN DEFAULT FALSE,
+            category_id INTEGER REFERENCES blog_categories(id) ON DELETE SET NULL,
+            author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            tags VARCHAR(500),
+            meta_title VARCHAR(300),
+            meta_description VARCHAR(500),
+            views INTEGER DEFAULT 0,
+            published_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS ix_blog_posts_slug ON blog_posts (slug)",
+        "CREATE INDEX IF NOT EXISTS ix_blog_posts_status ON blog_posts (status)",
+        "CREATE INDEX IF NOT EXISTS ix_blog_posts_published_at ON blog_posts (published_at)",
         # Normalise role column to lowercase values (Python 3.11+ str-enum name/value fix)
         "UPDATE users SET role = 'account_admin' WHERE role = 'ACCOUNT_ADMIN'",
         "UPDATE users SET role = 'super_admin'   WHERE role = 'SUPER_ADMIN'",
@@ -384,6 +414,7 @@ from app.routes import team as team_router
 from app.routes import onboarding as onboarding_router
 from app.routes import billing as billing_router
 from app.routes import notifications as notifications_router
+from app.routes import blog as blog_router
 
 app.include_router(auth.router)
 app.include_router(products.router)
@@ -399,6 +430,7 @@ app.include_router(team_router.router)
 app.include_router(onboarding_router.router)
 app.include_router(billing_router.router)
 app.include_router(notifications_router.router)
+app.include_router(blog_router.router)
 
 try:
     from app.routes import admin_llm
@@ -572,6 +604,73 @@ async def pricing_page(request: Request):
     db = next(get_db())
     user = get_current_user_from_cookie(request, db)
     return templates.TemplateResponse("pricing.html", {"request": request, "user": user})
+
+
+def _get_optional_user(request: Request):
+    """Return current user or None (never raises)."""
+    from app.routes.auth import get_current_user_from_cookie
+    from app.database import get_db
+    try:
+        db = next(get_db())
+        return get_current_user_from_cookie(request, db)
+    except Exception:
+        return None
+
+
+@app.get("/features")
+async def features_page(request: Request):
+    return templates.TemplateResponse("features.html", {"request": request, "user": _get_optional_user(request), "active_page": "features"})
+
+
+@app.get("/about")
+async def about_page(request: Request):
+    return templates.TemplateResponse("about.html", {"request": request, "user": _get_optional_user(request), "active_page": "about"})
+
+
+@app.get("/contact")
+async def contact_page(request: Request):
+    return templates.TemplateResponse("contact.html", {
+        "request": request, "user": _get_optional_user(request), "active_page": "contact",
+        "flash_message": request.query_params.get("msg"),
+        "flash_type": request.query_params.get("type", "success"),
+    })
+
+
+@app.post("/contact/submit")
+async def contact_submit(request: Request):
+    form = await request.form()
+    name = form.get("name", "")
+    email = form.get("email", "")
+    message = form.get("message", "")
+    inquiry_type = form.get("inquiry_type", "other")
+    company = form.get("company", "")
+    # Log the contact submission (in production, send email via Brevo)
+    print(f"[contact] {inquiry_type} from {name} <{email}> ({company}): {message[:200]}")
+    from urllib.parse import quote
+    return RedirectResponse(
+        url=f"/contact?msg={quote('Message sent! We will get back to you within 24 hours.')}&type=success",
+        status_code=302,
+    )
+
+
+@app.get("/help")
+async def help_page(request: Request):
+    return templates.TemplateResponse("help.html", {"request": request, "user": _get_optional_user(request), "active_page": "help"})
+
+
+@app.get("/terms")
+async def terms_page(request: Request):
+    return templates.TemplateResponse("terms.html", {"request": request, "user": _get_optional_user(request), "active_page": "terms"})
+
+
+@app.get("/privacy")
+async def privacy_page(request: Request):
+    return templates.TemplateResponse("privacy.html", {"request": request, "user": _get_optional_user(request), "active_page": "privacy"})
+
+
+@app.get("/changelog")
+async def changelog_page(request: Request):
+    return templates.TemplateResponse("changelog.html", {"request": request, "user": _get_optional_user(request), "active_page": "changelog"})
 
 
 @app.get("/r/{token}")

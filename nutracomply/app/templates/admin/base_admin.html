@@ -194,6 +194,11 @@
         {% endif %}
       </a>
 
+      <div class="adm-nav-section">Content</div>
+      <a href="/admin/blog" class="adm-nav-link {% if '/admin/blog' in request.url.path %}active{% endif %}">
+        <span class="adm-nav-icon">✎</span> Blog
+      </a>
+
       <div class="adm-nav-section">AI Studio</div>
       <a href="/admin/llm" class="adm-nav-link {% if '/admin/llm' in request.url.path %}active{% endif %}">
         <span class="adm-nav-icon">◈</span> LLM Studio

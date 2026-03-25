@@ -537,6 +537,47 @@ class PaymentRecord(Base):
 
 # ─── In-App Notifications ─────────────────────────────────────────────────────
 
+# ─── Blog ────────────────────────────────────────────────────────────────────
+
+class BlogPostStatus(str, enum.Enum):
+    DRAFT     = "draft"
+    PUBLISHED = "published"
+    ARCHIVED  = "archived"
+
+
+class BlogCategory(Base):
+    __tablename__ = "blog_categories"
+    id         = Column(Integer, primary_key=True, index=True)
+    name       = Column(String(100), nullable=False, unique=True)
+    slug       = Column(String(120), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    posts      = relationship("BlogPost", back_populates="category")
+
+
+class BlogPost(Base):
+    __tablename__ = "blog_posts"
+    id               = Column(Integer, primary_key=True, index=True)
+    title            = Column(String(300), nullable=False)
+    slug             = Column(String(350), nullable=False, unique=True, index=True)
+    excerpt          = Column(Text, nullable=True)
+    content          = Column(Text, nullable=False)
+    featured_image   = Column(String(500), nullable=True)
+    status           = Column(SAEnum(BlogPostStatus), default=BlogPostStatus.DRAFT)
+    is_featured      = Column(Boolean, default=False)
+    category_id      = Column(Integer, ForeignKey("blog_categories.id"), nullable=True)
+    author_id        = Column(Integer, ForeignKey("users.id"), nullable=False)
+    tags             = Column(String(500), nullable=True)  # comma-separated
+    meta_title       = Column(String(300), nullable=True)
+    meta_description = Column(String(500), nullable=True)
+    views            = Column(Integer, default=0)
+    published_at     = Column(DateTime, nullable=True)
+    created_at       = Column(DateTime, default=datetime.utcnow)
+    updated_at       = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    category = relationship("BlogCategory", back_populates="posts")
+    author   = relationship("User", foreign_keys=[author_id])
+
+
 class NotificationType(str, enum.Enum):
     INFO    = "info"
     SUCCESS = "success"
