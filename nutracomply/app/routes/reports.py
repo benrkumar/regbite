@@ -166,4 +166,16 @@ async def create_share_link(report_id: int, request: Request, db: Session = Depe
         return RedirectResponse(url="/reports")
 
     token = generate_share_token(db, report)
+
+    # Send report shared notification email
+    try:
+        from app.services.notification import send_report_shared_email
+        from app.models import Product, LabelVersion
+        label = db.query(LabelVersion).filter(LabelVersion.id == report.label_version_id).first() if report.label_version_id else None
+        product = db.query(Product).filter(Product.id == label.product_id).first() if label else None
+        share_url = f"{str(request.base_url).rstrip('/')}/r/{token}"
+        send_report_shared_email(user, product, share_url)
+    except Exception:
+        pass
+
     return RedirectResponse(url=f"/reports/{report_id}?shared=1&token={token}", status_code=302)

@@ -66,6 +66,11 @@ async def lifespan(app: FastAPI):
     # within milliseconds.  The background thread runs independently.
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, _run_all_startup_tasks)
+
+    # Start the in-process daily scheduler (replaces Celery Beat + Redis)
+    from app.scheduler import start_scheduler
+    start_scheduler()
+
     log.info("[startup] Server ready — DB initialisation running in background")
     yield
 

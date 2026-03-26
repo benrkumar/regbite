@@ -145,6 +145,13 @@ async def change_password(
     user.hashed_password = hash_password(new_password)
     db.commit()
 
+    # Send password changed notification email
+    try:
+        from app.services.notification import send_password_changed_email
+        send_password_changed_email(user)
+    except Exception:
+        pass
+
     return RedirectResponse(
         url="/settings?msg=Password+updated+successfully&type=success",
         status_code=302,

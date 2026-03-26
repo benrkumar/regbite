@@ -248,11 +248,13 @@ def _process_label(label_version_id: int):
             db.add(alert)
             db.commit()
 
-            # Send email notification
+            # Send email notification to product owner
             try:
                 from app.services.notification import send_alert_email
+                from app.models import User
                 product = db.query(Product).filter(Product.id == label_version.product_id).first()
-                send_alert_email(alert, product)
+                owner = db.query(User).filter(User.id == product.user_id).first() if product else None
+                send_alert_email(alert, product, user=owner)
             except Exception as e:
                 print(f"[alert] Email failed: {e}")
 

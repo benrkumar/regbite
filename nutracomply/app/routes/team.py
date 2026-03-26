@@ -151,7 +151,17 @@ async def create_invite(
     db.commit()
 
     link = f"/team/accept/{token}"
-    msg = f"Invite+created!+Share+this+link:+{link}"
+
+    # Send invite email
+    try:
+        from app.services.notification import send_team_invite_email
+        base_url = str(request.base_url).rstrip("/")
+        invite_url = f"{base_url}{link}"
+        send_team_invite_email(email, user.name, invite_role.value, invite_url)
+    except Exception:
+        pass
+
+    msg = f"Invite+sent+to+{email}!+Link:+{link}"
     return RedirectResponse(
         url=f"/team?msg={msg}&type=success",
         status_code=302,
@@ -385,6 +395,14 @@ async def process_invite_accept(
         # Also notify the inviter
         push(invite.invited_by, f"{name} accepted your invite",
              f"{invite.email} has joined your team.", ntype="info", link="/team")
+    except Exception:
+        pass
+
+    # Send invite-accepted email to inviter
+    try:
+        from app.services.notification import send_invite_accepted_email
+        inviter = db.query(User).filter(User.id == invite.invited_by).first()
+        send_invite_accepted_email(inviter, name, invite.email, invite.role.value)
     except Exception:
         pass
 

@@ -11,7 +11,7 @@ from app.workers.celery_app import celery_app
 @celery_app.task(name="app.workers.recheck_task.recheck_all_labels", bind=True)
 def recheck_all_labels(self):
     from app.database import SessionLocal
-    from app.models import LabelVersion, Alert, AlertType, AlertStatus, Severity, Product, CheckResult
+    from app.models import LabelVersion, Alert, AlertType, AlertStatus, Severity, Product, CheckResult, User
     from app.services.compliance_engine import run_compliance_check, calculate_compliance_score
     from app.services.notification import send_alert_email
 
@@ -83,7 +83,8 @@ def recheck_all_labels(self):
                 db.commit()
 
                 try:
-                    send_alert_email(alert, product)
+                    owner = db.query(User).filter(User.id == product.user_id).first() if product else None
+                    send_alert_email(alert, product, user=owner)
                 except Exception as e:
                     print(f"[recheck] Email failed: {e}")
 
