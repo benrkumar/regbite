@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Getting Started — Help{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <h2>Getting Started</h2>
+    <p>Everything you need to know to start using RegBite</p>
+  </div>
+</div>
+
+<div style="display:flex;gap:1.5rem;align-items:flex-start;">
+
+  {% include "help/_nav.html" %}
+
+  <div style="flex:1;min-width:0;">
+
+    {# Overview #}
+    <div class="card" style="margin-bottom:1.2rem;">
+      <h3 style="margin:0 0 0.8rem;">What is RegBite?</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0 0 0.8rem;">
+        RegBite is an AI-powered compliance platform built for Indian nutraceutical and health supplement companies.
+        It automates label compliance checking against <strong>83 rules across 5 regulatory frameworks</strong>:
+        FSSAI, Legal Metrology, AYUSH, BIS, and DGFT.
+      </p>
+      <p style="font-size:0.88rem;color:#737373;margin:0;">
+        Upload a product label image, and RegBite's AI extracts the data and checks it against current regulations —
+        giving you an instant compliance score with specific remediation guidance for every failure.
+      </p>
+    </div>
+
+    {# First steps #}
+    <div class="card" style="margin-bottom:1.2rem;">
+      <h3 style="margin:0 0 1rem;">Your first compliance check in 3 steps</h3>
+
+      <div style="display:flex;gap:0.8rem;margin-bottom:1rem;">
+        <div style="min-width:2rem;height:2rem;border-radius:50%;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:600;">1</div>
+        <div>
+          <h4 style="margin:0 0 0.3rem;font-size:0.9rem;">Create a Product</h4>
+          <p style="margin:0;font-size:0.85rem;color:#737373;">
+            Go to <strong>Products</strong> in the sidebar and click "Add Product." Enter your product name,
+            select the category (Health Supplement, Ayurvedic, Dietary Supplement, etc.), and optionally add
+            brand name and SKU.
+          </p>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:0.8rem;margin-bottom:1rem;">
+        <div style="min-width:2rem;height:2rem;border-radius:50%;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:600;">2</div>
+        <div>
+          <h4 style="margin:0 0 0.3rem;font-size:0.9rem;">Upload a Label Image</h4>
+          <p style="margin:0;font-size:0.85rem;color:#737373;">
+            From the product detail page, click "Upload Label." Select a clear photo or scan of your product label
+            (JPG, PNG, PDF supported). The AI will extract all text and structured data from the image.
+          </p>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:0.8rem;">
+        <div style="min-width:2rem;height:2rem;border-radius:50%;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:600;">3</div>
+        <div>
+          <h4 style="margin:0 0 0.3rem;font-size:0.9rem;">View Your Compliance Report</h4>
+          <p style="margin:0;font-size:0.85rem;color:#737373;">
+            Once extraction completes, RegBite automatically runs the 83-rule compliance check. You'll see a
+            detailed report with your compliance score, pass/fail breakdown, and specific remediation steps
+            for any violations.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {# Navigation guide #}
+    <div class="card" style="margin-bottom:1.2rem;">
+      <h3 style="margin:0 0 0.8rem;">Navigating the platform</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0 0 0.8rem;">
+        The sidebar on the left is your main navigation. Here's what each section does:
+      </p>
+
+      <table style="width:100%;font-size:0.85rem;border-collapse:collapse;">
+        <tr style="border-bottom:1px solid #EBEBEB;">
+          <td style="padding:0.5rem 0.8rem 0.5rem 0;font-weight:500;white-space:nowrap;">— Dashboard</td>
+          <td style="padding:0.5rem 0;color:#737373;">Overview of all products, compliance scores, alerts, and expiring licenses</td>
+        </tr>
+        <tr style="border-bottom:1px solid #EBEBEB;">
+          <td style="padding:0.5rem 0.8rem 0.5rem 0;font-weight:500;white-space:nowrap;">□ Products</td>
+          <td style="padding:0.5rem 0;color:#737373;">Create and manage products, upload label images</td>
+        </tr>
+        <tr style="border-bottom:1px solid #EBEBEB;">
+          <td style="padding:0.5rem 0.8rem 0.5rem 0;font-weight:500;white-space:nowrap;">◎ Alerts</td>
+          <td style="padding:0.5rem 0;color:#737373;">Compliance violation alerts with severity levels</td>
+        </tr>
+        <tr style="border-bottom:1px solid #EBEBEB;">
+          <td style="padding:0.5rem 0.8rem 0.5rem 0;font-weight:500;white-space:nowrap;">≡ Regulations</td>
+          <td style="padding:0.5rem 0;color:#737373;">Track FSSAI/AYUSH/BIS/DGFT regulation changes</td>
+        </tr>
+        <tr style="border-bottom:1px solid #EBEBEB;">
+          <td style="padding:0.5rem 0.8rem 0.5rem 0;font-weight:500;white-space:nowrap;">○ License Renewals</td>
+          <td style="padding:0.5rem 0;color:#737373;">Track license expiry dates and renewal reminders</td>
+        </tr>
+        <tr style="border-bottom:1px solid #EBEBEB;">
+          <td style="padding:0.5rem 0.8rem 0.5rem 0;font-weight:500;white-space:nowrap;">◇ Checker</td>
+          <td style="padding:0.5rem 0;color:#737373;">Quick manual compliance check without uploading a label</td>
+        </tr>
+        <tr>
+          <td style="padding:0.5rem 0.8rem 0.5rem 0;font-weight:500;white-space:nowrap;">▤ Reports</td>
+          <td style="padding:0.5rem 0;color:#737373;">View, download, and share compliance reports</td>
+        </tr>
+      </table>
+    </div>
+
+    {# Role-specific notes #}
+    {% if user.role and user.role.value == 'viewer' %}
+    <div class="info-box" style="border-left:3px solid #A3A3A3;">
+      <strong>Viewer access:</strong> As a Viewer, you have read-only access to products, reports, and alerts.
+      You cannot create products, upload labels, or run compliance checks. Contact your Account Admin to request
+      a role upgrade.
+    </div>
+    {% elif user.role and user.role.value == 'consultant' %}
+    <div class="info-box" style="border-left:3px solid #A3A3A3;">
+      <strong>Consultant access:</strong> As an external Consultant, you can view compliance reports, the regulations feed,
+      and use the compliance checker. Product and team management features are not available for this role.
+    </div>
+    {% elif user.role and user.role.value == 'editor' %}
+    <div class="info-box" style="border-left:3px solid #A3A3A3;">
+      <strong>Editor access:</strong> You can create products, upload labels, run compliance checks, and generate reports.
+      Team management and billing are handled by your Account Admin.
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

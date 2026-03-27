@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Help & Documentation{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <h2>Help & Documentation</h2>
+    <p>Learn how to use RegBite to stay compliant with FSSAI, AYUSH, BIS, DGFT &amp; Legal Metrology regulations</p>
+  </div>
+</div>
+
+<div style="display:flex;gap:1.5rem;align-items:flex-start;">
+
+  {% include "help/_nav.html" %}
+
+  <div style="flex:1;min-width:0;">
+
+    {# Welcome card #}
+    <div class="card" style="margin-bottom:1.5rem;border-left:3px solid #111;">
+      <h3 style="margin:0 0 0.5rem;">Welcome to RegBite</h3>
+      <p style="margin:0;font-size:0.88rem;color:#737373;">
+        RegBite is an AI-powered compliance platform for Indian nutraceuticals and health supplements.
+        Upload your product label images, and our engine checks them against
+        <strong>83 rules across 5 regulatory frameworks</strong> — giving you an instant compliance score
+        with actionable remediation guidance.
+      </p>
+    </div>
+
+    {# Section cards grid #}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;">
+      {% for s in sections %}
+      <a href="/help/{{ s.slug }}" style="text-decoration:none;color:inherit;">
+        <div class="card" style="height:100%;transition:border-color 0.15s;border:1px solid #EBEBEB;">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+            <span style="font-size:1.1rem;color:#A3A3A3;">{{ s.icon }}</span>
+            <h4 style="margin:0;font-size:0.95rem;">{{ s.label }}</h4>
+          </div>
+          <p style="margin:0;font-size:0.83rem;color:#737373;">{{ s.desc }}</p>
+        </div>
+      </a>
+      {% endfor %}
+
+      {# FAQ card — always visible #}
+      <a href="/help/faq" style="text-decoration:none;color:inherit;">
+        <div class="card" style="height:100%;transition:border-color 0.15s;border:1px solid #EBEBEB;">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+            <span style="font-size:1.1rem;color:#A3A3A3;">?</span>
+            <h4 style="margin:0;font-size:0.95rem;">Frequently Asked Questions</h4>
+          </div>
+          <p style="margin:0;font-size:0.83rem;color:#737373;">Common questions about the platform, compliance, billing, and more</p>
+        </div>
+      </a>
+    </div>
+
+    {# Quick help #}
+    <div class="info-box" style="margin-top:1.5rem;">
+      Need help with something not covered here? Contact us at <strong>support@regbite.in</strong>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

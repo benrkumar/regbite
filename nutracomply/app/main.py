@@ -535,6 +535,7 @@ from app.routes import team as team_router
 from app.routes import onboarding as onboarding_router
 from app.routes import billing as billing_router
 from app.routes import notifications as notifications_router
+from app.routes import help as help_router
 
 app.include_router(auth.router)
 app.include_router(products.router)
@@ -550,6 +551,7 @@ app.include_router(team_router.router)
 app.include_router(onboarding_router.router)
 app.include_router(billing_router.router)
 app.include_router(notifications_router.router)
+app.include_router(help_router.router)
 
 try:
     from app.routes import admin_llm
