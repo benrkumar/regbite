@@ -36,9 +36,13 @@ def run_compliance_check(label_version: LabelVersion, db: Session) -> list[Compl
     extraction = label_version.extraction_json or {}
     all_rules = db.query(ComplianceRule).filter(ComplianceRule.active == True).all()
 
-    # Filter rules by product category
+    # Filter rules by product category and framework
     product_category = (label_version.product.category or "").lower().strip()
     is_ayurvedic = "ayurvedic" in product_category or "asu" in product_category
+    is_imported = bool(
+        extraction.get("country_of_origin")
+        and "india" not in str(extraction.get("country_of_origin", "")).lower()
+    )
 
     rules = []
     for rule in all_rules:
@@ -46,6 +50,11 @@ def run_compliance_check(label_version: LabelVersion, db: Session) -> list[Compl
         # AYUSH rules only apply to Ayurvedic/ASU products
         if code.startswith("AYUSH-") and not is_ayurvedic:
             continue
+        # DGFT import rules only apply to imported products
+        if code.startswith("DGFT-") and not is_imported:
+            continue
+        # Licensing rules are FORMAT checks — always include for awareness
+        # BIS rules always apply (voluntary but checked)
         rules.append(rule)
 
     # Delete previous checks for this label version

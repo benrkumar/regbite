@@ -29,7 +29,7 @@
   {
     "rule_code": "FSSAI-NUTRA-LBL-003",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(f)",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 4(1)(f)",
     "description": "FSSAI License Number must be present on the label",
     "check_type": "PATTERN_MATCH",
     "check_config": {
@@ -43,7 +43,7 @@
   {
     "rule_code": "FSSAI-NUTRA-LBL-004",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(a)",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 4(1)(a)",
     "description": "Product name must be present on the label",
     "check_type": "PRESENCE",
     "check_config": {
@@ -55,7 +55,7 @@
   {
     "rule_code": "FSSAI-NUTRA-LBL-005",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(b)",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 4(1)(b)",
     "description": "Net quantity/net weight must be declared on the label",
     "check_type": "PRESENCE",
     "check_config": {
@@ -67,7 +67,7 @@
   {
     "rule_code": "FSSAI-NUTRA-LBL-006",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(d)",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 4(1)(d)",
     "description": "Complete ingredient list must be present, in descending order of weight",
     "check_type": "PRESENCE",
     "check_config": {
@@ -129,7 +129,7 @@
   {
     "rule_code": "FSSAI-NUTRA-LBL-011",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(e)",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 4(1)(e)",
     "description": "Best before / Expiry date must be present on the label",
     "check_type": "PRESENCE",
     "check_config": {
@@ -141,7 +141,7 @@
   {
     "rule_code": "FSSAI-NUTRA-LBL-012",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(c)",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 4(1)(c)",
     "description": "Manufacturer / packer / importer name and complete address must be on the label",
     "check_type": "PRESENCE",
     "check_config": {
@@ -153,7 +153,7 @@
   {
     "rule_code": "FSSAI-NUTRA-LBL-013",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(g)",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 4(1)(g)",
     "description": "Batch / Lot number must be declared on the label",
     "check_type": "PRESENCE",
     "check_config": {
@@ -165,7 +165,7 @@
   {
     "rule_code": "FSSAI-NUTRA-LBL-014",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(h)",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 4(1)(h)",
     "description": "Storage conditions must be declared on the label",
     "check_type": "PRESENCE",
     "check_config": {
@@ -177,7 +177,7 @@
   {
     "rule_code": "FSSAI-NUTRA-LBL-015",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 22",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 22",
     "description": "Vegetarian (green dot) or Non-vegetarian (brown dot) mark must be displayed",
     "check_type": "PRESENCE",
     "check_config": {
@@ -430,7 +430,7 @@
   {
     "rule_code": "FSSAI-NUTRA-ALLERGEN-001",
     "category": "ALLERGEN_REQUIREMENT",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 6",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 6",
     "description": "Common allergens must be declared using the standard 'Contains:' format",
     "check_type": "PRESENCE",
     "check_config": {
@@ -446,7 +446,7 @@
   {
     "rule_code": "FSSAI-NUTRA-FORMAT-001",
     "category": "FORMAT_REQUIREMENT",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(3)",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 4(3)",
     "description": "All mandatory label information must be in English; Hindi or regional language may be additionally used",
     "check_type": "PRESENCE",
     "check_config": {
@@ -459,7 +459,7 @@
   {
     "rule_code": "FSSAI-NUTRA-FORMAT-002",
     "category": "FORMAT_REQUIREMENT",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(2)",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 4(2)",
     "description": "Mandatory label declarations must be legible and in prescribed minimum font size",
     "check_type": "FORMAT",
     "check_config": {
@@ -497,7 +497,7 @@
   {
     "rule_code": "FSSAI-NUTRA-IMPORT-001",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 5",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 5",
     "description": "Imported nutraceuticals must declare country of origin",
     "check_type": "PRESENCE",
     "check_config": {
@@ -554,7 +554,7 @@
   {
     "rule_code": "FSSAI-NUTRA-LBL-017",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Reg 4(1)(i)",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 4(1)(i)",
     "description": "Date of manufacture must be declared on the label",
     "check_type": "PRESENCE",
     "check_config": {
@@ -861,5 +861,315 @@
     },
     "severity": "CRITICAL",
     "remediation_template": "This product contains mineral/metal-based ingredients (Bhasma/Rasa). Ensure: (1) Heavy metal content is within prescribed limits per API/AFI standards, (2) Certificate of analysis for heavy metals (As, Pb, Hg, Cd) is maintained, (3) The label declares 'Contains processed minerals/metals'."
+  },
+
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-018",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 4(1)(j)",
+    "description": "Added sugars must be declared as a sub-line under Total Sugars in the nutritional table",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "nutritional_table",
+      "required_nutrient": "added_sugars",
+      "description": "Nutritional table must include 'of which Added Sugars' line"
+    },
+    "severity": "HIGH",
+    "version": "VIII",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Add 'of which Added Sugars — Xg' as a sub-line under Total Sugars in the nutritional information table. Applies to gummies, chewables, syrups, and flavoured powders."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-019",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 4A",
+    "description": "Front-of-Pack Nutrition Labelling (FOPNL) — Health Star Rating or warning symbols required for products exceeding sugar/sodium/fat thresholds",
+    "check_type": "FORMAT",
+    "check_config": {
+      "description": "Verify front-of-pack nutrition label (Health Star Rating or warning triangle) is present for products exceeding FSSAI threshold limits for sugar, sodium, saturated fat, or trans fat per serving."
+    },
+    "severity": "HIGH",
+    "version": "VIII",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Add front-of-pack nutrition label. Products exceeding FSSAI threshold limits for sugar (>6g/serving), sodium (>600mg/serving), saturated fat (>3g/serving), or trans fat (>0.5g/serving) must display warning symbols or Health Star Rating on the principal display panel."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-020",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 9A",
+    "description": "Digital labelling QR code required for products with complex formulations (>50 ingredients) or multi-serving packs",
+    "check_type": "FORMAT",
+    "check_config": {
+      "description": "Products with >50 ingredients or complex formulations must include a QR code linking to FSSAI-registered product page with batch details, lab reports, and full ingredient information."
+    },
+    "severity": "MEDIUM",
+    "version": "VIII",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Add a QR code (minimum 10mm x 10mm) linking to a product information page containing: complete ingredient list, batch-specific Certificate of Analysis, nutritional details, and FSSAI registration number. URL must remain active for shelf life + 2 years."
+  },
+
+  {
+    "rule_code": "FSSAI-FPS-ADD-001",
+    "category": "ADDITIVE_LIMIT",
+    "regulation_source": "FSS (Food Products Standards and Food Additives) First Amendment Regulations 2025, Schedule A",
+    "description": "Permitted food additives in health supplements must not exceed maximum limits specified in Schedule A",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "ingredient_list",
+      "monitored_items": ["tartrazine", "sunset yellow", "brilliant blue", "carmoisine", "erythrosine", "allura red", "ponceau 4R", "quinoline yellow"],
+      "note": "Synthetic food colours — check if present and within permitted limits for the product category"
+    },
+    "severity": "CRITICAL",
+    "version": "2025-Amendment-1",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Verify food additive usage against FSS (Food Products Standards and Food Additives) First Amendment Regulations 2025, Schedule A. Synthetic colours must not exceed 100 mg/kg total for health supplements. Declare each additive by its INS number and class name."
+  },
+  {
+    "rule_code": "FSSAI-FPS-ADD-002",
+    "category": "ADDITIVE_LIMIT",
+    "regulation_source": "FSS (Food Products Standards and Food Additives) First Amendment Regulations 2025, Schedule B",
+    "description": "Preservatives (benzoates, sorbates, propionates) must not exceed category-specific limits",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "ingredient_list",
+      "monitored_items": ["sodium benzoate", "potassium sorbate", "methyl paraben", "propyl paraben", "calcium propionate", "benzoic acid", "sorbic acid"],
+      "note": "Preservatives — check against maximum permitted levels in Schedule B"
+    },
+    "severity": "HIGH",
+    "version": "2025-Amendment-1",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Verify preservative levels against FSS (Food Products Standards and Food Additives) 2025 Amendment, Schedule B. Sodium benzoate max 250 ppm, potassium sorbate max 1000 ppm for health supplement syrups/liquids. Parabens: max 120 ppm methylparaben, 12 ppm propylparaben."
+  },
+  {
+    "rule_code": "FSSAI-FPS-ADD-003",
+    "category": "ADDITIVE_LIMIT",
+    "regulation_source": "FSS (Food Products Standards and Food Additives) First Amendment Regulations 2025, Schedule C",
+    "description": "Artificial sweeteners must be declared and within permitted limits; label must state 'CONTAINS ARTIFICIAL SWEETENER'",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "ingredient_list",
+      "monitored_items": ["sucralose", "aspartame", "acesulfame-k", "saccharin", "stevia", "steviol glycosides", "neotame", "monk fruit"],
+      "note": "Artificial sweeteners — verify limit compliance and mandatory declaration"
+    },
+    "severity": "HIGH",
+    "version": "2025-Amendment-1",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "If artificial sweeteners are used, declare 'CONTAINS ARTIFICIAL SWEETENER [name]' prominently on the label. Aspartame: must add 'CONTAINS A SOURCE OF PHENYLALANINE'. Verify levels against Schedule C limits."
+  },
+  {
+    "rule_code": "FSSAI-FPS-ADD-004",
+    "category": "ADDITIVE_LIMIT",
+    "regulation_source": "FSS (Food Products Standards and Food Additives) First Amendment Regulations 2025",
+    "description": "Titanium dioxide (E171) is prohibited as a food additive in health supplements and nutraceuticals",
+    "check_type": "NOT_IN_LIST",
+    "check_config": {
+      "field": "ingredient_list",
+      "banned_items": ["titanium dioxide", "TiO2", "E171", "CI 77891"]
+    },
+    "severity": "CRITICAL",
+    "version": "2025-Amendment-1",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Remove titanium dioxide (E171/TiO2) from the formulation. FSSAI has banned its use as a food additive following the EFSA 2021 safety assessment finding it can no longer be considered safe. Use permitted alternatives (calcium carbonate, rice starch) for opacity."
+  },
+
+  {
+    "rule_code": "FSSAI-NUTRA-ING-011",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023",
+    "description": "Aristolochic acid-containing herbs are banned in all food products and supplements",
+    "check_type": "NOT_IN_LIST",
+    "check_config": {
+      "field": "ingredient_list",
+      "banned_items": ["aristolochia", "aristolochic acid", "birthwort", "pipevine", "asarum"]
+    },
+    "severity": "CRITICAL",
+    "version": "2023",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Remove all aristolochic acid-containing herbs immediately. These are proven nephrotoxins and carcinogens, banned globally. No transition period applies."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-012",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023",
+    "description": "Ephedra (Ma Huang) and all ephedra-containing ingredients are banned",
+    "check_type": "NOT_IN_LIST",
+    "check_config": {
+      "field": "ingredient_list",
+      "banned_items": ["ephedra", "ma huang", "ephedrine", "pseudoephedrine", "ephedra sinica", "ephedra extract"]
+    },
+    "severity": "CRITICAL",
+    "version": "2023",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Remove all ephedra/ephedrine-containing ingredients. Ephedra is banned in supplements due to cardiovascular deaths. No transition period applies."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-013",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023",
+    "description": "Kava (Piper methysticum) is banned in health supplements due to hepatotoxicity",
+    "check_type": "NOT_IN_LIST",
+    "check_config": {
+      "field": "ingredient_list",
+      "banned_items": ["kava", "kava kava", "piper methysticum", "kavain", "kavalactones"]
+    },
+    "severity": "CRITICAL",
+    "version": "2023",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Remove kava/kava kava from the formulation. Banned due to documented hepatotoxicity and liver failure cases."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-014",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023",
+    "description": "Colloidal silver is banned for internal use in supplements",
+    "check_type": "NOT_IN_LIST",
+    "check_config": {
+      "field": "ingredient_list",
+      "banned_items": ["colloidal silver", "silver solution", "nano silver", "silver hydrosol"]
+    },
+    "severity": "CRITICAL",
+    "version": "2023",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Remove colloidal silver from the supplement. No proven health benefit; causes argyria (permanent skin discolouration) and heavy metal accumulation."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-015",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023",
+    "description": "Androstenedione and DHEA precursors are banned in supplements",
+    "check_type": "NOT_IN_LIST",
+    "check_config": {
+      "field": "ingredient_list",
+      "banned_items": ["androstenedione", "DHEA", "dehydroepiandrosterone", "prohormone", "4-androstenediol"]
+    },
+    "severity": "CRITICAL",
+    "version": "2023",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Remove androstenedione/DHEA from the formulation. These are anabolic steroid precursors, banned in supplements globally and prohibited under FSSAI and anti-doping regulations."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-ING-016",
+    "category": "INGREDIENT_RESTRICTION",
+    "regulation_source": "FSSAI Notification S.O. 2847(E), June 2024 — Phenylephrine restriction",
+    "description": "Phenylephrine and pseudoephedrine are restricted — not permitted in food/supplement category",
+    "check_type": "NOT_IN_LIST",
+    "check_config": {
+      "field": "ingredient_list",
+      "banned_items": ["phenylephrine", "pseudoephedrine", "phenylpropanolamine"]
+    },
+    "severity": "CRITICAL",
+    "version": "2024",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Remove phenylephrine/pseudoephedrine from the supplement. These are drug substances not permitted in the food/supplement category under FSSAI regulations."
+  },
+
+  {
+    "rule_code": "FSSAI-LIC-001",
+    "category": "LICENSING",
+    "regulation_source": "FSSAI Licensing & Registration Amendment Regulations 2026, S.O. March 2026",
+    "description": "FSSAI Registration (up to ₹1.5 Cr turnover), State License (up to ₹50 Cr), Central License (above ₹50 Cr) — updated thresholds effective March 2026",
+    "check_type": "FORMAT",
+    "check_config": {
+      "description": "Verify the FSSAI license type matches the manufacturer's annual turnover: Registration (up to ₹1.5 Cr), State License (up to ₹50 Cr), Central License (above ₹50 Cr). Post March 2026, licenses are perpetual (no renewal cycles)."
+    },
+    "severity": "HIGH",
+    "version": "2026-Amendment",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Verify your FSSAI license tier matches your annual turnover under the March 2026 amendment: Registration (up to ₹1.5 Cr), State License (up to ₹50 Cr), Central License (above ₹50 Cr). Note: licenses issued after March 2026 have perpetual validity — no renewal required."
+  },
+  {
+    "rule_code": "FSSAI-LIC-002",
+    "category": "LICENSING",
+    "regulation_source": "FSSAI Licensing & Registration Amendment Regulations 2026 — Street Vendors",
+    "description": "Street food vendors selling supplements under Street Vendors Act 2014 qualify for deemed registration",
+    "check_type": "FORMAT",
+    "check_config": {
+      "description": "Street vendors registered under Street Vendors (Protection of Livelihood and Regulation of Street Vending) Act 2014 are deemed registered under FSSAI. Verify vending certificate if applicable."
+    },
+    "severity": "MEDIUM",
+    "version": "2026-Amendment",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Street vendors with a valid vending certificate under the Street Vendors Act 2014 are deemed registered under FSSAI. No separate FSSAI registration needed, but food safety standards still apply."
+  },
+
+  {
+    "rule_code": "BIS-NUTRA-001",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "BIS IS 4926:2023 — Labelling of Pre-Packaged Foods (Revised)",
+    "description": "Products claiming BIS certification must display the ISI mark with valid license number",
+    "check_type": "FORMAT",
+    "check_config": {
+      "description": "If product carries BIS/ISI certification mark, verify ISI mark is displayed with valid CM/L license number. BIS certification is voluntary for most supplements but mandatory for products claiming ISI quality."
+    },
+    "severity": "MEDIUM",
+    "version": "2023",
+    "framework": "BIS",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "If displaying BIS/ISI mark, ensure: (1) Valid BIS license number (CM/L-XXXXXXX) is printed alongside the ISI mark, (2) Mark dimensions comply with IS 4926:2023, (3) License is current and renewed annually."
+  },
+  {
+    "rule_code": "BIS-NUTRA-002",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "BIS IS 7022:2023 — Labelling of Dietary Supplements",
+    "description": "Dietary supplements claiming protein content must meet BIS IS 7022 protein quality standards",
+    "check_type": "FORMAT",
+    "check_config": {
+      "description": "Protein supplements claiming BIS certification must meet IS 7022:2023 quality parameters: minimum protein content as labelled (within -10% tolerance), amino acid profile matching PDCAAS/DIAAS requirements, and heavy metal limits."
+    },
+    "severity": "HIGH",
+    "version": "2023",
+    "framework": "BIS",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "For BIS-certified protein supplements: (1) Protein content must be within -10% of labelled value, (2) Provide PDCAAS or DIAAS score, (3) Heavy metals: Pb <1ppm, As <0.5ppm, Cd <0.5ppm, Hg <0.01ppm. (4) Maintain NABL-accredited lab test reports."
+  },
+
+  {
+    "rule_code": "DGFT-IMP-001",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "DGFT Foreign Trade Policy 2023, Chapter 2 — Import Policy for Food Supplements",
+    "description": "Imported health supplements must have valid IEC (Import Export Code) and comply with FSSAI import clearance",
+    "check_type": "FORMAT",
+    "check_config": {
+      "field": "country_of_origin",
+      "applies_to": "imported_products",
+      "description": "Imported supplements require: (1) Valid IEC from DGFT, (2) FSSAI import license/NOC, (3) Port of entry clearance with lab testing report, (4) Country of origin + importer details on label."
+    },
+    "severity": "HIGH",
+    "version": "2023",
+    "framework": "DGFT",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "For imported supplements: (1) Obtain IEC from DGFT (dgft.gov.in), (2) Get FSSAI import license or NOC, (3) Ensure port-of-entry lab testing clearance, (4) Label must show: 'Imported by: [name, address]', 'Country of Origin: [country]', FSSAI import license number."
+  },
+  {
+    "rule_code": "DGFT-IMP-002",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "DGFT Notification No. 44/2023 — Restriction on Import of Supplements Containing Restricted Herbs",
+    "description": "Import of supplements containing CITES-listed or India-restricted botanicals requires additional DGFT clearance",
+    "check_type": "FORMAT",
+    "check_config": {
+      "field": "ingredient_list",
+      "applies_to": "imported_products",
+      "description": "Supplements containing CITES-listed botanicals (e.g., certain orchids, Saussurea costus) or India-restricted herbs require DGFT import license and AYUSH clearance."
+    },
+    "severity": "HIGH",
+    "version": "2023",
+    "framework": "DGFT",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "If importing supplements with CITES-listed or restricted botanicals, obtain: (1) DGFT restricted import license, (2) CITES permit from Wildlife Crime Control Bureau, (3) AYUSH import clearance for ASU ingredients. Failure to comply may result in customs seizure."
   }
 ]

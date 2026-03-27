@@ -54,6 +54,7 @@ def scrape_fssai_pages() -> list[dict]:
     discovered += _scrape_advisories_page()
     discovered += _scrape_ayush_pages()
     discovered += _scrape_legal_metrology_page()
+    discovered += _scrape_egazette_page()
 
     return discovered
 
@@ -148,6 +149,40 @@ def _scrape_legal_metrology_page() -> list[dict]:
     except Exception as e:
         print(f"[scraper] Legal Metrology page error: {e}")
     return results[:20]
+
+
+def _scrape_egazette_page() -> list[dict]:
+    """Scrape eGazette for FSSAI/AYUSH-related gazette notifications (Part III, Section 4)."""
+    results = []
+    try:
+        # Search eGazette for recent FSSAI-related notifications
+        # The eGazette site uses POST-based search; we search for FSSAI keywords
+        resp = httpx.get(
+            "https://egazette.gov.in/Search.aspx",
+            headers=HEADERS,
+            timeout=30,
+            follow_redirects=True,
+        )
+        soup = BeautifulSoup(resp.text, "lxml")
+
+        # Look for links containing food safety, FSSAI, health supplement keywords
+        fssai_keywords = ["fssai", "food safety", "health supplement", "nutraceutical",
+                          "labelling", "food additive", "packaged commodity", "ayush"]
+        for link in soup.find_all("a", href=True):
+            href = link["href"]
+            name = link.get_text(strip=True) or ""
+            combined = (name + " " + href).lower()
+            if any(kw in combined for kw in fssai_keywords):
+                full_url = _resolve_url(href, "https://egazette.gov.in/")
+                if name and len(name) > 5:
+                    results.append({
+                        "source_url": full_url,
+                        "document_name": f"eGazette: {name[:400]}",
+                        "section": "egazette"
+                    })
+    except Exception as e:
+        print(f"[scraper] eGazette page error: {e}")
+    return results[:15]
 
 
 def _resolve_url(href: str, base_url: str) -> str:
@@ -246,6 +281,52 @@ def _classify_with_gemini(name: str, text: str) -> dict:
     raw = re.sub(r"^```(?:json)?\s*", "", response.text.strip())
     raw = re.sub(r"\s*```$", "", raw)
     return json.loads(raw)
+
+
+def suggest_rule_modifications(document_name: str, text_excerpt: str, existing_rules: list[dict]) -> list[dict]:
+    """
+    When a CRITICAL regulation change is detected, use LLM to suggest
+    rule modifications or new rules that should be added to the compliance engine.
+    Returns list of suggested rule changes: [{action, rule_code, field, old_value, new_value, reason}]
+    """
+    if not settings.gemini_api_key:
+        return []
+
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel("gemini-2.0-flash")
+
+        rules_summary = "\n".join(
+            f"- {r['rule_code']}: {r['description'][:100]}" for r in existing_rules[:30]
+        )
+
+        prompt = (
+            "You are an FSSAI regulatory compliance engineer.\n\n"
+            f"A CRITICAL regulation change has been detected:\n"
+            f"Document: {document_name}\n"
+            f"Content excerpt:\n{text_excerpt[:2000]}\n\n"
+            f"Current compliance rules in our engine:\n{rules_summary}\n\n"
+            "Based on this regulation change, suggest specific modifications to existing rules "
+            "or new rules that should be added. Return ONLY valid JSON array (no markdown):\n"
+            '[{"action": "UPDATE" or "ADD", "rule_code": "existing or suggested code", '
+            '"field": "field to change (e.g. description, check_config, severity)", '
+            '"old_value": "current value if UPDATE", '
+            '"new_value": "suggested new value", '
+            '"reason": "why this change is needed"}]\n\n'
+            "Return empty array [] if no changes needed."
+        )
+
+        response = model.generate_content(
+            prompt,
+            generation_config={"temperature": 0.1, "max_output_tokens": 1024},
+        )
+        raw = re.sub(r"^```(?:json)?\s*", "", response.text.strip())
+        raw = re.sub(r"\s*```$", "", raw)
+        return json.loads(raw)
+    except Exception as e:
+        print(f"[scraper] Rule modification suggestion failed: {e}")
+        return []
 
 
 def _classify_with_keywords(name: str, text: str) -> dict:

@@ -32,6 +32,24 @@ class RuleCategory(str, enum.Enum):
     QUANTITY_REQUIREMENT = "QUANTITY_REQUIREMENT"
     ALLERGEN_REQUIREMENT = "ALLERGEN_REQUIREMENT"
     CLAIM_SUBSTANTIATION = "CLAIM_SUBSTANTIATION"
+    WARNING = "WARNING"
+    ADDITIVE_LIMIT = "ADDITIVE_LIMIT"
+    LICENSING = "LICENSING"
+
+
+class RuleFramework(str, enum.Enum):
+    FSSAI = "FSSAI"
+    LEGAL_METROLOGY = "LEGAL_METROLOGY"
+    AYUSH = "AYUSH"
+    BIS = "BIS"
+    DGFT = "DGFT"
+
+
+class RegulationStatus(str, enum.Enum):
+    DRAFT = "DRAFT"
+    FINAL = "FINAL"
+    EFFECTIVE = "EFFECTIVE"
+    SUPERSEDED = "SUPERSEDED"
 
 
 class CheckType(str, enum.Enum):
@@ -212,6 +230,10 @@ class ComplianceRule(Base):
     remediation_template = Column(Text)
     effective_from = Column(DateTime, default=datetime.utcnow)
     active = Column(Boolean, default=True)
+    # Rule versioning (Item 5) — tracks which version of the regulation this rule reflects
+    version = Column(String(50), nullable=True)          # e.g. "VIII", "2022-v2", "2025-Amendment-1"
+    framework = Column(SAEnum(RuleFramework), nullable=True)  # FSSAI, LEGAL_METROLOGY, AYUSH, BIS, DGFT
+    regulation_status = Column(SAEnum(RegulationStatus), default=RegulationStatus.EFFECTIVE)
 
     checks = relationship("ComplianceCheck", back_populates="rule")
 
@@ -246,6 +268,7 @@ class RegulationChange(Base):
     effective_date = Column(DateTime, nullable=True)
     severity = Column(SAEnum(Severity), default=Severity.MEDIUM)
     status = Column(String(20), default="NEW")
+    regulation_status = Column(SAEnum(RegulationStatus), default=RegulationStatus.EFFECTIVE)
     document_hash = Column(String(64))
 
     alerts = relationship("Alert", back_populates="regulation_change")
@@ -340,7 +363,10 @@ class LLMConversation(Base):
 # ─── License Renewal Tracker ─────────────────────────────────────────────────
 
 class LicenseType(str, enum.Enum):
-    FSSAI = "FSSAI"
+    FSSAI_REGISTRATION = "FSSAI Registration"    # up to ₹1.5 Cr turnover
+    FSSAI_STATE = "FSSAI State License"           # up to ₹50 Cr turnover
+    FSSAI_CENTRAL = "FSSAI Central License"       # above ₹50 Cr turnover
+    FSSAI = "FSSAI"                                # legacy — existing rows
     AYUSH = "AYUSH"
     IEC = "IEC"
     BIS = "BIS"
@@ -367,6 +393,7 @@ class LicenseRenewal(Base):
     issued_date = Column(DateTime, nullable=True)
     notes = Column(Text)
     is_active = Column(Boolean, default=True)
+    is_perpetual = Column(Boolean, default=False)  # March 2026 FSSAI amendment: perpetual license validity
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -374,11 +401,15 @@ class LicenseRenewal(Base):
 
     @property
     def days_until_expiry(self):
+        if self.is_perpetual:
+            return 9999  # perpetual licenses never expire
         delta = self.expiry_date - datetime.utcnow()
         return delta.days
 
     @property
     def status(self):
+        if self.is_perpetual:
+            return LicenseStatus.ACTIVE
         days = self.days_until_expiry
         if days < 0:
             return LicenseStatus.EXPIRED
@@ -537,6 +568,12 @@ class PaymentRecord(Base):
 
 # ─── In-App Notifications ─────────────────────────────────────────────────────
 
+class BlogStatus(str, enum.Enum):
+    DRAFT = "draft"
+    PUBLISHED = "published"
+    ARCHIVED = "archived"
+
+
 class NotificationType(str, enum.Enum):
     INFO    = "info"
     SUCCESS = "success"
@@ -555,3 +592,42 @@ class Notification(Base):
     link       = Column(String(300), nullable=True)   # optional deep link
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     user       = relationship("User", foreign_keys=[user_id])
+
+
+# ─── Blog ────────────────────────────────────────────────────────────────────
+
+class BlogCategory(Base):
+    __tablename__ = "blog_categories"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    name        = Column(String(100), nullable=False, unique=True)
+    slug        = Column(String(100), nullable=False, unique=True)
+    description = Column(Text)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+
+    posts = relationship("BlogPost", back_populates="category")
+
+
+class BlogPost(Base):
+    __tablename__ = "blog_posts"
+
+    id                 = Column(Integer, primary_key=True, index=True)
+    title              = Column(String(500), nullable=False)
+    slug               = Column(String(500), unique=True, index=True, nullable=False)
+    excerpt            = Column(Text)                          # short summary for listing
+    content            = Column(Text, nullable=False)          # HTML content from rich editor
+    featured_image_url = Column(String(1000))                  # URL or path
+    category_id        = Column(Integer, ForeignKey("blog_categories.id"), nullable=True)
+    author_id          = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status             = Column(SAEnum(BlogStatus), default=BlogStatus.DRAFT)
+    meta_title         = Column(String(200))                   # SEO
+    meta_description   = Column(String(500))                   # SEO
+    tags               = Column(JSON, default=list)            # ["fssai", "compliance"]
+    views              = Column(Integer, default=0)
+    is_featured        = Column(Boolean, default=False)
+    published_at       = Column(DateTime, nullable=True)
+    created_at         = Column(DateTime, default=datetime.utcnow)
+    updated_at         = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    author   = relationship("User", foreign_keys=[author_id])
+    category = relationship("BlogCategory", back_populates="posts")

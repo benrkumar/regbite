@@ -29,11 +29,13 @@ async def renewals_list(request: Request, db: Session = Depends(get_db)):
         .all()
     )
 
-    # Count by status
-    expired = [l for l in licenses if l.days_until_expiry < 0]
-    expiring_soon = [l for l in licenses if 0 <= l.days_until_expiry <= 30]
-    expiring_60 = [l for l in licenses if 30 < l.days_until_expiry <= 60]
-    active = [l for l in licenses if l.days_until_expiry > 60]
+    # Count by status (perpetual licenses are always active)
+    perpetual = [l for l in licenses if l.is_perpetual]
+    non_perpetual = [l for l in licenses if not l.is_perpetual]
+    expired = [l for l in non_perpetual if l.days_until_expiry < 0]
+    expiring_soon = [l for l in non_perpetual if 0 <= l.days_until_expiry <= 30]
+    expiring_60 = [l for l in non_perpetual if 30 < l.days_until_expiry <= 60]
+    active = [l for l in non_perpetual if l.days_until_expiry > 60] + perpetual
 
     unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
 
@@ -45,8 +47,10 @@ async def renewals_list(request: Request, db: Session = Depends(get_db)):
         "expiring_soon": expiring_soon,
         "expiring_60": expiring_60,
         "active": active,
+        "perpetual": perpetual,
         "license_types": [lt.value for lt in LicenseType],
         "unread_alerts": unread_alerts,
+        "perpetual_notice": "FSSAI licenses issued after March 2026 have perpetual validity under the Licensing & Registration Amendment Regulations 2026. No renewal is required.",
     })
 
 
@@ -56,8 +60,9 @@ async def add_renewal(
     license_name: str = Form(...),
     license_type: str = Form(...),
     license_number: str = Form(""),
-    expiry_date: str = Form(...),
+    expiry_date: str = Form(""),
     issued_date: str = Form(""),
+    is_perpetual: str = Form(""),
     notes: str = Form(""),
     db: Session = Depends(get_db),
 ):
@@ -66,7 +71,12 @@ async def add_renewal(
         return RedirectResponse(url="/login")
 
     try:
-        expiry_dt = datetime.strptime(expiry_date, "%Y-%m-%d")
+        perpetual = is_perpetual.lower() in ("true", "1", "on", "yes") if is_perpetual else False
+        # Perpetual licenses don't need an expiry date — use a far-future date
+        if perpetual:
+            expiry_dt = datetime(2099, 12, 31)
+        else:
+            expiry_dt = datetime.strptime(expiry_date, "%Y-%m-%d")
         issued_dt = datetime.strptime(issued_date, "%Y-%m-%d") if issued_date else None
 
         license = LicenseRenewal(
@@ -76,6 +86,7 @@ async def add_renewal(
             license_number=license_number or None,
             expiry_date=expiry_dt,
             issued_date=issued_dt,
+            is_perpetual=perpetual,
             notes=notes or None,
         )
         db.add(license)

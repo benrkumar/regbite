@@ -187,5 +187,85 @@
     "status": "APPROVED",
     "max_daily_dose": "10000mcg",
     "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule I"
+  },
+  {
+    "name": "Aristolochic Acid Herbs",
+    "aliases": ["aristolochia", "birthwort", "pipevine", "asarum"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Proven nephrotoxin and carcinogen — banned globally",
+    "regulation_reference": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023"
+  },
+  {
+    "name": "Ephedra",
+    "aliases": ["ma huang", "ephedrine", "pseudoephedrine", "ephedra sinica"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Cardiovascular deaths reported; banned globally for supplement use",
+    "regulation_reference": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023"
+  },
+  {
+    "name": "Kava",
+    "aliases": ["kava kava", "piper methysticum", "kavain", "kavalactones"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Hepatotoxicity; liver failure cases documented",
+    "regulation_reference": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023"
+  },
+  {
+    "name": "Pennyroyal",
+    "aliases": ["mentha pulegium", "pennyroyal oil", "pulegone"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Hepatotoxic; abortifacient effects",
+    "regulation_reference": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023"
+  },
+  {
+    "name": "Colloidal Silver",
+    "aliases": ["silver solution", "nano silver", "silver hydrosol", "silver protein"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Argyria (permanent skin discolouration); no proven health benefit; heavy metal accumulation",
+    "regulation_reference": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023"
+  },
+  {
+    "name": "Androstenedione",
+    "aliases": ["4-androstenedione", "andro", "4-AD"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Anabolic steroid precursor; banned in sports; hormonal risks",
+    "regulation_reference": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023"
+  },
+  {
+    "name": "Titanium Dioxide",
+    "aliases": ["TiO2", "E171", "CI 77891"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Banned as food additive per EFSA 2021 safety assessment — can no longer be considered safe for ingestion",
+    "regulation_reference": "FSS (Food Products Standards and Food Additives) First Amendment Regulations 2025"
+  },
+  {
+    "name": "Phenylephrine",
+    "aliases": ["phenylpropanolamine", "PPA"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Drug substance not permitted in food/supplement category",
+    "regulation_reference": "FSSAI Notification S.O. 2847(E), June 2024"
+  },
+  {
+    "name": "Vitamin K2 (MK-7)",
+    "aliases": ["menaquinone-7", "MK-7", "vitamin k2 mk7"],
+    "status": "APPROVED",
+    "max_daily_dose": "300mcg",
+    "source_restriction": "Must carry warning: 'Do not take if on anticoagulant therapy'",
+    "regulation_reference": "FSS HS Regulations 2022, Schedule I Amendment Dec 2023"
+  },
+  {
+    "name": "Vitamin K2 (MK-4)",
+    "aliases": ["menaquinone-4", "MK-4", "menatetrenone"],
+    "status": "APPROVED",
+    "max_daily_dose": "1500mcg",
+    "source_restriction": "Must carry warning: 'Do not take if on anticoagulant therapy'",
+    "regulation_reference": "FSS HS Regulations 2022, Schedule I Amendment Dec 2023"
   }
 ]

@@ -53,6 +53,11 @@ async def lifespan(app: FastAPI):
     # within milliseconds.  The background thread runs independently.
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, _run_all_startup_tasks)
+
+    # Start the in-process daily scheduler (replaces Celery Beat + Redis)
+    from app.scheduler import start_scheduler
+    start_scheduler()
+
     print("[startup] Server ready — DB initialisation running in background")
     yield
 
@@ -186,6 +191,14 @@ def _run_migrations():
         "UPDATE users SET role = 'editor'        WHERE role = 'EDITOR'",
         "UPDATE users SET role = 'viewer'        WHERE role = 'VIEWER'",
         "UPDATE users SET role = 'consultant'    WHERE role = 'CONSULTANT'",
+        # v10: rule versioning (Item 5) — version, framework, regulation_status on compliance_rules
+        "ALTER TABLE compliance_rules ADD COLUMN IF NOT EXISTS version VARCHAR(50)",
+        "ALTER TABLE compliance_rules ADD COLUMN IF NOT EXISTS framework VARCHAR(20)",
+        "ALTER TABLE compliance_rules ADD COLUMN IF NOT EXISTS regulation_status VARCHAR(20) DEFAULT 'EFFECTIVE'",
+        # v10: regulation status on regulation_changes (Item 8)
+        "ALTER TABLE regulation_changes ADD COLUMN IF NOT EXISTS regulation_status VARCHAR(20) DEFAULT 'EFFECTIVE'",
+        # v10: perpetual license flag (March 2026 FSSAI amendment)
+        "ALTER TABLE license_renewals ADD COLUMN IF NOT EXISTS is_perpetual BOOLEAN DEFAULT FALSE",
     ]
     for sql in migrations:
         try:
@@ -229,52 +242,108 @@ def _promote_admin():
 
 def _seed_initial_data():
     from datetime import datetime
-    from app.models import ComplianceRule, Ingredient, RegulationChange, Severity, ChangeType
+    from app.models import (
+        ComplianceRule, Ingredient, RegulationChange, Severity, ChangeType,
+        RuleCategory, RuleFramework, RegulationStatus
+    )
     db = SessionLocal()
     try:
-        # Seed compliance rules (insert any new rules that don't exist yet)
+        # Seed compliance rules (insert new, update existing regulation_source for Version VIII)
         rules_path = Path(__file__).parent / "data" / "fssai_rules_seed.json"
         with open(rules_path, encoding="utf-8") as f:
             rules_data = json.load(f)
-        existing_codes = {r.rule_code for r in db.query(ComplianceRule.rule_code).all()}
-        new_rules = [r for r in rules_data if r["rule_code"] not in existing_codes]
-        if new_rules:
-            for r in new_rules:
-                db.add(ComplianceRule(**r))
+        existing_rules = {r.rule_code: r for r in db.query(ComplianceRule).all()}
+        added = 0
+        updated = 0
+        for r in rules_data:
+            code = r["rule_code"]
+            # Extract new versioning fields (not part of original ComplianceRule columns by default)
+            version = r.pop("version", None)
+            framework_str = r.pop("framework", None)
+            reg_status_str = r.pop("regulation_status", None)
+
+            if code not in existing_rules:
+                rule = ComplianceRule(**r)
+                if version:
+                    rule.version = version
+                if framework_str:
+                    try:
+                        rule.framework = RuleFramework(framework_str)
+                    except (ValueError, KeyError):
+                        pass
+                if reg_status_str:
+                    try:
+                        rule.regulation_status = RegulationStatus(reg_status_str)
+                    except (ValueError, KeyError):
+                        pass
+                db.add(rule)
+                added += 1
+            else:
+                # Update regulation_source if it changed (e.g. Version VIII updates)
+                existing = existing_rules[code]
+                if r.get("regulation_source") and existing.regulation_source != r["regulation_source"]:
+                    existing.regulation_source = r["regulation_source"]
+                    updated += 1
+                # Backfill versioning fields if not set
+                if version and not existing.version:
+                    existing.version = version
+                if framework_str and not existing.framework:
+                    try:
+                        existing.framework = RuleFramework(framework_str)
+                    except (ValueError, KeyError):
+                        pass
+                if reg_status_str and not existing.regulation_status:
+                    try:
+                        existing.regulation_status = RegulationStatus(reg_status_str)
+                    except (ValueError, KeyError):
+                        pass
+        if added or updated:
             db.commit()
-            print(f"[seed] Loaded {len(new_rules)} new compliance rules (FSSAI + Legal Metrology + AYUSH)")
-        elif not existing_codes:
+            print(f"[seed] Rules: {added} new, {updated} updated")
+        elif not existing_rules:
             print("[seed] No compliance rules found — seed file may be empty")
 
-        # Seed ingredients
-        if db.query(Ingredient).count() == 0:
-            ing_path = Path(__file__).parent / "data" / "ingredients_seed.json"
-            with open(ing_path, encoding="utf-8") as f:
-                ing_data = json.load(f)
-            for i in ing_data:
+        # Seed ingredients (additive — insert any new ingredients not yet in DB)
+        ing_path = Path(__file__).parent / "data" / "ingredients_seed.json"
+        with open(ing_path, encoding="utf-8") as f:
+            ing_data = json.load(f)
+        existing_names = {i.name.lower() for i in db.query(Ingredient.name).all()}
+        new_ings = [i for i in ing_data if i["name"].lower() not in existing_names]
+        if new_ings:
+            for i in new_ings:
                 db.add(Ingredient(**i))
             db.commit()
-            print(f"[seed] Loaded {len(ing_data)} ingredients")
+            print(f"[seed] Loaded {len(new_ings)} new ingredients")
 
-        # Seed regulation update history
-        if db.query(RegulationChange).count() == 0:
-            updates_path = Path(__file__).parent / "data" / "regulation_updates_seed.json"
-            with open(updates_path, encoding="utf-8") as f:
-                updates_data = json.load(f)
-            for u in updates_data:
-                # Parse date strings
+        # Seed regulation update history (additive — insert new entries by document_hash)
+        updates_path = Path(__file__).parent / "data" / "regulation_updates_seed.json"
+        with open(updates_path, encoding="utf-8") as f:
+            updates_data = json.load(f)
+        existing_hashes = {r.document_hash for r in db.query(RegulationChange.document_hash).all() if r.document_hash}
+        new_updates = [u for u in updates_data if u.get("document_hash") not in existing_hashes]
+        if new_updates:
+            for u in new_updates:
+                u = dict(u)  # don't mutate original
                 detected = datetime.strptime(u.pop("detected_at"), "%Y-%m-%d")
                 eff_str = u.pop("effective_date", None)
                 effective = datetime.strptime(eff_str, "%Y-%m-%d") if eff_str else None
+                reg_status_str = u.pop("regulation_status", None)
+                reg_status = None
+                if reg_status_str:
+                    try:
+                        reg_status = RegulationStatus(reg_status_str)
+                    except (ValueError, KeyError):
+                        pass
                 db.add(RegulationChange(
                     detected_at=detected,
                     effective_date=effective,
                     severity=Severity(u.pop("severity")),
                     change_type=ChangeType(u.pop("change_type")),
+                    regulation_status=reg_status,
                     **u,
                 ))
             db.commit()
-            print(f"[seed] Loaded {len(updates_data)} regulation updates")
+            print(f"[seed] Loaded {len(new_updates)} new regulation updates")
     except Exception as e:
         db.rollback()
         print(f"[seed] Error: {e}")
@@ -284,9 +353,13 @@ def _seed_initial_data():
 
 def _seed_demo_users():
     """
-    Seed two hardcoded demo accounts on every startup (idempotent — skip if already exist).
-      ben   / admin@123  — regular user, gets 5 demo products
-      admin / admin@123  — super admin
+    Seed demo accounts for every persona on startup (idempotent — skip if already exist).
+    All use password admin@123:
+      admin      — super_admin (full platform control)
+      ben        — account_admin (manage products & team)
+      editor     — editor (upload labels & run checks)
+      viewer     — viewer (read-only dashboard)
+      consultant — consultant (external audit access)
     """
     db = None
     try:
@@ -342,6 +415,84 @@ def _seed_demo_users():
                 adm.is_admin = True
                 db.commit()
             print("[demo] User admin already exists — skipped")
+
+        # --- editor (content editor) ---
+        editor = db.query(User).filter(User.email == "editor").first()
+        if not editor:
+            editor = User(
+                name="Editor",
+                email="editor",
+                hashed_password=hash_password("admin@123"),
+                is_admin=False,
+                role=UserRole.EDITOR,
+                is_active=True,
+                notification_emails=[],
+            )
+            db.add(editor)
+            db.commit()
+            db.refresh(editor)
+            print("[demo] Created user: editor")
+            try:
+                _seed_demo_products(editor, db)
+            except Exception:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+        else:
+            print("[demo] User editor already exists — skipped")
+
+        # --- viewer (read-only) ---
+        viewer = db.query(User).filter(User.email == "viewer").first()
+        if not viewer:
+            viewer = User(
+                name="Viewer",
+                email="viewer",
+                hashed_password=hash_password("admin@123"),
+                is_admin=False,
+                role=UserRole.VIEWER,
+                is_active=True,
+                notification_emails=[],
+            )
+            db.add(viewer)
+            db.commit()
+            db.refresh(viewer)
+            print("[demo] Created user: viewer")
+            try:
+                _seed_demo_products(viewer, db)
+            except Exception:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+        else:
+            print("[demo] User viewer already exists — skipped")
+
+        # --- consultant (external auditor) ---
+        consultant = db.query(User).filter(User.email == "consultant").first()
+        if not consultant:
+            consultant = User(
+                name="Consultant",
+                email="consultant",
+                hashed_password=hash_password("admin@123"),
+                is_admin=False,
+                role=UserRole.CONSULTANT,
+                is_active=True,
+                notification_emails=[],
+            )
+            db.add(consultant)
+            db.commit()
+            db.refresh(consultant)
+            print("[demo] Created user: consultant")
+            try:
+                _seed_demo_products(consultant, db)
+            except Exception:
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+        else:
+            print("[demo] User consultant already exists — skipped")
 
     except Exception as e:
         print(f"[demo] User seed error: {e}")
