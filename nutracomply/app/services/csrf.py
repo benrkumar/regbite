@@ -9,6 +9,7 @@ How it works:
 """
 
 import secrets
+from urllib.parse import parse_qs
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response, JSONResponse
@@ -65,8 +66,12 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                     response = await call_next(request)
                     return response
             elif "application/x-www-form-urlencoded" in content_type:
-                form = await request.form()
-                submitted_token = form.get(FORM_FIELD)
+                # Read raw body bytes instead of request.form() to avoid consuming
+                # the body stream — BaseHTTPMiddleware + form() breaks FastAPI's
+                # Form(...) dependency injection (fields become null).
+                body = await request.body()
+                params = parse_qs(body.decode("utf-8"))
+                submitted_token = params.get(FORM_FIELD, [None])[0]
             else:
                 # JSON or other content types — check header
                 submitted_token = request.headers.get(HEADER_NAME)
