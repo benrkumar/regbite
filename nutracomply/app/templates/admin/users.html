@@ -31,10 +31,13 @@
           <div style="font-size:0.76rem;color:#64748b;">{{ u.email }}</div>
         </td>
         <td>
+          {% set role_label = (u.role.value if u.role else 'account_admin')|replace('_', ' ')|title %}
+          <span class="adm-badge badge-gray">{{ role_label }}</span>
           {% if u.is_admin %}
-          <span class="adm-badge badge-purple">Super Admin</span>
-          {% else %}
-          <span class="adm-badge badge-gray">User</span>
+          <span class="adm-badge badge-purple" style="margin-left:0.2rem;">Admin</span>
+          {% endif %}
+          {% if row.is_demo %}
+          <span class="adm-badge badge-yellow" style="margin-left:0.2rem;">Demo</span>
           {% endif %}
         </td>
         <td>

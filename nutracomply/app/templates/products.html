@@ -74,13 +74,29 @@ function showFileName(){
 </script>
 
 {% if products %}
+<div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap;">
+  <input class="input" type="text" id="product-search" placeholder="Search by name, SKU, or description..."
+         style="max-width:320px;font-size:0.82rem;" oninput="filterProducts()" />
+  <select class="input" id="category-filter" style="max-width:220px;font-size:0.82rem;" onchange="filterProducts()">
+    <option value="">All Categories</option>
+    <option>Health Supplement</option>
+    <option>Nutraceutical</option>
+    <option>Functional Food</option>
+    <option>Food for Special Dietary Use</option>
+    <option>Novel Food</option>
+    <option>Ayurvedic / ASU</option>
+  </select>
+  <button class="btn btn-outline btn-sm" onclick="clearFilters()" style="font-size:0.78rem;">Clear</button>
+  <span id="filter-count" style="font-size:0.78rem;color:#737373;margin-left:auto;"></span>
+</div>
+
 <div class="table-wrap">
   <table class="tbl">
     <thead>
       <tr>
-        <th>Product</th>
+        <th style="cursor:pointer;" onclick="sortTable(0,'text')">Product &#x21C5;</th>
         <th>Category</th>
-        <th>Score</th>
+        <th style="cursor:pointer;" onclick="sortTable(2,'num')">Score &#x21C5;</th>
         <th>Last Label</th>
         <th>Actions</th>
       </tr>
@@ -89,7 +105,7 @@ function showFileName(){
     {% for p in products %}
       {% set score = p.compliance_score %}
       {% set latest = p.latest_label %}
-      <tr>
+      <tr data-name="{{ p.name|lower }}" data-sku="{{ (p.sku or '')|lower }}" data-desc="{{ (p.description or '')|lower }}" data-category="{{ p.category }}">
         <td>
           <a href="/products/{{ p.id }}" style="font-weight:600;color:var(--gray-900);">{{ p.name }}</a>
           {% if p.sku %}<br/><small>{{ p.sku }}</small>{% endif %}
@@ -115,6 +131,53 @@ function showFileName(){
     </tbody>
   </table>
 </div>
+<div id="no-filter-results" style="display:none;text-align:center;padding:2rem;color:#737373;font-size:0.88rem;">
+  No products match your filters.
+</div>
+<script>
+function filterProducts(){
+  var q=document.getElementById('product-search').value.toLowerCase();
+  var cat=document.getElementById('category-filter').value;
+  var rows=document.querySelectorAll('table.tbl tbody tr');
+  var shown=0;
+  rows.forEach(function(row){
+    var name=row.getAttribute('data-name')||'';
+    var sku=row.getAttribute('data-sku')||'';
+    var desc=row.getAttribute('data-desc')||'';
+    var rowCat=row.getAttribute('data-category')||'';
+    var textMatch=!q||name.indexOf(q)!==-1||sku.indexOf(q)!==-1||desc.indexOf(q)!==-1;
+    var catMatch=!cat||rowCat===cat;
+    if(textMatch&&catMatch){row.style.display='';shown++;}
+    else{row.style.display='none';}
+  });
+  var countEl=document.getElementById('filter-count');
+  if(q||cat){countEl.textContent=shown+' of '+rows.length+' shown';}
+  else{countEl.textContent='';}
+  document.getElementById('no-filter-results').style.display=shown===0?'block':'none';
+  document.querySelector('.table-wrap').style.display=shown===0?'none':'';
+}
+function clearFilters(){
+  document.getElementById('product-search').value='';
+  document.getElementById('category-filter').value='';
+  filterProducts();
+}
+function sortTable(colIndex,type){
+  var tbody=document.querySelector('table.tbl tbody');
+  var rows=Array.from(tbody.querySelectorAll('tr'));
+  var asc=tbody.getAttribute('data-sort-asc')!==String(colIndex);
+  rows.sort(function(a,b){
+    var aVal=a.children[colIndex].textContent.trim();
+    var bVal=b.children[colIndex].textContent.trim();
+    if(type==='num'){aVal=parseFloat(aVal)||-1;bVal=parseFloat(bVal)||-1;}
+    else{aVal=aVal.toLowerCase();bVal=bVal.toLowerCase();}
+    if(aVal<bVal)return asc?-1:1;
+    if(aVal>bVal)return asc?1:-1;
+    return 0;
+  });
+  rows.forEach(function(r){tbody.appendChild(r);});
+  tbody.setAttribute('data-sort-asc',asc?colIndex:'');
+}
+</script>
 {% else %}
 <div class="card no-hover" style="padding:0;">
   <div class="empty-state">

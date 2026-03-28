@@ -484,6 +484,12 @@ async def register(
         except Exception:
             pass
 
+    try:
+        from app.services.notification import send_welcome_email
+        send_welcome_email(user)
+    except Exception:
+        pass
+
     token = create_access_token({"sub": user.email})
     response = RedirectResponse(url="/onboarding", status_code=302)
     response.set_cookie("access_token", token, httponly=True, max_age=settings.access_token_expire_minutes * 60)

@@ -171,7 +171,8 @@ async def create_share_link(report_id: int, request: Request, db: Session = Depe
         from app.services.notification import send_report_shared_email
         product = report.product
         share_url = f"{request.base_url}r/{token}"
-        send_report_shared_email(user, report, product, share_url)
+        expires_at = report.share_expires_at.strftime("%d %b %Y") if report.share_expires_at else "30 days"
+        send_report_shared_email(user, product.name if product else "Unknown", share_url, expires_at)
     except Exception:
         pass
 

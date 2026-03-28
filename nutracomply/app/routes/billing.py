@@ -153,6 +153,14 @@ async def verify_payment(request: Request, db: Session = Depends(get_db)):
     except Exception:
         pass
 
+    try:
+        from app.services.notification import send_payment_confirmation_email
+        period_end = sub.current_period_end.strftime("%d %b %Y") if sub.current_period_end else "30 days"
+        amount_display = f"₹{record.amount_paise / 100:.0f}" if record and record.amount_paise else "Growth plan"
+        send_payment_confirmation_email(user, plan, amount_display, period_end)
+    except Exception:
+        pass
+
     return RedirectResponse(
         url="/billing?msg=Payment+successful!+Welcome+to+Growth+plan&type=success",
         status_code=302,
@@ -169,8 +177,15 @@ async def cancel_subscription(request: Request, db: Session = Depends(get_db)):
     if sub and sub.status == SubscriptionStatus.ACTIVE:
         sub.status = SubscriptionStatus.CANCELLED
         sub.cancelled_at = datetime.utcnow()
+        access_until = sub.current_period_end.strftime("%d %b %Y") if sub.current_period_end else "end of billing period"
         user.plan = PlanType.FREE
         db.commit()
+
+        try:
+            from app.services.notification import send_subscription_cancelled_email
+            send_subscription_cancelled_email(user, access_until)
+        except Exception:
+            pass
 
     return RedirectResponse(
         url="/billing?msg=Subscription+cancelled.+Access+continues+until+end+of+billing+period.&type=info",

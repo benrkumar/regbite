@@ -98,6 +98,9 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
 
 # ── Users ─────────────────────────────────────────────────────────────────────
 
+DEMO_EMAILS = {"admin", "ben", "editor", "viewer", "consultant"}
+
+
 @router.get("/users")
 async def admin_users(request: Request, db: Session = Depends(get_db)):
     user, redirect = _require_admin(request, db)
@@ -118,6 +121,7 @@ async def admin_users(request: Request, db: Session = Depends(get_db)):
             "user": u,
             "product_count": product_count,
             "label_count": label_count,
+            "is_demo": u.email in DEMO_EMAILS,
         })
 
     unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
