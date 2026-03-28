@@ -1,172 +1,84 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>About — RegBite FSSAI Compliance Platform</title>
-  <meta name="description" content="RegBite is built for India's nutraceutical future. AI-powered label compliance checking against 64+ FSSAI, Legal Metrology & AYUSH rules." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap');
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --font: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-      --ink: #111111; --bg: #F8F8F8; --white: #FFFFFF; --border: #EBEBEB;
-      --g50: #FAFAFA; --g100: #F5F5F5; --g200: #EBEBEB; --g300: #D4D4D4;
-      --g400: #A3A3A3; --g500: #737373; --g600: #525252; --g700: #404040; --g900: #171717;
-    }
-    html { font-size: 16px; scroll-behavior: smooth; }
-    body { font-family: var(--font); color: var(--ink); background: var(--white); line-height: 1.7; letter-spacing: 0.01em; -webkit-font-smoothing: antialiased; }
-    a { color: inherit; text-decoration: none; }
+{% extends "public_base.html" %}
+{% block title %}About{% endblock %}
+{% block description %}RegBite is building India's most accurate FSSAI compliance platform for nutraceuticals, health supplements, and Ayurvedic products.{% endblock %}
 
-    /* ── Navbar ── */
-    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 56px; display: flex; align-items: center; padding: 0 2rem; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--g200); }
-    .nav-brand { display: flex; align-items: center; gap: 0.4rem; margin-right: auto; }
-    .nav-dot { font-size: 0.5rem; color: var(--ink); }
-    .nav-name { font-size: 1rem; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
-    .nav-links { display: flex; align-items: center; gap: 1.5rem; }
-    .nav-links a { font-size: 0.84rem; color: var(--g500); transition: color 0.12s; }
-    .nav-links a:hover { color: var(--ink); }
-    .nav-ctas { display: flex; align-items: center; gap: 0.5rem; margin-left: 1.5rem; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.42rem 1rem; border-radius: 5px; font-size: 0.84rem; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all 0.12s; font-family: var(--font); text-decoration: none; white-space: nowrap; line-height: 1.4; }
-    .btn-ghost { background: transparent; color: var(--g600); border-color: var(--g300); }
-    .btn-ghost:hover { background: var(--g100); color: var(--ink); }
-    .btn-primary { background: var(--ink); color: var(--white); border-color: var(--ink); }
-    .btn-primary:hover { background: var(--g700); border-color: var(--g700); }
-    .btn-lg { padding: 0.6rem 1.5rem; font-size: 0.92rem; }
+{% block extra_css %}
+  .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
+  .about-text h2 { font-size: 1.35rem; font-weight: 400; color: var(--ink); letter-spacing: -0.02em; margin-bottom: 0.75rem; }
+  .about-text h2 strong { font-weight: 600; }
+  .about-text p { font-size: 0.92rem; color: var(--g500); line-height: 1.75; margin-bottom: 1rem; }
+  .values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+  .value-card { background: var(--white); border: 1px solid var(--g200); border-radius: 6px; padding: 1.5rem; }
+  .value-icon { width: 36px; height: 36px; border-radius: 6px; background: var(--g100); border: 1px solid var(--g200); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: var(--g600); margin-bottom: 0.75rem; }
+  .value-card h3 { font-size: 0.92rem; font-weight: 600; color: var(--ink); margin-bottom: 0.3rem; }
+  .value-card p { font-size: 0.82rem; color: var(--g500); line-height: 1.6; }
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+  .about-stat { text-align: center; padding: 1.5rem; background: var(--white); border: 1px solid var(--g200); border-radius: 6px; }
+  .about-stat-val { font-size: 2rem; font-weight: 600; color: var(--ink); line-height: 1; }
+  .about-stat-lbl { font-size: 0.74rem; color: var(--g500); margin-top: 0.3rem; }
+  .team-note { max-width: 600px; margin: 0 auto; text-align: center; }
+  .team-note p { font-size: 0.92rem; color: var(--g500); line-height: 1.75; }
+  @media (max-width: 768px) {
+    .about-grid { grid-template-columns: 1fr; gap: 2rem; }
+    .values-grid { grid-template-columns: 1fr; }
+    .stat-row { grid-template-columns: 1fr 1fr; }
+  }
+{% endblock %}
 
-    /* ── Hero ── */
-    .hero { padding-top: 56px; background: var(--bg); border-bottom: 1px solid var(--border); text-align: center; }
-    .hero-inner { max-width: 720px; margin: 0 auto; padding: 5rem 2rem 4rem; }
-    .hero-tag { display: inline-block; padding: 0.2rem 0.65rem; background: var(--g100); color: var(--g600); border: 1px solid var(--g200); border-radius: 999px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1.2rem; }
-    .hero h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 300; color: var(--ink); letter-spacing: -0.03em; line-height: 1.2; margin-bottom: 1rem; }
-    .hero h1 strong { font-weight: 600; }
-    .hero p { font-size: 1rem; color: var(--g500); max-width: 560px; margin: 0 auto; line-height: 1.7; }
-
-    /* ── Sections ── */
-    .sec { padding: 5rem 2rem; }
-    .sec-inner { max-width: 1120px; margin: 0 auto; }
-    .sec-alt { background: var(--g50); }
-    .sec-header { margin-bottom: 3rem; text-align: center; }
-    .sec-tag { display: inline-block; padding: 0.2rem 0.65rem; background: var(--g100); color: var(--g600); border: 1px solid var(--g200); border-radius: 999px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
-    .sec-title { font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 400; color: var(--ink); letter-spacing: -0.02em; line-height: 1.25; margin-bottom: 0.6rem; }
-    .sec-title strong { font-weight: 600; }
-    .sec-sub { font-size: 0.95rem; color: var(--g500); max-width: 560px; margin: 0 auto; line-height: 1.7; }
-
-    /* ── Mission ── */
-    .mission { max-width: 760px; margin: 0 auto; text-align: center; }
-    .mission p { font-size: 1.1rem; color: var(--g600); line-height: 1.8; font-weight: 300; }
-
-    /* ── Stats ── */
-    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; margin-top: 3rem; }
-    .stat-card { text-align: center; padding: 2rem 1rem; background: var(--white); border: 1px solid var(--g200); border-radius: 8px; }
-    .stat-num { font-size: 2.2rem; font-weight: 700; color: var(--ink); letter-spacing: -0.03em; }
-    .stat-label { font-size: 0.82rem; color: var(--g500); margin-top: 0.3rem; font-weight: 400; }
-
-    /* ── Team ── */
-    .team-card { max-width: 680px; margin: 0 auto; background: var(--white); border: 1px solid var(--g200); border-radius: 8px; padding: 3rem; text-align: center; }
-    .team-card h3 { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; }
-    .team-card p { font-size: 0.95rem; color: var(--g500); line-height: 1.7; }
-
-    /* ── Values ── */
-    .values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
-    .value-card { background: var(--white); border: 1px solid var(--g200); border-radius: 8px; padding: 2rem; }
-    .value-icon { font-size: 1.5rem; margin-bottom: 1rem; }
-    .value-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; }
-    .value-card p { font-size: 0.88rem; color: var(--g500); line-height: 1.7; }
-
-    /* ── CTA Banner ── */
-    .cta-banner { background: var(--ink); padding: 4rem 2rem; text-align: center; }
-    .cta-banner h2 { font-size: clamp(1.4rem, 3vw, 1.8rem); font-weight: 400; color: var(--white); margin-bottom: 0.6rem; letter-spacing: -0.02em; }
-    .cta-banner p { font-size: 0.95rem; color: var(--g400); margin-bottom: 2rem; }
-    .cta-banner .btn-white { background: var(--white); color: var(--ink); border: none; padding: 0.6rem 1.8rem; font-size: 0.92rem; font-weight: 500; border-radius: 5px; cursor: pointer; transition: all 0.12s; font-family: var(--font); text-decoration: none; display: inline-flex; align-items: center; }
-    .cta-banner .btn-white:hover { background: var(--g100); }
-
-    /* ── Footer ── */
-    .footer { background: var(--g900); color: var(--white); }
-    .footer-inner { max-width: 1120px; margin: 0 auto; padding: 3.5rem 2rem 2rem; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 2rem; }
-    .footer-brand-name { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
-    .footer-brand p { font-size: 0.78rem; color: var(--g400); max-width: 260px; line-height: 1.6; }
-    .footer-col h4 { font-size: 0.7rem; font-weight: 600; color: var(--g400); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.75rem; }
-    .footer-col a { display: block; font-size: 0.82rem; color: var(--g300); padding: 0.2rem 0; transition: color 0.12s; }
-    .footer-col a:hover { color: var(--white); }
-    .footer-bottom { max-width: 1120px; margin: 0 auto; padding: 1.5rem 2rem; border-top: 1px solid var(--g700); display: flex; align-items: center; justify-content: space-between; }
-    .footer-bottom p { font-size: 0.72rem; color: var(--g500); }
-
-    /* ── Responsive ── */
-    @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
-      .values-grid { grid-template-columns: 1fr; }
-      .footer-inner { grid-template-columns: 1fr 1fr; }
-      .footer-bottom { flex-direction: column; gap: 0.5rem; text-align: center; }
-    }
-    @media (max-width: 480px) {
-      .stats-row { grid-template-columns: 1fr; }
-      .footer-inner { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
-<body>
-
-<nav class="nav">
-  <a href="/" class="nav-brand"><span class="nav-dot">&#9679;</span><span class="nav-name">RegBite</span></a>
-  <div class="nav-links">
-    <a href="/features">Features</a>
-    <a href="/pricing">Pricing</a>
-    <a href="/blog">Blog</a>
-    <a href="/about">About</a>
-    <a href="/contact">Contact</a>
-  </div>
-  <div class="nav-ctas">
-    <a href="/login" class="btn btn-ghost">Sign In</a>
-    <a href="/register" class="btn btn-primary">Get Started</a>
-  </div>
-</nav>
-
+{% block content %}
 <!-- Hero -->
-<section class="hero">
-  <div class="hero-inner">
-    <span class="hero-tag">About RegBite</span>
-    <h1>Built for India's <strong>Nutraceutical Future</strong></h1>
-    <p>We are on a mission to make regulatory compliance effortless for every health supplement, nutraceutical, and Ayurvedic product company in India.</p>
+<section class="page-hero">
+  <div class="page-hero-inner">
+    <div class="sec-tag">About</div>
+    <h1>Making <strong>label compliance</strong> simple for Indian nutraceuticals</h1>
+    <p>RegBite automates FSSAI, Legal Metrology, and AYUSH compliance checks so brands can focus on building great products.</p>
   </div>
 </section>
 
 <!-- Mission -->
 <section class="sec">
   <div class="sec-inner">
-    <div class="mission">
-      <span class="sec-tag">Our Mission</span>
-      <p>India's nutraceutical industry is growing at 20% annually, yet compliance remains fragmented, manual, and error-prone. Brands lose months navigating FSSAI, Legal Metrology, and AYUSH regulations. We built RegBite to change that. Our AI-powered platform scans product labels against 64+ regulatory rules in seconds, giving manufacturers, brand owners, and consultants the confidence to launch products that are fully compliant from day one.</p>
+    <div class="about-grid">
+      <div class="about-text">
+        <h2>Why we built <strong>RegBite</strong></h2>
+        <p>India's nutraceutical market is growing at 20%+ annually, but navigating the regulatory landscape remains one of the biggest challenges for brands. FSSAI, Legal Metrology, and AYUSH each have their own labelling requirements — and they change frequently.</p>
+        <p>We built RegBite because compliance shouldn't require a legal team. Our AI reads your product labels, checks them against 64+ active rules, and tells you exactly what needs fixing — in seconds, not weeks.</p>
+        <p>Whether you're a single-product startup or managing a portfolio of 500+ SKUs, RegBite gives you the confidence that your labels meet every regulatory requirement before they reach the shelf.</p>
+      </div>
+      <div>
+        <div class="stat-row">
+          <div class="about-stat"><div class="about-stat-val">64</div><div class="about-stat-lbl">Compliance Rules</div></div>
+          <div class="about-stat"><div class="about-stat-val">3</div><div class="about-stat-lbl">Frameworks</div></div>
+          <div class="about-stat"><div class="about-stat-val">AI</div><div class="about-stat-lbl">Vision Analysis</div></div>
+          <div class="about-stat"><div class="about-stat-val">24/7</div><div class="about-stat-lbl">Always Available</div></div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- Stats -->
+<!-- Values -->
 <section class="sec sec-alt">
   <div class="sec-inner">
-    <div class="sec-header">
-      <span class="sec-tag">By the Numbers</span>
-      <h2 class="sec-title">Comprehensive <strong>Regulatory Coverage</strong></h2>
+    <div class="sec-header sec-header-center">
+      <div class="sec-tag">Our Values</div>
+      <h2 class="sec-title">What drives <strong>RegBite</strong></h2>
     </div>
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-num">64+</div>
-        <div class="stat-label">Compliance Rules</div>
+    <div class="values-grid">
+      <div class="value-card">
+        <div class="value-icon">◎</div>
+        <h3>Accuracy First</h3>
+        <p>Every rule in our engine is sourced directly from FSSAI, Legal Metrology, and AYUSH regulations. We verify against the actual gazette notifications.</p>
       </div>
-      <div class="stat-card">
-        <div class="stat-num">6</div>
-        <div class="stat-label">Product Categories</div>
+      <div class="value-card">
+        <div class="value-icon">△</div>
+        <h3>Radical Simplicity</h3>
+        <p>Compliance is complex enough. Our platform is designed to be minimal, fast, and clear — no clutter, no jargon, just actionable results.</p>
       </div>
-      <div class="stat-card">
-        <div class="stat-num">3</div>
-        <div class="stat-label">Regulatory Frameworks</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num">1000+</div>
-        <div class="stat-label">Products Analyzed</div>
+      <div class="value-card">
+        <div class="value-icon">□</div>
+        <h3>India-First</h3>
+        <p>Built specifically for Indian regulatory frameworks. We understand the nuances of FSSAI categorization, AYUSH exemptions, and Legal Metrology requirements.</p>
       </div>
     </div>
   </div>
@@ -175,88 +87,14 @@
 <!-- Team -->
 <section class="sec">
   <div class="sec-inner">
-    <div class="sec-header">
-      <span class="sec-tag">Our Team</span>
-      <h2 class="sec-title">Expertise at the <strong>Intersection</strong></h2>
+    <div class="sec-header sec-header-center">
+      <div class="sec-tag">Team</div>
+      <h2 class="sec-title">Built by <strong>compliance professionals</strong></h2>
     </div>
-    <div class="team-card">
-      <h3>Regulatory Expertise Meets AI Engineering</h3>
-      <p>Our team combines deep knowledge of Indian food safety regulations with cutting-edge AI and machine learning. We have spent years working with FSSAI compliance frameworks, Legal Metrology standards, and AYUSH-ASU guidelines. Every rule in our engine is authored and verified by regulatory professionals, then powered by Gemini Vision AI for intelligent label extraction and analysis.</p>
-    </div>
-  </div>
-</section>
-
-<!-- Values -->
-<section class="sec sec-alt">
-  <div class="sec-inner">
-    <div class="sec-header">
-      <span class="sec-tag">Our Values</span>
-      <h2 class="sec-title">What Drives <strong>Every Decision</strong></h2>
-    </div>
-    <div class="values-grid">
-      <div class="value-card">
-        <div class="value-icon">&#9678;</div>
-        <h3>Accuracy</h3>
-        <p>Every compliance rule is meticulously mapped to the latest FSSAI, Legal Metrology, and AYUSH-ASU regulations. Our AI extraction is validated against ground truth, and we maintain confidence thresholds to ensure no false positives slip through.</p>
-      </div>
-      <div class="value-card">
-        <div class="value-icon">&#9889;</div>
-        <h3>Speed</h3>
-        <p>What used to take weeks of manual review now happens in seconds. Upload a label image, and our platform extracts data, runs 64+ checks, and generates a compliance report before you finish your chai.</p>
-      </div>
-      <div class="value-card">
-        <div class="value-icon">&#9745;</div>
-        <h3>Compliance-First</h3>
-        <p>We do not cut corners. Our platform is designed to surface every potential issue, weighted by severity and regulatory impact. We would rather flag a false positive than let a non-compliant label reach the market.</p>
-      </div>
+    <div class="team-note">
+      <p>RegBite is built by a team that understands both the regulatory landscape and the technology needed to automate it. We combine deep domain knowledge of FSSAI regulations with modern AI to deliver a platform that's both accurate and delightful to use.</p>
+      <p style="margin-top:1rem;">Have questions? <a href="/contact" style="color:var(--ink);font-weight:500;text-decoration:underline;">Get in touch</a></p>
     </div>
   </div>
 </section>
-
-<!-- CTA Banner -->
-<section class="cta-banner">
-  <h2>Ready to simplify your compliance workflow?</h2>
-  <p>Join hundreds of nutraceutical companies already using RegBite.</p>
-  <a href="/register" class="btn-white">Start Free Trial</a>
-</section>
-
-<!-- Footer -->
-<footer class="footer">
-  <div class="footer-inner">
-    <div class="footer-brand">
-      <div class="footer-brand-name">&#9679; RegBite</div>
-      <p>AI-powered label compliance for India's nutraceutical, health supplement, and Ayurvedic product industry.</p>
-    </div>
-    <div class="footer-col">
-      <h4>Product</h4>
-      <a href="/features">Features</a>
-      <a href="/pricing">Pricing</a>
-      <a href="/blog">Blog</a>
-      <a href="/changelog">Changelog</a>
-    </div>
-    <div class="footer-col">
-      <h4>Company</h4>
-      <a href="/about">About</a>
-      <a href="/contact">Contact</a>
-      <a href="/help">Help Center</a>
-    </div>
-    <div class="footer-col">
-      <h4>Legal</h4>
-      <a href="/terms">Terms</a>
-      <a href="/privacy">Privacy</a>
-    </div>
-    <div class="footer-col">
-      <h4>Connect</h4>
-      <a href="mailto:hello@regbite.in">hello@regbite.in</a>
-      <a href="#">Twitter</a>
-      <a href="#">LinkedIn</a>
-    </div>
-  </div>
-  <div class="footer-bottom">
-    <p>&copy; 2026 RegBite. All rights reserved.</p>
-    <p>Made in India for Indian Compliance</p>
-  </div>
-</footer>
-
-</body>
-</html>
+{% endblock %}

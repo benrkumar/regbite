@@ -390,6 +390,26 @@ def calculate_compliance_score(checks: list[ComplianceCheck]) -> int:
     return round((weighted_earned / weighted_total) * 100)
 
 
+def calculate_critical_score(checks: list[ComplianceCheck]) -> dict:
+    """
+    Returns critical-only compliance metrics.
+    - critical_pass: True if ALL critical rules pass
+    - critical_score: % of critical rules that pass
+    - critical_failures: count of failed critical rules
+    """
+    critical_checks = [c for c in checks if c.rule and c.rule.severity == Severity.CRITICAL]
+    if not critical_checks:
+        return {"critical_pass": True, "critical_score": 100, "critical_failures": 0}
+
+    failures = sum(1 for c in critical_checks if c.result == CheckResult.FAIL)
+    passed = len(critical_checks) - failures
+    return {
+        "critical_pass": failures == 0,
+        "critical_score": round((passed / len(critical_checks)) * 100),
+        "critical_failures": failures,
+    }
+
+
 def get_violation_summary(checks: list[ComplianceCheck]) -> dict:
     """Returns a dict with counts by severity for failed checks."""
     from app.models import Severity

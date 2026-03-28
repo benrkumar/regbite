@@ -49,7 +49,7 @@ class RateLimiter:
     def check(self, namespace: str, identifier: str, limit: int, window: int) -> tuple:
         """
         Returns (allowed: bool, retry_after_seconds: int).
-        If the limiter itself errors, returns (True, 0) — fail open.
+        If the limiter itself errors, returns (False, 60) — fail closed.
         """
         try:
             key = f"rl:{namespace}:{identifier}"
@@ -59,7 +59,7 @@ class RateLimiter:
                 return self._check_memory(key, limit, window)
         except Exception as e:
             print(f"[rate_limiter] check error: {e}")
-            return True, 0
+            return False, 60  # fail closed — deny on error
 
     def _check_redis(self, key: str, limit: int, window: int) -> tuple:
         now = time.time()

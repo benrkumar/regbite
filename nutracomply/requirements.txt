@@ -44,6 +44,9 @@ celery[redis]==5.4.0
 python-dotenv==1.0.1
 requests==2.32.3
 
+# Security
+nh3==0.2.18
+
 # Utilities
 pydantic==2.9.2
 pydantic-settings==2.5.2

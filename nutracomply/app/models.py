@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean, DateTime,
-    Float, ForeignKey, JSON, Enum as _SAEnumType
+    Float, ForeignKey, JSON, Enum as _SAEnumType, Index
 )
 from sqlalchemy.orm import relationship
 import enum
@@ -168,6 +168,10 @@ class Product(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    __table_args__ = (
+        Index("ix_products_user_active", "user_id", "is_active"),
+    )
+
     owner = relationship("User", back_populates="products")
     label_versions = relationship(
         "LabelVersion", back_populates="product",
@@ -207,6 +211,10 @@ class LabelVersion(Base):
     extraction_json = Column(JSON)
     extraction_confidence = Column(Float)
     is_current = Column(Boolean, default=True)
+
+    __table_args__ = (
+        Index("ix_labels_product_current", "product_id", "is_current"),
+    )
 
     product = relationship("Product", back_populates="label_versions")
     checks = relationship(
@@ -249,6 +257,10 @@ class ComplianceCheck(Base):
     message = Column(Text)
     remediation = Column(Text)
     checked_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_checks_label_version", "label_version_id"),
+    )
 
     label_version = relationship("LabelVersion", back_populates="checks")
     rule = relationship("ComplianceRule", back_populates="checks")
@@ -568,10 +580,12 @@ class PaymentRecord(Base):
 
 # ─── In-App Notifications ─────────────────────────────────────────────────────
 
-class BlogStatus(str, enum.Enum):
-    DRAFT = "draft"
+# ─── Blog ────────────────────────────────────────────────────────────────────
+
+class BlogPostStatus(str, enum.Enum):
+    DRAFT     = "draft"
     PUBLISHED = "published"
-    ARCHIVED = "archived"
+    ARCHIVED  = "archived"
 
 
 class NotificationType(str, enum.Enum):
@@ -598,36 +612,32 @@ class Notification(Base):
 
 class BlogCategory(Base):
     __tablename__ = "blog_categories"
-
-    id          = Column(Integer, primary_key=True, index=True)
-    name        = Column(String(100), nullable=False, unique=True)
-    slug        = Column(String(100), nullable=False, unique=True)
-    description = Column(Text)
-    created_at  = Column(DateTime, default=datetime.utcnow)
-
-    posts = relationship("BlogPost", back_populates="category")
+    id         = Column(Integer, primary_key=True, index=True)
+    name       = Column(String(100), nullable=False, unique=True)
+    slug       = Column(String(120), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    posts      = relationship("BlogPost", back_populates="category")
 
 
 class BlogPost(Base):
     __tablename__ = "blog_posts"
+    id               = Column(Integer, primary_key=True, index=True)
+    title            = Column(String(300), nullable=False)
+    slug             = Column(String(350), nullable=False, unique=True, index=True)
+    excerpt          = Column(Text, nullable=True)
+    content          = Column(Text, nullable=False)
+    featured_image   = Column(String(500), nullable=True)
+    status           = Column(SAEnum(BlogPostStatus), default=BlogPostStatus.DRAFT)
+    is_featured      = Column(Boolean, default=False)
+    category_id      = Column(Integer, ForeignKey("blog_categories.id"), nullable=True)
+    author_id        = Column(Integer, ForeignKey("users.id"), nullable=False)
+    tags             = Column(String(500), nullable=True)  # comma-separated
+    meta_title       = Column(String(300), nullable=True)
+    meta_description = Column(String(500), nullable=True)
+    views            = Column(Integer, default=0)
+    published_at     = Column(DateTime, nullable=True)
+    created_at       = Column(DateTime, default=datetime.utcnow)
+    updated_at       = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    id                 = Column(Integer, primary_key=True, index=True)
-    title              = Column(String(500), nullable=False)
-    slug               = Column(String(500), unique=True, index=True, nullable=False)
-    excerpt            = Column(Text)                          # short summary for listing
-    content            = Column(Text, nullable=False)          # HTML content from rich editor
-    featured_image_url = Column(String(1000))                  # URL or path
-    category_id        = Column(Integer, ForeignKey("blog_categories.id"), nullable=True)
-    author_id          = Column(Integer, ForeignKey("users.id"), nullable=False)
-    status             = Column(SAEnum(BlogStatus), default=BlogStatus.DRAFT)
-    meta_title         = Column(String(200))                   # SEO
-    meta_description   = Column(String(500))                   # SEO
-    tags               = Column(JSON, default=list)            # ["fssai", "compliance"]
-    views              = Column(Integer, default=0)
-    is_featured        = Column(Boolean, default=False)
-    published_at       = Column(DateTime, nullable=True)
-    created_at         = Column(DateTime, default=datetime.utcnow)
-    updated_at         = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    author   = relationship("User", foreign_keys=[author_id])
     category = relationship("BlogCategory", back_populates="posts")
+    author   = relationship("User", foreign_keys=[author_id])

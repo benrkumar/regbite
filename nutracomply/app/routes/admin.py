@@ -698,13 +698,13 @@ async def admin_blog(request: Request, db: Session = Depends(get_db)):
     if redirect:
         return redirect
 
-    from app.models import BlogPost, BlogCategory, BlogStatus
+    from app.models import BlogPost, BlogCategory, BlogPostStatus
 
     status_filter = request.query_params.get("status", "")
     q = db.query(BlogPost)
     if status_filter:
         try:
-            q = q.filter(BlogPost.status == BlogStatus(status_filter))
+            q = q.filter(BlogPost.status == BlogPostStatus(status_filter))
         except ValueError:
             pass
 
@@ -714,8 +714,8 @@ async def admin_blog(request: Request, db: Session = Depends(get_db)):
         _ = p.category
 
     total_posts = db.query(BlogPost).count()
-    published_count = db.query(BlogPost).filter(BlogPost.status == BlogStatus.PUBLISHED).count()
-    draft_count = db.query(BlogPost).filter(BlogPost.status == BlogStatus.DRAFT).count()
+    published_count = db.query(BlogPost).filter(BlogPost.status == BlogPostStatus.PUBLISHED).count()
+    draft_count = db.query(BlogPost).filter(BlogPost.status == BlogPostStatus.DRAFT).count()
     total_views = sum(p.views or 0 for p in posts)
     categories = db.query(BlogCategory).order_by(BlogCategory.name).all()
 
@@ -857,7 +857,7 @@ async def admin_blog_create(
     if redirect:
         return redirect
 
-    from app.models import BlogPost, BlogStatus
+    from app.models import BlogPost, BlogPostStatus
     import re
 
     slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
@@ -868,8 +868,8 @@ async def admin_blog_create(
 
     tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
 
-    post_status = BlogStatus.PUBLISHED if status == "published" else BlogStatus.DRAFT
-    published_at = datetime.utcnow() if post_status == BlogStatus.PUBLISHED else None
+    post_status = BlogPostStatus.PUBLISHED if status == "published" else BlogPostStatus.DRAFT
+    published_at = datetime.utcnow() if post_status == BlogPostStatus.PUBLISHED else None
 
     post = BlogPost(
         title=title.strip(),
@@ -941,7 +941,7 @@ async def admin_blog_update(
     if redirect:
         return redirect
 
-    from app.models import BlogPost, BlogStatus
+    from app.models import BlogPost, BlogPostStatus
 
     post = db.query(BlogPost).filter(BlogPost.id == post_id).first()
     if not post:
@@ -957,8 +957,8 @@ async def admin_blog_update(
     post.tags = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
     post.is_featured = bool(is_featured)
 
-    new_status = BlogStatus.PUBLISHED if status == "published" else BlogStatus(status) if status in ("draft", "archived") else BlogStatus.DRAFT
-    if new_status == BlogStatus.PUBLISHED and post.status != BlogStatus.PUBLISHED:
+    new_status = BlogPostStatus.PUBLISHED if status == "published" else BlogPostStatus(status) if status in ("draft", "archived") else BlogPostStatus.DRAFT
+    if new_status == BlogPostStatus.PUBLISHED and post.status != BlogPostStatus.PUBLISHED:
         post.published_at = datetime.utcnow()
     post.status = new_status
 
@@ -977,11 +977,11 @@ async def admin_blog_publish(post_id: int, request: Request, db: Session = Depen
     if redirect:
         return redirect
 
-    from app.models import BlogPost, BlogStatus
+    from app.models import BlogPost, BlogPostStatus
 
     post = db.query(BlogPost).filter(BlogPost.id == post_id).first()
     if post:
-        post.status = BlogStatus.PUBLISHED
+        post.status = BlogPostStatus.PUBLISHED
         if not post.published_at:
             post.published_at = datetime.utcnow()
         db.commit()
@@ -995,11 +995,11 @@ async def admin_blog_archive(post_id: int, request: Request, db: Session = Depen
     if redirect:
         return redirect
 
-    from app.models import BlogPost, BlogStatus
+    from app.models import BlogPost, BlogPostStatus
 
     post = db.query(BlogPost).filter(BlogPost.id == post_id).first()
     if post:
-        post.status = BlogStatus.ARCHIVED
+        post.status = BlogPostStatus.ARCHIVED
         db.commit()
 
     return RedirectResponse(url="/admin/blog?msg=Post+archived&type=success", status_code=302)

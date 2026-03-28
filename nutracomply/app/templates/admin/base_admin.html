@@ -194,6 +194,11 @@
         {% endif %}
       </a>
 
+      <div class="adm-nav-section">Content</div>
+      <a href="/admin/blog" class="adm-nav-link {% if '/admin/blog' in request.url.path %}active{% endif %}">
+        <span class="adm-nav-icon">✎</span> Blog
+      </a>
+
       <div class="adm-nav-section">AI Studio</div>
       <a href="/admin/llm" class="adm-nav-link {% if '/admin/llm' in request.url.path %}active{% endif %}">
         <span class="adm-nav-icon">◈</span> LLM Studio
@@ -258,5 +263,6 @@ document.querySelectorAll('.adm-nav-link').forEach(function(a) {
   a.addEventListener('click', admCloseSidebar);
 });
 </script>
+<script>!function(){var c=document.cookie.match('(^|;)\\s*_csrf=([^;]+)');if(!c)return;var t=decodeURIComponent(c[2]);document.querySelectorAll('form[method="post"],form[method="POST"]').forEach(function(f){if(f.querySelector('input[name="csrf_token"]'))return;var i=document.createElement('input');i.type='hidden';i.name='csrf_token';i.value=t;f.appendChild(i)})}()</script>
 </body>
 </html>

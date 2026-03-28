@@ -1,0 +1,233 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ 'Edit Post' if post else 'New Post' }}{% endblock %}
+{% block page_title %}{{ 'Edit Post' if post else 'New Post' }}{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css" />
+<style>
+  /* Editor layout */
+  .blog-editor-grid { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; }
+  .editor-main { }
+  .editor-sidebar { }
+  .editor-card { background: #FFFFFF; border: 1px solid #EBEBEB; border-radius: 6px; padding: 1.2rem; margin-bottom: 1rem; }
+  .editor-card-title { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #A3A3A3; margin-bottom: 0.75rem; }
+  /* Title input */
+  .blog-title-input { width: 100%; border: none; border-bottom: 1px solid #EBEBEB; padding: 0.75rem 0; font-size: 1.5rem; font-weight: 300; font-family: 'Noto Sans JP'; color: #111111; outline: none; background: transparent; letter-spacing: -0.02em; }
+  .blog-title-input:focus { border-color: #111111; }
+  .blog-title-input::placeholder { color: #D4D4D4; }
+  /* Slug */
+  .slug-input { width: 100%; padding: 0.4rem 0.6rem; border: 1px solid #EBEBEB; border-radius: 4px; font-size: 0.82rem; font-family: monospace; color: #525252; background: #FAFAFA; }
+  /* Form elements */
+  .editor-label { display: block; font-size: 0.72rem; font-weight: 500; color: #737373; margin-bottom: 0.3rem; letter-spacing: 0.03em; }
+  .editor-input { width: 100%; padding: 0.45rem 0.65rem; border: 1px solid #EBEBEB; border-radius: 4px; font-size: 0.82rem; font-family: 'Noto Sans JP'; color: #111111; outline: none; }
+  .editor-input:focus { border-color: #111111; }
+  .editor-textarea { width: 100%; padding: 0.45rem 0.65rem; border: 1px solid #EBEBEB; border-radius: 4px; font-size: 0.82rem; font-family: 'Noto Sans JP'; color: #111111; outline: none; resize: vertical; min-height: 60px; }
+  .editor-select { width: 100%; padding: 0.45rem 0.65rem; border: 1px solid #EBEBEB; border-radius: 4px; font-size: 0.82rem; font-family: 'Noto Sans JP'; color: #111111; background: #FFFFFF; outline: none; appearance: none; }
+  .editor-checkbox { margin-right: 0.5rem; }
+  /* Quill overrides */
+  .ql-toolbar.ql-snow { border-color: #EBEBEB !important; border-radius: 6px 6px 0 0; background: #FAFAFA; }
+  .ql-container.ql-snow { border-color: #EBEBEB !important; border-radius: 0 0 6px 6px; min-height: 350px; font-family: 'Noto Sans JP'; font-size: 0.92rem; }
+  .ql-editor { min-height: 350px; line-height: 1.8; }
+  /* Action bar */
+  .editor-actions { display: flex; gap: 0.5rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #EBEBEB; }
+  /* Radio group */
+  .status-radio-group { display:flex; flex-direction:column; gap:0.4rem; }
+  .status-radio-group label { display:flex; align-items:center; gap:0.4rem; font-size:0.82rem; color:#525252; cursor:pointer; }
+  .status-radio-group input[type="radio"] { accent-color:#111111; }
+  /* Slug prefix */
+  .slug-row { display:flex; align-items:center; gap:0.4rem; margin-top:0.5rem; margin-bottom:1.5rem; }
+  .slug-prefix { font-size:0.75rem; color:#A3A3A3; font-family:monospace; white-space:nowrap; }
+  /* Excerpt */
+  .excerpt-wrap { margin-top:1.25rem; margin-bottom:1.25rem; }
+  /* Editor container */
+  .quill-wrap { margin-top:0.5rem; }
+
+  @media (max-width: 900px) {
+    .blog-editor-grid { grid-template-columns: 1fr; }
+  }
+</style>
+
+<form id="blogForm" method="post"
+      action="{% if post %}/admin/blog/{{ post.id }}/update{% else %}/admin/blog/create{% endif %}">
+
+  <div class="blog-editor-grid">
+    {# ── Main Column ── #}
+    <div class="editor-main">
+      <div class="editor-card">
+        {# Title #}
+        <input type="text" name="title" id="postTitle" class="blog-title-input"
+               placeholder="Post title..."
+               value="{{ post.title if post else '' }}" required />
+
+        {# Slug #}
+        <div class="slug-row">
+          <span class="slug-prefix">/blog/</span>
+          <input type="text" name="slug" id="postSlug" class="slug-input"
+                 placeholder="auto-generated-slug"
+                 value="{{ post.slug if post else '' }}" />
+        </div>
+
+        {# Excerpt #}
+        <div class="excerpt-wrap">
+          <label class="editor-label">Excerpt</label>
+          <textarea name="excerpt" class="editor-textarea" rows="3"
+                    placeholder="A short summary for previews and SEO...">{{ post.excerpt if post else '' }}</textarea>
+        </div>
+
+        {# Quill Editor #}
+        <label class="editor-label">Content</label>
+        <div class="quill-wrap">
+          <div id="quillEditor">{% if post %}{{ post.content | safe }}{% endif %}</div>
+        </div>
+        <textarea name="content" id="hiddenContent" style="display:none;">{{ post.content if post else '' }}</textarea>
+      </div>
+
+      {# Action bar #}
+      <div class="editor-actions">
+        <button type="submit" name="action" value="draft" class="adm-btn">Save Draft</button>
+        <button type="submit" name="action" value="publish" class="adm-btn adm-btn-primary">Publish Now</button>
+        <a href="/admin/blog" class="adm-btn" style="margin-left:auto;">Cancel</a>
+      </div>
+    </div>
+
+    {# ── Sidebar ── #}
+    <div class="editor-sidebar">
+
+      {# Status #}
+      <div class="editor-card">
+        <div class="editor-card-title">Status</div>
+        <div class="status-radio-group">
+          <label>
+            <input type="radio" name="status" value="draft"
+                   {% if not post or post.status.value == 'draft' %}checked{% endif %} />
+            Draft
+          </label>
+          <label>
+            <input type="radio" name="status" value="published"
+                   {% if post and post.status.value == 'published' %}checked{% endif %} />
+            Published
+          </label>
+          <label>
+            <input type="radio" name="status" value="archived"
+                   {% if post and post.status.value == 'archived' %}checked{% endif %} />
+            Archived
+          </label>
+        </div>
+      </div>
+
+      {# Category #}
+      <div class="editor-card">
+        <div class="editor-card-title">Category</div>
+        <select name="category_id" class="editor-select">
+          <option value="">— Select Category —</option>
+          {% for cat in categories | default([]) %}
+          <option value="{{ cat.id }}"
+                  {% if post and post.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# Featured Image #}
+      <div class="editor-card">
+        <div class="editor-card-title">Featured Image</div>
+        <label class="editor-label">Image URL</label>
+        <input type="url" name="featured_image" class="editor-input"
+               placeholder="https://..."
+               value="{{ post.featured_image if post else '' }}" />
+        <div style="margin-top:0.75rem;">
+          <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.82rem;color:#525252;cursor:pointer;">
+            <input type="checkbox" name="is_featured" class="editor-checkbox" value="1"
+                   {% if post and post.is_featured %}checked{% endif %} />
+            Feature this post
+          </label>
+        </div>
+      </div>
+
+      {# Tags #}
+      <div class="editor-card">
+        <div class="editor-card-title">Tags</div>
+        <input type="text" name="tags" class="editor-input"
+               placeholder="fssai, compliance, labeling"
+               value="{{ post.tags if post else '' }}" />
+        <div style="font-size:0.68rem;color:#A3A3A3;margin-top:0.3rem;">Comma separated</div>
+      </div>
+
+      {# SEO #}
+      <div class="editor-card">
+        <div class="editor-card-title">SEO</div>
+        <label class="editor-label">Meta Title</label>
+        <input type="text" name="meta_title" class="editor-input"
+               placeholder="SEO title (defaults to post title)"
+               value="{{ post.meta_title if post else '' }}" />
+        <div style="margin-top:0.6rem;">
+          <label class="editor-label">Meta Description</label>
+          <textarea name="meta_description" class="editor-textarea" rows="3"
+                    placeholder="Brief description for search engines...">{{ post.meta_description if post else '' }}</textarea>
+        </div>
+      </div>
+
+      {# Publish Date #}
+      <div class="editor-card">
+        <div class="editor-card-title">Publish Date</div>
+        <input type="datetime-local" name="published_at" class="editor-input"
+               value="{{ post.published_at.strftime('%Y-%m-%dT%H:%M') if post and post.published_at else '' }}" />
+        <div style="font-size:0.68rem;color:#A3A3A3;margin-top:0.3rem;">Auto-set when published</div>
+      </div>
+
+    </div>
+  </div>
+
+</form>
+
+<script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
+<script>
+(function() {
+  // ── Quill Editor ──
+  var quill = new Quill('#quillEditor', {
+    theme: 'snow',
+    placeholder: 'Write your post content here...',
+    modules: {
+      toolbar: [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        ['blockquote', 'code-block'],
+        ['link', 'image'],
+        ['clean']
+      ]
+    }
+  });
+
+  // ── Sync Quill to hidden field on submit ──
+  var form = document.getElementById('blogForm');
+  form.addEventListener('submit', function() {
+    var content = quill.root.innerHTML;
+    document.getElementById('hiddenContent').value = content;
+  });
+
+  // ── Auto-generate slug from title ──
+  var titleInput = document.getElementById('postTitle');
+  var slugInput = document.getElementById('postSlug');
+  var slugManuallyEdited = {{ 'true' if post else 'false' }};
+
+  slugInput.addEventListener('input', function() {
+    slugManuallyEdited = true;
+  });
+
+  titleInput.addEventListener('input', function() {
+    if (!slugManuallyEdited) {
+      slugInput.value = generateSlug(titleInput.value);
+    }
+  });
+
+  function generateSlug(text) {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .substring(0, 80);
+  }
+})();
+</script>
+{% endblock %}
