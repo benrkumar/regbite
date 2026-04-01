@@ -1,10 +1,11 @@
 """
 Form-First Compliance Checker
-Allows users to input product details manually and run a compliance check
-without needing to upload a label image.
+Allows users to input product details manually or upload a label image
+and run a compliance check without needing to create a product first.
 """
+import uuid
 from datetime import datetime
-from fastapi import APIRouter, Request, Depends, Form
+from fastapi import APIRouter, Request, Depends, Form, UploadFile, File
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -17,6 +18,7 @@ from app.models import (
     Product, LabelVersion, ComplianceRule, ComplianceCheck, CheckResult,
     Alert, AlertStatus, Severity
 )
+from app.config import get_settings
 
 router = APIRouter(prefix="/checker")
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -189,6 +191,101 @@ async def run_check(
         return RedirectResponse(url=f"/reports/{report.id}", status_code=302)
     except Exception as e:
         print(f"[checker] Report generation error: {e}")
+        return RedirectResponse(url=f"/labels/{label.id}", status_code=302)
+
+
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".pdf", ".webp"}
+
+
+@router.post("/upload")
+async def upload_check(
+    request: Request,
+    file: UploadFile = File(...),
+    category: str = Form("Health Supplement"),
+    db: Session = Depends(get_db),
+):
+    """Upload a label image/PDF, run Vision extraction + compliance check."""
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+
+    try:
+        from app.services.rate_limiter import limiter
+        client_ip = request.client.host if request.client else "unknown"
+        allowed, retry_after = limiter.check("checker_upload", client_ip, limit=15, window=3600)
+        if not allowed:
+            return RedirectResponse(url="/?error=Rate+limit+exceeded", status_code=302)
+    except Exception:
+        pass
+
+    # Quota check
+    try:
+        from app.services.quota_service import check_scan_limit
+        allowed, quota_msg = check_scan_limit(user, db)
+        if not allowed:
+            from urllib.parse import quote
+            return RedirectResponse(url=f"/?error={quote(quota_msg)}", status_code=302)
+    except Exception:
+        pass
+
+    # Validate file
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in ALLOWED_EXTENSIONS:
+        return RedirectResponse(url="/?error=Unsupported+file+type", status_code=302)
+
+    content = await file.read()
+    if len(content) > 50 * 1024 * 1024:
+        return RedirectResponse(url="/?error=File+too+large", status_code=302)
+
+    # Save file
+    settings = get_settings()
+    upload_dir = Path(settings.upload_dir) / "checker"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    file_name = f"{uuid.uuid4().hex}{suffix}"
+    file_path = upload_dir / file_name
+
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    # Create product + label version
+    product = Product(
+        user_id=user.id,
+        name=file.filename.rsplit(".", 1)[0][:80] or "Uploaded Label",
+        category=category,
+        description=f"Label uploaded via Quick Check on {datetime.utcnow().strftime('%d %b %Y')}",
+    )
+    db.add(product)
+    db.flush()
+
+    label = LabelVersion(
+        product_id=product.id,
+        file_path=str(file_path),
+        file_name=file.filename,
+        file_type="pdf" if suffix == ".pdf" else "image",
+        is_current=True,
+    )
+    db.add(label)
+    db.commit()
+    db.refresh(label)
+
+    # Run OCR + extraction + compliance in background via the same pipeline as /products upload
+    try:
+        from app.routes.labels import _process_label
+        _process_label(label.id)
+    except Exception as e:
+        print(f"[checker/upload] Processing error: {e}")
+
+    # Try to generate report
+    try:
+        db.refresh(label)
+        from app.services.report_service import get_or_create_report
+        _ = label.checks
+        for c in label.checks:
+            _ = c.rule
+        report = get_or_create_report(db, user.id, product.id, label.id)
+        return RedirectResponse(url=f"/reports/{report.id}", status_code=302)
+    except Exception as e:
+        print(f"[checker/upload] Report error: {e}")
         return RedirectResponse(url=f"/labels/{label.id}", status_code=302)
 
 

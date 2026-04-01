@@ -76,9 +76,32 @@
     .hc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
     textarea.hc-input { resize: vertical; min-height: 72px; }
     select.hc-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='none' stroke='%23A3A3A3' stroke-width='1.5' stroke-linecap='round' d='M1 1l4 4 4-4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2.2rem; appearance: none; }
-    .hc-submit { width: 100%; padding: 0.6rem; background: var(--ink); color: var(--white); border: none; border-radius: 5px; font-size: 0.88rem; font-weight: 500; font-family: var(--font); cursor: pointer; transition: background 0.12s; }
-    .hc-submit:hover { background: var(--g700); }
+    .hc-submit { width: 100%; padding: 0.6rem; background: #81C2C0; color: var(--white); border: none; border-radius: 5px; font-size: 0.88rem; font-weight: 500; font-family: var(--font); cursor: pointer; transition: background 0.12s; }
+    .hc-submit:hover { background: #5A9A98; }
     .hc-footer { margin-top: 0.75rem; font-size: 0.68rem; color: var(--g400); text-align: center; }
+
+    /* ── Checker Tabs ── */
+    .hc-tabs { display: flex; gap: 0; margin-bottom: 1.2rem; border-bottom: 1px solid var(--g200); }
+    .hc-tab { flex: 1; padding: 0.55rem 0; text-align: center; font-size: 0.78rem; font-weight: 500; color: var(--g400); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; font-family: var(--font); }
+    .hc-tab:hover { color: var(--g600); }
+    .hc-tab.active { color: #5A9A98; border-bottom-color: #5A9A98; }
+    .hc-panel { display: none; }
+    .hc-panel.active { display: block; }
+
+    /* ── Upload Zone ── */
+    .hc-upload-zone {
+      border: 2px dashed var(--g300); border-radius: 8px; padding: 2.5rem 1.5rem;
+      text-align: center; cursor: pointer; transition: all 0.15s; background: var(--g50);
+    }
+    .hc-upload-zone:hover, .hc-upload-zone.dragover { border-color: #81C2C0; background: #D4EDEC; }
+    .hc-upload-icon { font-size: 2rem; margin-bottom: 0.5rem; color: var(--g400); }
+    .hc-upload-text { font-size: 0.84rem; color: var(--g500); margin-bottom: 0.3rem; }
+    .hc-upload-text strong { color: #5A9A98; cursor: pointer; }
+    .hc-upload-hint { font-size: 0.7rem; color: var(--g400); }
+    .hc-file-preview { margin-top: 1rem; display: none; align-items: center; gap: 0.6rem; padding: 0.6rem 0.8rem; background: var(--white); border: 1px solid var(--g200); border-radius: 5px; }
+    .hc-file-name { font-size: 0.82rem; font-weight: 500; color: var(--ink); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hc-file-remove { background: none; border: none; color: #8B3A3A; cursor: pointer; font-size: 0.9rem; padding: 0; }
+    .hc-upload-category { margin-top: 1rem; }
 
     /* ── Logos / Trust bar ── */
     .trust-bar { border-top: 1px solid var(--g200); border-bottom: 1px solid var(--g200); background: var(--g50); padding: 1.5rem 2rem; }
@@ -255,14 +278,30 @@
     <!-- Hero Checker -->
     <div class="hero-checker">
       <div class="hc-title">Quick Compliance Check</div>
-      <div class="hc-sub">Paste your product details — instant FSSAI analysis. No account needed.</div>
-      <form method="post" action="/checker/run">
-        <div class="hc-row">
-          <div class="hc-field">
-            <label class="hc-label">Product Name</label>
-            <input type="text" name="product_name" class="hc-input" placeholder="e.g. Omega-3 Fish Oil" required />
+      <div class="hc-sub">Upload a label or enter details manually — instant FSSAI analysis.</div>
+
+      <div class="hc-tabs">
+        <button class="hc-tab active" onclick="switchCheckerTab('upload')" type="button">&#9650; Upload Label</button>
+        <button class="hc-tab" onclick="switchCheckerTab('manual')" type="button">&#9998; Enter Manually</button>
+      </div>
+
+      <!-- Upload Panel -->
+      <div class="hc-panel active" id="hc-upload-panel">
+        <form method="post" action="/checker/upload" enctype="multipart/form-data" id="hc-upload-form">
+          <div class="hc-upload-zone" id="hc-drop-zone"
+               ondragover="event.preventDefault();this.classList.add('dragover')"
+               ondragleave="this.classList.remove('dragover')"
+               ondrop="event.preventDefault();this.classList.remove('dragover');handleCheckerDrop(event)">
+            <div class="hc-upload-icon">&#128196;</div>
+            <div class="hc-upload-text">Drag &amp; drop your label here or <strong onclick="document.getElementById('hc-file-input').click()">browse files</strong></div>
+            <div class="hc-upload-hint">Supports JPG, PNG, PDF, TIFF, WebP — max 50 MB</div>
+            <input type="file" name="file" id="hc-file-input" accept=".jpg,.jpeg,.png,.pdf,.tiff,.tif,.webp" style="display:none" onchange="handleCheckerFile(this)" />
           </div>
-          <div class="hc-field">
+          <div class="hc-file-preview" id="hc-file-preview">
+            <span class="hc-file-name" id="hc-file-name"></span>
+            <button type="button" class="hc-file-remove" onclick="clearCheckerFile()">&times;</button>
+          </div>
+          <div class="hc-upload-category">
             <label class="hc-label">Category</label>
             <select name="category" class="hc-input">
               <option value="Health Supplement">Health Supplement</option>
@@ -274,25 +313,51 @@
               <option value="Weight Management">Weight Management</option>
             </select>
           </div>
-        </div>
-        <div class="hc-field">
-          <label class="hc-label">Ingredients (comma-separated)</label>
-          <textarea name="ingredients" class="hc-input" rows="3" placeholder="e.g. Ashwagandha Root Extract (KSM-66), Vitamin D3, Zinc, Magnesium Stearate..." required></textarea>
-        </div>
-        <div class="hc-row">
-          <div class="hc-field">
-            <label class="hc-label">FSSAI License (optional)</label>
-            <input type="text" name="fssai_license" class="hc-input" placeholder="14-digit number" />
+          <button type="submit" class="hc-submit" style="margin-top:1rem;" id="hc-upload-btn" disabled>Upload &amp; Analyze &rarr;</button>
+          <div class="hc-footer">AI Vision extracts label data automatically, then checks against 83 rules</div>
+        </form>
+      </div>
+
+      <!-- Manual Panel -->
+      <div class="hc-panel" id="hc-manual-panel">
+        <form method="post" action="/checker/run">
+          <div class="hc-row">
+            <div class="hc-field">
+              <label class="hc-label">Product Name</label>
+              <input type="text" name="product_name" class="hc-input" placeholder="e.g. Omega-3 Fish Oil" required />
+            </div>
+            <div class="hc-field">
+              <label class="hc-label">Category</label>
+              <select name="category" class="hc-input">
+                <option value="Health Supplement">Health Supplement</option>
+                <option value="Sports Nutrition">Sports Nutrition</option>
+                <option value="Herbal/Ayurvedic">Herbal / Ayurvedic</option>
+                <option value="Vitamin & Mineral Supplement">Vitamin &amp; Mineral</option>
+                <option value="Functional Food">Functional Food</option>
+                <option value="Digestive Health">Digestive Health</option>
+                <option value="Weight Management">Weight Management</option>
+              </select>
+            </div>
           </div>
           <div class="hc-field">
-            <label class="hc-label">Net Quantity (optional)</label>
-            <input type="text" name="net_quantity" class="hc-input" placeholder="e.g. 60 Tablets" />
+            <label class="hc-label">Ingredients (comma-separated)</label>
+            <textarea name="ingredients" class="hc-input" rows="3" placeholder="e.g. Ashwagandha Root Extract (KSM-66), Vitamin D3, Zinc, Magnesium Stearate..." required></textarea>
           </div>
-        </div>
-        <input type="hidden" name="manufacturing_origin" value="India" />
-        <button type="submit" class="hc-submit">Analyze Compliance &rarr;</button>
-        <div class="hc-footer">Checks against 83 rules across FSSAI, Legal Metrology, AYUSH, BIS &amp; DGFT</div>
-      </form>
+          <div class="hc-row">
+            <div class="hc-field">
+              <label class="hc-label">FSSAI License (optional)</label>
+              <input type="text" name="fssai_license" class="hc-input" placeholder="14-digit number" />
+            </div>
+            <div class="hc-field">
+              <label class="hc-label">Net Quantity (optional)</label>
+              <input type="text" name="net_quantity" class="hc-input" placeholder="e.g. 60 Tablets" />
+            </div>
+          </div>
+          <input type="hidden" name="manufacturing_origin" value="India" />
+          <button type="submit" class="hc-submit">Analyze Compliance &rarr;</button>
+          <div class="hc-footer">Checks against 83 rules across FSSAI, Legal Metrology, AYUSH, BIS &amp; DGFT</div>
+        </form>
+      </div>
     </div>
   </div>
 </section>
@@ -570,5 +635,37 @@
 </footer>
 
 <script>!function(){var c=document.cookie.match('(^|;)\\s*_csrf=([^;]+)');if(!c)return;var t=decodeURIComponent(c[2]);document.querySelectorAll('form[method="post"],form[method="POST"]').forEach(function(f){if(f.querySelector('input[name="csrf_token"]'))return;var i=document.createElement('input');i.type='hidden';i.name='csrf_token';i.value=t;f.appendChild(i)})}()</script>
+<script>
+function switchCheckerTab(tab) {
+  document.querySelectorAll('.hc-tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.hc-panel').forEach(function(p){ p.classList.remove('active'); });
+  if (tab === 'upload') {
+    document.querySelectorAll('.hc-tab')[0].classList.add('active');
+    document.getElementById('hc-upload-panel').classList.add('active');
+  } else {
+    document.querySelectorAll('.hc-tab')[1].classList.add('active');
+    document.getElementById('hc-manual-panel').classList.add('active');
+  }
+}
+function handleCheckerFile(input) {
+  if (input.files && input.files[0]) {
+    document.getElementById('hc-file-name').textContent = input.files[0].name;
+    document.getElementById('hc-file-preview').style.display = 'flex';
+    document.getElementById('hc-upload-btn').disabled = false;
+  }
+}
+function handleCheckerDrop(e) {
+  var dt = e.dataTransfer;
+  if (dt.files && dt.files[0]) {
+    document.getElementById('hc-file-input').files = dt.files;
+    handleCheckerFile(document.getElementById('hc-file-input'));
+  }
+}
+function clearCheckerFile() {
+  document.getElementById('hc-file-input').value = '';
+  document.getElementById('hc-file-preview').style.display = 'none';
+  document.getElementById('hc-upload-btn').disabled = true;
+}
+</script>
 </body>
 </html>
