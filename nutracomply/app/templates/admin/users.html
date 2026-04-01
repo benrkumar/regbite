@@ -5,7 +5,43 @@
 {% block content %}
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.75rem;">
-  <p style="margin:0;color:#64748b;font-size:0.86rem;">{{ user_stats|length }} registered user{{ 's' if user_stats|length != 1 }}</p>
+  <p style="margin:0;color:#737373;font-size:0.86rem;">{{ user_stats|length }} registered user{{ 's' if user_stats|length != 1 }}</p>
+  <button class="adm-btn adm-btn-primary" onclick="document.getElementById('addUserPanel').style.display=document.getElementById('addUserPanel').style.display==='none'?'block':'none'">+ Add User</button>
+</div>
+
+<div id="addUserPanel" style="display:none;margin-bottom:1.5rem;">
+  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.25rem 1.5rem;">
+    <h4 style="margin:0 0 1rem;font-size:0.9rem;font-weight:600;">Create New User</h4>
+    <form method="post" action="/admin/users/create" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem 1rem;align-items:end;">
+      <div>
+        <label style="display:block;font-size:0.72rem;font-weight:500;color:#737373;margin-bottom:0.2rem;">Full Name *</label>
+        <input type="text" name="name" required placeholder="e.g. Priya Sharma" class="adm-input" style="width:100%;padding:0.4rem 0.6rem;font-size:0.82rem;" />
+      </div>
+      <div>
+        <label style="display:block;font-size:0.72rem;font-weight:500;color:#737373;margin-bottom:0.2rem;">Email *</label>
+        <input type="email" name="email" required placeholder="priya@company.com" class="adm-input" style="width:100%;padding:0.4rem 0.6rem;font-size:0.82rem;" />
+      </div>
+      <div>
+        <label style="display:block;font-size:0.72rem;font-weight:500;color:#737373;margin-bottom:0.2rem;">Password *</label>
+        <input type="password" name="password" required minlength="8" placeholder="Min 8 characters" class="adm-input" style="width:100%;padding:0.4rem 0.6rem;font-size:0.82rem;" />
+      </div>
+      <div>
+        <label style="display:block;font-size:0.72rem;font-weight:500;color:#737373;margin-bottom:0.2rem;">Access Level</label>
+        <select name="role" class="adm-input" style="width:100%;padding:0.4rem 0.6rem;font-size:0.82rem;">
+          <option value="viewer">Viewer &mdash; read-only access to products &amp; reports</option>
+          <option value="editor">Editor &mdash; can add/edit products and upload labels</option>
+          <option value="consultant">Consultant &mdash; compliance review &amp; reporting</option>
+          <option value="account_admin">Account Admin &mdash; full access + team management</option>
+          <option value="super_admin">Super Admin &mdash; everything including admin panel</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1;display:flex;gap:0.5rem;align-items:center;margin-top:0.25rem;">
+        <button type="submit" class="adm-btn adm-btn-primary">Create User</button>
+        <button type="button" class="adm-btn" onclick="document.getElementById('addUserPanel').style.display='none'">Cancel</button>
+        <span style="font-size:0.72rem;color:#A3A3A3;margin-left:auto;">User will be active immediately</span>
+      </div>
+    </form>
+  </div>
 </div>
 
 <div class="adm-table-wrap">
@@ -27,8 +63,8 @@
       {% set u = row.user %}
       <tr>
         <td>
-          <div style="font-weight:700;"><a href="/admin/users/{{ u.id }}" style="color:#0f172a;text-decoration:none;" onmouseover="this.style.color='#6366f1'" onmouseout="this.style.color='#0f172a'">{{ u.name }}</a></div>
-          <div style="font-size:0.76rem;color:#64748b;">{{ u.email }}</div>
+          <div style="font-weight:700;"><a href="/admin/users/{{ u.id }}" style="color:#5A9A98;text-decoration:none;" onmouseover="this.style.color='#649CC4'" onmouseout="this.style.color='#5A9A98'">{{ u.name }}</a></div>
+          <div style="font-size:0.76rem;color:#737373;">{{ u.email }}</div>
         </td>
         <td>
           {% set role_label = (u.role.value if u.role else 'account_admin')|replace('_', ' ')|title %}
@@ -49,18 +85,29 @@
         </td>
         <td style="font-weight:600;">{{ row.product_count }}</td>
         <td style="font-weight:600;">{{ row.label_count }}</td>
-        <td style="font-size:0.78rem;color:#64748b;">
+        <td style="font-size:0.78rem;color:#737373;">
           {% set emails = u.notification_emails or [] %}
           {% if emails %}
             {{ emails|length }} email{{ 's' if emails|length != 1 }}
           {% else %}
-            <span style="color:#94a3b8;">None set</span>
+            <span style="color:#A3A3A3;">None set</span>
           {% endif %}
         </td>
-        <td style="font-size:0.78rem;color:#64748b;">{{ u.created_at.strftime('%d %b %Y') }}</td>
+        <td style="font-size:0.78rem;color:#737373;">{{ u.created_at.strftime('%d %b %Y') }}</td>
         <td>
-          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
             {% if u.id != user.id %}
+            {# Change role #}
+            <form method="post" action="/admin/users/{{ u.id }}/change-role" style="margin:0;display:flex;gap:0.3rem;align-items:center;">
+              <select name="role" class="adm-input" style="font-size:0.74rem;padding:0.25rem 0.4rem;border-radius:4px;min-width:110px;">
+                <option value="viewer" {% if u.role and u.role.value == 'viewer' %}selected{% endif %}>Viewer</option>
+                <option value="editor" {% if u.role and u.role.value == 'editor' %}selected{% endif %}>Editor</option>
+                <option value="consultant" {% if u.role and u.role.value == 'consultant' %}selected{% endif %}>Consultant</option>
+                <option value="account_admin" {% if u.role and u.role.value == 'account_admin' %}selected{% endif %}>Account Admin</option>
+                <option value="super_admin" {% if u.role and u.role.value == 'super_admin' %}selected{% endif %}>Super Admin</option>
+              </select>
+              <button type="submit" class="adm-btn" style="font-size:0.72rem;padding:0.22rem 0.5rem;">Set</button>
+            </form>
             {# Toggle active #}
             <form method="post" action="/admin/users/{{ u.id }}/toggle-active" style="margin:0;">
               <button type="submit" class="adm-btn {% if u.is_active %}adm-btn-danger{% endif %}"
@@ -68,22 +115,15 @@
                 {{ 'Deactivate' if u.is_active else 'Activate' }}
               </button>
             </form>
-            {# Toggle admin #}
-            <form method="post" action="/admin/users/{{ u.id }}/toggle-admin" style="margin:0;">
-              <button type="submit" class="adm-btn"
-                      onclick="return confirm('{{ 'Revoke admin from' if u.is_admin else 'Grant admin to' }} {{ u.name }}?')">
-                {{ 'Revoke Admin' if u.is_admin else 'Make Admin' }}
-              </button>
-            </form>
             {% else %}
-            <span style="font-size:0.76rem;color:#94a3b8;padding:0.3rem 0;">(you)</span>
+            <span style="font-size:0.76rem;color:#A3A3A3;padding:0.3rem 0;">(you)</span>
             {% endif %}
           </div>
         </td>
       </tr>
       {% else %}
       <tr>
-        <td colspan="8" style="text-align:center;padding:2rem;color:#94a3b8;">No users found</td>
+        <td colspan="8" style="text-align:center;padding:2rem;color:#A3A3A3;">No users found</td>
       </tr>
       {% endfor %}
     </tbody>

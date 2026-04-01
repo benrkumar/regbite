@@ -46,16 +46,16 @@
       <div class="field">
         <label class="field-label">Upload Label / Product File</label>
         <div id="drop-zone" style="border:1.5px dashed var(--border);border-radius:6px;padding:1.2rem;text-align:center;cursor:pointer;transition:border-color 0.15s;background:#FAFAFA;"
-             ondragover="event.preventDefault();this.style.borderColor='#111111';"
+             ondragover="event.preventDefault();this.style.borderColor='#81C2C0';"
              ondragleave="this.style.borderColor='var(--border)';"
              ondrop="event.preventDefault();this.style.borderColor='var(--border)';document.getElementById('product-file').files=event.dataTransfer.files;showFileName();">
           <div style="font-size:0.82rem;color:var(--gray-500);margin-bottom:0.3rem;">
-            Drag &amp; drop or <span style="color:#111111;font-weight:600;text-decoration:underline;cursor:pointer;" onclick="document.getElementById('product-file').click()">browse files</span>
+            Drag &amp; drop or <span style="color:#5A9A98;font-weight:600;text-decoration:underline;cursor:pointer;" onclick="document.getElementById('product-file').click()">browse files</span>
           </div>
           <div style="font-size:0.72rem;color:var(--gray-400);">
             Image (JPG, PNG, WebP) · PDF · CSV · Excel (.xlsx)
           </div>
-          <div id="file-name-display" style="margin-top:0.5rem;font-size:0.8rem;font-weight:600;color:#111111;display:none;"></div>
+          <div id="file-name-display" style="margin-top:0.5rem;font-size:0.8rem;font-weight:600;color:#262626;display:none;"></div>
         </div>
         <input type="file" id="product-file" name="file" accept=".jpg,.jpeg,.png,.webp,.tiff,.tif,.pdf,.csv,.xlsx,.xls" style="display:none;" onchange="showFileName()" />
       </div>

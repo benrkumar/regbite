@@ -1171,5 +1171,130 @@
     "framework": "DGFT",
     "regulation_status": "EFFECTIVE",
     "remediation_template": "If importing supplements with CITES-listed or restricted botanicals, obtain: (1) DGFT restricted import license, (2) CITES permit from Wildlife Crime Control Bureau, (3) AYUSH import clearance for ASU ingredients. Failure to comply may result in customs seizure."
+  },
+
+  {
+    "rule_code": "FSSAI-NUTRA-NUT-001",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII), Reg 5 — Nutritional Information",
+    "description": "Nutritional information table must be present with at least energy (kcal) and protein values",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "nutritional_table",
+      "min_items": 2
+    },
+    "severity": "HIGH",
+    "version": "2025",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Add a complete nutritional information table listing at minimum: Energy (kcal), Protein, Carbohydrate, Total Fat, and Sodium per serving and per 100g. Include %RDA where applicable."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-NUT-002",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(1)(e)",
+    "description": "Health supplements must declare recommended daily allowance (%RDA) percentages in nutritional table",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "rda_percentages"
+    },
+    "severity": "MEDIUM",
+    "version": "2025",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Add %RDA (Recommended Dietary Allowance) percentage column to the nutritional information table for all nutrients where RDA values are established by ICMR/FSSAI."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-NUT-003",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII), Reg 5(2)",
+    "description": "Nutritional table must include energy (calories/kcal) declaration",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "nutritional_table",
+      "required_nutrient": "energy"
+    },
+    "severity": "HIGH",
+    "version": "2025",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Include energy/calories (kcal) as a mandatory row in the nutritional information table. This must be declared per serving and per 100g."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-NUT-004",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII), Reg 5(2)",
+    "description": "Nutritional table must include protein declaration",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "nutritional_table",
+      "required_nutrient": "protein"
+    },
+    "severity": "HIGH",
+    "version": "2025",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Include protein content as a mandatory row in the nutritional information table with values per serving and per 100g."
+  },
+  {
+    "rule_code": "LM-PKG-MRP-002",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "Legal Metrology (Packaged Commodities) Rules 2011, Rule 6(1)(e)",
+    "description": "MRP declaration must include 'inclusive of all taxes' statement",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "mrp",
+      "required_text": "inclusive"
+    },
+    "severity": "MEDIUM",
+    "version": "2025",
+    "framework": "LEGAL_METROLOGY",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "MRP declaration must state 'inclusive of all taxes'. Format: 'MRP ₹XXX (inclusive of all taxes)'. This is a Legal Metrology requirement."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-SRV-001",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(1)(d)",
+    "description": "Label must specify recommended usage/dosage instructions (serving size/dosage)",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "serving_size"
+    },
+    "severity": "HIGH",
+    "version": "2025",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Add clear recommended dosage/serving size instructions. Example: 'Take 1-2 capsules daily with water' or 'Serving size: 30g (1 scoop)'."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-WRN-005",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(2)(b)",
+    "description": "Label must carry advisory to consult healthcare professional before use",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "consult_doctor_advisory"
+    },
+    "severity": "MEDIUM",
+    "version": "2025",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Add advisory statement: 'Consult your healthcare professional/doctor/dietician before use' or equivalent. Especially important for pregnant/lactating women and people with medical conditions."
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-WRN-006",
+    "category": "MANDATORY_FIELD",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(2)(c)",
+    "description": "Label must carry 'do not exceed recommended daily usage' advisory",
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "not_exceed_daily_usage_advisory"
+    },
+    "severity": "MEDIUM",
+    "version": "2025",
+    "framework": "FSSAI",
+    "regulation_status": "EFFECTIVE",
+    "remediation_template": "Add advisory: 'Not to exceed the stated recommended daily usage' or 'Do not exceed the recommended daily dose'. This is mandatory for all health supplements."
   }
 ]

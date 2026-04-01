@@ -5,7 +5,7 @@
 {% block content %}
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.75rem;">
-  <p style="margin:0;color:#64748b;font-size:0.86rem;">{{ total }} total event{{ 's' if total != 1 }}</p>
+  <p style="margin:0;color:#737373;font-size:0.86rem;">{{ total }} total event{{ 's' if total != 1 }}</p>
   <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
     <a href="/admin/activity" class="adm-btn {% if not since %}adm-btn-primary{% endif %}">All Time</a>
     <a href="/admin/activity?since=24h" class="adm-btn {% if since == '24h' %}adm-btn-primary{% endif %}">Last 24h</a>
@@ -28,16 +28,16 @@
     <tbody>
       {% for log in logs %}
       <tr>
-        <td style="white-space:nowrap;font-size:0.78rem;color:#64748b;">
+        <td style="white-space:nowrap;font-size:0.78rem;color:#737373;">
           {{ log.created_at.strftime('%d %b %Y') }}<br>
-          <span style="color:#94a3b8;">{{ log.created_at.strftime('%H:%M:%S') }}</span>
+          <span style="color:#A3A3A3;">{{ log.created_at.strftime('%H:%M:%S') }}</span>
         </td>
         <td>
           {% if log.user %}
-          <div style="font-weight:600;font-size:0.84rem;color:#0f172a;">{{ log.user.name }}</div>
-          <div style="font-size:0.73rem;color:#64748b;">{{ log.user.email }}</div>
+          <div style="font-weight:600;font-size:0.84rem;color:#262626;">{{ log.user.name }}</div>
+          <div style="font-size:0.73rem;color:#737373;">{{ log.user.email }}</div>
           {% else %}
-          <span style="color:#94a3b8;font-size:0.82rem;">System</span>
+          <span style="color:#A3A3A3;font-size:0.82rem;">System</span>
           {% endif %}
         </td>
         <td>
@@ -58,28 +58,28 @@
           <span class="adm-badge badge-gray">{{ action }}</span>
           {% endif %}
         </td>
-        <td style="font-size:0.82rem;color:#475569;">
+        <td style="font-size:0.82rem;color:#525252;">
           {% if log.resource_type %}
           <span style="font-weight:600;">{{ log.resource_type }}</span>
-          {% if log.resource_id %}<span style="color:#94a3b8;"> #{{ log.resource_id }}</span>{% endif %}
+          {% if log.resource_id %}<span style="color:#A3A3A3;"> #{{ log.resource_id }}</span>{% endif %}
           {% else %}
-          <span style="color:#cbd5e1;">—</span>
+          <span style="color:#D4D4D4;">—</span>
           {% endif %}
         </td>
-        <td style="font-size:0.82rem;color:#64748b;max-width:260px;">
+        <td style="font-size:0.82rem;color:#737373;max-width:260px;">
           {% if log.detail %}
           {{ log.detail }}
           {% else %}
-          <span style="color:#cbd5e1;">—</span>
+          <span style="color:#D4D4D4;">—</span>
           {% endif %}
         </td>
-        <td style="font-size:0.78rem;color:#94a3b8;white-space:nowrap;">
-          {% if log.ip_address %}{{ log.ip_address }}{% else %}<span style="color:#cbd5e1;">—</span>{% endif %}
+        <td style="font-size:0.78rem;color:#A3A3A3;white-space:nowrap;">
+          {% if log.ip_address %}{{ log.ip_address }}{% else %}<span style="color:#D4D4D4;">—</span>{% endif %}
         </td>
       </tr>
       {% else %}
       <tr>
-        <td colspan="6" style="text-align:center;padding:2.5rem;color:#94a3b8;">No activity recorded yet.</td>
+        <td colspan="6" style="text-align:center;padding:2.5rem;color:#A3A3A3;">No activity recorded yet.</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -91,7 +91,7 @@
   {% if page > 1 %}
   <a href="/admin/activity?page={{ page - 1 }}{% if since %}&since={{ since }}{% endif %}" class="adm-btn">&larr; Previous</a>
   {% endif %}
-  <span style="font-size:0.84rem;color:#64748b;">Page {{ page }} of {{ total_pages }}</span>
+  <span style="font-size:0.84rem;color:#737373;">Page {{ page }} of {{ total_pages }}</span>
   {% if page < total_pages %}
   <a href="/admin/activity?page={{ page + 1 }}{% if since %}&since={{ since }}{% endif %}" class="adm-btn">Next &rarr;</a>
   {% endif %}

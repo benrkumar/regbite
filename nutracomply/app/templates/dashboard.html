@@ -5,7 +5,7 @@
 {% block content %}
 {% if request.query_params.get('welcome') == '1' %}
 <div id="welcome-banner" style="
-  background: #111111;
+  background: #81C2C0;
   color: #fff; border-radius: 6px; padding: 1.2rem 1.5rem;
   margin-bottom: 1.5rem; display: flex; align-items: flex-start;
   justify-content: space-between; gap: 1rem; flex-wrap: wrap;
@@ -42,16 +42,16 @@
   cursor:pointer; transition:all var(--t);
 }
 .filter-btn.active {
-  background: #111111;
-  border-color: #111111; color:#fff;
+  background: #81C2C0;
+  border-color: #81C2C0; color:#fff;
 }
-.filter-btn:hover:not(.active) { border-color:#A3A3A3; color:#111111; }
+.filter-btn:hover:not(.active) { border-color:#A3A3A3; color:#5A9A98; }
 
 .product-card { position:relative; overflow:hidden; display:flex; flex-direction:column; gap:0.8rem; }
 .flagged-ribbon {
-  position:absolute; top:13px; right:-26px; background:#ef4444; color:#fff;
+  position:absolute; top:13px; right:-26px; background:#8B3A3A; color:#fff;
   font-size:0.55rem; font-weight:900; letter-spacing:0.12em; padding:0.2rem 2.4rem;
-  transform:rotate(38deg); box-shadow:0 2px 8px rgba(239,68,68,0.4); z-index:2; pointer-events:none;
+  transform:rotate(38deg); box-shadow:0 2px 8px rgba(139,58,58,0.4); z-index:2; pointer-events:none;
 }
 .top-viol {
   font-size:0.8rem; color:var(--danger-fg); background:var(--danger-bg);
@@ -60,8 +60,8 @@
 }
 .sev-chips { display:flex; gap:0.3rem; flex-wrap:wrap; }
 .sev-chip { font-size:0.67rem; font-weight:700; padding:0.12rem 0.48rem; border-radius:var(--r-full); white-space:nowrap; }
-.chip-c { background:#fce7f3; color:#9d174d; }
-.chip-h { background:#ffedd5; color:#9a3412; }
+.chip-c { background:#F5D5D5; color:#8B3A3A; }
+.chip-h { background:#FFF0E0; color:#8B6914; }
 .chip-m { background:var(--warning-bg); color:var(--warning-fg); }
 .chip-l { background:var(--gray-100); color:var(--gray-500); }
 
@@ -80,7 +80,7 @@
 <div class="toast-alert" id="alert-toast">
   <span style="font-size:1.2rem;">🔔</span>
   <div style="flex:1;min-width:0;">
-    <div style="font-weight:700;font-size:0.83rem;color:#991b1b;">{{ unread_alerts }} Unread Alert{{ 's' if unread_alerts != 1 }}</div>
+    <div style="font-weight:700;font-size:0.83rem;color:#8B3A3A;">{{ unread_alerts }} Unread Alert{{ 's' if unread_alerts != 1 }}</div>
     <a href="/alerts" style="font-size:0.75rem;color:var(--danger);">View &amp; resolve →</a>
   </div>
   <button class="toast-close" onclick="document.getElementById('alert-toast').style.display='none'" title="Dismiss">✕</button>
@@ -102,7 +102,7 @@
 {# ── Stat Strip ── #}
 <div class="stat-strip">
   <div class="stat-card">
-    <div class="stat-card-icon" style="background:#f0fdf4;">📦</div>
+    <div class="stat-card-icon" style="background:#D4EDEC;">📦</div>
     <div class="stat-card-body">
       <div class="stat-card-val">{{ total_products }}</div>
       <div class="stat-card-lbl">Total Products</div>
@@ -110,7 +110,7 @@
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-card-icon" style="background:#f0fdf4;">✅</div>
+    <div class="stat-card-icon" style="background:#D4EDEC;">✅</div>
     <div class="stat-card-body">
       <div class="stat-card-val" style="color:var(--success-fg);">{{ compliant_count }}</div>
       <div class="stat-card-lbl">Compliant</div>
@@ -118,7 +118,7 @@
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-card-icon" style="background:#fff1f2;">🚩</div>
+    <div class="stat-card-icon" style="background:#F5D5D5;">🚩</div>
     <div class="stat-card-body">
       <div class="stat-card-val" style="color:{% if flagged_count > 0 %}var(--danger-fg){% else %}var(--gray-400){% endif %};">{{ flagged_count }}</div>
       <div class="stat-card-lbl">Flagged</div>
@@ -301,7 +301,7 @@
       <div class="activity-header">Recent Activity</div>
       {% if unread_alerts > 0 %}
       <div class="activity-item">
-        <div class="activity-avatar" style="background:#fee2e2;color:#991b1b;">🔔</div>
+        <div class="activity-avatar" style="background:#F5D5D5;color:#8B3A3A;">🔔</div>
         <div class="activity-text">
           <div class="activity-name">{{ unread_alerts }} unread alert{{ 's' if unread_alerts != 1 }}</div>
           <div class="activity-desc">Compliance notifications pending</div>
@@ -311,7 +311,7 @@
       {% endif %}
       {% if flagged_count > 0 %}
       <div class="activity-item">
-        <div class="activity-avatar" style="background:#fee2e2;color:#991b1b;">🚩</div>
+        <div class="activity-avatar" style="background:#F5D5D5;color:#8B3A3A;">🚩</div>
         <div class="activity-text">
           <div class="activity-name">{{ flagged_count }} product{{ 's' if flagged_count != 1 }} flagged</div>
           <div class="activity-desc">Compliance violations detected</div>
@@ -346,8 +346,8 @@
       {% set days = lic.days_until_expiry %}
       <div class="activity-item">
         <div class="activity-avatar"
-             style="background:{% if days < 0 %}#fee2e2{% elif days <= 30 %}#ffedd5{% elif days <= 60 %}#fef3c7{% else %}#dcfce7{% endif %};
-                    color:{% if days < 0 %}#991b1b{% elif days <= 30 %}#9a3412{% elif days <= 60 %}#92400e{% else %}#166534{% endif %};">
+             style="background:{% if days < 0 %}#F5D5D5{% elif days <= 30 %}#FFF0E0{% elif days <= 60 %}#FFF0E0{% else %}#D8F0DF{% endif %};
+                    color:{% if days < 0 %}#8B3A3A{% elif days <= 30 %}#8B6914{% elif days <= 60 %}#8B6914{% else %}#3D7A50{% endif %};">
           🗓️
         </div>
         <div class="activity-text">
@@ -381,7 +381,7 @@
         No licenses expiring soon
       </div>
       <a href="/renewals" class="btn btn-primary btn-sm btn-full"
-         style="background:linear-gradient(135deg,#4ade80,#16a34a);color:#fff;box-shadow:0 3px 12px rgba(34,197,94,0.38);justify-content:center;margin-top:0.5rem;">
+         style="justify-content:center;margin-top:0.5rem;">
         + Add License
       </a>
     </div>
@@ -398,14 +398,14 @@
       {% set sev = ra.severity.value %}
       <div class="activity-item">
         <div class="activity-avatar"
-             style="background:{% if sev == 'Urgent' %}#fee2e2{% elif sev == 'Important' %}#fef3c7{% else %}#dbeafe{% endif %};
-                    color:{% if sev == 'Urgent' %}#991b1b{% elif sev == 'Important' %}#92400e{% else %}#1e40af{% endif %};">
+             style="background:{% if sev == 'Urgent' %}#F5D5D5{% elif sev == 'Important' %}#FFF0E0{% else %}#CADCEE{% endif %};
+                    color:{% if sev == 'Urgent' %}#8B3A3A{% elif sev == 'Important' %}#8B6914{% else %}#4A7BA3{% endif %};">
           📢
         </div>
         <div class="activity-text">
           <div class="activity-name" style="font-size:0.8rem;">{{ ra.title[:40] }}{% if ra.title|length > 40 %}…{% endif %}</div>
           <div class="activity-desc">
-            <span style="font-weight:700;{% if sev == 'Urgent' %}color:#dc2626;{% elif sev == 'Important' %}color:#d97706;{% else %}color:#3b82f6;{% endif %}">{{ sev }}</span>
+            <span style="font-weight:700;{% if sev == 'Urgent' %}color:#8B3A3A;{% elif sev == 'Important' %}color:#8B6914;{% else %}color:#649CC4;{% endif %}">{{ sev }}</span>
             {% if ra.published_at %} · {{ ra.published_at.strftime('%d %b') }}{% endif %}
           </div>
         </div>

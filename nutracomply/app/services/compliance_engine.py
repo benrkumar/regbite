@@ -182,6 +182,27 @@ def _check_presence(rule: ComplianceRule, config: dict, extraction: dict):
                 return CheckResult.FAIL, str(found), f"Possible allergens found in ingredients ({found}) but no allergen declaration"
         return CheckResult.PASS, "No allergens detected", "No allergen declaration needed — no common allergens found in ingredients"
 
+    # Minimum items check (e.g. nutritional_table must have >= N rows)
+    min_items = config.get("min_items")
+    if min_items and isinstance(value, list):
+        if len(value) >= min_items:
+            return CheckResult.PASS, f"{len(value)} items", f"'{field}' has {len(value)} entries (minimum {min_items})"
+        else:
+            return CheckResult.FAIL, f"{len(value)} items", f"'{field}' has {len(value)} entries but requires at least {min_items}"
+
+    # Required nutrient in nutritional table (e.g. must have "energy" row)
+    required_nutrient = config.get("required_nutrient")
+    if required_nutrient and field == "nutritional_table" and isinstance(value, list):
+        if not value:
+            return CheckResult.FAIL, None, f"Nutritional table is empty — '{required_nutrient}' not declared"
+        nutrient_names = " ".join(
+            str(row.get("nutrient", "")).lower() for row in value if isinstance(row, dict)
+        )
+        if required_nutrient.lower() in nutrient_names:
+            return CheckResult.PASS, required_nutrient, f"Required nutrient '{required_nutrient}' found in nutritional table"
+        else:
+            return CheckResult.FAIL, None, f"Required nutrient '{required_nutrient}' not found in nutritional table"
+
     # Simple non-empty check
     if value and (not isinstance(value, (list, dict)) or len(value) > 0):
         display = str(value)[:100] if not isinstance(value, list) else f"{len(value)} items"

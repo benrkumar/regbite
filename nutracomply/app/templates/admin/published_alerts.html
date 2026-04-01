@@ -9,21 +9,21 @@
 .cat-checks { display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.4rem; }
 .cat-check-label {
   display:flex; align-items:center; gap:0.35rem; cursor:pointer;
-  padding:0.28rem 0.7rem; border-radius:6px; border:1px solid #e2e8f0;
-  font-size:0.78rem; font-weight:500; color:#374151; background:#fff;
+  padding:0.28rem 0.7rem; border-radius:6px; border:1px solid #EBEBEB;
+  font-size:0.78rem; font-weight:500; color:#525252; background:#fff;
   transition:all 0.15s;
 }
-.cat-check-label:hover { background:#f1f5f9; }
-.cat-check-label input:checked + span { color:#4f46e5; }
-.cat-check-label input { accent-color:#6366f1; }
+.cat-check-label:hover { background:#F5F5F5; }
+.cat-check-label input:checked + span { color:#649CC4; }
+.cat-check-label input { accent-color:#649CC4; }
 
-.sev-select { width:100%; padding:0.48rem 0.7rem; border:1px solid #e2e8f0; border-radius:8px; font-size:0.85rem; }
-.form-label { display:block; font-size:0.78rem; font-weight:600; color:#374151; margin-bottom:0.35rem; }
+.sev-select { width:100%; padding:0.48rem 0.7rem; border:1px solid #EBEBEB; border-radius:8px; font-size:0.85rem; }
+.form-label { display:block; font-size:0.78rem; font-weight:600; color:#525252; margin-bottom:0.35rem; }
 .form-inp {
-  width:100%; padding:0.48rem 0.7rem; border:1px solid #e2e8f0; border-radius:8px;
-  font-size:0.85rem; color:#1e293b; box-sizing:border-box;
+  width:100%; padding:0.48rem 0.7rem; border:1px solid #EBEBEB; border-radius:8px;
+  font-size:0.85rem; color:#262626; box-sizing:border-box;
 }
-.form-inp:focus { outline:none; border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,0.12); }
+.form-inp:focus { outline:none; border-color:#649CC4; box-shadow:0 0 0 3px rgba(99,102,241,0.12); }
 textarea.form-inp { resize:vertical; }
 
 .pub-btn {
@@ -31,26 +31,26 @@ textarea.form-inp { resize:vertical; }
   padding:0.48rem 1.1rem; border-radius:8px; font-size:0.85rem; font-weight:600;
   cursor:pointer; transition:all 0.15s; border:none;
 }
-.pub-btn-primary { background:#6366f1; color:#fff; }
-.pub-btn-primary:hover { background:#4f46e5; }
-.pub-btn-outline { background:#fff; color:#374151; border:1px solid #e2e8f0; }
-.pub-btn-outline:hover { background:#f8fafc; }
+.pub-btn-primary { background:#649CC4; color:#fff; }
+.pub-btn-primary:hover { background:#649CC4; }
+.pub-btn-outline { background:#fff; color:#525252; border:1px solid #EBEBEB; }
+.pub-btn-outline:hover { background:#F8F8F8; }
 
 .status-badge {
   display:inline-block; padding:0.15rem 0.55rem; border-radius:5px;
   font-size:0.7rem; font-weight:700; white-space:nowrap;
 }
-.status-published { background:#dcfce7; color:#166534; }
-.status-draft     { background:#f1f5f9; color:#475569; }
-.status-archived  { background:#f1f5f9; color:#94a3b8; }
+.status-published { background:#D8F0DF; color:#3D7A50; }
+.status-draft     { background:#F5F5F5; color:#525252; }
+.status-archived  { background:#F5F5F5; color:#A3A3A3; }
 
-.sev-info      { background:#dbeafe; color:#1e40af; }
-.sev-important { background:#fef3c7; color:#92400e; }
-.sev-urgent    { background:#fee2e2; color:#991b1b; }
+.sev-info      { background:#CADCEE; color:#4A7BA3; }
+.sev-important { background:#FFF0E0; color:#8B6914; }
+.sev-urgent    { background:#F5D5D5; color:#8B3A3A; }
 </style>
 
 {# ── Composer Form ── #}
-<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:1.5rem;margin-bottom:1.75rem;">
+<div style="background:#fff;border:1px solid #EBEBEB;border-radius:14px;padding:1.5rem;margin-bottom:1.75rem;">
   <div class="adm-section-title" style="margin-bottom:1.2rem;">Compose New Regulation Alert</div>
   <form method="post" action="/admin/published-alerts/create">
     <div class="composer-grid">
@@ -91,7 +91,7 @@ textarea.form-inp { resize:vertical; }
       </div>
       <div class="composer-full" style="display:flex;align-items:center;gap:1.5rem;padding-top:0.5rem;">
         <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;font-weight:500;cursor:pointer;">
-          <input type="checkbox" name="publish_now" value="1" style="accent-color:#6366f1;width:16px;height:16px;" />
+          <input type="checkbox" name="publish_now" value="1" style="accent-color:#649CC4;width:16px;height:16px;" />
           Publish immediately (otherwise saved as Draft)
         </label>
         <div style="margin-left:auto;display:flex;gap:0.5rem;">
@@ -124,12 +124,12 @@ textarea.form-inp { resize:vertical; }
       {% for a in published_alerts %}
       <tr>
         <td style="max-width:260px;">
-          <div style="font-weight:600;color:#0f172a;font-size:0.85rem;">{{ a.title[:80] }}{% if a.title|length > 80 %}…{% endif %}</div>
+          <div style="font-weight:600;color:#262626;font-size:0.85rem;">{{ a.title[:80] }}{% if a.title|length > 80 %}…{% endif %}</div>
           {% if a.source_title %}
-          <div style="font-size:0.72rem;color:#64748b;margin-top:0.2rem;">{{ a.source_title[:60] }}</div>
+          <div style="font-size:0.72rem;color:#737373;margin-top:0.2rem;">{{ a.source_title[:60] }}</div>
           {% endif %}
           {% if a.source_url %}
-          <a href="{{ a.source_url }}" target="_blank" style="font-size:0.7rem;color:#6366f1;">View source ↗</a>
+          <a href="{{ a.source_url }}" target="_blank" style="font-size:0.7rem;color:#649CC4;">View source ↗</a>
           {% endif %}
         </td>
         <td>
@@ -154,20 +154,20 @@ textarea.form-inp { resize:vertical; }
           {% if a.affected_categories %}
           <div style="display:flex;flex-wrap:wrap;gap:0.3rem;">
             {% for cat in a.affected_categories[:3] %}
-            <span style="background:#ede9fe;color:#5b21b6;border-radius:4px;padding:0.1rem 0.4rem;font-size:0.67rem;font-weight:600;">{{ cat }}</span>
+            <span style="background:#D4EDEC;color:#5A9A98;border-radius:4px;padding:0.1rem 0.4rem;font-size:0.67rem;font-weight:600;">{{ cat }}</span>
             {% endfor %}
             {% if a.affected_categories|length > 3 %}
-            <span style="font-size:0.67rem;color:#94a3b8;">+{{ a.affected_categories|length - 3 }} more</span>
+            <span style="font-size:0.67rem;color:#A3A3A3;">+{{ a.affected_categories|length - 3 }} more</span>
             {% endif %}
           </div>
           {% else %}
-          <span style="color:#94a3b8;font-size:0.78rem;">—</span>
+          <span style="color:#A3A3A3;font-size:0.78rem;">—</span>
           {% endif %}
         </td>
-        <td style="font-size:0.78rem;color:#64748b;white-space:nowrap;">
+        <td style="font-size:0.78rem;color:#737373;white-space:nowrap;">
           {{ a.created_at.strftime('%d %b %Y') }}
         </td>
-        <td style="font-size:0.78rem;color:#64748b;white-space:nowrap;">
+        <td style="font-size:0.78rem;color:#737373;white-space:nowrap;">
           {% if a.published_at %}{{ a.published_at.strftime('%d %b %Y') }}{% else %}—{% endif %}
         </td>
         <td>
@@ -192,10 +192,10 @@ textarea.form-inp { resize:vertical; }
 </div>
 
 {% else %}
-<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:2.5rem;text-align:center;">
+<div style="background:#fff;border:1px solid #EBEBEB;border-radius:14px;padding:2.5rem;text-align:center;">
   <div style="font-size:2.5rem;margin-bottom:0.75rem;">📢</div>
-  <div style="font-weight:600;color:#0f172a;margin-bottom:0.4rem;">No alerts composed yet</div>
-  <div style="font-size:0.85rem;color:#64748b;">Use the form above to compose and publish regulation alerts for users.</div>
+  <div style="font-weight:600;color:#262626;margin-bottom:0.4rem;">No alerts composed yet</div>
+  <div style="font-size:0.85rem;color:#737373;">Use the form above to compose and publish regulation alerts for users.</div>
 </div>
 {% endif %}
 

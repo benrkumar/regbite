@@ -20,7 +20,7 @@
   padding: 1.5rem;
 }
 .plan-card.active-plan {
-  border-color: #111111;
+  border-color: #81C2C0;
   box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
 }
 
@@ -46,11 +46,11 @@
   letter-spacing: 0.04em;
   white-space: nowrap;
 }
-.pill-active    { background: #dcfce7; color: #166534; }
-.pill-cancelled { background: #fee2e2; color: #991b1b; }
-.pill-past-due  { background: #fef3c7; color: #92400e; }
+.pill-active    { background: #D8F0DF; color: #3D7A50; }
+.pill-cancelled { background: #F5D5D5; color: #8B3A3A; }
+.pill-past-due  { background: #FFF0E0; color: #8B6914; }
 .pill-trialing  { background: #F5F5F5; color: #737373; }
-.pill-free      { background: #f1f5f9; color: #475569; }
+.pill-free      { background: #F5F5F5; color: #525252; }
 
 .plan-meta {
   font-size: 0.82rem;
@@ -77,7 +77,7 @@
 }
 .usage-bar-fill {
   height: 100%;
-  background: #111111;
+  background: #81C2C0;
   border-radius: 999px;
   transition: width 0.5s ease;
 }
@@ -94,13 +94,13 @@
 .upgrade-card-title {
   font-size: 1.05rem;
   font-weight: 700;
-  color: #111111;
+  color: #262626;
   margin-bottom: 0.3rem;
 }
 .upgrade-price {
   font-size: 2rem;
   font-weight: 700;
-  color: #111111;
+  color: #262626;
   letter-spacing: -0.03em;
   line-height: 1;
   margin-bottom: 0.2rem;
@@ -122,12 +122,12 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.855rem;
-  color: #111111;
+  color: #262626;
 }
 .upgrade-features li .chk {
   width: 17px; height: 17px;
   border-radius: 50%;
-  background: #111111;
+  background: #81C2C0;
   display: flex; align-items: center; justify-content: center;
   font-size: 0.6rem; color: #FFFFFF; font-weight: 700;
   flex-shrink: 0;
@@ -159,21 +159,21 @@
   transition: transform 0.2s;
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
-.toggle-switch input:checked + .toggle-slider { background: #111111; }
+.toggle-switch input:checked + .toggle-slider { background: #81C2C0; }
 .toggle-switch input:checked + .toggle-slider::before { transform: translateX(17px); }
 .save-chip {
   font-size: 0.7rem; font-weight: 700;
-  background: #dcfce7; color: #166534;
+  background: #D8F0DF; color: #3D7A50;
   padding: 0.1rem 0.45rem; border-radius: 999px;
 }
 
 .warning-box {
   background: #fffbeb;
-  border: 1.5px solid #fde68a;
+  border: 1.5px solid #FFD7AD;
   border-radius: 10px;
   padding: 0.85rem 1rem;
   font-size: 0.85rem;
-  color: #92400e;
+  color: #8B6914;
   display: flex;
   gap: 0.5rem;
   align-items: flex-start;
@@ -193,7 +193,7 @@
   font-size: 0.84rem;
 }
 .pay-table th {
-  background: #f8fafc;
+  background: #F8F8F8;
   padding: 0.6rem 1rem;
   text-align: left;
   font-size: 0.71rem; font-weight: 700;
@@ -203,14 +203,14 @@
 }
 .pay-table td {
   padding: 0.65rem 1rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #F5F5F5;
   vertical-align: middle;
 }
 .pay-table tr:last-child td { border-bottom: none; }
 .pay-table tbody tr:hover td { background: #fafafa; }
-.status-paid    { background: #dcfce7; color: #166534; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
-.status-created { background: #fef3c7; color: #92400e; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
-.status-failed  { background: #fee2e2; color: #991b1b; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+.status-paid    { background: #D8F0DF; color: #3D7A50; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+.status-created { background: #FFF0E0; color: #8B6914; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+.status-failed  { background: #F5D5D5; color: #8B3A3A; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
 </style>
 
 {# ── Page header ── #}
@@ -274,7 +274,7 @@
       </div>
       {% endif %}
       {% if sub_status == "cancelled" and subscription.cancelled_at %}
-      <div class="plan-meta" style="color:#dc2626;">
+      <div class="plan-meta" style="color:#8B3A3A;">
         <strong>Cancelled on:</strong> {{ subscription.cancelled_at.strftime('%d %b %Y') }}
       </div>
       {% endif %}
@@ -296,7 +296,7 @@
       {% if is_growth and sub_status == "active" %}
         <form method="post" action="/billing/cancel"
               onsubmit="return confirm('Cancel your Growth subscription? Access continues until the end of the current billing period.')">
-          <button type="submit" class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fca5a5;">
+          <button type="submit" class="btn btn-outline btn-sm" style="color:#8B3A3A;border-color:#E8BFBF;">
             Cancel Subscription
           </button>
         </form>
@@ -347,7 +347,7 @@
       <div class="warning-box">
         <span>⚠️</span>
         <span>Payment gateway not yet configured. Contact
-          <a href="mailto:support@regbite.com" style="color:#92400e;text-decoration:underline;">support@regbite.com</a>
+          <a href="mailto:support@regbite.com" style="color:#8B6914;text-decoration:underline;">support@regbite.com</a>
           to upgrade.
         </span>
       </div>
@@ -361,7 +361,7 @@
     <ul class="upgrade-features" style="list-style:none;padding:0;">
       {% for feat in plans.growth.features %}
       <li style="display:flex;align-items:center;gap:0.5rem;font-size:0.855rem;color:var(--gray-700);margin-bottom:0.4rem;">
-        <span style="color:#111111;font-weight:700;">&#10003;</span> {{ feat }}
+        <span style="color:#5A9A98;font-weight:700;">&#10003;</span> {{ feat }}
       </li>
       {% endfor %}
     </ul>
@@ -475,7 +475,7 @@ async function startPayment() {
       name: '{{ user.name | e }}',
       email: '{{ user.email | e }}'
     },
-    theme: { color: '#111111' }
+    theme: { color: '#5A9A98' }
   };
 
   var rzp = new Razorpay(options);

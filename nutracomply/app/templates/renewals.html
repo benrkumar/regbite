@@ -11,9 +11,9 @@
 }
 .renewal-stat-val { font-size:2rem; font-weight:800; line-height:1; }
 .renewal-stat-lbl { font-size:0.75rem; color:var(--gray-500); font-weight:500; }
-.val-danger { color:#dc2626; }
-.val-warning { color:#d97706; }
-.val-success { color:#16a34a; }
+.val-danger { color:#8B3A3A; }
+.val-warning { color:#8B6914; }
+.val-success { color:#3D7A50; }
 .val-neutral { color:var(--gray-400); }
 
 .add-form-card { margin-bottom:1.5rem; }
@@ -23,11 +23,11 @@
 .lic-table-wrap { background:#fff; border:1px solid var(--border); border-radius:var(--r-lg); overflow:hidden; }
 .lic-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
 .lic-table th {
-  background:#f8fafc; padding:0.65rem 1rem; text-align:left;
+  background:#F8F8F8; padding:0.65rem 1rem; text-align:left;
   font-size:0.72rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
   color:var(--gray-500); border-bottom:1.5px solid var(--border);
 }
-.lic-table td { padding:0.7rem 1rem; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+.lic-table td { padding:0.7rem 1rem; border-bottom:1px solid #F5F5F5; vertical-align:middle; }
 .lic-table tr:last-child td { border-bottom:none; }
 .lic-table tbody tr:hover td { background:#fafafa; }
 
@@ -35,14 +35,14 @@
   display:inline-block; padding:0.18rem 0.6rem; border-radius:var(--r-full);
   font-size:0.73rem; font-weight:700; white-space:nowrap;
 }
-.days-expired  { background:#fee2e2; color:#991b1b; }
+.days-expired  { background:#F5D5D5; color:#8B3A3A; }
 .days-soon     { background:#ffedd5; color:#9a3412; }
-.days-warning  { background:#fef3c7; color:#92400e; }
-.days-ok       { background:#dcfce7; color:#166534; }
+.days-warning  { background:#FFF0E0; color:#8B6914; }
+.days-ok       { background:#D8F0DF; color:#3D7A50; }
 
 .type-badge {
   display:inline-block; padding:0.15rem 0.55rem; border-radius:5px;
-  font-size:0.7rem; font-weight:700; background:#ede9fe; color:#5b21b6; white-space:nowrap;
+  font-size:0.7rem; font-weight:700; background:#D4EDEC; color:#5A9A98; white-space:nowrap;
 }
 
 .renew-inline-form { display:flex; gap:0.4rem; align-items:center; }
@@ -85,11 +85,11 @@
     <div class="renewal-stat-lbl">Expired</div>
   </div>
   <div class="renewal-stat">
-    <div class="renewal-stat-val" style="color:#d97706;">{{ expiring_soon|length }}</div>
+    <div class="renewal-stat-val" style="color:#8B6914;">{{ expiring_soon|length }}</div>
     <div class="renewal-stat-lbl">Expiring in 30 days</div>
   </div>
   <div class="renewal-stat">
-    <div class="renewal-stat-val" style="color:#ca8a04;">{{ expiring_60|length }}</div>
+    <div class="renewal-stat-val" style="color:#8B6914;">{{ expiring_60|length }}</div>
     <div class="renewal-stat-lbl">Expiring in 60 days</div>
   </div>
   <div class="renewal-stat">
@@ -213,7 +213,7 @@
             </form>
             <form method="post" action="/renewals/{{ lic.id }}/delete"
                   onsubmit="return confirm('Remove this license from tracking?')">
-              <button type="submit" class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fca5a5;" title="Remove">✕</button>
+              <button type="submit" class="btn btn-outline btn-sm" style="color:#8B3A3A;border-color:#E8BFBF;" title="Remove">✕</button>
             </form>
           </div>
         </td>

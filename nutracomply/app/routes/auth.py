@@ -353,7 +353,12 @@ def _seed_demo_products(user: User, db: Session):
         if len(failing_set) > 3:
             total = len(rules)
             passed = total - len(failing_set)
-            score = round((passed / total) * 100) if total else 0
+            # Use severity-weighted scoring for alert messages
+            from app.services.compliance_engine import calculate_compliance_score as _calc
+            demo_checks = db.query(ComplianceCheck).filter(
+                ComplianceCheck.label_version_id == lv.id
+            ).all()
+            score = _calc(demo_checks) if demo_checks else round((passed / total) * 100) if total else 0
             critical_count = sum(1 for c in failing_set if rules.get(c) and rules[c].severity == Severity.CRITICAL)
             high_count = sum(1 for c in failing_set if rules.get(c) and rules[c].severity == Severity.HIGH)
 
@@ -458,8 +463,16 @@ async def register(
     name: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
+    agree_terms: str = Form(None),
     db: Session = Depends(get_db),
 ):
+    # Validate terms agreement
+    if not agree_terms:
+        return templates.TemplateResponse("register.html", {
+            "request": request,
+            "error": "You must agree to the Terms of Service and Privacy Policy to create an account.",
+        })
+
     # Check if email already taken
     existing = db.query(User).filter(User.email == email.lower().strip()).first()
     if existing:

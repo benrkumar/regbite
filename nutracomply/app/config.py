@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     # Gemini
     gemini_api_key: str = ""
 
+    # Anthropic (Claude) — used for label extraction
+    anthropic_api_key: str = ""
+
     # Email (Brevo SMTP)
     brevo_smtp_host: str = "smtp-relay.brevo.com"
     brevo_smtp_port: int = 587

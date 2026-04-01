@@ -11,17 +11,17 @@
   .editor-card { background: #FFFFFF; border: 1px solid #EBEBEB; border-radius: 6px; padding: 1.2rem; margin-bottom: 1rem; }
   .editor-card-title { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #A3A3A3; margin-bottom: 0.75rem; }
   /* Title input */
-  .blog-title-input { width: 100%; border: none; border-bottom: 1px solid #EBEBEB; padding: 0.75rem 0; font-size: 1.5rem; font-weight: 300; font-family: 'Noto Sans JP'; color: #111111; outline: none; background: transparent; letter-spacing: -0.02em; }
-  .blog-title-input:focus { border-color: #111111; }
+  .blog-title-input { width: 100%; border: none; border-bottom: 1px solid #EBEBEB; padding: 0.75rem 0; font-size: 1.5rem; font-weight: 300; font-family: 'Noto Sans JP'; color: #262626; outline: none; background: transparent; letter-spacing: -0.02em; }
+  .blog-title-input:focus { border-color: #262626; }
   .blog-title-input::placeholder { color: #D4D4D4; }
   /* Slug */
   .slug-input { width: 100%; padding: 0.4rem 0.6rem; border: 1px solid #EBEBEB; border-radius: 4px; font-size: 0.82rem; font-family: monospace; color: #525252; background: #FAFAFA; }
   /* Form elements */
   .editor-label { display: block; font-size: 0.72rem; font-weight: 500; color: #737373; margin-bottom: 0.3rem; letter-spacing: 0.03em; }
-  .editor-input { width: 100%; padding: 0.45rem 0.65rem; border: 1px solid #EBEBEB; border-radius: 4px; font-size: 0.82rem; font-family: 'Noto Sans JP'; color: #111111; outline: none; }
-  .editor-input:focus { border-color: #111111; }
-  .editor-textarea { width: 100%; padding: 0.45rem 0.65rem; border: 1px solid #EBEBEB; border-radius: 4px; font-size: 0.82rem; font-family: 'Noto Sans JP'; color: #111111; outline: none; resize: vertical; min-height: 60px; }
-  .editor-select { width: 100%; padding: 0.45rem 0.65rem; border: 1px solid #EBEBEB; border-radius: 4px; font-size: 0.82rem; font-family: 'Noto Sans JP'; color: #111111; background: #FFFFFF; outline: none; appearance: none; }
+  .editor-input { width: 100%; padding: 0.45rem 0.65rem; border: 1px solid #EBEBEB; border-radius: 4px; font-size: 0.82rem; font-family: 'Noto Sans JP'; color: #262626; outline: none; }
+  .editor-input:focus { border-color: #262626; }
+  .editor-textarea { width: 100%; padding: 0.45rem 0.65rem; border: 1px solid #EBEBEB; border-radius: 4px; font-size: 0.82rem; font-family: 'Noto Sans JP'; color: #262626; outline: none; resize: vertical; min-height: 60px; }
+  .editor-select { width: 100%; padding: 0.45rem 0.65rem; border: 1px solid #EBEBEB; border-radius: 4px; font-size: 0.82rem; font-family: 'Noto Sans JP'; color: #262626; background: #FFFFFF; outline: none; appearance: none; }
   .editor-checkbox { margin-right: 0.5rem; }
   /* Quill overrides */
   .ql-toolbar.ql-snow { border-color: #EBEBEB !important; border-radius: 6px 6px 0 0; background: #FAFAFA; }
@@ -32,7 +32,7 @@
   /* Radio group */
   .status-radio-group { display:flex; flex-direction:column; gap:0.4rem; }
   .status-radio-group label { display:flex; align-items:center; gap:0.4rem; font-size:0.82rem; color:#525252; cursor:pointer; }
-  .status-radio-group input[type="radio"] { accent-color:#111111; }
+  .status-radio-group input[type="radio"] { accent-color:#81C2C0; }
   /* Slug prefix */
   .slug-row { display:flex; align-items:center; gap:0.4rem; margin-top:0.5rem; margin-bottom:1.5rem; }
   .slug-prefix { font-size:0.75rem; color:#A3A3A3; font-family:monospace; white-space:nowrap; }
@@ -130,9 +130,19 @@
       <div class="editor-card">
         <div class="editor-card-title">Featured Image</div>
         <label class="editor-label">Image URL</label>
-        <input type="url" name="featured_image" class="editor-input"
+        <input type="url" name="featured_image" id="featuredImage" class="editor-input"
                placeholder="https://..."
                value="{{ post.featured_image if post else '' }}" />
+        <div style="margin-top:0.6rem;">
+          <label class="editor-label" style="margin-bottom:0.4rem;">Or upload an image</label>
+          <div style="display:flex;gap:0.4rem;align-items:center;">
+            <input type="file" id="imageUpload" accept="image/*"
+                   style="font-size:0.78rem;color:#525252;flex:1;min-width:0;" />
+            <button type="button" id="uploadBtn" class="adm-btn" style="font-size:0.75rem;padding:0.3rem 0.6rem;white-space:nowrap;"
+                    onclick="uploadImage()">Upload</button>
+          </div>
+          <div id="uploadStatus" style="font-size:0.72rem;color:#737373;margin-top:0.3rem;"></div>
+        </div>
         <div style="margin-top:0.75rem;">
           <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.82rem;color:#525252;cursor:pointer;">
             <input type="checkbox" name="is_featured" class="editor-checkbox" value="1"
@@ -153,16 +163,21 @@
 
       {# SEO #}
       <div class="editor-card">
-        <div class="editor-card-title">SEO</div>
+        <div class="editor-card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          SEO
+          <button type="button" id="genSeoBtn" class="adm-btn" style="font-size:0.68rem;padding:0.2rem 0.5rem;text-transform:none;letter-spacing:0;"
+                  onclick="generateSeo()">AI Generate</button>
+        </div>
         <label class="editor-label">Meta Title</label>
-        <input type="text" name="meta_title" class="editor-input"
+        <input type="text" name="meta_title" id="metaTitle" class="editor-input"
                placeholder="SEO title (defaults to post title)"
                value="{{ post.meta_title if post else '' }}" />
         <div style="margin-top:0.6rem;">
           <label class="editor-label">Meta Description</label>
-          <textarea name="meta_description" class="editor-textarea" rows="3"
+          <textarea name="meta_description" id="metaDesc" class="editor-textarea" rows="3"
                     placeholder="Brief description for search engines...">{{ post.meta_description if post else '' }}</textarea>
         </div>
+        <div id="seoStatus" style="font-size:0.72rem;color:#737373;margin-top:0.3rem;"></div>
       </div>
 
       {# Publish Date #}
@@ -228,6 +243,60 @@
       .replace(/^-+|-+$/g, '')
       .substring(0, 80);
   }
+
+  // ── Image Upload ──
+  window.uploadImage = function() {
+    var fileInput = document.getElementById('imageUpload');
+    var status = document.getElementById('uploadStatus');
+    var btn = document.getElementById('uploadBtn');
+    if (!fileInput.files.length) { status.textContent = 'Select an image first.'; return; }
+    var fd = new FormData();
+    fd.append('file', fileInput.files[0]);
+    btn.disabled = true; btn.style.opacity = '0.6';
+    status.textContent = 'Uploading...';
+    fetch('/admin/blog/upload-image', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.url) {
+          document.getElementById('featuredImage').value = d.url;
+          status.textContent = 'Uploaded successfully.';
+          status.style.color = '#3D7A50';
+        } else {
+          status.textContent = d.detail || 'Upload failed.';
+          status.style.color = '#8B3A3A';
+        }
+      })
+      .catch(function() { status.textContent = 'Upload failed.'; status.style.color = '#8B3A3A'; })
+      .finally(function() { btn.disabled = false; btn.style.opacity = '1'; });
+  };
+
+  // ── AI SEO Generation ──
+  window.generateSeo = function() {
+    var title = document.getElementById('postTitle').value;
+    var content = quill.getText();
+    var btn = document.getElementById('genSeoBtn');
+    var status = document.getElementById('seoStatus');
+    if (!title && !content.trim()) { status.textContent = 'Add a title or content first.'; return; }
+    btn.disabled = true; btn.style.opacity = '0.6';
+    status.textContent = 'Generating...';
+    var csrfSeo = (document.cookie.match('(^|;)\\s*_csrf=([^;]+)') || [])[2] || '';
+    fetch('/admin/blog/generate-seo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': decodeURIComponent(csrfSeo) },
+      body: JSON.stringify({ title: title, content: content.substring(0, 3000) })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.meta_title) document.getElementById('metaTitle').value = d.meta_title;
+        if (d.meta_description) document.getElementById('metaDesc').value = d.meta_description;
+        if (d.excerpt) document.querySelector('textarea[name="excerpt"]').value = d.excerpt;
+        if (d.tags) document.querySelector('input[name="tags"]').value = d.tags;
+        status.textContent = 'SEO fields populated.';
+        status.style.color = '#3D7A50';
+      })
+      .catch(function() { status.textContent = 'Generation failed.'; status.style.color = '#8B3A3A'; })
+      .finally(function() { btn.disabled = false; btn.style.opacity = '1'; });
+  };
 })();
 </script>
 {% endblock %}

@@ -6,9 +6,9 @@
   .rpt-hdr { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem; }
   .rpt-score { text-align:center; }
   .rpt-score-num { font-size:2.5rem; font-weight:700; line-height:1; }
-  .rpt-score-num.sc-good { color:#065F46; }
-  .rpt-score-num.sc-warn { color:#92400E; }
-  .rpt-score-num.sc-bad  { color:#991B1B; }
+  .rpt-score-num.sc-good { color:#3D7A50; }
+  .rpt-score-num.sc-warn { color:#8B6914; }
+  .rpt-score-num.sc-bad  { color:#8B3A3A; }
   .rpt-score-lbl { font-size:0.72rem; color:#737373; margin-top:0.25rem; letter-spacing:0.04em; }
 
   .rpt-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:0.75rem; margin-bottom:1.75rem; }
@@ -16,19 +16,19 @@
   .rpt-sum-val { font-size:1.5rem; font-weight:700; line-height:1; }
   .rpt-sum-lbl { font-size:0.68rem; color:#A3A3A3; margin-top:0.2rem; font-weight:500; letter-spacing:0.04em; text-transform:uppercase; }
 
-  .rpt-section-title { font-size:0.9rem; font-weight:600; color:#111111; margin:1.5rem 0 0.75rem; letter-spacing:-0.01em; }
+  .rpt-section-title { font-size:0.9rem; font-weight:600; color:#262626; margin:1.5rem 0 0.75rem; letter-spacing:-0.01em; }
   .rpt-check { background:#fff; border:1px solid #EBEBEB; border-radius:5px; padding:1rem 1.25rem; margin-bottom:0.6rem; border-left:3px solid #EBEBEB; }
-  .rpt-check.sev-CRITICAL { border-left-color:#DC2626; }
-  .rpt-check.sev-HIGH     { border-left-color:#D97706; }
-  .rpt-check.sev-MEDIUM   { border-left-color:#CA8A04; }
+  .rpt-check.sev-CRITICAL { border-left-color:#8B3A3A; }
+  .rpt-check.sev-HIGH     { border-left-color:#8B6914; }
+  .rpt-check.sev-MEDIUM   { border-left-color:#8B6914; }
   .rpt-check.sev-LOW      { border-left-color:#A3A3A3; }
-  .rpt-check.sev-PASS     { border-left-color:#16A34A; }
+  .rpt-check.sev-PASS     { border-left-color:#3D7A50; }
 
   .rpt-check-hdr { display:flex; justify-content:space-between; align-items:flex-start; gap:0.75rem; }
-  .rpt-check-desc { font-size:0.85rem; font-weight:600; color:#111111; flex:1; }
+  .rpt-check-desc { font-size:0.85rem; font-weight:600; color:#262626; flex:1; }
   .rpt-sev-tag { font-size:0.62rem; font-weight:700; padding:0.15rem 0.5rem; border-radius:3px; letter-spacing:0.05em; white-space:nowrap; }
-  .tag-CRITICAL { background:#FEE2E2; color:#991B1B; }
-  .tag-HIGH     { background:#FEF3C7; color:#92400E; }
+  .tag-CRITICAL { background:#F5D5D5; color:#8B3A3A; }
+  .tag-HIGH     { background:#FFF0E0; color:#8B6914; }
   .tag-MEDIUM   { background:#FEF9C3; color:#854D0E; }
   .tag-LOW      { background:#F5F5F5; color:#737373; }
 
@@ -37,14 +37,14 @@
   .rpt-actual { font-size:0.78rem; color:#737373; margin-top:0.3rem; }
   .rpt-actual strong { color:#525252; }
   .rpt-fix { margin-top:0.5rem; }
-  .rpt-fix summary { font-size:0.78rem; color:#111111; font-weight:600; cursor:pointer; }
+  .rpt-fix summary { font-size:0.78rem; color:#262626; font-weight:600; cursor:pointer; }
   .rpt-fix-body { font-size:0.8rem; color:#525252; margin-top:0.4rem; padding:0.75rem; background:#F8F8F8; border-radius:4px; border:1px solid #EBEBEB; line-height:1.6; }
 
   .rpt-pass-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
   .rpt-pass-table th { background:#FAFAFA; padding:0.5rem 0.75rem; text-align:left; font-size:0.67rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:#A3A3A3; border-bottom:1px solid #EBEBEB; }
   .rpt-pass-table td { padding:0.5rem 0.75rem; border-bottom:1px solid #F5F5F5; }
   .rpt-pass-table tr:last-child td { border-bottom:none; }
-  .rpt-pass-table .pass-val { color:#16A34A; font-weight:500; }
+  .rpt-pass-table .pass-val { color:#3D7A50; font-weight:500; }
 
   .rpt-label-img { max-width:100%; border-radius:5px; border:1px solid #EBEBEB; }
   .rpt-two-col { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
@@ -59,7 +59,7 @@
   <span style="margin:0 0.3rem;">›</span>
   <a href="/products/{{ product.id }}" style="color:#737373;">{{ product.name }}</a>
   <span style="margin:0 0.3rem;">›</span>
-  <span style="color:#111111;">Compliance Report</span>
+  <span style="color:#262626;">Compliance Report</span>
 </div>
 
 {% if processing %}
@@ -85,7 +85,7 @@
   {% if critical is defined and not critical.critical_pass %}
   <div class="rpt-score" style="margin-left:0.75rem;">
     <div class="rpt-score-num sc-bad">{{ critical.critical_failures }}</div>
-    <div class="rpt-score-lbl" style="color:#DC2626;font-weight:600;">Critical Failures</div>
+    <div class="rpt-score-lbl" style="color:#8B3A3A;font-weight:600;">Critical Failures</div>
   </div>
   {% endif %}
   {% endif %}
@@ -95,20 +95,20 @@
 {% if violation_summary %}
 <div class="rpt-summary">
   {% if violation_summary.CRITICAL is defined and violation_summary.CRITICAL > 0 %}
-  <div class="rpt-sum-card" style="border-left:3px solid #DC2626;">
-    <div class="rpt-sum-val" style="color:#DC2626;">{{ violation_summary.CRITICAL }}</div>
+  <div class="rpt-sum-card" style="border-left:3px solid #8B3A3A;">
+    <div class="rpt-sum-val" style="color:#8B3A3A;">{{ violation_summary.CRITICAL }}</div>
     <div class="rpt-sum-lbl">Critical</div>
   </div>
   {% endif %}
   {% if violation_summary.HIGH is defined and violation_summary.HIGH > 0 %}
-  <div class="rpt-sum-card" style="border-left:3px solid #D97706;">
-    <div class="rpt-sum-val" style="color:#D97706;">{{ violation_summary.HIGH }}</div>
+  <div class="rpt-sum-card" style="border-left:3px solid #8B6914;">
+    <div class="rpt-sum-val" style="color:#8B6914;">{{ violation_summary.HIGH }}</div>
     <div class="rpt-sum-lbl">High</div>
   </div>
   {% endif %}
   {% if violation_summary.MEDIUM is defined and violation_summary.MEDIUM > 0 %}
-  <div class="rpt-sum-card" style="border-left:3px solid #CA8A04;">
-    <div class="rpt-sum-val" style="color:#CA8A04;">{{ violation_summary.MEDIUM }}</div>
+  <div class="rpt-sum-card" style="border-left:3px solid #8B6914;">
+    <div class="rpt-sum-val" style="color:#8B6914;">{{ violation_summary.MEDIUM }}</div>
     <div class="rpt-sum-lbl">Medium</div>
   </div>
   {% endif %}
@@ -118,8 +118,8 @@
     <div class="rpt-sum-lbl">Low</div>
   </div>
   {% endif %}
-  <div class="rpt-sum-card" style="border-left:3px solid #16A34A;">
-    <div class="rpt-sum-val" style="color:#16A34A;">{{ passed_checks | length }}</div>
+  <div class="rpt-sum-card" style="border-left:3px solid #3D7A50;">
+    <div class="rpt-sum-val" style="color:#3D7A50;">{{ passed_checks | length }}</div>
     <div class="rpt-sum-lbl">Passed</div>
   </div>
 </div>
@@ -190,7 +190,7 @@
     <div class="rpt-section-title">Uploaded Label</div>
     <div class="card no-hover" style="padding:1rem;text-align:center;margin-bottom:1rem;">
       <div style="font-size:2rem;margin-bottom:0.5rem;">📄</div>
-      <div style="font-size:0.85rem;font-weight:600;color:#111111;">{{ label.file_name }}</div>
+      <div style="font-size:0.85rem;font-weight:600;color:#262626;">{{ label.file_name }}</div>
       <div style="font-size:0.72rem;color:#A3A3A3;margin-top:0.2rem;">PDF document</div>
     </div>
     {% endif %}

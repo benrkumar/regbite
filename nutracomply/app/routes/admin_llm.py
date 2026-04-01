@@ -3,7 +3,8 @@ LLM Studio — Admin routes
 =========================
 All routes require is_admin=True.
 Provides knowledge-base management (train) and chat test interfaces for
-the Regulations LLM (gemini-1.5-pro) and Products LLM (gemini-2.0-flash).
+the Regulations LLM (gemini-2.5-pro) and Products LLM (gemini-2.0-flash),
+with Claude (Anthropic) as automatic fallback.
 """
 from pathlib import Path
 
@@ -52,12 +53,13 @@ async def llm_dashboard(request: Request, db: Session = Depends(get_db)):
     settings = get_settings()
 
     return templates.TemplateResponse("admin/llm_dashboard.html", {
-        "request":          request,
-        "user":             user,
-        "unread_alerts":    _unread_alerts(db),
-        "reg_stats":        get_kb_stats("regulations", db),
-        "prod_stats":       get_kb_stats("products",    db),
+        "request":           request,
+        "user":              user,
+        "unread_alerts":     _unread_alerts(db),
+        "reg_stats":         get_kb_stats("regulations", db),
+        "prod_stats":        get_kb_stats("products",    db),
         "gemini_configured": bool(settings.gemini_api_key),
+        "claude_configured": bool(settings.anthropic_api_key),
     })
 
 
@@ -279,6 +281,7 @@ async def llm_chat_send(kb_type: str, request: Request, db: Session = Depends(ge
     return JSONResponse({
         "reply":        result["reply"],
         "context_used": result.get("context_used", []),
+        "provider":     result.get("provider"),
         "error":        result.get("error"),
     })
 

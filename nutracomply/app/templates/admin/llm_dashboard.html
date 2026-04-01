@@ -4,11 +4,16 @@
 
 {% block content %}
 
-{% if not gemini_configured %}
+{% if not gemini_configured and not claude_configured %}
 <div class="adm-flash adm-flash-error" style="margin-bottom:1.5rem;">
+  ⚠️ <strong>No LLM API key configured.</strong>
+  The chat interface requires at least one of <code>GEMINI_API_KEY</code> or
+  <code>ANTHROPIC_API_KEY</code> in your environment variables.
+</div>
+{% elif not gemini_configured %}
+<div class="adm-flash adm-flash-warning" style="margin-bottom:1.5rem;">
   ⚠️ <strong>Gemini API key not configured.</strong>
-  The chat interface will not work until <code>GEMINI_API_KEY</code>
-  is added to your Railway environment variables.
+  Chat will use Claude (Anthropic) as the LLM provider. Add <code>GEMINI_API_KEY</code> for primary Gemini support.
 </div>
 {% endif %}
 
@@ -16,20 +21,20 @@
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.75rem;">
 
   {# Regulations LLM card #}
-  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:1.5rem;">
+  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:14px;padding:1.5rem;">
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.1rem;">
       <span style="font-size:1.6rem;">📋</span>
       <div>
-        <h3 style="margin:0;font-size:1rem;font-weight:800;color:#0f172a;">Regulations LLM</h3>
-        <p style="margin:0;font-size:0.77rem;color:#64748b;">Powered by <strong>gemini-1.5-pro</strong></p>
+        <h3 style="margin:0;font-size:1rem;font-weight:800;color:#262626;">Regulations LLM</h3>
+        <p style="margin:0;font-size:0.77rem;color:#737373;">Powered by <strong>gemini-2.5-pro</strong>{% if claude_configured %} + Claude fallback{% endif %}</p>
       </div>
-      {% if gemini_configured %}
+      {% if gemini_configured or claude_configured %}
       <span class="adm-badge badge-green" style="margin-left:auto;">Ready</span>
       {% else %}
       <span class="adm-badge badge-red" style="margin-left:auto;">No API Key</span>
       {% endif %}
     </div>
-    <p style="font-size:0.8rem;color:#64748b;margin:0 0 1rem;">
+    <p style="font-size:0.8rem;color:#737373;margin:0 0 1rem;">
       Answers FSSAI compliance questions, rule lookups, regulation updates, and ingredient restrictions.
     </p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.3rem;">
@@ -49,20 +54,20 @@
   </div>
 
   {# Products LLM card #}
-  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:1.5rem;">
+  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:14px;padding:1.5rem;">
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.1rem;">
       <span style="font-size:1.6rem;">📦</span>
       <div>
-        <h3 style="margin:0;font-size:1rem;font-weight:800;color:#0f172a;">Products LLM</h3>
-        <p style="margin:0;font-size:0.77rem;color:#64748b;">Powered by <strong>gemini-2.0-flash</strong></p>
+        <h3 style="margin:0;font-size:1rem;font-weight:800;color:#262626;">Products LLM</h3>
+        <p style="margin:0;font-size:0.77rem;color:#737373;">Powered by <strong>gemini-2.0-flash</strong>{% if claude_configured %} + Claude fallback{% endif %}</p>
       </div>
-      {% if gemini_configured %}
+      {% if gemini_configured or claude_configured %}
       <span class="adm-badge badge-green" style="margin-left:auto;">Ready</span>
       {% else %}
       <span class="adm-badge badge-red" style="margin-left:auto;">No API Key</span>
       {% endif %}
     </div>
-    <p style="font-size:0.8rem;color:#64748b;margin:0 0 1rem;">
+    <p style="font-size:0.8rem;color:#737373;margin:0 0 1rem;">
       Answers questions about product compliance scores, label violations, and remediation steps.
     </p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.3rem;">
@@ -84,9 +89,9 @@
 </div>
 
 {# ── Quick start guide ─────────────────────────────────────────────────────── #}
-<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.4rem 1.6rem;margin-bottom:1.5rem;">
+<div style="background:#fff;border:1px solid #EBEBEB;border-radius:12px;padding:1.4rem 1.6rem;margin-bottom:1.5rem;">
   <h4 class="adm-section-title">Quick Start</h4>
-  <ol style="margin:0;padding-left:1.3rem;font-size:0.85rem;color:#374151;line-height:2;">
+  <ol style="margin:0;padding-left:1.3rem;font-size:0.85rem;color:#525252;line-height:2;">
     <li>Click <strong>Manage KB</strong> on either LLM above.</li>
     <li>Click <strong>Auto-Seed from DB</strong> to instantly load all existing regulations / products data.</li>
     <li>Optionally upload additional <code>.txt</code>, <code>.pdf</code>, or <code>.csv</code> files.</li>
@@ -95,28 +100,28 @@
 </div>
 
 {# ── How it works ──────────────────────────────────────────────────────────── #}
-<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:1.2rem 1.5rem;">
+<div style="background:#F8F8F8;border:1px solid #EBEBEB;border-radius:12px;padding:1.2rem 1.5rem;">
   <h4 class="adm-section-title">How it works — RAG Pipeline</h4>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;text-align:center;">
     <div style="padding:0.8rem;">
       <div style="font-size:1.5rem;margin-bottom:0.4rem;">📥</div>
-      <div style="font-size:0.78rem;font-weight:700;color:#0f172a;margin-bottom:0.25rem;">1. Ingest</div>
-      <div style="font-size:0.72rem;color:#64748b;">Upload docs or auto-import from DB. Text is split into chunks.</div>
+      <div style="font-size:0.78rem;font-weight:700;color:#262626;margin-bottom:0.25rem;">1. Ingest</div>
+      <div style="font-size:0.72rem;color:#737373;">Upload docs or auto-import from DB. Text is split into chunks.</div>
     </div>
     <div style="padding:0.8rem;">
       <div style="font-size:1.5rem;margin-bottom:0.4rem;">🔍</div>
-      <div style="font-size:0.78rem;font-weight:700;color:#0f172a;margin-bottom:0.25rem;">2. Retrieve</div>
-      <div style="font-size:0.72rem;color:#64748b;">At query time, the most relevant chunks are found via full-text search.</div>
+      <div style="font-size:0.78rem;font-weight:700;color:#262626;margin-bottom:0.25rem;">2. Retrieve</div>
+      <div style="font-size:0.72rem;color:#737373;">At query time, the most relevant chunks are found via full-text search.</div>
     </div>
     <div style="padding:0.8rem;">
       <div style="font-size:1.5rem;margin-bottom:0.4rem;">🤖</div>
-      <div style="font-size:0.78rem;font-weight:700;color:#0f172a;margin-bottom:0.25rem;">3. Generate</div>
-      <div style="font-size:0.72rem;color:#64748b;">Retrieved chunks + question are sent as context to Gemini.</div>
+      <div style="font-size:0.78rem;font-weight:700;color:#262626;margin-bottom:0.25rem;">3. Generate</div>
+      <div style="font-size:0.72rem;color:#737373;">Retrieved chunks + question are sent as context to Gemini.</div>
     </div>
     <div style="padding:0.8rem;">
       <div style="font-size:1.5rem;margin-bottom:0.4rem;">✅</div>
-      <div style="font-size:0.78rem;font-weight:700;color:#0f172a;margin-bottom:0.25rem;">4. Answer</div>
-      <div style="font-size:0.72rem;color:#64748b;">Gemini replies grounded in your actual data, not general knowledge.</div>
+      <div style="font-size:0.78rem;font-weight:700;color:#262626;margin-bottom:0.25rem;">4. Answer</div>
+      <div style="font-size:0.72rem;color:#737373;">Gemini replies grounded in your actual data, not general knowledge.</div>
     </div>
   </div>
 </div>

@@ -3,12 +3,12 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Request, Depends, UploadFile, File, Form, BackgroundTasks
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Product, LabelVersion, Alert, AlertType, AlertStatus, CheckResult, Severity, ComplianceReport
+from app.models import Product, LabelVersion, ComplianceCheck, Alert, AlertType, AlertStatus, CheckResult, Severity, ComplianceReport
 from app.routes.auth import get_current_user_from_cookie
 from app.services.ocr_service import extract_text_from_file
 from app.services.extraction_service import extract_label_data, extract_label_data_from_image
@@ -196,14 +196,13 @@ def _process_label(label_version_id: int):
             raw_text, _ = extract_text_from_file(label_version.file_path)
             label_version.ocr_raw_text = raw_text
 
-            # Step 2: Structured extraction — try Vision API first for images
+            # Step 2: Structured extraction — try Vision API for images AND PDFs
             extraction = None
             confidence = 0.0
-            if label_version.file_type == "image":
-                try:
-                    extraction, confidence = extract_label_data_from_image(label_version.file_path)
-                except Exception as e:
-                    print(f"[extraction] Vision fallback: {e}")
+            try:
+                extraction, confidence = extract_label_data_from_image(label_version.file_path)
+            except Exception as e:
+                print(f"[extraction] Vision extraction failed: {e}")
 
             if not extraction or confidence < 0.5:
                 extraction, confidence = extract_label_data(raw_text)
@@ -348,3 +347,58 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
         "CheckResult": CheckResult,
         "existing_report": existing_report,
     })
+
+
+@router.post("/labels/{label_id}/update-fields")
+async def update_extraction_fields(label_id: int, request: Request, db: Session = Depends(get_db)):
+    """Save edited extraction fields and re-run compliance checks."""
+    user = require_user(request, db)
+    if not user:
+        return JSONResponse({"detail": "Not authenticated"}, status_code=401)
+
+    label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
+    if not label or label.product.user_id != user.id:
+        return JSONResponse({"detail": "Label not found"}, status_code=404)
+
+    try:
+        updated_data = await request.json()
+    except Exception:
+        return JSONResponse({"detail": "Invalid JSON"}, status_code=400)
+
+    # Merge with existing extraction (preserve internal fields like _extraction_warnings)
+    existing = label.extraction_json or {}
+    existing.update(updated_data)
+    label.extraction_json = existing
+    db.commit()
+
+    # Delete old compliance checks for this label version
+    db.query(ComplianceCheck).filter(ComplianceCheck.label_version_id == label_id).delete()
+    db.commit()
+
+    # Re-run compliance engine
+    checks = run_compliance_check(label, db)
+    score = calculate_compliance_score(checks)
+
+    # Also invalidate any existing compliance report so it gets regenerated
+    existing_report = db.query(ComplianceReport).filter(
+        ComplianceReport.label_version_id == label_id
+    ).first()
+    if existing_report:
+        existing_report.score = score
+        # Update verdict
+        if score >= 90:
+            existing_report.verdict = "COMPLIANT"
+        elif score >= 60:
+            existing_report.verdict = "PARTIAL"
+        else:
+            existing_report.verdict = "NON_COMPLIANT"
+        db.commit()
+
+    try:
+        from app.services.activity_service import log_action
+        log_action(user.id, "label_fields_edited", "label", label_id,
+                   detail=f"Edited extraction fields for {label.product.name}, new score: {score}%")
+    except Exception:
+        pass
+
+    return JSONResponse({"success": True, "score": score})

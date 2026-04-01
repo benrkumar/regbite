@@ -311,10 +311,11 @@ def _feed_product_to_llm(product_id: int, db):
             rule_code = rule.rule_code if rule else "Unknown"
             fail_lines.append(f"  - FAIL [{rule_code}]: {fc.message or 'No detail'}")
 
-        score = round((passed / total) * 100) if total else 0
+        from app.services.compliance_engine import calculate_compliance_score as _calc_score
+        score = _calc_score(checks)
         checks_summary = (
             f"\nLabel Analysis (uploaded {latest_lv.uploaded_at.strftime('%Y-%m-%d')}):\n"
-            f"Compliance Score: {score}% ({passed}/{total} checks passed)\n"
+            f"Compliance Score: {score}% ({passed}/{total} checks passed, severity-weighted)\n"
             f"Failing Checks:\n"
             + ("\n".join(fail_lines) if fail_lines else "  None")
             + f"\nOCR Text Preview: {(latest_lv.ocr_raw_text or '')[:400]}"
@@ -495,6 +496,70 @@ async def bulk_upload_post(
         "user": user,
         "unread_alerts": unread_alerts,
         "result": {"added": added, "skipped": skipped, "errors": errors},
+    })
+
+
+@router.post("/products/bulk-upload-files")
+async def bulk_upload_files(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+):
+    """Bulk upload label images/PDFs — creates one product per file and triggers processing."""
+    user = require_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login")
+
+    added, skipped, errors = [], [], []
+
+    for f in files:
+        if not f.filename:
+            continue
+        suffix = Path(f.filename).suffix.lower()
+        if suffix not in LABEL_EXTENSIONS:
+            errors.append(f"'{f.filename}' — unsupported file type (use JPG, PNG, PDF, WEBP, TIFF)")
+            continue
+
+        # Derive product name from filename (strip extension)
+        product_name = Path(f.filename).stem.replace("_", " ").replace("-", " ").strip()
+        if not product_name:
+            product_name = f"Product {uuid.uuid4().hex[:6]}"
+
+        # Skip duplicates
+        existing = db.query(Product).filter(
+            Product.user_id == user.id,
+            Product.name == product_name,
+            Product.is_active == True,
+        ).first()
+        if existing:
+            skipped.append(f"'{f.filename}' — product '{product_name}' already exists")
+            continue
+
+        try:
+            product = Product(
+                user_id=user.id,
+                name=product_name,
+                category="Health Supplement",
+            )
+            db.add(product)
+            db.commit()
+
+            label_version = await _save_label_file(f, suffix, product.id, db)
+            background_tasks.add_task(_process_label_bg, label_version.id)
+            added.append(product_name)
+        except Exception as e:
+            errors.append(f"'{f.filename}' — {e}")
+
+    from app.models import Alert, AlertStatus
+    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+
+    return templates.TemplateResponse("bulk_upload.html", {
+        "request": request,
+        "user": user,
+        "unread_alerts": unread_alerts,
+        "result": {"added": added, "skipped": skipped, "errors": errors},
+        "active_tab": "files",
     })
 
 

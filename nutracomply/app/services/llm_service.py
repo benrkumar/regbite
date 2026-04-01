@@ -2,28 +2,35 @@
 LLM Studio — RAG service layer
 ================================
 Two knowledge bases (Regulations + Products), each backed by Gemini via
-Retrieval-Augmented Generation.  Retrieval uses PostgreSQL LIKE-based
-full-text scoring with stopword filtering and title boosting — no pgvector required.
+Retrieval-Augmented Generation with Claude (Anthropic) as automatic fallback.
 
-v2 improvements:
-  - Upgraded models (gemini-2.5-pro for regulations, gemini-2.0-flash for products)
-  - Better retrieval: stopword filtering, title boosting, minimum relevance threshold
-  - Enhanced system prompts with citation and formatting instructions
-  - Higher max_output_tokens for complex regulatory answers
-  - Relevance scores included in context for LLM transparency
+Retrieval uses PostgreSQL LIKE-based full-text scoring with stopword filtering
+and title boosting — no pgvector required.
+
+v3 improvements:
+  - Stable Gemini model names (gemini-2.5-pro, gemini-2.0-flash)
+  - Claude fallback: if Gemini API fails, automatically retries with Anthropic
+  - Better error reporting surfaced to the chat UI
 
 Models used:
-  regulations → gemini-2.5-pro-preview-06-05  (precision for legal/regulatory reasoning)
-  products    → gemini-2.0-flash               (fast for structured product/label data)
+  regulations → gemini-2.5-pro (precision for legal/regulatory reasoning)
+  products    → gemini-2.0-flash (fast for structured product/label data)
+  fallback    → claude-sonnet-4-20250514 (Anthropic) when Gemini unavailable
 """
 from __future__ import annotations
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 # ─── Per-KB Gemini model names ────────────────────────────────────────────────
 
 MODELS: dict[str, str] = {
-    "regulations": "gemini-2.5-pro-preview-06-05",
+    "regulations": "gemini-2.5-pro",
     "products":    "gemini-2.0-flash",
 }
+
+CLAUDE_MODEL = "claude-sonnet-4-20250514"
 
 # ─── Stopwords to filter from search queries ─────────────────────────────────
 
@@ -296,10 +303,11 @@ def seed_products_kb(db) -> dict:
                 rule_code = rule.rule_code if rule else "Unknown"
                 fail_lines.append(f"  - FAIL [{rule_code}]: {fc.message or 'No detail'}")
 
-            score = round((passed / total) * 100) if total else 0
+            from app.services.compliance_engine import calculate_compliance_score as _calc_score
+            score = _calc_score(checks)
             checks_summary = (
                 f"\nLabel Analysis (uploaded {latest_lv.uploaded_at.strftime('%Y-%m-%d')}):\n"
-                f"Compliance Score: {score}% ({passed}/{total} checks passed)\n"
+                f"Compliance Score: {score}% ({passed}/{total} checks passed, severity-weighted)\n"
                 f"Failing Checks:\n"
                 + ("\n".join(fail_lines) if fail_lines else "  None")
                 + f"\nOCR Text Preview: {(latest_lv.ocr_raw_text or '')[:400]}"
@@ -432,45 +440,15 @@ def retrieve_context(kb_type: str, query: str, db, top_k: int = 10) -> list[dict
     return filtered
 
 
-# ─── Gemini call ──────────────────────────────────────────────────────────────
+# ─── Context formatting helper ────────────────────────────────────────────────
 
-def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
+def _build_context(kb_type: str, query: str, db):
     """
-    RAG pipeline: retrieve context → build prompt → call Gemini.
-
-    v2 improvements:
-      - Context includes relevance scores for LLM transparency
-      - Higher max_output_tokens (2048) for complex regulatory answers
-      - Separate system instruction from context (uses Gemini system_instruction param)
-      - Context quality indicator warns LLM when retrieval is weak
-
-    Args:
-        kb_type:  "regulations" or "products"
-        query:    current user message
-        history:  list of {"role":"user"|"model", "content":"..."} dicts
-        db:       SQLAlchemy session
-
-    Returns:
-        {"reply": str, "context_used": [document_title, ...]}
-        On error: {"reply": error_msg, "context_used": [], "error": error_code}
+    Retrieve chunks and format them into context text + quality indicator.
+    Returns (context_chunks, system_prompt, user_message).
     """
-    from app.config import get_settings
-    settings = get_settings()
-
-    if not settings.gemini_api_key:
-        return {
-            "reply": (
-                "Gemini API key is not configured. "
-                "Please set GEMINI_API_KEY in your Railway environment variables."
-            ),
-            "context_used": [],
-            "error": "no_api_key",
-        }
-
-    # Retrieve relevant chunks
     context_chunks = retrieve_context(kb_type, query, db, top_k=10)
 
-    # Format context with relevance scores for LLM transparency
     if context_chunks:
         max_score = max(c["relevance_score"] for c in context_chunks) or 1
         context_parts = []
@@ -483,7 +461,6 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
             )
         context_text = "\n\n---\n\n".join(context_parts)
 
-        # Assess overall context quality
         high_relevance_count = sum(
             1 for c in context_chunks if c["relevance_score"] >= max_score * 0.7
         )
@@ -498,43 +475,157 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
         context_quality = "No context found — tell the user you don't have this information."
 
     system_prompt = SYSTEM_PROMPTS.get(kb_type, SYSTEM_PROMPTS["regulations"])
-    model_name    = MODELS.get(kb_type, "gemini-2.0-flash")
 
-    # Build user message with context (system prompt goes as system_instruction)
     user_message = (
         f"KNOWLEDGE BASE CONTEXT ({context_quality}):\n"
         f"{context_text}\n\n"
         f"USER QUESTION: {query}"
     )
 
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel(
-            model_name,
-            system_instruction=system_prompt,
-        )
+    return context_chunks, system_prompt, user_message
 
-        # Build Gemini history from last 10 turns (roles: "user" / "model")
-        gemini_history = [
-            {"role": msg["role"], "parts": [msg["content"]]}
-            for msg in history[-10:]
-        ]
 
-        chat     = model.start_chat(history=gemini_history)
-        response = chat.send_message(
-            user_message,
-            generation_config={"temperature": 0.2, "max_output_tokens": 2048},
-        )
-        reply = response.text.strip()
+# ─── Gemini call ──────────────────────────────────────────────────────────────
 
-    except Exception as exc:
-        reply = f"Error calling Gemini API ({model_name}): {str(exc)[:300]}"
-        return {"reply": reply, "context_used": [], "error": "api_error"}
+def _call_gemini(model_name: str, system_prompt: str, user_message: str,
+                 history: list, api_key: str) -> str:
+    """Call Gemini and return the reply text. Raises on failure."""
+    import google.generativeai as genai
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(
+        model_name,
+        system_instruction=system_prompt,
+    )
 
+    # Build Gemini history from last 10 turns (roles: "user" / "model")
+    gemini_history = [
+        {"role": msg["role"], "parts": [msg["content"]]}
+        for msg in history[-10:]
+    ]
+
+    chat = model.start_chat(history=gemini_history)
+    response = chat.send_message(
+        user_message,
+        generation_config={"temperature": 0.2, "max_output_tokens": 2048},
+    )
+    return response.text.strip()
+
+
+# ─── Claude (Anthropic) fallback ─────────────────────────────────────────────
+
+def _call_claude(system_prompt: str, user_message: str,
+                 history: list, api_key: str) -> str:
+    """Call Claude as fallback and return the reply text. Raises on failure."""
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    # Convert history to Claude message format (role: "user" / "assistant")
+    claude_messages = []
+    for msg in history[-10:]:
+        role = "assistant" if msg["role"] == "model" else "user"
+        claude_messages.append({"role": role, "content": msg["content"]})
+
+    # Add the current user message with context
+    claude_messages.append({"role": "user", "content": user_message})
+
+    response = client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=2048,
+        system=system_prompt,
+        messages=claude_messages,
+        temperature=0.2,
+    )
+    return response.content[0].text.strip()
+
+
+# ─── Main ask_llm entry point ────────────────────────────────────────────────
+
+def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
+    """
+    RAG pipeline: retrieve context -> build prompt -> call Gemini -> fallback to Claude.
+
+    Tries Gemini first. If Gemini fails (bad API key, expired model, quota, etc.),
+    automatically retries with Claude (Anthropic) if anthropic_api_key is configured.
+
+    Args:
+        kb_type:  "regulations" or "products"
+        query:    current user message
+        history:  list of {"role":"user"|"model", "content":"..."} dicts
+        db:       SQLAlchemy session
+
+    Returns:
+        {"reply": str, "context_used": [document_title, ...], "provider": "gemini"|"claude"}
+        On error: {"reply": error_msg, "context_used": [], "error": error_code}
+    """
+    from app.config import get_settings
+    settings = get_settings()
+
+    has_gemini = bool(settings.gemini_api_key)
+    has_claude = bool(settings.anthropic_api_key)
+
+    if not has_gemini and not has_claude:
+        return {
+            "reply": (
+                "No LLM API key is configured. "
+                "Please set GEMINI_API_KEY or ANTHROPIC_API_KEY in your environment variables."
+            ),
+            "context_used": [],
+            "error": "no_api_key",
+        }
+
+    # Build RAG context
+    context_chunks, system_prompt, user_message = _build_context(kb_type, query, db)
+    context_titles = [c["document_title"] for c in context_chunks]
+    model_name = MODELS.get(kb_type, "gemini-2.0-flash")
+
+    # ── Try Gemini first ──────────────────────────────────────────────────────
+    gemini_error = None
+    if has_gemini:
+        try:
+            reply = _call_gemini(model_name, system_prompt, user_message,
+                                 history, settings.gemini_api_key)
+            return {
+                "reply":        reply,
+                "context_used": context_titles,
+                "provider":     "gemini",
+            }
+        except Exception as exc:
+            gemini_error = str(exc)
+            logger.warning("Gemini API failed for %s chat: %s", kb_type, gemini_error[:200])
+
+    # ── Fallback to Claude ────────────────────────────────────────────────────
+    if has_claude:
+        try:
+            reply = _call_claude(system_prompt, user_message,
+                                 history, settings.anthropic_api_key)
+            fallback_note = ""
+            if gemini_error:
+                fallback_note = f"\n\n---\n*[Answered by Claude — Gemini was unavailable]*"
+            return {
+                "reply":        reply + fallback_note,
+                "context_used": context_titles,
+                "provider":     "claude",
+            }
+        except Exception as exc:
+            claude_error = str(exc)
+            logger.error("Claude API also failed for %s chat: %s", kb_type, claude_error[:200])
+            # Both providers failed
+            return {
+                "reply": (
+                    f"Both LLM providers failed.\n\n"
+                    f"Gemini ({model_name}): {gemini_error[:200]}\n\n"
+                    f"Claude ({CLAUDE_MODEL}): {claude_error[:200]}"
+                ),
+                "context_used": [],
+                "error": "all_providers_failed",
+            }
+
+    # Gemini failed and no Claude key configured
     return {
-        "reply":        reply,
-        "context_used": [c["document_title"] for c in context_chunks],
+        "reply": f"Gemini API error ({model_name}): {gemini_error[:300]}",
+        "context_used": [],
+        "error": "api_error",
     }
 
 

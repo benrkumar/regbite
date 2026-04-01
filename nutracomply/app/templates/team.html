@@ -31,7 +31,7 @@
 }
 .team-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .team-table th {
-  background: #f8fafc;
+  background: #F8F8F8;
   padding: 0.65rem 1rem;
   text-align: left;
   font-size: 0.72rem;
@@ -43,7 +43,7 @@
 }
 .team-table td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #F5F5F5;
   vertical-align: middle;
 }
 .team-table tr:last-child td { border-bottom: none; }
@@ -70,8 +70,8 @@
   border-radius: 5px;
   font-size: 0.72rem;
   font-weight: 700;
-  background: #ede9fe;
-  color: #5b21b6;
+  background: #D4EDEC;
+  color: #5A9A98;
   white-space: nowrap;
 }
 
@@ -108,7 +108,7 @@
 
 .invite-link-box {
   background: var(--info-bg);
-  border: 1px solid #93c5fd;
+  border: 1px solid #CADCEE;
   border-radius: var(--r-md);
   padding: 1rem 1.2rem;
   margin-bottom: 1.5rem;
@@ -125,7 +125,7 @@
   font-size: 0.8rem;
   color: var(--info-fg);
   word-break: break-all;
-  background: rgba(59,130,246,0.08);
+  background: rgba(100,156,196,0.08);
   padding: 0.3rem 0.5rem;
   border-radius: 5px;
   display: block;
@@ -261,7 +261,7 @@
           <form method="post" action="/team/members/{{ member.id }}/remove"
                 onsubmit="return confirm('Remove {{ member.name }} from your team?')">
             <button type="submit" class="btn btn-outline btn-sm"
-                    style="color:#dc2626;border-color:#fca5a5;">Remove</button>
+                    style="color:#8B3A3A;border-color:#E8BFBF;">Remove</button>
           </form>
         </td>
       </tr>
@@ -307,7 +307,7 @@
           <form method="post" action="/team/invites/{{ inv.id }}/revoke"
                 onsubmit="return confirm('Revoke this invite for {{ inv.email }}?')">
             <button type="submit" class="btn btn-outline btn-sm"
-                    style="color:#dc2626;border-color:#fca5a5;">Revoke</button>
+                    style="color:#8B3A3A;border-color:#E8BFBF;">Revoke</button>
           </form>
         </td>
       </tr>

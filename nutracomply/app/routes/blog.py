@@ -1,11 +1,12 @@
 """
 Blog routes — public blog listing + post detail, and admin blog management.
 """
+import uuid
 from datetime import datetime
 from urllib.parse import quote
 
-from fastapi import APIRouter, Request, Depends, Form
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Request, Depends, Form, UploadFile, File
+from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from pathlib import Path
@@ -496,3 +497,129 @@ async def admin_blog_category_delete(cat_id: int, request: Request, db: Session 
         url="/admin/blog/categories?msg=Category+deleted&type=success",
         status_code=302,
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BLOG IMAGE UPLOAD
+# ═══════════════════════════════════════════════════════════════════════════════
+
+BLOG_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+BLOG_IMAGE_MAX_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
+@router.post("/admin/blog/upload-image")
+async def admin_blog_upload_image(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """Upload an image for blog posts. Returns JSON with the image URL."""
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in BLOG_IMAGE_EXTENSIONS:
+        return JSONResponse(
+            {"error": f"Unsupported format. Allowed: {', '.join(BLOG_IMAGE_EXTENSIONS)}"},
+            status_code=400,
+        )
+
+    content = await file.read()
+    if len(content) > BLOG_IMAGE_MAX_SIZE:
+        return JSONResponse({"error": "Image too large. Max 5 MB."}, status_code=400)
+
+    # Save to static/blog-images/
+    upload_dir = Path(__file__).parent.parent / "static" / "blog-images"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    file_name = f"{uuid.uuid4().hex}{suffix}"
+    file_path = upload_dir / file_name
+
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    return JSONResponse({"url": f"/static/blog-images/{file_name}"})
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AI-GENERATED SEO
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.post("/admin/blog/generate-seo")
+async def admin_blog_generate_seo(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Generate SEO meta title, description, and excerpt using AI."""
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    body = await request.json()
+    title = body.get("title", "")
+    content_text = body.get("content", "")
+
+    if not title.strip():
+        return JSONResponse({"error": "Title is required"}, status_code=400)
+
+    # Strip HTML tags for content
+    import re
+    clean_content = re.sub(r'<[^>]+>', '', content_text)[:3000]
+
+    prompt = f"""Generate SEO metadata for a blog post on an FSSAI compliance platform (RegBite).
+
+Blog title: {title}
+Blog content (excerpt): {clean_content[:1500]}
+
+Return a JSON object with:
+- "meta_title": SEO-optimized title (50-60 chars, include primary keyword)
+- "meta_description": SEO meta description (150-160 chars, compelling, include keywords)
+- "excerpt": Blog excerpt for listing pages (100-200 chars, engaging summary)
+- "tags": Comma-separated relevant tags (3-6 tags, lowercase)
+
+Focus on FSSAI compliance, Indian food regulation, nutraceutical industry keywords.
+Return ONLY valid JSON, no markdown."""
+
+    from app.config import get_settings
+    settings = get_settings()
+
+    result = None
+
+    # Try Claude first
+    if settings.anthropic_api_key:
+        try:
+            import anthropic
+            client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+            response = client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=1024,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = response.content[0].text.strip()
+            raw = re.sub(r"^```(?:json)?\s*", "", raw)
+            raw = re.sub(r"\s*```$", "", raw)
+            import json
+            result = json.loads(raw)
+        except Exception as e:
+            print(f"[blog-seo] Claude failed: {e}")
+
+    # Fallback: Gemini
+    if not result and settings.gemini_api_key:
+        try:
+            import google.generativeai as genai
+            import json
+            genai.configure(api_key=settings.gemini_api_key)
+            model = genai.GenerativeModel("gemini-2.0-flash")
+            response = model.generate_content(prompt)
+            raw = response.text.strip()
+            raw = re.sub(r"^```(?:json)?\s*", "", raw)
+            raw = re.sub(r"\s*```$", "", raw)
+            result = json.loads(raw)
+        except Exception as e:
+            print(f"[blog-seo] Gemini failed: {e}")
+
+    if not result:
+        return JSONResponse({"error": "AI generation failed. Check API keys."}, status_code=500)
+
+    return JSONResponse(result)

@@ -16,7 +16,7 @@ from app.models import (
     User, Product, LabelVersion, ComplianceCheck, ComplianceRule,
     Alert, AlertStatus, AlertType, RegulationChange, Severity, CheckResult,
     PublishedAlert, PublishedAlertSeverity, PublishedAlertStatus,
-    ComplianceReport, PlanType,
+    ComplianceReport, PlanType, UserRole,
 )
 
 router = APIRouter(prefix="/admin")
@@ -170,6 +170,86 @@ async def toggle_user_admin(user_id: int, request: Request, db: Session = Depend
             status_code=302
         )
     return RedirectResponse(url="/admin/users?msg=Action+not+allowed&type=error", status_code=302)
+
+
+@router.post("/users/create")
+async def admin_create_user(
+    request: Request,
+    name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    role: str = Form("viewer"),
+    db: Session = Depends(get_db),
+):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    # Check if email already taken
+    existing = db.query(User).filter(User.email == email).first()
+    if existing:
+        return RedirectResponse(
+            url=f"/admin/users?msg=Email+already+registered&type=error",
+            status_code=302,
+        )
+
+    from app.routes.auth import hash_password
+
+    try:
+        new_role = UserRole(role)
+    except ValueError:
+        new_role = UserRole.VIEWER
+
+    new_user = User(
+        name=name.strip(),
+        email=email.strip().lower(),
+        hashed_password=hash_password(password),
+        role=new_role,
+        is_admin=new_role in (UserRole.SUPER_ADMIN,),
+        is_active=True,
+        onboarding_complete=True,
+    )
+    db.add(new_user)
+    db.commit()
+
+    role_label = new_role.value.replace("_", " ").title()
+    return RedirectResponse(
+        url=f"/admin/users?msg=User+{name.strip()}+created+as+{role_label}&type=success",
+        status_code=302,
+    )
+
+
+@router.post("/users/{user_id}/change-role")
+async def change_user_role(
+    user_id: int,
+    request: Request,
+    role: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target or target.id == user.id:
+        return RedirectResponse(url="/admin/users?msg=Action+not+allowed&type=error", status_code=302)
+
+    try:
+        new_role = UserRole(role)
+    except ValueError:
+        return RedirectResponse(url="/admin/users?msg=Invalid+role&type=error", status_code=302)
+
+    target.role = new_role
+    # Super admin role automatically gets admin flag
+    if new_role == UserRole.SUPER_ADMIN:
+        target.is_admin = True
+    db.commit()
+
+    role_label = new_role.value.replace("_", " ").title()
+    return RedirectResponse(
+        url=f"/admin/users?msg=Role+changed+to+{role_label}&type=success",
+        status_code=302,
+    )
 
 
 # ── Compliance Rules ──────────────────────────────────────────────────────────

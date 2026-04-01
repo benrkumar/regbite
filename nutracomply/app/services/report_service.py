@@ -58,9 +58,8 @@ def get_or_create_report(
         .all()
     )
 
-    total = len(checks)
-    passed = sum(1 for c in checks if c.result == CheckResult.PASS)
-    score = round((passed / total) * 100) if total else 0
+    from app.services.compliance_engine import calculate_compliance_score
+    score = calculate_compliance_score(checks)
 
     if score >= 90:
         verdict = "COMPLIANT"
