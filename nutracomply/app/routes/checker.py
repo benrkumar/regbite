@@ -175,6 +175,13 @@ async def run_check(
     db.commit()
     db.refresh(label)
 
+    # Feed into LLM knowledge base
+    try:
+        from app.routes.products import _feed_product_to_llm
+        _feed_product_to_llm(product.id, db)
+    except Exception as e:
+        print(f"[checker] LLM feed error: {e}")
+
     try:
         from app.services.activity_service import log_action
         log_action(user.id, "compliance_checked", "product", product.id, detail=f"Checker run for {product_name}")
