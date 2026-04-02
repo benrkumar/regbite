@@ -252,6 +252,47 @@ async def change_user_role(
     )
 
 
+# ── Products (all accounts) ──────────────────────────────────────────────────
+
+@router.get("/products")
+async def admin_products(request: Request, db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    # Get all users who have products, with their products
+    from sqlalchemy.orm import joinedload
+
+    users_with_products = (
+        db.query(User)
+        .filter(User.is_active == True)
+        .order_by(User.name)
+        .all()
+    )
+
+    accounts = []
+    for u in users_with_products:
+        products = (
+            db.query(Product)
+            .filter(Product.user_id == u.id, Product.is_active == True)
+            .order_by(Product.created_at.desc())
+            .all()
+        )
+        if products:
+            accounts.append({"user": u, "products": products})
+
+    total_products = sum(len(a["products"]) for a in accounts)
+    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+
+    return templates.TemplateResponse("admin/products.html", {
+        "request": request,
+        "user": user,
+        "accounts": accounts,
+        "total_products": total_products,
+        "unread_alerts": unread_alerts,
+    })
+
+
 # ── Compliance Rules ──────────────────────────────────────────────────────────
 
 @router.get("/rules")
