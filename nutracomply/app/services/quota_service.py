@@ -20,7 +20,12 @@ def check_product_limit(user, db) -> tuple:
     """
     Returns (allowed: bool, message: str).
     Checks if user can create another product under their plan.
+    Admin users always bypass limits.
     """
+    # Admin users have unlimited access
+    if getattr(user, 'is_admin', False):
+        return True, ""
+
     plan_key = get_user_plan(user)
     limits = PLANS.get(plan_key, PLANS["free"])
     max_products = limits.get("product_limit")
@@ -48,7 +53,12 @@ def check_scan_limit(user, db) -> tuple:
     Returns (allowed: bool, message: str).
     Checks monthly label scan usage against plan limit.
     Monthly scans = LabelVersion rows created this calendar month by this user.
+    Admin users always bypass limits.
     """
+    # Admin users have unlimited access
+    if getattr(user, 'is_admin', False):
+        return True, ""
+
     plan_key = get_user_plan(user)
     limits = PLANS.get(plan_key, PLANS["free"])
     max_scans = limits.get("scan_limit_monthly")

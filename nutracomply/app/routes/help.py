@@ -22,7 +22,7 @@ SECTIONS = [
     {"slug": "products", "label": "Products", "icon": "□",
      "desc": "Create products and upload label images"},
     {"slug": "compliance", "label": "Compliance Engine", "icon": "◇",
-     "desc": "83 rules across 5 regulatory frameworks"},
+     "desc": "Comprehensive checks across 5 regulatory frameworks"},
     {"slug": "reports", "label": "Reports", "icon": "▤",
      "desc": "Generate, download, and share compliance reports"},
     {"slug": "regulations", "label": "Regulations", "icon": "≡",
