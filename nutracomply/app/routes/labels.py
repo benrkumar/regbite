@@ -1,3 +1,4 @@
+import io
 import os
 import uuid
 from pathlib import Path
@@ -11,7 +12,7 @@ from app.database import get_db
 from app.models import Product, LabelVersion, ComplianceCheck, Alert, AlertType, AlertStatus, CheckResult, Severity, ComplianceReport
 from app.routes.auth import get_current_user_from_cookie
 from app.services.ocr_service import extract_text_from_file
-from app.services.extraction_service import extract_label_data, extract_label_data_from_image
+from app.services.extraction_service import extract_label_data, extract_label_data_from_image, _cross_check_with_ocr
 from app.services.compliance_engine import run_compliance_check, calculate_compliance_score, calculate_critical_score, get_violation_summary
 from app.config import get_settings
 
@@ -207,6 +208,10 @@ def _process_label(label_version_id: int):
             if not extraction or confidence < 0.5:
                 extraction, confidence = extract_label_data(raw_text)
 
+            # Cross-check vision extraction against raw OCR text
+            if extraction and raw_text:
+                extraction = _cross_check_with_ocr(extraction, raw_text)
+
             label_version.extraction_json = extraction
             label_version.extraction_confidence = confidence
             db.commit()
@@ -347,6 +352,44 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
         "CheckResult": CheckResult,
         "existing_report": existing_report,
     })
+
+
+@router.get("/labels/{label_id}/preview-page/{page_num}")
+async def label_preview_page(label_id: int, page_num: int = 0, request: Request = None, db: Session = Depends(get_db)):
+    """Serve a PDF page as a PNG image for preview."""
+    from fastapi.responses import StreamingResponse
+    import fitz  # PyMuPDF
+
+    user = require_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+
+    label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
+    if not label or label.product.user_id != user.id:
+        return JSONResponse({"detail": "Label not found"}, status_code=404)
+
+    file_path = label.file_path
+    if not file_path or not Path(file_path).exists():
+        return JSONResponse({"detail": "File not found"}, status_code=404)
+
+    try:
+        doc = fitz.open(file_path)
+        if page_num < 0 or page_num >= len(doc):
+            doc.close()
+            return JSONResponse({"detail": "Page not found"}, status_code=404)
+
+        page = doc[page_num]
+        pix = page.get_pixmap(dpi=200)
+        img_bytes = pix.tobytes("png")
+        doc.close()
+
+        return StreamingResponse(
+            io.BytesIO(img_bytes),
+            media_type="image/png",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+    except Exception as e:
+        return JSONResponse({"detail": f"Error rendering PDF: {e}"}, status_code=500)
 
 
 @router.post("/labels/{label_id}/update-fields")

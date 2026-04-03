@@ -442,6 +442,7 @@ def extract_label_data(ocr_text: str) -> tuple[dict, float]:
             result = _call_claude_text(ocr_text)
             if result:
                 result = _normalize_extraction(result)
+                result = _cross_check_with_ocr(result, ocr_text)
                 confidence = _calculate_confidence(result, "text")
                 warnings = _validate_extraction(result)
                 if warnings:
@@ -458,6 +459,7 @@ def extract_label_data(ocr_text: str) -> tuple[dict, float]:
             result = _call_gemini_text(ocr_text)
             if result:
                 result = _normalize_extraction(result)
+                result = _cross_check_with_ocr(result, ocr_text)
                 confidence = _calculate_confidence(result, "text")
                 warnings = _validate_extraction(result)
                 if warnings:
@@ -471,6 +473,129 @@ def extract_label_data(ocr_text: str) -> tuple[dict, float]:
     fallback = _rule_based_extraction(ocr_text)
     confidence = _calculate_confidence(fallback, "fallback")
     return fallback, confidence
+
+
+def _cross_check_with_ocr(extraction: dict, ocr_text: str) -> dict:
+    """
+    Post-extraction OCR cross-check. Compares AI extraction against raw OCR text
+    and fixes fields where the OCR clearly contains information the AI missed.
+    This catches cases where the LLM returns false/null for fields that ARE present.
+    """
+    if not ocr_text or not extraction:
+        return extraction
+
+    text = ocr_text
+    text_lower = text.lower()
+
+    # Boolean field fixes — only upgrade from False to True, never downgrade
+    if not extraction.get("not_for_medicinal_use"):
+        if "not for medicinal use" in text_lower:
+            extraction["not_for_medicinal_use"] = True
+            print("[ocr-crosscheck] Fixed not_for_medicinal_use → True")
+
+    if not extraction.get("consult_doctor_advisory"):
+        if "consult" in text_lower and any(
+            w in text_lower for w in ("doctor", "dietitian", "physician", "healthcare")
+        ):
+            extraction["consult_doctor_advisory"] = True
+            print("[ocr-crosscheck] Fixed consult_doctor_advisory → True")
+
+    if not extraction.get("keep_out_of_reach_children"):
+        if "out of reach" in text_lower and "children" in text_lower:
+            extraction["keep_out_of_reach_children"] = True
+            print("[ocr-crosscheck] Fixed keep_out_of_reach_children → True")
+
+    if not extraction.get("not_exceed_daily_usage_advisory"):
+        has_exceed = "not to exceed" in text_lower or "not exceed" in text_lower
+        has_daily = "daily" in text_lower or "recommended" in text_lower
+        if has_exceed and has_daily:
+            extraction["not_exceed_daily_usage_advisory"] = True
+            print("[ocr-crosscheck] Fixed not_exceed_daily_usage_advisory → True")
+
+    # Veg/non-veg mark
+    if not extraction.get("veg_nonveg_mark"):
+        if re.search(r'\bvegetarian\b', text_lower) or re.search(r'\bveg\b', text_lower):
+            extraction["veg_nonveg_mark"] = "VEG"
+            print("[ocr-crosscheck] Fixed veg_nonveg_mark → VEG")
+
+    # FSSAI license number (14-digit number)
+    if not extraction.get("fssai_license_number"):
+        fssai_match = re.search(r'\b(\d{14})\b', text)
+        if fssai_match:
+            extraction["fssai_license_number"] = fssai_match.group(1)
+            print(f"[ocr-crosscheck] Fixed fssai_license_number → {fssai_match.group(1)}")
+
+    # Manufacturer details
+    if not extraction.get("manufacturer_details"):
+        mfg_match = re.search(r'(?:manufactured\s+by|marketed\s+by)', text_lower)
+        if mfg_match:
+            start = mfg_match.start()
+            snippet = text[start:start + 200].strip()
+            extraction["manufacturer_details"] = snippet
+            print(f"[ocr-crosscheck] Fixed manufacturer_details from OCR")
+
+    # Net quantity
+    if not extraction.get("net_quantity"):
+        qty_match = re.search(
+            r'(?:net\s+(?:wt\.?|weight|qty\.?|quantity)[:\s]*)([\d.,]+\s*(?:g|mg|kg|ml|l|tablets?|capsules?|softgels?))',
+            text, re.IGNORECASE
+        )
+        if qty_match:
+            extraction["net_quantity"] = qty_match.group(0).strip()
+            print(f"[ocr-crosscheck] Fixed net_quantity → {extraction['net_quantity']}")
+
+    # Serving size
+    if not extraction.get("serving_size"):
+        srv_match = re.search(r'serving\s+size[:\s]*([^\n]{5,80})', text, re.IGNORECASE)
+        if srv_match:
+            extraction["serving_size"] = srv_match.group(1).strip()
+            print(f"[ocr-crosscheck] Fixed serving_size from OCR")
+
+    # Storage conditions
+    if not extraction.get("storage_conditions"):
+        store_match = re.search(r'store[:\s]', text_lower)
+        if store_match and any(w in text_lower for w in ("cool", "dry", "sunlight")):
+            # Extract the sentence containing "store"
+            start = max(0, store_match.start() - 10)
+            # Find the end of the sentence
+            end = store_match.end()
+            for i in range(end, min(len(text), end + 200)):
+                if text[i] in '.!\n':
+                    end = i + 1
+                    break
+            else:
+                end = min(len(text), store_match.start() + 200)
+            extraction["storage_conditions"] = text[start:end].strip()
+            print(f"[ocr-crosscheck] Fixed storage_conditions from OCR")
+
+    # Allergen declarations
+    allergens = extraction.get("allergen_declarations", [])
+    if not allergens or allergens == []:
+        if "allergen" in text_lower:
+            allerg_match = re.search(r'allergen[s]?[:\s]*([^\n]{5,200})', text, re.IGNORECASE)
+            if allerg_match:
+                extraction["allergen_declarations"] = [allerg_match.group(1).strip()]
+                print(f"[ocr-crosscheck] Fixed allergen_declarations from OCR")
+
+    # MRP
+    if not extraction.get("mrp"):
+        mrp_match = re.search(r'(?:MRP|M\.R\.P\.?)[:\s]*[₹Rs\.]*\s*([0-9,]+(?:\.\d{1,2})?)', text, re.IGNORECASE)
+        if mrp_match:
+            extraction["mrp"] = mrp_match.group(0).strip()
+            print(f"[ocr-crosscheck] Fixed mrp → {extraction['mrp']}")
+
+    # Customer care details (email or phone)
+    if not extraction.get("customer_care_details"):
+        email_match = re.search(r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}', text)
+        phone_match = re.search(r'(?:\+91[\s\-]?)?(?:\d[\s\-]?){10,12}', text)
+        if email_match:
+            extraction["customer_care_details"] = email_match.group(0)
+            print(f"[ocr-crosscheck] Fixed customer_care_details (email) from OCR")
+        elif phone_match:
+            extraction["customer_care_details"] = phone_match.group(0).strip()
+            print(f"[ocr-crosscheck] Fixed customer_care_details (phone) from OCR")
+
+    return extraction
 
 
 def _normalize_extraction(data: dict) -> dict:
