@@ -4,10 +4,11 @@ and extracts a structured JSON representation of the label.
 
 Supports FSSAI, Legal Metrology, and AYUSH regulation fields.
 
-v3 improvements:
-  - Primary: Anthropic Claude (claude-sonnet-4-20250514) for vision + text extraction
+v4 improvements:
+  - Primary: Anthropic Claude (Sonnet) via direct HTTP — no SDK dependency
   - Fallback: Google Gemini if Claude unavailable
   - Dynamic confidence scoring based on field completeness
+  - Post-extraction OCR cross-check for accuracy
   - Post-extraction validation with missing-field warnings
 """
 
@@ -222,19 +223,49 @@ def _pdf_to_images(pdf_path: str, dpi: int = 300) -> list[tuple[bytes, str]]:
     return images
 
 
-# ─── Claude (Anthropic) extraction ──────────────────────────────────────────
+# ─── Claude (Anthropic) via direct HTTP ───────────────────────────────────
+
+CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
+CLAUDE_MODEL = "claude-sonnet-4-20250514"
+CLAUDE_VERSION = "2023-06-01"
+
+
+def _claude_request(messages: list, max_tokens: int = 8192) -> Optional[str]:
+    """Make a direct HTTP call to the Anthropic Messages API."""
+    import httpx
+
+    headers = {
+        "x-api-key": settings.anthropic_api_key,
+        "anthropic-version": CLAUDE_VERSION,
+        "content-type": "application/json",
+    }
+    payload = {
+        "model": CLAUDE_MODEL,
+        "max_tokens": max_tokens,
+        "messages": messages,
+    }
+
+    resp = httpx.post(CLAUDE_API_URL, headers=headers, json=payload, timeout=120.0)
+    resp.raise_for_status()
+    data = resp.json()
+    return data["content"][0]["text"].strip()
+
+
+def _parse_json_response(raw: str) -> dict:
+    """Strip markdown fences and parse JSON from LLM response."""
+    raw = re.sub(r"^```(?:json)?\s*", "", raw)
+    raw = re.sub(r"\s*```$", "", raw)
+    return json.loads(raw)
+
 
 def _call_claude_vision(image_path: str) -> Optional[dict]:
-    """Use Claude's vision API to extract label data from an image or PDF."""
-    import anthropic
-
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    """Use Claude Vision via direct HTTP to extract label data from an image or PDF."""
     img_path = Path(image_path)
     suffix = img_path.suffix.lower()
 
     # For PDFs, convert to images and send all pages
     if suffix == ".pdf":
-        return _call_claude_vision_multi(image_path, client)
+        return _call_claude_vision_multi(image_path)
 
     # Single image
     image_data = img_path.read_bytes()
@@ -247,35 +278,26 @@ def _call_claude_vision(image_path: str) -> Optional[dict]:
     }
     media_type = media_types.get(suffix, "image/jpeg")
 
-    response = client.messages.create(
-        model="claude-opus-4-6",
-        max_tokens=8192,
-        messages=[{
-            "role": "user",
-            "content": [
-                {
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": media_type,
-                        "data": b64_image,
-                    },
+    messages = [{
+        "role": "user",
+        "content": [
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": media_type,
+                    "data": b64_image,
                 },
-                {
-                    "type": "text",
-                    "text": VISION_PROMPT,
-                },
-            ],
-        }],
-    )
+            },
+            {"type": "text", "text": VISION_PROMPT},
+        ],
+    }]
 
-    raw = response.content[0].text.strip()
-    raw = re.sub(r"^```(?:json)?\s*", "", raw)
-    raw = re.sub(r"\s*```$", "", raw)
-    return json.loads(raw)
+    raw = _claude_request(messages)
+    return _parse_json_response(raw)
 
 
-def _call_claude_vision_multi(pdf_path: str, client) -> Optional[dict]:
+def _call_claude_vision_multi(pdf_path: str) -> Optional[dict]:
     """Send all PDF pages as images to Claude for combined extraction."""
     pages = _pdf_to_images(pdf_path)
     if not pages:
@@ -292,39 +314,18 @@ def _call_claude_vision_multi(pdf_path: str, client) -> Optional[dict]:
     prompt = MULTI_PAGE_VISION_PROMPT if len(pages) > 1 else VISION_PROMPT
     content_blocks.append({"type": "text", "text": prompt})
 
-    response = client.messages.create(
-        model="claude-opus-4-6",
-        max_tokens=8192,
-        messages=[{"role": "user", "content": content_blocks}],
-    )
-
-    raw = response.content[0].text.strip()
-    raw = re.sub(r"^```(?:json)?\s*", "", raw)
-    raw = re.sub(r"\s*```$", "", raw)
-    return json.loads(raw)
+    messages = [{"role": "user", "content": content_blocks}]
+    raw = _claude_request(messages)
+    return _parse_json_response(raw)
 
 
 def _call_claude_text(ocr_text: str) -> Optional[dict]:
-    """Use Claude text API to extract label data from OCR text."""
-    import anthropic
-
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-
+    """Use Claude text via direct HTTP to extract label data from OCR text."""
     prompt = TEXT_PROMPT.format(label_text=ocr_text[:16000])
 
-    response = client.messages.create(
-        model="claude-opus-4-6",
-        max_tokens=8192,
-        messages=[{
-            "role": "user",
-            "content": prompt,
-        }],
-    )
-
-    raw = response.content[0].text.strip()
-    raw = re.sub(r"^```(?:json)?\s*", "", raw)
-    raw = re.sub(r"\s*```$", "", raw)
-    return json.loads(raw)
+    messages = [{"role": "user", "content": prompt}]
+    raw = _claude_request(messages)
+    return _parse_json_response(raw)
 
 
 # ─── Gemini fallback ────────────────────────────────────────────────────────
