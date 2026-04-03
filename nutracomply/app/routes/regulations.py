@@ -25,7 +25,7 @@ async def regulations_feed(
 ):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     changes = (
         db.query(RegulationChange)

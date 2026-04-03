@@ -20,7 +20,7 @@ def require_user(request: Request, db: Session):
 async def alerts_list(request: Request, db: Session = Depends(get_db)):
     user = require_user(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     alerts = (
         db.query(Alert)
@@ -51,7 +51,7 @@ async def update_alert_status(
 ):
     user = require_user(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
     if alert:
@@ -71,7 +71,7 @@ async def update_alert_status(
 async def mark_all_read(request: Request, db: Session = Depends(get_db)):
     user = require_user(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).update(
         {"status": AlertStatus.ACKNOWLEDGED}

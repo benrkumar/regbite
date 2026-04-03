@@ -33,7 +33,7 @@ def require_user(request: Request, db: Session):
 async def upload_page(product_id: int, request: Request, db: Session = Depends(get_db)):
     user = require_user(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     product = db.query(Product).filter(
         Product.id == product_id, Product.user_id == user.id
@@ -58,7 +58,7 @@ async def upload_label(
 ):
     user = require_user(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     try:
         from app.services.rate_limiter import limiter
@@ -286,7 +286,7 @@ async def reanalyze_label(
     """
     user = require_user(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
     if not label or label.product.user_id != user.id:
@@ -308,7 +308,7 @@ async def reanalyze_label(
 async def label_report(label_id: int, request: Request, processing: int = 0, db: Session = Depends(get_db)):
     user = require_user(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
     if not label or label.product.user_id != user.id:

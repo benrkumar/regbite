@@ -21,7 +21,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 async def billing_page(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     subscription = db.query(Subscription).filter(Subscription.user_id == user.id).first()
     payment_history = (
@@ -176,7 +176,7 @@ async def verify_payment(request: Request, db: Session = Depends(get_db)):
 async def cancel_subscription(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     sub = db.query(Subscription).filter(Subscription.user_id == user.id).first()
     if sub and sub.status == SubscriptionStatus.ACTIVE:

@@ -86,7 +86,7 @@ async def help_hub(request: Request, db: Session = Depends(get_db)):
     """Documentation index — cards linking to each section."""
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     role = user.role.value if user.role else "account_admin"
     sections = _get_user_sections(role)
@@ -105,7 +105,7 @@ async def help_faq(request: Request, db: Session = Depends(get_db)):
     """FAQ page with role-filtered accordion categories."""
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     role = user.role.value if user.role else "account_admin"
     sections = _get_user_sections(role)
@@ -127,7 +127,7 @@ async def help_section(section: str, request: Request, db: Session = Depends(get
     """Render a specific documentation section if the user's role allows it."""
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     role = user.role.value if user.role else "account_admin"
     allowed = ROLE_SECTIONS.get(role, ROLE_SECTIONS["account_admin"])

@@ -12,7 +12,7 @@ router = APIRouter()
 async def notifications_page(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     notifications = (
         db.query(Notification)

@@ -20,7 +20,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 async def renewals_list(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     licenses = (
         db.query(LicenseRenewal)
@@ -68,7 +68,7 @@ async def add_renewal(
 ):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     try:
         perpetual = is_perpetual.lower() in ("true", "1", "on", "yes") if is_perpetual else False
@@ -101,7 +101,7 @@ async def add_renewal(
 async def delete_renewal(license_id: int, request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     license = db.query(LicenseRenewal).filter(
         LicenseRenewal.id == license_id,
@@ -123,7 +123,7 @@ async def renew_license(
 ):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     license = db.query(LicenseRenewal).filter(
         LicenseRenewal.id == license_id,

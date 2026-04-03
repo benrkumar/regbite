@@ -33,7 +33,7 @@ def require_user(request: Request, db: Session):
 async def products_list(request: Request, db: Session = Depends(get_db)):
     user = require_user(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     products = (
         db.query(Product)
@@ -68,7 +68,7 @@ async def add_product(
 ):
     user = require_user(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     # Quota check
     try:
@@ -425,7 +425,7 @@ async def _handle_spreadsheet_upload(request: Request, user, file: UploadFile, s
 async def bulk_upload_page(request: Request, db: Session = Depends(get_db)):
     user = require_user(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     from app.models import Alert, AlertStatus
     unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
@@ -446,7 +446,7 @@ async def bulk_upload_post(
 ):
     user = require_user(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     lines = [l.strip() for l in csv_data.strip().splitlines() if l.strip()]
     added, skipped, errors = [], [], []
@@ -509,7 +509,7 @@ async def bulk_upload_files(
     """Bulk upload label images/PDFs — creates one product per file and triggers processing."""
     user = require_user(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     added, skipped, errors = [], [], []
 
@@ -567,7 +567,7 @@ async def bulk_upload_files(
 async def product_detail(product_id: int, request: Request, db: Session = Depends(get_db)):
     user = require_user(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     product = db.query(Product).filter(
         Product.id == product_id, Product.user_id == user.id
@@ -592,7 +592,7 @@ async def product_detail(product_id: int, request: Request, db: Session = Depend
 async def delete_product(product_id: int, request: Request, db: Session = Depends(get_db)):
     user = require_user(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     product = db.query(Product).filter(
         Product.id == product_id, Product.user_id == user.id

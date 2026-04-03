@@ -24,7 +24,7 @@ EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
 async def settings_page(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
 
@@ -42,7 +42,7 @@ async def save_notification_emails(request: Request, db: Session = Depends(get_d
     """Save up to 5 notification email addresses for the user."""
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     form = await request.form()
     emails = []
@@ -82,7 +82,7 @@ async def save_profile(
     """Update the user's display name."""
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     name = name.strip()
     if len(name) < 2:
@@ -116,7 +116,7 @@ async def change_password(
     """Change the user's password after verifying the current one."""
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     if not verify_password(current_password, user.hashed_password):
         return RedirectResponse(
@@ -162,7 +162,7 @@ async def change_password(
 async def save_branding(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
     form = await request.form()
     brand_name = (form.get("brand_name") or "").strip()[:255]
     brand_color = (form.get("brand_color") or "").strip()[:10]
@@ -182,7 +182,7 @@ async def save_branding(request: Request, db: Session = Depends(get_db)):
 async def api_keys_page(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
     keys = db.query(APIKey).filter(APIKey.user_id == user.id, APIKey.is_active == True).order_by(APIKey.created_at.desc()).all()
     unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
     new_key = request.query_params.get("new_key")  # shown once after creation
@@ -201,7 +201,7 @@ async def api_keys_page(request: Request, db: Session = Depends(get_db)):
 async def create_api_key(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     form = await request.form()
     name = (form.get("name") or "").strip()
@@ -245,7 +245,7 @@ async def create_api_key(request: Request, db: Session = Depends(get_db)):
 async def revoke_api_key(key_id: int, request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     key = db.query(APIKey).filter(APIKey.id == key_id, APIKey.user_id == user.id).first()
     if key:

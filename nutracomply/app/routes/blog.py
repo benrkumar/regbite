@@ -55,7 +55,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 def _require_admin(request: Request, db: Session):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return None, RedirectResponse(url="/login")
+        return None, RedirectResponse(url="/login", status_code=302)
     if not user.is_admin:
         return None, RedirectResponse(url="/dashboard")
     return user, None

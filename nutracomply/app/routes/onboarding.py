@@ -16,7 +16,7 @@ async def onboarding_page(request: Request):
     db = next(get_db())
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     # If onboarding already complete, go to dashboard
     if user.onboarding_complete:
@@ -47,7 +47,7 @@ async def onboarding_step1(
     db = next(get_db())
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     user.company_name = company_name.strip() or None
     user.company_gstin = company_gstin.strip() or None
@@ -62,7 +62,7 @@ async def onboarding_step2(request: Request):
     db = next(get_db())
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     form = await request.form()
     product_name = form.get("product_name", "").strip()
@@ -88,7 +88,7 @@ async def onboarding_step3(request: Request):
     db = next(get_db())
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     user.onboarding_complete = True
     db.commit()
@@ -101,7 +101,7 @@ async def onboarding_skip(request: Request):
     db = next(get_db())
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     user.onboarding_complete = True
     db.commit()

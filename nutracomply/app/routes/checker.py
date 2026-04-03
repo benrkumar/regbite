@@ -52,7 +52,7 @@ TARGET_GROUPS = [
 async def checker_form(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
 
@@ -89,7 +89,7 @@ async def run_check(
 ):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     try:
         from app.services.rate_limiter import limiter
@@ -214,7 +214,7 @@ async def upload_check(
     """Upload a label image/PDF, run Vision extraction + compliance check."""
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     try:
         from app.services.rate_limiter import limiter

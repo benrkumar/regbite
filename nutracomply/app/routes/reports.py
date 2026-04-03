@@ -23,7 +23,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 async def reports_list(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     reports = (
         db.query(ComplianceReport)
@@ -51,7 +51,7 @@ async def generate_report(label_version_id: int, request: Request, db: Session =
     """Create or retrieve a report for a label version, then redirect to report view."""
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     lv = db.query(LabelVersion).filter(LabelVersion.id == label_version_id).first()
     if not lv:
@@ -78,7 +78,7 @@ async def generate_report(label_version_id: int, request: Request, db: Session =
 async def view_report(report_id: int, request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     report = db.query(ComplianceReport).filter(
         ComplianceReport.id == report_id,
@@ -108,7 +108,7 @@ async def view_report(report_id: int, request: Request, db: Session = Depends(ge
 async def download_report_pdf(report_id: int, request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     report = (
         db.query(ComplianceReport)
@@ -156,7 +156,7 @@ async def download_report_pdf(report_id: int, request: Request, db: Session = De
 async def create_share_link(report_id: int, request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url="/login", status_code=302)
 
     report = db.query(ComplianceReport).filter(
         ComplianceReport.id == report_id,
