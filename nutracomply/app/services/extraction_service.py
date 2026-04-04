@@ -16,9 +16,14 @@ import base64
 import io
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Optional
 from app.config import get_settings
+
+
+def _log(msg: str):
+    print(msg, flush=True)
 
 settings = get_settings()
 
@@ -248,13 +253,13 @@ def _claude_request(messages: list, max_tokens: int = 8192, extra_headers: dict 
         "messages": messages,
     }
 
-    print(f"[claude-api] Sending request to Claude ({CLAUDE_MODEL})...")
+    _log(f"[claude-api] Sending request to Claude ({CLAUDE_MODEL})...")
     resp = httpx.post(CLAUDE_API_URL, headers=headers, json=payload, timeout=180.0)
     if resp.status_code != 200:
-        print(f"[claude-api] HTTP {resp.status_code}: {resp.text[:500]}")
+        _log(f"[claude-api] HTTP {resp.status_code}: {resp.text[:500]}")
     resp.raise_for_status()
     data = resp.json()
-    print(f"[claude-api] OK — model={data.get('model')}, tokens={data.get('usage')}")
+    _log(f"[claude-api] OK — model={data.get('model')}, tokens={data.get('usage')}")
     return data["content"][0]["text"].strip()
 
 
@@ -269,13 +274,13 @@ def _call_claude_vision(image_path: str) -> Optional[dict]:
     """Use Claude Vision via direct HTTP to extract label data from an image or PDF."""
     img_path = Path(image_path)
     suffix = img_path.suffix.lower()
-    print(f"[extraction] Claude Vision starting for {suffix} file...")
+    _log(f"[extraction] Claude Vision starting for {suffix} file...")
 
     # PDFs: send natively as a document (no image conversion needed)
     if suffix == ".pdf":
         pdf_bytes = img_path.read_bytes()
         b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
-        print(f"[extraction] Sending PDF natively ({len(pdf_bytes)//1024}KB) to Claude...")
+        _log(f"[extraction] Sending PDF natively ({len(pdf_bytes)//1024}KB) to Claude...")
         messages = [{
             "role": "user",
             "content": [
@@ -408,11 +413,11 @@ def extract_label_data_from_image(image_path: str) -> tuple[dict, float]:
                 warnings = _validate_extraction(result)
                 if warnings:
                     result["_extraction_warnings"] = warnings
-                    print(f"[extraction] Claude Vision warnings: {warnings}")
-                print(f"[extraction] Claude Vision succeeded (confidence={confidence})")
+                    _log(f"[extraction] Claude Vision warnings: {warnings}")
+                _log(f"[extraction] Claude Vision succeeded (confidence={confidence})")
                 return result, confidence
         except Exception as e:
-            print(f"[extraction] Claude Vision failed: {e}")
+            _log(f"[extraction] Claude Vision failed: {e}")
 
     # Fallback: Gemini Vision
     if settings.gemini_api_key:
@@ -424,11 +429,11 @@ def extract_label_data_from_image(image_path: str) -> tuple[dict, float]:
                 warnings = _validate_extraction(result)
                 if warnings:
                     result["_extraction_warnings"] = warnings
-                    print(f"[extraction] Gemini Vision warnings: {warnings}")
-                print(f"[extraction] Gemini Vision fallback succeeded (confidence={confidence})")
+                    _log(f"[extraction] Gemini Vision warnings: {warnings}")
+                _log(f"[extraction] Gemini Vision fallback succeeded (confidence={confidence})")
                 return result, confidence
         except Exception as e:
-            print(f"[extraction] Gemini Vision fallback failed: {e}")
+            _log(f"[extraction] Gemini Vision fallback failed: {e}")
 
     return {}, 0.0
 
@@ -452,11 +457,11 @@ def extract_label_data(ocr_text: str) -> tuple[dict, float]:
                 warnings = _validate_extraction(result)
                 if warnings:
                     result["_extraction_warnings"] = warnings
-                    print(f"[extraction] Claude text warnings: {warnings}")
-                print(f"[extraction] Claude text succeeded (confidence={confidence})")
+                    _log(f"[extraction] Claude text warnings: {warnings}")
+                _log(f"[extraction] Claude text succeeded (confidence={confidence})")
                 return result, confidence
         except Exception as e:
-            print(f"[extraction] Claude text failed: {e}")
+            _log(f"[extraction] Claude text failed: {e}")
 
     # Fallback: Gemini
     if settings.gemini_api_key:
@@ -469,10 +474,10 @@ def extract_label_data(ocr_text: str) -> tuple[dict, float]:
                 warnings = _validate_extraction(result)
                 if warnings:
                     result["_extraction_warnings"] = warnings
-                    print(f"[extraction] Gemini text warnings: {warnings}")
+                    _log(f"[extraction] Gemini text warnings: {warnings}")
                 return result, confidence
         except Exception as e:
-            print(f"[extraction] Gemini text failed: {e}")
+            _log(f"[extraction] Gemini text failed: {e}")
 
     # Final fallback: rule-based extraction
     fallback = _rule_based_extraction(ocr_text)
@@ -528,7 +533,7 @@ def _cross_check_with_ocr(extraction: dict, ocr_text: str) -> dict:
         fssai_match = re.search(r'\b(\d{14})\b', text)
         if fssai_match:
             extraction["fssai_license_number"] = fssai_match.group(1)
-            print(f"[ocr-crosscheck] Fixed fssai_license_number → {fssai_match.group(1)}")
+            _log(f"[ocr-crosscheck] Fixed fssai_license_number → {fssai_match.group(1)}")
 
     # Manufacturer details
     if not extraction.get("manufacturer_details"):
@@ -537,7 +542,7 @@ def _cross_check_with_ocr(extraction: dict, ocr_text: str) -> dict:
             start = mfg_match.start()
             snippet = text[start:start + 200].strip()
             extraction["manufacturer_details"] = snippet
-            print(f"[ocr-crosscheck] Fixed manufacturer_details from OCR")
+            _log(f"[ocr-crosscheck] Fixed manufacturer_details from OCR")
 
     # Net quantity
     if not extraction.get("net_quantity"):
@@ -547,14 +552,14 @@ def _cross_check_with_ocr(extraction: dict, ocr_text: str) -> dict:
         )
         if qty_match:
             extraction["net_quantity"] = qty_match.group(0).strip()
-            print(f"[ocr-crosscheck] Fixed net_quantity → {extraction['net_quantity']}")
+            _log(f"[ocr-crosscheck] Fixed net_quantity → {extraction['net_quantity']}")
 
     # Serving size
     if not extraction.get("serving_size"):
         srv_match = re.search(r'serving\s+size[:\s]*([^\n]{5,80})', text, re.IGNORECASE)
         if srv_match:
             extraction["serving_size"] = srv_match.group(1).strip()
-            print(f"[ocr-crosscheck] Fixed serving_size from OCR")
+            _log(f"[ocr-crosscheck] Fixed serving_size from OCR")
 
     # Storage conditions
     if not extraction.get("storage_conditions"):
@@ -571,7 +576,7 @@ def _cross_check_with_ocr(extraction: dict, ocr_text: str) -> dict:
             else:
                 end = min(len(text), store_match.start() + 200)
             extraction["storage_conditions"] = text[start:end].strip()
-            print(f"[ocr-crosscheck] Fixed storage_conditions from OCR")
+            _log(f"[ocr-crosscheck] Fixed storage_conditions from OCR")
 
     # Allergen declarations
     allergens = extraction.get("allergen_declarations", [])
@@ -580,14 +585,14 @@ def _cross_check_with_ocr(extraction: dict, ocr_text: str) -> dict:
             allerg_match = re.search(r'allergen[s]?[:\s]*([^\n]{5,200})', text, re.IGNORECASE)
             if allerg_match:
                 extraction["allergen_declarations"] = [allerg_match.group(1).strip()]
-                print(f"[ocr-crosscheck] Fixed allergen_declarations from OCR")
+                _log(f"[ocr-crosscheck] Fixed allergen_declarations from OCR")
 
     # MRP
     if not extraction.get("mrp"):
         mrp_match = re.search(r'(?:MRP|M\.R\.P\.?)[:\s]*[₹Rs\.]*\s*([0-9,]+(?:\.\d{1,2})?)', text, re.IGNORECASE)
         if mrp_match:
             extraction["mrp"] = mrp_match.group(0).strip()
-            print(f"[ocr-crosscheck] Fixed mrp → {extraction['mrp']}")
+            _log(f"[ocr-crosscheck] Fixed mrp → {extraction['mrp']}")
 
     # Customer care details (email or phone)
     if not extraction.get("customer_care_details"):
@@ -595,10 +600,10 @@ def _cross_check_with_ocr(extraction: dict, ocr_text: str) -> dict:
         phone_match = re.search(r'(?:\+91[\s\-]?)?(?:\d[\s\-]?){10,12}', text)
         if email_match:
             extraction["customer_care_details"] = email_match.group(0)
-            print(f"[ocr-crosscheck] Fixed customer_care_details (email) from OCR")
+            _log(f"[ocr-crosscheck] Fixed customer_care_details (email) from OCR")
         elif phone_match:
             extraction["customer_care_details"] = phone_match.group(0).strip()
-            print(f"[ocr-crosscheck] Fixed customer_care_details (phone) from OCR")
+            _log(f"[ocr-crosscheck] Fixed customer_care_details (phone) from OCR")
 
     return extraction
 
