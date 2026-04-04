@@ -12,10 +12,17 @@ v3 improvements:
   - Claude fallback: if Gemini API fails, automatically retries with Anthropic
   - Better error reporting surfaced to the chat UI
 
+v4 improvements:
+  - Fixed Claude model name: claude-sonnet-4-6 (was invalid claude-sonnet-4-20250514)
+  - STOPWORDS no longer strips "not", "is", "for", "about", "why" — critical regulatory terms
+  - chunk_text max_chars: 800 → 1200 (avoids mid-sentence cuts in long rule descriptions)
+  - retrieve_context top_k: 10 → 15 (more context for multi-rule queries)
+  - Anti-hallucination guardrails in both system prompts (no invented rule codes)
+
 Models used:
   regulations → gemini-2.5-pro (precision for legal/regulatory reasoning)
   products    → gemini-2.0-flash (fast for structured product/label data)
-  fallback    → claude-sonnet-4-20250514 (Anthropic) when Gemini unavailable
+  fallback    → claude-sonnet-4-6 (Anthropic) when Gemini unavailable
 """
 from __future__ import annotations
 
@@ -30,22 +37,25 @@ MODELS: dict[str, str] = {
     "products":    "gemini-2.0-flash",
 }
 
-CLAUDE_MODEL = "claude-sonnet-4-20250514"
+CLAUDE_MODEL = "claude-sonnet-4-6"
 
 # ─── Stopwords to filter from search queries ─────────────────────────────────
 
 STOPWORDS = frozenset({
-    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+    "the", "a", "an", "are", "was", "were", "be", "been", "being",
     "have", "has", "had", "do", "does", "did", "will", "would", "could",
-    "should", "may", "might", "can", "shall", "to", "of", "in", "for",
+    "should", "may", "might", "can", "shall", "to", "of", "in",
     "on", "with", "at", "by", "from", "as", "into", "through", "during",
     "before", "after", "above", "below", "between", "out", "off", "over",
     "under", "again", "further", "then", "once", "here", "there", "when",
-    "where", "why", "how", "all", "each", "every", "both", "few", "more",
+    "where", "how", "all", "each", "every", "both", "few", "more",
     "most", "other", "some", "such", "only", "own", "same", "than", "too",
-    "very", "just", "because", "not", "but", "and", "or", "nor", "so",
+    "very", "just", "because", "but", "and", "or", "nor", "so",
     "what", "which", "who", "whom", "this", "that", "these", "those",
-    "about", "it", "its", "if", "up", "any", "also", "tell", "me",
+    "it", "its", "if", "up", "any", "also", "tell", "me",
+    # Note: "not", "is", "for", "about", "why" intentionally excluded —
+    # these carry semantic meaning in regulatory queries
+    # e.g. "is this banned", "not for medicinal use", "for what purpose"
 })
 
 # ─── System prompts ───────────────────────────────────────────────────────────
@@ -73,6 +83,10 @@ SYSTEM_PROMPTS: dict[str, str] = {
         "- When multiple rules apply, list them in order of severity (CRITICAL → HIGH → MEDIUM → LOW).\n"
         "- For remediation questions, provide specific, actionable steps the manufacturer should take.\n"
         "- Do NOT hallucinate rule codes, regulation numbers, or section references.\n"
+        "- CRITICAL: If a rule code is not explicitly present in the provided context, "
+        "do NOT invent one. Write 'Rule code not available in context' instead.\n"
+        "- If the context does not contain enough information to answer confidently, "
+        "say: 'I don't have sufficient information in my knowledge base to answer this accurately.'\n"
         "- Use bullet points and bold text for readability."
     ),
     "products": (
@@ -88,6 +102,10 @@ SYSTEM_PROMPTS: dict[str, str] = {
         "- For failing checks, include the remediation steps from the knowledge base.\n"
         "- Compare products when asked (e.g. 'which product has the most violations?').\n"
         "- Keep responses factual — do not invent compliance data.\n"
+        "- CRITICAL: Only report compliance scores, rule codes, and check results that appear "
+        "explicitly in the provided context. Do NOT estimate or fabricate values.\n"
+        "- If asked about a product not in the context, say: "
+        "'This product is not in my current knowledge base — please reseed the Products KB.'\n"
         "- Use tables or bullet points for multi-product comparisons."
     ),
 }
@@ -95,7 +113,7 @@ SYSTEM_PROMPTS: dict[str, str] = {
 
 # ─── Text chunking ────────────────────────────────────────────────────────────
 
-def chunk_text(text: str, max_chars: int = 800) -> list[str]:
+def chunk_text(text: str, max_chars: int = 1200) -> list[str]:
     """
     Split *text* into chunks of at most *max_chars* characters.
     Splits on paragraph boundaries first (double newlines), then on word
@@ -447,7 +465,7 @@ def _build_context(kb_type: str, query: str, db):
     Retrieve chunks and format them into context text + quality indicator.
     Returns (context_chunks, system_prompt, user_message).
     """
-    context_chunks = retrieve_context(kb_type, query, db, top_k=10)
+    context_chunks = retrieve_context(kb_type, query, db, top_k=15)
 
     if context_chunks:
         max_score = max(c["relevance_score"] for c in context_chunks) or 1

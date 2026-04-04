@@ -56,6 +56,17 @@ Analyze the following product label VERY CAREFULLY and extract ALL information
 present into a structured JSON. Read every line — key information may be anywhere:
 front panel, back panel, side panels, footer areas, cap/lid text.
 
+BILINGUAL READING INSTRUCTIONS (CRITICAL):
+- Indian labels frequently mix Hindi and English. Read ALL text including Devanagari script.
+- FSSAI license numbers and FSSAI registration details often appear in Hindi: look for
+  "एफएसएसएआई लाइसेंस संख्या" or "भारतीय खाद्य सुरक्षा" alongside the numeric license.
+- MRP may appear as "अधिकतम खुदरा मूल्य" or abbreviated in Hindi — extract the numeric value.
+- Manufacturer/marketer addresses may have Hindi text for city/state names — include both scripts.
+- Best Before / expiry may appear as "श्रेष्ठ उपयोग से पूर्व" — still extract the date.
+- Veg/Non-Veg declarations may have Hindi labels alongside the green/brown symbol.
+- Ingredient names may be in Hindi (e.g. "अश्वगंधा" = Ashwagandha) — include both the
+  Hindi name and English transliteration if you can identify it.
+
 IMPORTANT RULES:
 - Only set a field to null if the information is genuinely NOT present on the label.
 - For boolean fields: set true if the statement/declaration IS present, false only if
@@ -117,6 +128,12 @@ Analyze the product label in this image. Look at ALL visible panels — front, b
 sides, top, bottom. Zoom into fine print areas for batch numbers, FSSAI license,
 manufacturing dates, and warnings. If text is partially obscured or blurry, extract
 what you can read and note uncertainty in the value (e.g. "Batch: B2024-0?? (partially obscured)").
+
+SPECIAL ATTENTION FOR INDIAN LABELS:
+- Many fields are printed in BOTH Hindi (Devanagari) and English — read both.
+- The FSSAI license number is 14 digits and is often near "FSSAI Lic. No." or the FSSAI logo;
+  on Hindi labels it may appear near "एफएसएसएआई लाइसेंस" — extract the numeric string regardless.
+- Small print at the bottom or sides often contains the most compliance-critical data.
 """
 
 MULTI_PAGE_VISION_PROMPT = EXTRACTION_PROMPT + """
@@ -213,18 +230,39 @@ def _validate_extraction(extraction: dict) -> list[str]:
 
 # ─── PDF to images ─────────────────────────────────────────────────────────
 
-def _pdf_to_images(pdf_path: str, dpi: int = 300) -> list[tuple[bytes, str]]:
-    """Convert PDF pages to PNG images. Returns list of (image_bytes, media_type)."""
+def _pdf_to_images(pdf_path: str, dpi: int = 150) -> list[tuple[bytes, str]]:
+    """Convert PDF pages to JPEG images for Claude/Gemini Vision.
+
+    Uses JPEG (not PNG) for ~10× smaller payloads — a typical supplement label
+    page goes from ~5 MB PNG to ~300 KB JPEG, dramatically reducing API round-trip time.
+    Pages wider than 1800 px are downscaled to keep payload size predictable.
+    Capped at 3 pages: supplement labels rarely exceed 3 pages and sending more
+    pages just increases cost and latency without improving accuracy.
+    """
     import fitz  # PyMuPDF
+    import io
+    from PIL import Image
 
     images = []
     doc = fitz.open(pdf_path)
-    for page_num in range(min(len(doc), 10)):  # cap at 10 pages
+    page_count = min(len(doc), 3)  # 3-page cap — supplement labels don't need more
+    for page_num in range(page_count):
         page = doc[page_num]
         pix = page.get_pixmap(dpi=dpi)
-        img_bytes = pix.tobytes("png")
-        images.append((img_bytes, "image/png"))
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+
+        # Resize if wider than 1800 px (keeps text sharp but limits payload)
+        if img.width > 1800:
+            ratio = 1800 / img.width
+            img = img.resize((1800, int(img.height * ratio)), Image.LANCZOS)
+
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=85, optimize=True)
+        images.append((buf.getvalue(), "image/jpeg"))
+
     doc.close()
+    _log(f"[pdf-convert] {page_count} page(s) → "
+         f"{sum(len(b) for b, _ in images) // 1024} KB total JPEG payload")
     return images
 
 
@@ -235,8 +273,12 @@ CLAUDE_MODEL = "claude-sonnet-4-6"
 CLAUDE_VERSION = "2023-06-01"
 
 
-def _claude_request(messages: list, max_tokens: int = 8192, extra_headers: dict = None) -> Optional[str]:
-    """Make a direct HTTP call to the Anthropic Messages API."""
+def _claude_request(messages: list, max_tokens: int = 8192, extra_headers: dict = None) -> tuple:
+    """Make a direct HTTP call to the Anthropic Messages API.
+
+    Returns:
+        (text: str, input_tokens: int, output_tokens: int)
+    """
     import httpx
 
     import os
@@ -261,8 +303,11 @@ def _claude_request(messages: list, max_tokens: int = 8192, extra_headers: dict 
         _log(f"[claude-api] HTTP {resp.status_code}: {resp.text[:500]}")
     resp.raise_for_status()
     data = resp.json()
-    _log(f"[claude-api] OK — model={data.get('model')}, tokens={data.get('usage')}")
-    return data["content"][0]["text"].strip()
+    usage = data.get("usage", {})
+    input_tokens = usage.get("input_tokens", 0)
+    output_tokens = usage.get("output_tokens", 0)
+    _log(f"[claude-api] OK — model={data.get('model')}, tokens=in:{input_tokens} out:{output_tokens}")
+    return data["content"][0]["text"].strip(), input_tokens, output_tokens
 
 
 def _parse_json_response(raw: str) -> dict:
@@ -272,33 +317,39 @@ def _parse_json_response(raw: str) -> dict:
     return json.loads(raw)
 
 
-def _call_claude_vision(image_path: str) -> Optional[dict]:
-    """Use Claude Vision via direct HTTP to extract label data from an image or PDF."""
+def _call_claude_vision(image_path: str) -> tuple:
+    """Use Claude Vision via direct HTTP to extract label data from an image or PDF.
+
+    Returns:
+        (extraction_dict, input_tokens, output_tokens)
+    """
     img_path = Path(image_path)
     suffix = img_path.suffix.lower()
     _log(f"[extraction] Claude Vision starting for {suffix} file...")
 
-    # PDFs: send natively as a document (no image conversion needed)
+    # PDFs: render each page as a high-res image so Claude can read fine print
+    # (native PDF support misses small text like FSSAI numbers and batch codes)
     if suffix == ".pdf":
-        pdf_bytes = img_path.read_bytes()
-        b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
-        _log(f"[extraction] Sending PDF natively ({len(pdf_bytes)//1024}KB) to Claude...")
-        messages = [{
-            "role": "user",
-            "content": [
-                {
-                    "type": "document",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "application/pdf",
-                        "data": b64_pdf,
-                    },
-                },
-                {"type": "text", "text": VISION_PROMPT},
-            ],
-        }]
-        raw = _claude_request(messages, extra_headers={"anthropic-beta": "pdfs-2024-09-25"})
-        return _parse_json_response(raw)
+        _log(f"[extraction] Converting PDF to high-res images for Claude Vision...")
+        pages = _pdf_to_images(image_path, dpi=300)
+        if not pages:
+            _log("[extraction] PDF→image conversion returned no pages")
+            return None, 0, 0
+
+        content = []
+        for img_bytes, media_type in pages:
+            b64 = base64.b64encode(img_bytes).decode("utf-8")
+            content.append({
+                "type": "image",
+                "source": {"type": "base64", "media_type": media_type, "data": b64},
+            })
+        prompt_text = MULTI_PAGE_VISION_PROMPT if len(pages) > 1 else VISION_PROMPT
+        content.append({"type": "text", "text": prompt_text})
+
+        _log(f"[extraction] Sending {len(pages)} PDF page(s) as images to Claude...")
+        messages = [{"role": "user", "content": content}]
+        raw, inp, out = _claude_request(messages)
+        return _parse_json_response(raw), inp, out
 
     # Single image
     image_data = img_path.read_bytes()
@@ -326,17 +377,20 @@ def _call_claude_vision(image_path: str) -> Optional[dict]:
         ],
     }]
 
-    raw = _claude_request(messages)
-    return _parse_json_response(raw)
+    raw, inp, out = _claude_request(messages)
+    return _parse_json_response(raw), inp, out
 
 
-def _call_claude_text(ocr_text: str) -> Optional[dict]:
-    """Use Claude text via direct HTTP to extract label data from OCR text."""
+def _call_claude_text(ocr_text: str) -> tuple:
+    """Use Claude text via direct HTTP to extract label data from OCR text.
+
+    Returns:
+        (extraction_dict, input_tokens, output_tokens)
+    """
     prompt = TEXT_PROMPT.replace("{label_text}", ocr_text[:16000])
-
     messages = [{"role": "user", "content": prompt}]
-    raw = _claude_request(messages)
-    return _parse_json_response(raw)
+    raw, inp, out = _claude_request(messages)
+    return _parse_json_response(raw), inp, out
 
 
 # ─── Gemini fallback ────────────────────────────────────────────────────────
@@ -385,7 +439,7 @@ def _call_gemini_text(ocr_text: str) -> Optional[dict]:
     genai.configure(api_key=settings.gemini_api_key)
     model = genai.GenerativeModel("gemini-2.0-flash")
 
-    prompt = TEXT_PROMPT.format(label_text=ocr_text[:12000])
+    prompt = TEXT_PROMPT.replace("{label_text}", ocr_text[:12000])
 
     response = model.generate_content(
         prompt,
@@ -400,13 +454,15 @@ def _call_gemini_text(ocr_text: str) -> Optional[dict]:
 
 # ─── Public API ─────────────────────────────────────────────────────────────
 
-def extract_label_data_from_image(image_path: str) -> tuple[dict, float]:
+def extract_label_data_from_image(image_path: str) -> tuple:
     """
     Extract structured label data from an image file.
     Primary: Claude Vision → Fallback: Gemini Vision
+
+    Returns:
+        (extraction_dict, confidence, source, input_tokens, output_tokens)
     """
     import os
-    # Diagnostic: show key status (read both from settings and direct env var)
     key_from_settings = settings.anthropic_api_key
     key_from_env = os.environ.get("ANTHROPIC_API_KEY", "")
     _log(f"[extraction] Claude key (settings): {'SET len=' + str(len(key_from_settings)) if key_from_settings else 'EMPTY'}")
@@ -415,7 +471,7 @@ def extract_label_data_from_image(image_path: str) -> tuple[dict, float]:
     # Try Claude first
     if key_from_env or settings.anthropic_api_key:
         try:
-            result = _call_claude_vision(image_path)
+            result, inp, out = _call_claude_vision(image_path)
             if result:
                 result = _normalize_extraction(result)
                 confidence = _calculate_confidence(result, "vision")
@@ -424,7 +480,7 @@ def extract_label_data_from_image(image_path: str) -> tuple[dict, float]:
                     result["_extraction_warnings"] = warnings
                     _log(f"[extraction] Claude Vision warnings: {warnings}")
                 _log(f"[extraction] Claude Vision succeeded (confidence={confidence})")
-                return result, confidence
+                return result, confidence, "claude", inp, out
         except Exception as e:
             _log(f"[extraction] Claude Vision failed: {e}")
 
@@ -440,25 +496,29 @@ def extract_label_data_from_image(image_path: str) -> tuple[dict, float]:
                     result["_extraction_warnings"] = warnings
                     _log(f"[extraction] Gemini Vision warnings: {warnings}")
                 _log(f"[extraction] Gemini Vision fallback succeeded (confidence={confidence})")
-                return result, confidence
+                return result, confidence, "gemini", 0, 0
         except Exception as e:
             _log(f"[extraction] Gemini Vision fallback failed: {e}")
 
-    return {}, 0.0
+    return {}, 0.0, "none", 0, 0
 
 
-def extract_label_data(ocr_text: str) -> tuple[dict, float]:
+def extract_label_data(ocr_text: str) -> tuple:
     """
     Extract structured label data from OCR text.
     Primary: Claude Text → Fallback: Gemini Text → Fallback: Rule-based
+
+    Returns:
+        (extraction_dict, confidence, source, input_tokens, output_tokens)
     """
     if not ocr_text.strip():
-        return {}, 0.0
+        return {}, 0.0, "none", 0, 0
 
     # Try Claude first
-    if settings.anthropic_api_key:
+    import os
+    if settings.anthropic_api_key or os.environ.get("ANTHROPIC_API_KEY", ""):
         try:
-            result = _call_claude_text(ocr_text)
+            result, inp, out = _call_claude_text(ocr_text)
             if result:
                 result = _normalize_extraction(result)
                 result = _cross_check_with_ocr(result, ocr_text)
@@ -468,7 +528,7 @@ def extract_label_data(ocr_text: str) -> tuple[dict, float]:
                     result["_extraction_warnings"] = warnings
                     _log(f"[extraction] Claude text warnings: {warnings}")
                 _log(f"[extraction] Claude text succeeded (confidence={confidence})")
-                return result, confidence
+                return result, confidence, "claude", inp, out
         except Exception as e:
             _log(f"[extraction] Claude text failed: {e}")
 
@@ -484,14 +544,14 @@ def extract_label_data(ocr_text: str) -> tuple[dict, float]:
                 if warnings:
                     result["_extraction_warnings"] = warnings
                     _log(f"[extraction] Gemini text warnings: {warnings}")
-                return result, confidence
+                return result, confidence, "gemini", 0, 0
         except Exception as e:
             _log(f"[extraction] Gemini text failed: {e}")
 
     # Final fallback: rule-based extraction
     fallback = _rule_based_extraction(ocr_text)
     confidence = _calculate_confidence(fallback, "fallback")
-    return fallback, confidence
+    return fallback, confidence, "fallback", 0, 0
 
 
 def _cross_check_with_ocr(extraction: dict, ocr_text: str) -> dict:
