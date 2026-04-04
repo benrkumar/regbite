@@ -239,8 +239,10 @@ def _claude_request(messages: list, max_tokens: int = 8192, extra_headers: dict 
     """Make a direct HTTP call to the Anthropic Messages API."""
     import httpx
 
+    import os
+    api_key = settings.anthropic_api_key or os.environ.get("ANTHROPIC_API_KEY", "")
     headers = {
-        "x-api-key": settings.anthropic_api_key,
+        "x-api-key": api_key,
         "anthropic-version": CLAUDE_VERSION,
         "content-type": "application/json",
     }
@@ -403,8 +405,15 @@ def extract_label_data_from_image(image_path: str) -> tuple[dict, float]:
     Extract structured label data from an image file.
     Primary: Claude Vision → Fallback: Gemini Vision
     """
+    import os
+    # Diagnostic: show key status (read both from settings and direct env var)
+    key_from_settings = settings.anthropic_api_key
+    key_from_env = os.environ.get("ANTHROPIC_API_KEY", "")
+    _log(f"[extraction] Claude key (settings): {'SET len=' + str(len(key_from_settings)) if key_from_settings else 'EMPTY'}")
+    _log(f"[extraction] Claude key (os.environ): {'SET len=' + str(len(key_from_env)) if key_from_env else 'EMPTY'}")
+
     # Try Claude first
-    if settings.anthropic_api_key:
+    if key_from_env or settings.anthropic_api_key:
         try:
             result = _call_claude_vision(image_path)
             if result:
