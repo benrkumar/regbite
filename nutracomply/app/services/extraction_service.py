@@ -226,7 +226,7 @@ def _pdf_to_images(pdf_path: str, dpi: int = 300) -> list[tuple[bytes, str]]:
 # ─── Claude (Anthropic) via direct HTTP ───────────────────────────────────
 
 CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
-CLAUDE_MODEL = "claude-sonnet-4-20250514"
+CLAUDE_MODEL = "claude-sonnet-4-6"
 CLAUDE_VERSION = "2023-06-01"
 
 
@@ -246,8 +246,11 @@ def _claude_request(messages: list, max_tokens: int = 8192) -> Optional[str]:
     }
 
     resp = httpx.post(CLAUDE_API_URL, headers=headers, json=payload, timeout=120.0)
+    if resp.status_code != 200:
+        print(f"[claude-api] HTTP {resp.status_code}: {resp.text[:500]}")
     resp.raise_for_status()
     data = resp.json()
+    print(f"[claude-api] OK — model={data.get('model')}, tokens={data.get('usage')}")
     return data["content"][0]["text"].strip()
 
 
