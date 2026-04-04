@@ -19,6 +19,18 @@ v4 improvements:
   - retrieve_context top_k: 10 → 15 (more context for multi-rule queries)
   - Anti-hallucination guardrails in both system prompts (no invented rule codes)
 
+v5 improvements:
+  - In-memory query result cache (TTL=1 hour, up to 500 entries) — avoids redundant LLM calls
+  - Query expansion: short queries (< 6 meaningful words) expanded via Gemini Flash for better retrieval
+  - Chunk-level deduplication in _ingest_document — skips exact-duplicate chunks
+  - seed_products_kb supports force_update_product_id for targeted re-ingest
+  - Phrase-level matching boost in retrieve_context (+3 per bigram match)
+  - _build_context merges expanded + original query results for broader coverage
+  - ask_llm checks cache before calling LLM; stores successful results in cache
+  - History window increased: 10 → 20 turns for both Gemini and Claude
+  - Citation format improved: includes section/clause and Sources used section
+  - Auto-reseed hook in labels.py refreshes Products KB after each label scan
+
 Models used:
   regulations → gemini-2.5-pro (precision for legal/regulatory reasoning)
   products    → gemini-2.0-flash (fast for structured product/label data)
@@ -27,8 +39,55 @@ Models used:
 from __future__ import annotations
 
 import logging
+import time
+import hashlib
 
 logger = logging.getLogger(__name__)
+
+# ─── In-memory query result cache (TTL = 1 hour) ─────────────────────────────
+_QUERY_CACHE: dict = {}
+CACHE_TTL_SECONDS = 3600  # 1 hour
+
+
+def _cache_key(kb_type: str, query: str) -> str:
+    return hashlib.md5(f"{kb_type}:{query.lower().strip()}".encode()).hexdigest()
+
+
+def _get_cached(kb_type: str, query: str):
+    """Return cached result if still within TTL, else None."""
+    key = _cache_key(kb_type, query)
+    entry = _QUERY_CACHE.get(key)
+    if entry:
+        result, ts = entry
+        if time.time() - ts < CACHE_TTL_SECONDS:
+            return result
+        del _QUERY_CACHE[key]
+    return None
+
+
+def _set_cache(kb_type: str, query: str, result: dict) -> None:
+    """Store result in cache; prune stale entries if cache exceeds 500 items."""
+    key = _cache_key(kb_type, query)
+    _QUERY_CACHE[key] = (result, time.time())
+    if len(_QUERY_CACHE) > 500:
+        cutoff = time.time() - CACHE_TTL_SECONDS
+        for k in list(_QUERY_CACHE.keys()):
+            if _QUERY_CACHE[k][1] < cutoff:
+                del _QUERY_CACHE[k]
+
+
+def invalidate_cache(kb_type: str | None = None) -> int:
+    """Invalidate all cache entries (or just for a specific kb_type). Returns count removed."""
+    removed = 0
+    if kb_type is None:
+        removed = len(_QUERY_CACHE)
+        _QUERY_CACHE.clear()
+    else:
+        # We can't easily filter by kb_type without re-hashing, so clear all
+        removed = len(_QUERY_CACHE)
+        _QUERY_CACHE.clear()
+    return removed
+
 
 # ─── Per-KB Gemini model names ────────────────────────────────────────────────
 
@@ -58,6 +117,47 @@ STOPWORDS = frozenset({
     # e.g. "is this banned", "not for medicinal use", "for what purpose"
 })
 
+
+# ─── Query expansion ──────────────────────────────────────────────────────────
+
+def _expand_query(query: str, kb_type: str, gemini_api_key: str = "") -> str:
+    """
+    Expand a short query (< 6 words) into a richer form for better retrieval.
+    Uses Gemini Flash (cheap/fast). Falls back to original query on any failure.
+    Only expands queries with fewer than 6 meaningful (non-stopword) words.
+    """
+    meaningful_words = [w for w in query.split() if w.lower() not in STOPWORDS and len(w) >= 3]
+    if len(meaningful_words) >= 6 or not gemini_api_key:
+        return query
+
+    domain = (
+        "Indian food and supplement regulations (FSSAI, Legal Metrology, AYUSH, BIS)"
+        if kb_type == "regulations"
+        else "nutraceutical product compliance data and label analysis results"
+    )
+
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=gemini_api_key)
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        prompt = (
+            f"Expand this short search query into a detailed search query for {domain}. "
+            f"Return ONLY the expanded query (one sentence, max 25 words). No preamble.\n"
+            f"Original query: {query}"
+        )
+        response = model.generate_content(
+            prompt,
+            generation_config={"temperature": 0.1, "max_output_tokens": 60},
+        )
+        expanded = response.text.strip().strip('"').strip("'")
+        if expanded and len(expanded) > len(query):
+            logger.info("[llm-expand] %r → %r", query[:60], expanded[:80])
+            return expanded
+    except Exception as exc:
+        logger.debug("[llm-expand] failed: %s", exc)
+    return query
+
+
 # ─── System prompts ───────────────────────────────────────────────────────────
 
 SYSTEM_PROMPTS: dict[str, str] = {
@@ -79,7 +179,9 @@ SYSTEM_PROMPTS: dict[str, str] = {
         "RESPONSE GUIDELINES:\n"
         "- Answer using ONLY the provided context. If context is insufficient, say so explicitly.\n"
         "- Always cite the specific rule code (e.g. FSSAI-NUTRA-LBL-003) and regulation source.\n"
-        "- Format citations as: **[RULE_CODE]** — regulation source.\n"
+        "- Format citations as: **[RULE_CODE]** — regulation source — section/clause if known.\n"
+        "- At the end of your response, add a 'Sources used:' section listing the document titles "
+        "from which you drew each fact (use the [Source: ...] tags in the context).\n"
         "- When multiple rules apply, list them in order of severity (CRITICAL → HIGH → MEDIUM → LOW).\n"
         "- For remediation questions, provide specific, actionable steps the manufacturer should take.\n"
         "- Do NOT hallucinate rule codes, regulation numbers, or section references.\n"
@@ -150,6 +252,7 @@ def _ingest_document(db, kb_type: str, title: str, source: str,
                      content: str, uploaded_by_id: int | None = None):
     """
     Create a KBDocument, chunk its content, insert KBChunk rows, and commit.
+    Skips exact-duplicate chunks already present in this KB.
     Returns the created KBDocument.
     """
     from app.models import KBDocument, KBChunk, KBType
@@ -165,15 +268,24 @@ def _ingest_document(db, kb_type: str, title: str, source: str,
     db.flush()  # get doc.id without committing transaction
 
     chunks = chunk_text(content)
+    inserted = 0
     for i, chunk_content in enumerate(chunks):
+        # Skip exact-duplicate chunks already in this KB
+        existing = db.query(KBChunk.id).filter(
+            KBChunk.kb_type == KBType(kb_type),
+            KBChunk.content == chunk_content,
+        ).first()
+        if existing:
+            continue
         db.add(KBChunk(
             document_id=doc.id,
             kb_type=KBType(kb_type),
             chunk_index=i,
             content=chunk_content,
         ))
+        inserted += 1
 
-    doc.chunk_count = len(chunks)
+    doc.chunk_count = inserted
     db.commit()
     return doc
 
@@ -272,12 +384,17 @@ def seed_regulations_kb(db) -> dict:
     return {"status": "seeded" if count > 0 else "up_to_date", "document_count": total, "new_documents": count}
 
 
-def seed_products_kb(db) -> dict:
+def seed_products_kb(db, force_update_product_id: int | None = None) -> dict:
     """
     Auto-populate the Products knowledge base from existing DB rows.
     Additive — only inserts products whose source doesn't already exist.
     Data is permanently stored and never auto-deleted.
     Sources: Product + latest LabelVersion + ComplianceCheck failures.
+
+    Args:
+        db: SQLAlchemy session
+        force_update_product_id: If given, delete and re-ingest the KB document
+            for this specific product (allows fresh compliance data after a scan).
     """
     from app.models import KBDocument, KBType, Product, LabelVersion, ComplianceCheck, ComplianceRule, CheckResult
 
@@ -293,8 +410,21 @@ def seed_products_kb(db) -> dict:
 
     for product in db.query(Product).filter(Product.is_active == True).all():
         source = f"db:product:{product.id}"
+
+        if force_update_product_id and product.id == force_update_product_id:
+            # Delete existing KB document for this product to force re-ingest
+            old_doc = db.query(KBDocument).filter(
+                KBDocument.source == source,
+                KBDocument.kb_type == KBType.PRODUCTS,
+            ).first()
+            if old_doc:
+                db.delete(old_doc)
+                db.flush()
+                existing_sources.discard(source)
+
         if source in existing_sources:
             continue
+
         latest_lv = (
             db.query(LabelVersion)
             .filter(LabelVersion.product_id == product.id,
@@ -366,6 +496,9 @@ def retrieve_context(kb_type: str, query: str, db, top_k: int = 10) -> list[dict
       - Minimum relevance threshold filters low-quality matches
       - Returns relevance scores for LLM context transparency
 
+    v5 improvements:
+      - Phrase-level matching: +3 points per consecutive word-pair (bigram) found in content
+
     Returns a list of dicts: {"chunk_id", "content", "document_title", "relevance_score"}.
     """
     from app.models import KBChunk, KBDocument, KBType
@@ -406,7 +539,17 @@ def retrieve_context(kb_type: str, query: str, db, top_k: int = 10) -> list[dict
     for word in words[1:]:
         title_score = title_score + case((KBDocument.title.ilike(f"%{word}%"), 2), else_=0)
 
+    # Phrase score: +3 for each consecutive word pair found as a phrase
+    phrase_score = None
+    if len(words) >= 2:
+        for i in range(len(words) - 1):
+            phrase = f"{words[i]} {words[i+1]}"
+            ps = case((KBChunk.content.ilike(f"%{phrase}%"), 3), else_=0)
+            phrase_score = ps if phrase_score is None else phrase_score + ps
+
     total_score = content_score + title_score
+    if phrase_score is not None:
+        total_score = total_score + phrase_score
 
     or_conditions = or_(
         *[KBChunk.content.ilike(f"%{w}%") for w in words],
@@ -463,9 +606,22 @@ def retrieve_context(kb_type: str, query: str, db, top_k: int = 10) -> list[dict
 def _build_context(kb_type: str, query: str, db):
     """
     Retrieve chunks and format them into context text + quality indicator.
+    Applies query expansion for short queries, then merges expanded + original results.
     Returns (context_chunks, system_prompt, user_message).
     """
-    context_chunks = retrieve_context(kb_type, query, db, top_k=15)
+    from app.config import get_settings as _get_settings
+    _settings = _get_settings()
+    expanded_query = _expand_query(query, kb_type, _settings.gemini_api_key or "")
+    context_chunks = retrieve_context(kb_type, expanded_query, db, top_k=15)
+    # If expansion found different results and original query returns more, merge
+    if expanded_query != query:
+        original_chunks = retrieve_context(kb_type, query, db, top_k=8)
+        seen_ids = {c["chunk_id"] for c in context_chunks}
+        for c in original_chunks:
+            if c["chunk_id"] not in seen_ids:
+                context_chunks.append(c)
+                seen_ids.add(c["chunk_id"])
+        context_chunks = context_chunks[:15]  # cap at 15
 
     if context_chunks:
         max_score = max(c["relevance_score"] for c in context_chunks) or 1
@@ -515,10 +671,10 @@ def _call_gemini(model_name: str, system_prompt: str, user_message: str,
         system_instruction=system_prompt,
     )
 
-    # Build Gemini history from last 10 turns (roles: "user" / "model")
+    # Build Gemini history from last 20 turns (roles: "user" / "model")
     gemini_history = [
         {"role": msg["role"], "parts": [msg["content"]]}
-        for msg in history[-10:]
+        for msg in history[-20:]
     ]
 
     chat = model.start_chat(history=gemini_history)
@@ -539,8 +695,9 @@ def _call_claude(system_prompt: str, user_message: str,
     client = anthropic.Anthropic(api_key=api_key)
 
     # Convert history to Claude message format (role: "user" / "assistant")
+    # Use last 20 turns for broader context
     claude_messages = []
-    for msg in history[-10:]:
+    for msg in history[-20:]:
         role = "assistant" if msg["role"] == "model" else "user"
         claude_messages.append({"role": role, "content": msg["content"]})
 
@@ -592,6 +749,13 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
             "error": "no_api_key",
         }
 
+    # Check cache first (skip for very short queries that are likely unique)
+    if len(query.split()) >= 3:
+        cached = _get_cached(kb_type, query)
+        if cached:
+            logger.info("[llm-cache] HIT for %r", query[:60])
+            return {**cached, "cached": True}
+
     # Build RAG context
     context_chunks, system_prompt, user_message = _build_context(kb_type, query, db)
     context_titles = [c["document_title"] for c in context_chunks]
@@ -603,11 +767,9 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
         try:
             reply = _call_gemini(model_name, system_prompt, user_message,
                                  history, settings.gemini_api_key)
-            return {
-                "reply":        reply,
-                "context_used": context_titles,
-                "provider":     "gemini",
-            }
+            result = {"reply": reply, "context_used": context_titles, "provider": "gemini"}
+            _set_cache(kb_type, query, result)
+            return result
         except Exception as exc:
             gemini_error = str(exc)
             logger.warning("Gemini API failed for %s chat: %s", kb_type, gemini_error[:200])
@@ -620,11 +782,13 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
             fallback_note = ""
             if gemini_error:
                 fallback_note = f"\n\n---\n*[Answered by Claude — Gemini was unavailable]*"
-            return {
+            result = {
                 "reply":        reply + fallback_note,
                 "context_used": context_titles,
                 "provider":     "claude",
             }
+            _set_cache(kb_type, query, result)
+            return result
         except Exception as exc:
             claude_error = str(exc)
             logger.error("Claude API also failed for %s chat: %s", kb_type, claude_error[:200])

@@ -197,20 +197,54 @@ def _process_label(label_version_id: int):
             raw_text, _ = extract_text_from_file(label_version.file_path)
             label_version.ocr_raw_text = raw_text
 
-            # Step 2: Structured extraction — try Vision API for images AND PDFs
+            # Step 1.5: Try local extraction first (zero API cost)
             extraction = None
             confidence = 0.0
+            used_local = False
             try:
-                extraction, confidence = extract_label_data_from_image(label_version.file_path)
+                from app.services.local_extraction_service import extract_locally
+                from app.config import get_settings as _get_settings
+                _cfg = _get_settings()
+                local_result, local_conf = extract_locally(raw_text, db=db)
+                if _cfg.local_extraction_enabled and local_conf >= _cfg.local_extraction_min_confidence:
+                    print(f"[local-extract] confidence={local_conf:.3f} >= {_cfg.local_extraction_min_confidence} — skipping Claude", flush=True)
+                    extraction = local_result
+                    confidence = local_conf
+                    used_local = True
+                else:
+                    print(f"[local-extract] confidence={local_conf:.3f} < {_cfg.local_extraction_min_confidence} — falling back to Claude", flush=True)
             except Exception as e:
-                print(f"[extraction] Vision extraction failed: {e}")
+                print(f"[local-extract] Error: {e}", flush=True)
 
-            if not extraction or confidence < 0.5:
-                extraction, confidence = extract_label_data(raw_text)
+            if not used_local:
+                # Step 2: Structured extraction via Claude (Vision API)
+                inp_tokens = out_tokens = 0
+                extr_source = "fallback"
+                try:
+                    extraction, confidence, extr_source, inp_tokens, out_tokens = extract_label_data_from_image(label_version.file_path)
+                except Exception as e:
+                    print(f"[extraction] Vision extraction failed: {e}")
 
-            # Cross-check vision extraction against raw OCR text
-            if extraction and raw_text:
-                extraction = _cross_check_with_ocr(extraction, raw_text)
+                if not extraction or confidence < 0.5:
+                    extraction, confidence, extr_source, inp_tokens, out_tokens = extract_label_data(raw_text)
+
+                # Cross-check vision extraction against raw OCR text
+                if extraction and raw_text:
+                    extraction = _cross_check_with_ocr(extraction, raw_text)
+
+                label_version.extraction_source = extr_source
+                label_version.tokens_input = inp_tokens
+                label_version.tokens_output = out_tokens
+
+                # Learn from this Claude extraction for future local extractions
+                if extraction and confidence >= 0.80 and raw_text and extr_source == "claude":
+                    try:
+                        from app.services.pattern_library import learn_from_extraction
+                        learn_from_extraction(extraction, raw_text, label_version.id, db, confidence)
+                    except Exception as e:
+                        print(f"[pattern-library] Learn failed: {e}", flush=True)
+            else:
+                label_version.extraction_source = "local"
 
             label_version.extraction_json = extraction
             label_version.extraction_confidence = confidence
@@ -262,7 +296,16 @@ def _process_label(label_version_id: int):
             except Exception as e:
                 print(f"[alert] Email failed: {e}")
 
-        # Step 5: Feed product into LLM knowledge base
+        # Step 5: Auto-refresh Products KB so LLM Studio always has current compliance data
+        try:
+            from app.services.llm_service import seed_products_kb, invalidate_cache
+            seed_products_kb(db, force_update_product_id=label_version.product_id)
+            invalidate_cache("products")
+            print(f"[llm-kb] Products KB refreshed for product {label_version.product_id}", flush=True)
+        except Exception as e:
+            print(f"[llm-kb] Products KB refresh failed (non-critical): {e}", flush=True)
+
+        # Step 6: Feed product into LLM knowledge base (legacy hook)
         try:
             from app.routes.products import _feed_product_to_llm
             _feed_product_to_llm(label_version.product_id, db)
@@ -307,6 +350,29 @@ async def reanalyze_label(
 
     background_tasks.add_task(_process_label, label.id)
     return RedirectResponse(url=f"/labels/{label.id}?processing=1", status_code=302)
+
+
+@router.get("/labels/{label_id}/status")
+async def label_status(label_id: int, request: Request, db: Session = Depends(get_db)):
+    """JSON polling endpoint — returns {ready: bool} for the progress bar."""
+    user = require_user(request, db)
+    if not user:
+        return JSONResponse({"ready": False})
+    # Single query with JOIN — avoids lazy-load round-trips on label.product / label.checks
+    row = (
+        db.query(LabelVersion, Product)
+        .join(Product, Product.id == LabelVersion.product_id)
+        .filter(LabelVersion.id == label_id, Product.user_id == user.id)
+        .first()
+    )
+    if not row:
+        return JSONResponse({"ready": False})
+    label, _ = row
+    has_checks = db.query(ComplianceCheck.id).filter(
+        ComplianceCheck.label_version_id == label_id
+    ).first() is not None
+    ready = bool(label.extraction_json) and has_checks
+    return JSONResponse({"ready": ready})
 
 
 @router.get("/labels/{label_id}")
