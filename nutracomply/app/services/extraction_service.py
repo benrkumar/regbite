@@ -230,7 +230,7 @@ CLAUDE_MODEL = "claude-sonnet-4-6"
 CLAUDE_VERSION = "2023-06-01"
 
 
-def _claude_request(messages: list, max_tokens: int = 8192) -> Optional[str]:
+def _claude_request(messages: list, max_tokens: int = 8192, extra_headers: dict = None) -> Optional[str]:
     """Make a direct HTTP call to the Anthropic Messages API."""
     import httpx
 
@@ -239,13 +239,17 @@ def _claude_request(messages: list, max_tokens: int = 8192) -> Optional[str]:
         "anthropic-version": CLAUDE_VERSION,
         "content-type": "application/json",
     }
+    if extra_headers:
+        headers.update(extra_headers)
+
     payload = {
         "model": CLAUDE_MODEL,
         "max_tokens": max_tokens,
         "messages": messages,
     }
 
-    resp = httpx.post(CLAUDE_API_URL, headers=headers, json=payload, timeout=120.0)
+    print(f"[claude-api] Sending request to Claude ({CLAUDE_MODEL})...")
+    resp = httpx.post(CLAUDE_API_URL, headers=headers, json=payload, timeout=180.0)
     if resp.status_code != 200:
         print(f"[claude-api] HTTP {resp.status_code}: {resp.text[:500]}")
     resp.raise_for_status()
@@ -265,10 +269,29 @@ def _call_claude_vision(image_path: str) -> Optional[dict]:
     """Use Claude Vision via direct HTTP to extract label data from an image or PDF."""
     img_path = Path(image_path)
     suffix = img_path.suffix.lower()
+    print(f"[extraction] Claude Vision starting for {suffix} file...")
 
-    # For PDFs, convert to images and send all pages
+    # PDFs: send natively as a document (no image conversion needed)
     if suffix == ".pdf":
-        return _call_claude_vision_multi(image_path)
+        pdf_bytes = img_path.read_bytes()
+        b64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+        print(f"[extraction] Sending PDF natively ({len(pdf_bytes)//1024}KB) to Claude...")
+        messages = [{
+            "role": "user",
+            "content": [
+                {
+                    "type": "document",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "application/pdf",
+                        "data": b64_pdf,
+                    },
+                },
+                {"type": "text", "text": VISION_PROMPT},
+            ],
+        }]
+        raw = _claude_request(messages, extra_headers={"anthropic-beta": "pdfs-2024-09-25"})
+        return _parse_json_response(raw)
 
     # Single image
     image_data = img_path.read_bytes()
@@ -296,28 +319,6 @@ def _call_claude_vision(image_path: str) -> Optional[dict]:
         ],
     }]
 
-    raw = _claude_request(messages)
-    return _parse_json_response(raw)
-
-
-def _call_claude_vision_multi(pdf_path: str) -> Optional[dict]:
-    """Send all PDF pages as images to Claude for combined extraction."""
-    pages = _pdf_to_images(pdf_path)
-    if not pages:
-        return None
-
-    content_blocks = []
-    for img_bytes, media_type in pages:
-        b64 = base64.b64encode(img_bytes).decode("utf-8")
-        content_blocks.append({
-            "type": "image",
-            "source": {"type": "base64", "media_type": media_type, "data": b64},
-        })
-
-    prompt = MULTI_PAGE_VISION_PROMPT if len(pages) > 1 else VISION_PROMPT
-    content_blocks.append({"type": "text", "text": prompt})
-
-    messages = [{"role": "user", "content": content_blocks}]
     raw = _claude_request(messages)
     return _parse_json_response(raw)
 
