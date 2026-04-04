@@ -332,7 +332,7 @@ def _call_claude_vision(image_path: str) -> Optional[dict]:
 
 def _call_claude_text(ocr_text: str) -> Optional[dict]:
     """Use Claude text via direct HTTP to extract label data from OCR text."""
-    prompt = TEXT_PROMPT.format(label_text=ocr_text[:16000])
+    prompt = TEXT_PROMPT.replace("{label_text}", ocr_text[:16000])
 
     messages = [{"role": "user", "content": prompt}]
     raw = _claude_request(messages)
