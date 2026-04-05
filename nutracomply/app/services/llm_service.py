@@ -794,9 +794,29 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
     context_titles = [c["document_title"] for c in context_chunks]
     model_name = MODELS.get(kb_type, "gemini-2.0-flash")
 
-    # ── Try Gemini first ─────────────────────────────────────────────────────
+    # Provider priority differs by KB type:
+    #   regulations → Gemma (self-hosted) → Claude → Gemini
+    #   products    → Gemini → Gemma (self-hosted) → Claude
+    is_regulations = (kb_type == "regulations")
+
     gemini_error = None
-    if has_gemini:
+    gemma_error  = None
+
+    # ── Regulations: try Gemma first ─────────────────────────────────────────
+    if is_regulations and has_gemma:
+        try:
+            reply = _call_gemma_chat(system_prompt, user_message, history,
+                                      settings.gemma_api_url, settings.gemma_api_key,
+                                      settings.gemma_model_name)
+            result = {"reply": reply, "context_used": context_titles, "provider": "gemma"}
+            _set_cache(kb_type, query, result)
+            return result
+        except Exception as exc:
+            gemma_error = str(exc)
+            logger.warning("Gemma failed for regulations chat: %s", gemma_error[:200])
+
+    # ── Products: try Gemini first; Regulations: Gemini is last resort ────────
+    if not is_regulations and has_gemini:
         try:
             reply = _call_gemini(model_name, system_prompt, user_message,
                                  history, settings.gemini_api_key)
@@ -807,9 +827,8 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
             gemini_error = str(exc)
             logger.warning("Gemini API failed for %s chat: %s", kb_type, gemini_error[:200])
 
-    # ── Fallback: Gemma 4 (self-hosted) ──────────────────────────────────────
-    gemma_error = None
-    if has_gemma:
+    # ── Products fallback / Regulations second: Gemma (products) or Claude ───
+    if not is_regulations and has_gemma:
         try:
             reply = _call_gemma_chat(system_prompt, user_message, history,
                                       settings.gemma_api_url, settings.gemma_api_key,
@@ -821,14 +840,14 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
             gemma_error = str(exc)
             logger.warning("Gemma failed for %s chat: %s", kb_type, gemma_error[:200])
 
-    # ── Fallback: Claude ─────────────────────────────────────────────────────
+    # ── Regulations second / Products third: Claude ───────────────────────────
     if has_claude:
         try:
             reply = _call_claude(system_prompt, user_message,
                                  history, settings.anthropic_api_key)
             fallback_note = ""
-            if gemini_error:
-                fallback_note = f"\n\n---\n*[Answered by Claude — Gemini was unavailable]*"
+            if gemini_error or gemma_error:
+                fallback_note = f"\n\n---\n*[Answered by Claude — primary provider was unavailable]*"
             result = {
                 "reply":        reply + fallback_note,
                 "context_used": context_titles,
@@ -838,7 +857,24 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
             return result
         except Exception as exc:
             claude_error = str(exc)
-            logger.error("Claude API also failed for %s chat: %s", kb_type, claude_error[:200])
+            logger.error("Claude API failed for %s chat: %s", kb_type, claude_error[:200])
+
+            # ── Regulations last resort: Gemini ───────────────────────────────
+            if is_regulations and has_gemini:
+                try:
+                    reply = _call_gemini(model_name, system_prompt, user_message,
+                                         history, settings.gemini_api_key)
+                    result = {
+                        "reply": reply + "\n\n---\n*[Answered by Gemini — Gemma and Claude were unavailable]*",
+                        "context_used": context_titles,
+                        "provider": "gemini",
+                    }
+                    _set_cache(kb_type, query, result)
+                    return result
+                except Exception as exc2:
+                    gemini_error = str(exc2)
+                    logger.error("Gemini also failed for regulations chat: %s", gemini_error[:200])
+
             # All providers failed
             errors = []
             if gemma_error:
@@ -852,7 +888,18 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
                 "error": "all_providers_failed",
             }
 
-    # All available providers failed, no Claude configured
+    # Claude not configured — Gemini as final fallback for regulations
+    if is_regulations and has_gemini:
+        try:
+            reply = _call_gemini(model_name, system_prompt, user_message,
+                                 history, settings.gemini_api_key)
+            result = {"reply": reply, "context_used": context_titles, "provider": "gemini"}
+            _set_cache(kb_type, query, result)
+            return result
+        except Exception as exc:
+            gemini_error = str(exc)
+            logger.error("Gemini final fallback failed for regulations: %s", gemini_error[:200])
+
     errors = []
     if gemma_error:
         errors.append(f"Gemma: {gemma_error[:200]}")
