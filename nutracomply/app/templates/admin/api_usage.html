@@ -1,0 +1,165 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}API Usage{% endblock %}
+{% block page_title %}API Usage &amp; Token Reporting{% endblock %}
+
+{% block content %}
+
+{# ── Summary cards ─────────────────────────────────────────────────────────── #}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:1rem;margin-bottom:2rem;">
+
+  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Total Scans</div>
+    <div style="font-size:1.6rem;font-weight:700;color:#111;">{{ total_scans }}</div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Claude Scans</div>
+    <div style="font-size:1.6rem;font-weight:700;color:#5A9A98;">{{ claude_scans }}</div>
+    <div style="font-size:0.72rem;color:#A3A3A3;">
+      {{ ((claude_scans / total_scans * 100)|round(1)) if total_scans else 0 }}% of total
+    </div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Gemma (Self-hosted)</div>
+    <div style="font-size:1.6rem;font-weight:700;color:#4A90D9;">{{ gemma_scans }}</div>
+    <div style="font-size:0.72rem;color:#A3A3A3;">
+      {{ ((gemma_scans / total_scans * 100)|round(1)) if total_scans else 0 }}% of total
+    </div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Local (Free)</div>
+    <div style="font-size:1.6rem;font-weight:700;color:#3D7A4A;">{{ local_scans }}</div>
+    <div style="font-size:0.72rem;color:#A3A3A3;">
+      {{ ((local_scans / total_scans * 100)|round(1)) if total_scans else 0 }}% of total
+    </div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Input Tokens</div>
+    <div style="font-size:1.6rem;font-weight:700;color:#111;">{{ "{:,}".format(total_input_tokens) }}</div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Output Tokens</div>
+    <div style="font-size:1.6rem;font-weight:700;color:#111;">{{ "{:,}".format(total_output_tokens) }}</div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Est. Claude Cost</div>
+    <div style="font-size:1.6rem;font-weight:700;color:#8B3A3A;">${{ estimated_cost_usd }}</div>
+    <div style="font-size:0.7rem;color:#A3A3A3;">$3/M in · $15/M out</div>
+  </div>
+
+</div>
+
+{# ── Source breakdown bar ─────────────────────────────────────────────────── #}
+{% if total_scans > 0 %}
+<div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.25rem 1.5rem;margin-bottom:2rem;">
+  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:0.75rem;">Extraction source breakdown</div>
+  <div style="display:flex;height:10px;border-radius:99px;overflow:hidden;gap:2px;">
+    {% set claude_pct = (claude_scans / total_scans * 100)|round(1) %}
+    {% set gemma_pct  = (gemma_scans  / total_scans * 100)|round(1) %}
+    {% set local_pct  = (local_scans  / total_scans * 100)|round(1) %}
+    {% set gemini_pct = (gemini_scans / total_scans * 100)|round(1) %}
+    {% set fallback_pct = (fallback_scans / total_scans * 100)|round(1) %}
+    {% if claude_pct   > 0 %}<div style="flex:{{ claude_pct }};background:#5A9A98;" title="Claude {{ claude_pct }}%"></div>{% endif %}
+    {% if gemma_pct    > 0 %}<div style="flex:{{ gemma_pct }};background:#4A90D9;" title="Gemma {{ gemma_pct }}%"></div>{% endif %}
+    {% if local_pct    > 0 %}<div style="flex:{{ local_pct }};background:#3D7A4A;" title="Local {{ local_pct }}%"></div>{% endif %}
+    {% if gemini_pct   > 0 %}<div style="flex:{{ gemini_pct }};background:#9B8AC4;" title="Gemini {{ gemini_pct }}%"></div>{% endif %}
+    {% if fallback_pct > 0 %}<div style="flex:{{ fallback_pct }};background:#D4D4D4;" title="Fallback {{ fallback_pct }}%"></div>{% endif %}
+  </div>
+  <div style="display:flex;gap:1.2rem;margin-top:0.6rem;flex-wrap:wrap;">
+    <span style="font-size:0.72rem;color:#5A9A98;">&#9632; Claude {{ claude_pct }}%</span>
+    <span style="font-size:0.72rem;color:#4A90D9;">&#9632; Gemma {{ gemma_pct }}%</span>
+    <span style="font-size:0.72rem;color:#3D7A4A;">&#9632; Local {{ local_pct }}%</span>
+    <span style="font-size:0.72rem;color:#9B8AC4;">&#9632; Gemini {{ gemini_pct }}%</span>
+    <span style="font-size:0.72rem;color:#A3A3A3;">&#9632; Fallback {{ fallback_pct }}%</span>
+  </div>
+</div>
+{% endif %}
+
+{# ── Daily table ──────────────────────────────────────────────────────────── #}
+{% if daily_list %}
+<div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.25rem 1.5rem;margin-bottom:2rem;">
+  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:0.9rem;">Last 30 days — daily breakdown</div>
+  <div class="adm-table-wrap">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Claude</th>
+          <th>Gemma</th>
+          <th>Local</th>
+          <th>Gemini</th>
+          <th>Fallback</th>
+          <th>Tokens</th>
+          <th>Est. Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in daily_list|reverse %}
+        <tr>
+          <td style="font-size:0.8rem;color:#525252;">{{ row.day }}</td>
+          <td style="font-weight:{% if row.claude > 0 %}600{% else %}400{% endif %};color:{% if row.claude > 0 %}#5A9A98{% else %}#D4D4D4{% endif %};">{{ row.claude }}</td>
+          <td style="font-weight:{% if row.gemma is defined and row.gemma > 0 %}600{% else %}400{% endif %};color:{% if row.gemma is defined and row.gemma > 0 %}#4A90D9{% else %}#D4D4D4{% endif %};">{{ row.gemma if row.gemma is defined else 0 }}</td>
+          <td style="font-weight:{% if row.local > 0 %}600{% else %}400{% endif %};color:{% if row.local > 0 %}#3D7A4A{% else %}#D4D4D4{% endif %};">{{ row.local }}</td>
+          <td style="color:{% if row.gemini > 0 %}#9B8AC4{% else %}#D4D4D4{% endif %};">{{ row.gemini }}</td>
+          <td style="color:#A3A3A3;">{{ row.fallback }}</td>
+          <td style="font-size:0.8rem;">{{ "{:,}".format(row.tokens) }}</td>
+          <td style="font-size:0.8rem;color:{% if row.cost > 0.01 %}#8B3A3A{% else %}#737373{% endif %};">${{ "%.4f"|format(row.cost) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# ── Recent Claude scans ──────────────────────────────────────────────────── #}
+{% if recent_labels %}
+<div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.25rem 1.5rem;">
+  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:0.9rem;">Last 100 Claude scans</div>
+  <div class="adm-table-wrap">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Label</th>
+          <th>Product</th>
+          <th>Date</th>
+          <th>Confidence</th>
+          <th>Input tok</th>
+          <th>Output tok</th>
+          <th>Est. Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lv in recent_labels %}
+        {% set c = ((lv.tokens_input or 0) / 1000000 * 3) + ((lv.tokens_output or 0) / 1000000 * 15) %}
+        <tr>
+          <td><a href="/labels/{{ lv.id }}" style="color:#5A9A98;font-size:0.8rem;">#{{ lv.id }}</a></td>
+          <td style="font-size:0.8rem;color:#525252;">{{ lv.product.name if lv.product else '—' }}</td>
+          <td style="font-size:0.76rem;color:#737373;">{{ lv.uploaded_at.strftime('%d %b %Y') }}</td>
+          <td>
+            {% set conf = ((lv.extraction_confidence or 0) * 100)|round|int %}
+            <span style="font-size:0.78rem;font-weight:600;color:{% if conf >= 80 %}#3D7A4A{% elif conf >= 60 %}#8B6A00{% else %}#8B3A3A{% endif %};">{{ conf }}%</span>
+          </td>
+          <td style="font-size:0.8rem;">{{ "{:,}".format(lv.tokens_input or 0) }}</td>
+          <td style="font-size:0.8rem;">{{ "{:,}".format(lv.tokens_output or 0) }}</td>
+          <td style="font-size:0.8rem;color:{% if c > 0.01 %}#8B3A3A{% else %}#737373{% endif %};">${{ "%.4f"|format(c) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if total_scans == 0 %}
+<div style="text-align:center;padding:3rem;color:#A3A3A3;font-size:0.88rem;">
+  No label scans yet. Token usage will appear here after the first upload.
+</div>
+{% endif %}
+
+{% endblock %}

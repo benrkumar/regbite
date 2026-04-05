@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from pathlib import Path
 
+from sqlalchemy import func
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
 from app.models import (
@@ -1140,3 +1141,103 @@ async def admin_blog_delete(post_id: int, request: Request, db: Session = Depend
         db.commit()
 
     return RedirectResponse(url="/admin/blog?msg=Post+deleted&type=success", status_code=302)
+
+
+# ── API Usage Reporting ───────────────────────────────────────────────────────
+
+@router.get("/api-usage")
+async def admin_api_usage(request: Request, db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+
+    # Totals
+    total_scans = db.query(LabelVersion).count()
+    claude_scans = db.query(LabelVersion).filter(LabelVersion.extraction_source == "claude").count()
+    gemma_scans  = db.query(LabelVersion).filter(LabelVersion.extraction_source == "gemma").count()
+    gemini_scans = db.query(LabelVersion).filter(LabelVersion.extraction_source == "gemini").count()
+    local_scans  = db.query(LabelVersion).filter(LabelVersion.extraction_source == "local").count()
+    fallback_scans = db.query(LabelVersion).filter(LabelVersion.extraction_source == "fallback").count()
+
+    token_totals = db.query(
+        func.coalesce(func.sum(LabelVersion.tokens_input), 0),
+        func.coalesce(func.sum(LabelVersion.tokens_output), 0),
+    ).first()
+    total_input_tokens  = int(token_totals[0] or 0)
+    total_output_tokens = int(token_totals[1] or 0)
+    total_tokens = total_input_tokens + total_output_tokens
+
+    # Cost estimate (claude-sonnet-4-6 pricing: $3/M input, $15/M output)
+    INPUT_COST_PER_M  = 3.0
+    OUTPUT_COST_PER_M = 15.0
+    estimated_cost_usd = (
+        (total_input_tokens  / 1_000_000) * INPUT_COST_PER_M +
+        (total_output_tokens / 1_000_000) * OUTPUT_COST_PER_M
+    )
+
+    # Per-scan breakdown (last 100 Claude scans)
+    recent_labels = (
+        db.query(LabelVersion)
+        .filter(LabelVersion.extraction_source == "claude")
+        .order_by(LabelVersion.uploaded_at.desc())
+        .limit(100)
+        .all()
+    )
+
+    # Daily aggregates — last 30 days
+    from datetime import timedelta
+    cutoff = datetime.utcnow() - timedelta(days=30)
+    daily_rows = (
+        db.query(
+            func.date(LabelVersion.uploaded_at).label("day"),
+            LabelVersion.extraction_source,
+            func.count(LabelVersion.id).label("scans"),
+            func.coalesce(func.sum(LabelVersion.tokens_input), 0).label("inp"),
+            func.coalesce(func.sum(LabelVersion.tokens_output), 0).label("out"),
+        )
+        .filter(LabelVersion.uploaded_at >= cutoff)
+        .group_by(func.date(LabelVersion.uploaded_at), LabelVersion.extraction_source)
+        .order_by(func.date(LabelVersion.uploaded_at))
+        .all()
+    )
+
+    # Collapse into per-day dict for template
+    daily: dict = {}
+    for row in daily_rows:
+        day = str(row.day)
+        if day not in daily:
+            daily[day] = {"claude": 0, "gemma": 0, "gemini": 0, "local": 0, "fallback": 0,
+                          "tokens": 0, "cost": 0.0}
+        src = row.extraction_source or "fallback"
+        daily[day][src] = daily[day].get(src, 0) + row.scans
+        t = int(row.inp) + int(row.out)
+        daily[day]["tokens"] += t
+        daily[day]["cost"] += (
+            (int(row.inp) / 1_000_000) * INPUT_COST_PER_M +
+            (int(row.out) / 1_000_000) * OUTPUT_COST_PER_M
+        )
+
+    daily_list = sorted(
+        [{"day": k, **v} for k, v in daily.items()],
+        key=lambda x: x["day"]
+    )
+
+    return templates.TemplateResponse("admin/api_usage.html", {
+        "request": request,
+        "user": user,
+        "unread_alerts": unread_alerts,
+        "total_scans": total_scans,
+        "claude_scans": claude_scans,
+        "gemma_scans": gemma_scans,
+        "gemini_scans": gemini_scans,
+        "local_scans": local_scans,
+        "fallback_scans": fallback_scans,
+        "total_input_tokens": total_input_tokens,
+        "total_output_tokens": total_output_tokens,
+        "total_tokens": total_tokens,
+        "estimated_cost_usd": round(estimated_cost_usd, 4),
+        "recent_labels": recent_labels,
+        "daily_list": daily_list,
+    })

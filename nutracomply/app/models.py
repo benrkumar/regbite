@@ -222,6 +222,9 @@ class LabelVersion(Base):
     ocr_raw_text = Column(Text)
     extraction_json = Column(JSON)
     extraction_confidence = Column(Float)
+    extraction_source = Column(String(20), nullable=True)   # "claude", "gemma", "gemini", "local", "fallback"
+    tokens_input = Column(Integer, nullable=True)
+    tokens_output = Column(Integer, nullable=True)
     is_current = Column(Boolean, default=True)
 
     __table_args__ = (
@@ -653,3 +656,18 @@ class BlogPost(Base):
 
     category = relationship("BlogCategory", back_populates="posts")
     author   = relationship("User", foreign_keys=[author_id])
+
+
+# ─── Local Extraction Pattern Library ────────────────────────────────────────
+
+class ExtractionPattern(Base):
+    """Stores field-level extraction patterns learned from successful Claude extractions."""
+    __tablename__ = "extraction_patterns"
+
+    id              = Column(Integer, primary_key=True, index=True)
+    field_name      = Column(String(64), nullable=False, index=True)
+    field_value     = Column(Text, nullable=False)
+    ocr_context     = Column(Text, nullable=False)   # surrounding OCR text for TF-IDF matching
+    source_label_id = Column(Integer, ForeignKey("label_versions.id"), nullable=True)
+    confidence      = Column(Float, default=0.0)
+    created_at      = Column(DateTime, default=datetime.utcnow)

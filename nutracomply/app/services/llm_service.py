@@ -685,6 +685,39 @@ def _call_gemini(model_name: str, system_prompt: str, user_message: str,
     return response.text.strip()
 
 
+# ─── Gemma 4 (self-hosted via vLLM) ─────────────────────────────────────────
+
+def _call_gemma_chat(system_prompt: str, user_message: str,
+                     history: list, api_url: str, api_key: str,
+                     model_name: str) -> str:
+    """Call Gemma 4 via vLLM OpenAI-compatible API. Raises on failure."""
+    import httpx
+
+    url = api_url.rstrip("/") + "/chat/completions"
+    headers = {"content-type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    # Build OpenAI-style messages: system + history + current user message
+    messages = [{"role": "system", "content": system_prompt}]
+    for msg in history[-20:]:
+        role = "assistant" if msg["role"] == "model" else "user"
+        messages.append({"role": role, "content": msg["content"]})
+    messages.append({"role": "user", "content": user_message})
+
+    payload = {
+        "model": model_name,
+        "messages": messages,
+        "max_tokens": 2048,
+        "temperature": 0.2,
+    }
+
+    resp = httpx.post(url, headers=headers, json=payload, timeout=120.0)
+    resp.raise_for_status()
+    data = resp.json()
+    return data["choices"][0]["message"]["content"].strip()
+
+
 # ─── Claude (Anthropic) fallback ─────────────────────────────────────────────
 
 def _call_claude(system_prompt: str, user_message: str,
@@ -718,10 +751,9 @@ def _call_claude(system_prompt: str, user_message: str,
 
 def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
     """
-    RAG pipeline: retrieve context -> build prompt -> call Gemini -> fallback to Claude.
+    RAG pipeline: retrieve context -> build prompt -> call LLM.
 
-    Tries Gemini first. If Gemini fails (bad API key, expired model, quota, etc.),
-    automatically retries with Claude (Anthropic) if anthropic_api_key is configured.
+    Priority: Gemini → Gemma 4 (self-hosted fallback) → Claude (paid fallback).
 
     Args:
         kb_type:  "regulations" or "products"
@@ -730,20 +762,21 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
         db:       SQLAlchemy session
 
     Returns:
-        {"reply": str, "context_used": [document_title, ...], "provider": "gemini"|"claude"}
+        {"reply": str, "context_used": [document_title, ...], "provider": "gemma"|"gemini"|"claude"}
         On error: {"reply": error_msg, "context_used": [], "error": error_code}
     """
     from app.config import get_settings
     settings = get_settings()
 
+    has_gemma  = bool(settings.gemma_enabled and settings.gemma_api_url)
     has_gemini = bool(settings.gemini_api_key)
     has_claude = bool(settings.anthropic_api_key)
 
-    if not has_gemini and not has_claude:
+    if not has_gemma and not has_gemini and not has_claude:
         return {
             "reply": (
-                "No LLM API key is configured. "
-                "Please set GEMINI_API_KEY or ANTHROPIC_API_KEY in your environment variables."
+                "No LLM provider is configured. "
+                "Set GEMMA_API_URL, GEMINI_API_KEY, or ANTHROPIC_API_KEY in your environment."
             ),
             "context_used": [],
             "error": "no_api_key",
@@ -761,7 +794,7 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
     context_titles = [c["document_title"] for c in context_chunks]
     model_name = MODELS.get(kb_type, "gemini-2.0-flash")
 
-    # ── Try Gemini first ──────────────────────────────────────────────────────
+    # ── Try Gemini first ─────────────────────────────────────────────────────
     gemini_error = None
     if has_gemini:
         try:
@@ -774,7 +807,21 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
             gemini_error = str(exc)
             logger.warning("Gemini API failed for %s chat: %s", kb_type, gemini_error[:200])
 
-    # ── Fallback to Claude ────────────────────────────────────────────────────
+    # ── Fallback: Gemma 4 (self-hosted) ──────────────────────────────────────
+    gemma_error = None
+    if has_gemma:
+        try:
+            reply = _call_gemma_chat(system_prompt, user_message, history,
+                                      settings.gemma_api_url, settings.gemma_api_key,
+                                      settings.gemma_model_name)
+            result = {"reply": reply, "context_used": context_titles, "provider": "gemma"}
+            _set_cache(kb_type, query, result)
+            return result
+        except Exception as exc:
+            gemma_error = str(exc)
+            logger.warning("Gemma failed for %s chat: %s", kb_type, gemma_error[:200])
+
+    # ── Fallback: Claude ─────────────────────────────────────────────────────
     if has_claude:
         try:
             reply = _call_claude(system_prompt, user_message,
@@ -792,20 +839,27 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
         except Exception as exc:
             claude_error = str(exc)
             logger.error("Claude API also failed for %s chat: %s", kb_type, claude_error[:200])
-            # Both providers failed
+            # All providers failed
+            errors = []
+            if gemma_error:
+                errors.append(f"Gemma: {gemma_error[:150]}")
+            if gemini_error:
+                errors.append(f"Gemini ({model_name}): {gemini_error[:150]}")
+            errors.append(f"Claude ({CLAUDE_MODEL}): {claude_error[:150]}")
             return {
-                "reply": (
-                    f"Both LLM providers failed.\n\n"
-                    f"Gemini ({model_name}): {gemini_error[:200]}\n\n"
-                    f"Claude ({CLAUDE_MODEL}): {claude_error[:200]}"
-                ),
+                "reply": "All LLM providers failed.\n\n" + "\n\n".join(errors),
                 "context_used": [],
                 "error": "all_providers_failed",
             }
 
-    # Gemini failed and no Claude key configured
+    # All available providers failed, no Claude configured
+    errors = []
+    if gemma_error:
+        errors.append(f"Gemma: {gemma_error[:200]}")
+    if gemini_error:
+        errors.append(f"Gemini ({model_name}): {gemini_error[:200]}")
     return {
-        "reply": f"Gemini API error ({model_name}): {gemini_error[:300]}",
+        "reply": "LLM providers failed.\n\n" + "\n\n".join(errors) if errors else "No LLM provider available.",
         "context_used": [],
         "error": "api_error",
     }

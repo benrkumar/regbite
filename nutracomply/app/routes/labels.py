@@ -236,8 +236,8 @@ def _process_label(label_version_id: int):
                 label_version.tokens_input = inp_tokens
                 label_version.tokens_output = out_tokens
 
-                # Learn from this Claude extraction for future local extractions
-                if extraction and confidence >= 0.80 and raw_text and extr_source == "claude":
+                # Learn from AI extractions for future local extractions
+                if extraction and confidence >= 0.80 and raw_text and extr_source in ("claude", "gemma"):
                     try:
                         from app.services.pattern_library import learn_from_extraction
                         learn_from_extraction(extraction, raw_text, label_version.id, db, confidence)

@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     # Anthropic (Claude) — used for label extraction
     anthropic_api_key: str = ""
 
+    # Gemma 4 (self-hosted via vLLM on GPU server)
+    gemma_api_url: str = ""                          # e.g. "https://{pod}-8000.proxy.runpod.net/v1"
+    gemma_api_key: str = ""                          # vLLM bearer token (empty = no auth)
+    gemma_model_name: str = "google/gemma-4-31b-it"  # model ID loaded in vLLM
+    gemma_enabled: bool = True                       # killswitch — set False to skip Gemma
+    gemma_visual_token_budget: int = 560             # 560=standard, 1120=detailed fine-print
+
     # Email (Brevo SMTP)
     brevo_smtp_host: str = "smtp-relay.brevo.com"
     brevo_smtp_port: int = 587
@@ -47,6 +54,10 @@ class Settings(BaseSettings):
 
     # File uploads
     upload_dir: str = "./uploads"
+
+    # Local extraction (reduces Claude API calls)
+    local_extraction_enabled: bool = True
+    local_extraction_min_confidence: float = 0.72
 
     class Config:
         env_file = ".env"

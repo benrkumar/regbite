@@ -329,40 +329,57 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
         relevant_keys = [k for k in extraction if extraction[k] and k != "_extraction_warnings"]
         context_data = "\n".join(f"  {k}: {str(extraction[k])[:200]}" for k in relevant_keys[:15])
 
+    prompt = (
+        "You are an FSSAI/Legal Metrology compliance auditor for Indian product labels.\n\n"
+        f"RULE: {rule.rule_code} — {description}\n"
+        f"REGULATION: {rule.regulation_source or 'N/A'}\n\n"
+        f"EXTRACTED LABEL DATA:\n{context_data}\n\n"
+        "Based on the extracted data, can you determine if this format/layout requirement "
+        "is likely met? Consider that you're working from extracted text — you cannot verify "
+        "visual elements like font size or color, but you CAN verify:\n"
+        "- Whether required text/declarations are present\n"
+        "- Whether bilingual requirements are met (Hindi + English)\n"
+        "- Whether numerical formats are correct\n"
+        "- Whether required ordering/structure is followed\n\n"
+        "Respond with ONLY valid JSON (no markdown):\n"
+        '{"verdict": "PASS" or "FAIL" or "WARNING", '
+        '"reason": "1-2 sentence explanation"}'
+    )
+
     try:
         from app.config import get_settings
         settings = get_settings()
-        if not settings.gemini_api_key:
-            raise ValueError("No API key")
-
-        import google.generativeai as genai
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash")
-
-        prompt = (
-            "You are an FSSAI/Legal Metrology compliance auditor for Indian product labels.\n\n"
-            f"RULE: {rule.rule_code} — {description}\n"
-            f"REGULATION: {rule.regulation_source or 'N/A'}\n\n"
-            f"EXTRACTED LABEL DATA:\n{context_data}\n\n"
-            "Based on the extracted data, can you determine if this format/layout requirement "
-            "is likely met? Consider that you're working from extracted text — you cannot verify "
-            "visual elements like font size or color, but you CAN verify:\n"
-            "- Whether required text/declarations are present\n"
-            "- Whether bilingual requirements are met (Hindi + English)\n"
-            "- Whether numerical formats are correct\n"
-            "- Whether required ordering/structure is followed\n\n"
-            "Respond with ONLY valid JSON (no markdown):\n"
-            '{"verdict": "PASS" or "FAIL" or "WARNING", '
-            '"reason": "1-2 sentence explanation"}'
-        )
-
-        response = model.generate_content(
-            prompt,
-            generation_config={"temperature": 0.1, "max_output_tokens": 256},
-        )
-
         import json
-        raw = response.text.strip()
+
+        raw = None
+
+        # Try Gemini first (existing, fast)
+        if raw is None and settings.gemini_api_key:
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=settings.gemini_api_key)
+                model = genai.GenerativeModel("gemini-2.0-flash")
+                response = model.generate_content(
+                    prompt,
+                    generation_config={"temperature": 0.1, "max_output_tokens": 256},
+                )
+                raw = response.text.strip()
+            except Exception as ge:
+                print(f"[compliance] Gemini format check failed for {rule.rule_code}: {ge}", flush=True)
+
+        # Fallback: Gemma 4 (self-hosted)
+        if raw is None and settings.gemma_enabled and settings.gemma_api_url:
+            try:
+                from app.services.extraction_service import _is_gemma_available, _gemma_request
+                if _is_gemma_available():
+                    messages = [{"role": "user", "content": prompt}]
+                    raw, _, _ = _gemma_request(messages, max_tokens=256)
+            except Exception as ge:
+                print(f"[compliance] Gemma format check failed for {rule.rule_code}: {ge}", flush=True)
+
+        if raw is None:
+            raise ValueError("No LLM provider available for format check")
+
         raw = re.sub(r"^```(?:json)?\s*", "", raw)
         raw = re.sub(r"\s*```$", "", raw)
         result_json = json.loads(raw)

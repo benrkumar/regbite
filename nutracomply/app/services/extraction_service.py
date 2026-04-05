@@ -10,6 +10,14 @@ v4 improvements:
   - Dynamic confidence scoring based on field completeness
   - Post-extraction OCR cross-check for accuracy
   - Post-extraction validation with missing-field warnings
+
+v5 improvements:
+  - Gemma 4 31B Dense (self-hosted via vLLM) as first fallback after Claude
+  - Priority: Local regex → Claude Vision → Gemma 4 Vision → Gemini Vision
+  - OpenAI-compatible API format (vLLM) with structured JSON output
+  - Token tracking from vLLM usage stats
+  - Cached health check (60s) to avoid per-request overhead
+  - ~100× cost reduction: ~$0.001/label (Gemma) vs ~$0.12/label (Claude)
 """
 
 import base64
@@ -393,6 +401,145 @@ def _call_claude_text(ocr_text: str) -> tuple:
     return _parse_json_response(raw), inp, out
 
 
+# ─── Gemma 4 (self-hosted via vLLM, OpenAI-compatible) ─────────────────────
+
+import time as _time
+
+_gemma_health = {"available": False, "checked_at": 0.0}
+
+
+def _is_gemma_available() -> bool:
+    """Check if self-hosted Gemma server is reachable. Caches result for 60 s."""
+    if not settings.gemma_enabled or not settings.gemma_api_url:
+        return False
+
+    now = _time.time()
+    if now - _gemma_health["checked_at"] < 60:
+        return _gemma_health["available"]
+
+    import httpx
+    try:
+        url = settings.gemma_api_url.rstrip("/") + "/models"
+        headers = {}
+        if settings.gemma_api_key:
+            headers["Authorization"] = f"Bearer {settings.gemma_api_key}"
+        resp = httpx.get(url, headers=headers, timeout=5.0)
+        ok = resp.status_code == 200
+    except Exception:
+        ok = False
+
+    _gemma_health["available"] = ok
+    _gemma_health["checked_at"] = now
+    return ok
+
+
+def _gemma_request(messages: list, max_tokens: int = 8192) -> tuple:
+    """Make a direct HTTP call to the vLLM OpenAI-compatible API.
+
+    Returns:
+        (text: str, input_tokens: int, output_tokens: int)
+    """
+    import httpx
+
+    url = settings.gemma_api_url.rstrip("/") + "/chat/completions"
+    headers = {"content-type": "application/json"}
+    if settings.gemma_api_key:
+        headers["Authorization"] = f"Bearer {settings.gemma_api_key}"
+
+    payload = {
+        "model": settings.gemma_model_name,
+        "messages": messages,
+        "max_tokens": max_tokens,
+        "temperature": 0.1,
+        "response_format": {"type": "json_object"},
+    }
+
+    _log(f"[gemma-api] Sending request to Gemma ({settings.gemma_model_name})...")
+    resp = httpx.post(url, headers=headers, json=payload, timeout=180.0)
+    if resp.status_code != 200:
+        _log(f"[gemma-api] HTTP {resp.status_code}: {resp.text[:500]}")
+    resp.raise_for_status()
+
+    data = resp.json()
+    usage = data.get("usage", {})
+    input_tokens = usage.get("prompt_tokens", 0)
+    output_tokens = usage.get("completion_tokens", 0)
+    text = data["choices"][0]["message"]["content"].strip()
+    _log(f"[gemma-api] OK — tokens=in:{input_tokens} out:{output_tokens}")
+    return text, input_tokens, output_tokens
+
+
+def _call_gemma_vision(image_path: str) -> tuple:
+    """Use Gemma 4 Vision via vLLM to extract label data from an image or PDF.
+
+    Returns:
+        (extraction_dict, input_tokens, output_tokens)
+    """
+    img_path = Path(image_path)
+    suffix = img_path.suffix.lower()
+    _log(f"[extraction] Gemma Vision starting for {suffix} file...")
+
+    if suffix == ".pdf":
+        _log("[extraction] Converting PDF to images for Gemma Vision...")
+        pages = _pdf_to_images(image_path, dpi=300)
+        if not pages:
+            _log("[extraction] PDF→image conversion returned no pages")
+            return None, 0, 0
+
+        # OpenAI vision format: image_url with base64 data URIs
+        content = []
+        for img_bytes, media_type in pages:
+            b64 = base64.b64encode(img_bytes).decode("utf-8")
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:{media_type};base64,{b64}"},
+            })
+        prompt_text = MULTI_PAGE_VISION_PROMPT if len(pages) > 1 else VISION_PROMPT
+        content.append({"type": "text", "text": prompt_text})
+
+        _log(f"[extraction] Sending {len(pages)} PDF page(s) to Gemma...")
+        messages = [{"role": "user", "content": content}]
+        raw, inp, out = _gemma_request(messages)
+        return _parse_json_response(raw), inp, out
+
+    # Single image
+    image_data = img_path.read_bytes()
+    b64_image = base64.b64encode(image_data).decode("utf-8")
+
+    media_types = {
+        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".png": "image/png", ".webp": "image/webp",
+        ".gif": "image/gif", ".tiff": "image/tiff", ".tif": "image/tiff",
+    }
+    media_type = media_types.get(suffix, "image/jpeg")
+
+    messages = [{
+        "role": "user",
+        "content": [
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:{media_type};base64,{b64_image}"},
+            },
+            {"type": "text", "text": VISION_PROMPT},
+        ],
+    }]
+
+    raw, inp, out = _gemma_request(messages)
+    return _parse_json_response(raw), inp, out
+
+
+def _call_gemma_text(ocr_text: str) -> tuple:
+    """Use Gemma 4 text via vLLM to extract label data from OCR text.
+
+    Returns:
+        (extraction_dict, input_tokens, output_tokens)
+    """
+    prompt = TEXT_PROMPT.replace("{label_text}", ocr_text[:16000])
+    messages = [{"role": "user", "content": prompt}]
+    raw, inp, out = _gemma_request(messages)
+    return _parse_json_response(raw), inp, out
+
+
 # ─── Gemini fallback ────────────────────────────────────────────────────────
 
 def _call_gemini_vision(image_path: str) -> Optional[dict]:
@@ -457,7 +604,7 @@ def _call_gemini_text(ocr_text: str) -> Optional[dict]:
 def extract_label_data_from_image(image_path: str) -> tuple:
     """
     Extract structured label data from an image file.
-    Primary: Claude Vision → Fallback: Gemini Vision
+    Priority: Claude Vision → Gemma 4 Vision → Gemini Vision
 
     Returns:
         (extraction_dict, confidence, source, input_tokens, output_tokens)
@@ -467,8 +614,9 @@ def extract_label_data_from_image(image_path: str) -> tuple:
     key_from_env = os.environ.get("ANTHROPIC_API_KEY", "")
     _log(f"[extraction] Claude key (settings): {'SET len=' + str(len(key_from_settings)) if key_from_settings else 'EMPTY'}")
     _log(f"[extraction] Claude key (os.environ): {'SET len=' + str(len(key_from_env)) if key_from_env else 'EMPTY'}")
+    _log(f"[extraction] Gemma enabled={settings.gemma_enabled}, url={'SET' if settings.gemma_api_url else 'EMPTY'}")
 
-    # Try Claude first
+    # Try Claude first (primary, highest quality)
     if key_from_env or settings.anthropic_api_key:
         try:
             result, inp, out = _call_claude_vision(image_path)
@@ -484,7 +632,23 @@ def extract_label_data_from_image(image_path: str) -> tuple:
         except Exception as e:
             _log(f"[extraction] Claude Vision failed: {e}")
 
-    # Fallback: Gemini Vision
+    # Fallback: Gemma 4 Vision (self-hosted, ~$0.001/label)
+    if _is_gemma_available():
+        try:
+            result, inp, out = _call_gemma_vision(image_path)
+            if result:
+                result = _normalize_extraction(result)
+                confidence = _calculate_confidence(result, "vision")
+                warnings = _validate_extraction(result)
+                if warnings:
+                    result["_extraction_warnings"] = warnings
+                    _log(f"[extraction] Gemma Vision warnings: {warnings}")
+                _log(f"[extraction] Gemma Vision succeeded (confidence={confidence})")
+                return result, confidence, "gemma", inp, out
+        except Exception as e:
+            _log(f"[extraction] Gemma Vision failed: {e}")
+
+    # Fallback: Gemini Vision (API)
     if settings.gemini_api_key:
         try:
             result = _call_gemini_vision(image_path)
@@ -506,7 +670,7 @@ def extract_label_data_from_image(image_path: str) -> tuple:
 def extract_label_data(ocr_text: str) -> tuple:
     """
     Extract structured label data from OCR text.
-    Primary: Claude Text → Fallback: Gemini Text → Fallback: Rule-based
+    Priority: Claude Text → Gemma 4 Text → Gemini Text → Rule-based
 
     Returns:
         (extraction_dict, confidence, source, input_tokens, output_tokens)
@@ -514,7 +678,7 @@ def extract_label_data(ocr_text: str) -> tuple:
     if not ocr_text.strip():
         return {}, 0.0, "none", 0, 0
 
-    # Try Claude first
+    # Try Claude first (primary)
     import os
     if settings.anthropic_api_key or os.environ.get("ANTHROPIC_API_KEY", ""):
         try:
@@ -532,7 +696,24 @@ def extract_label_data(ocr_text: str) -> tuple:
         except Exception as e:
             _log(f"[extraction] Claude text failed: {e}")
 
-    # Fallback: Gemini
+    # Fallback: Gemma 4 Text (self-hosted)
+    if _is_gemma_available():
+        try:
+            result, inp, out = _call_gemma_text(ocr_text)
+            if result:
+                result = _normalize_extraction(result)
+                result = _cross_check_with_ocr(result, ocr_text)
+                confidence = _calculate_confidence(result, "text")
+                warnings = _validate_extraction(result)
+                if warnings:
+                    result["_extraction_warnings"] = warnings
+                    _log(f"[extraction] Gemma text warnings: {warnings}")
+                _log(f"[extraction] Gemma text succeeded (confidence={confidence})")
+                return result, confidence, "gemma", inp, out
+        except Exception as e:
+            _log(f"[extraction] Gemma text failed: {e}")
+
+    # Fallback: Gemini (API)
     if settings.gemini_api_key:
         try:
             result = _call_gemini_text(ocr_text)
