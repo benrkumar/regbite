@@ -843,19 +843,24 @@ async def admin_blog(request: Request, db: Session = Depends(get_db)):
 
     unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
 
+    selected_category = request.query_params.get("category", "")
+
     return templates.TemplateResponse("admin/blog.html", {
-        "request": request,
-        "user": user,
-        "posts": posts,
-        "categories": categories,
-        "unread_alerts": unread_alerts,
-        "total_posts": total_posts,
-        "published_count": published_count,
-        "draft_count": draft_count,
-        "total_views": total_views,
-        "status_filter": status_filter,
+        "request":           request,
+        "user":              user,
+        "posts":             posts,
+        "categories":        categories,
+        "unread_alerts":     unread_alerts,
+        "selected_category": selected_category,
+        "status_filter":     status_filter,
+        "stats": {
+            "total":       total_posts,
+            "published":   published_count,
+            "drafts":      draft_count,
+            "total_views": total_views,
+        },
         "flash_message": request.query_params.get("msg"),
-        "flash_type": request.query_params.get("type", "info"),
+        "flash_type":    request.query_params.get("type", "info"),
     })
 
 

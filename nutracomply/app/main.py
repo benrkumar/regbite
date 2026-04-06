@@ -247,6 +247,38 @@ def _run_migrations():
         "CREATE INDEX IF NOT EXISTS ix_labels_product_current ON label_versions (product_id, is_current)",
         "CREATE INDEX IF NOT EXISTS ix_checks_label_version ON compliance_checks (label_version_id)",
         "CREATE INDEX IF NOT EXISTS ix_notifications_user_read ON notifications (user_id, is_read)",
+        # v12: LLM Studio KB tables (safety-net — also handled by create_all, but explicit here
+        #      to guarantee they exist before any route queries them)
+        """CREATE TABLE IF NOT EXISTS kb_documents (
+            id SERIAL PRIMARY KEY,
+            kb_type VARCHAR(20) NOT NULL,
+            title VARCHAR(500) NOT NULL,
+            source VARCHAR(500),
+            content TEXT NOT NULL,
+            chunk_count INTEGER DEFAULT 0,
+            is_active BOOLEAN DEFAULT TRUE,
+            uploaded_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            uploaded_at TIMESTAMP DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS ix_kb_documents_kb_type ON kb_documents (kb_type)",
+        """CREATE TABLE IF NOT EXISTS kb_chunks (
+            id SERIAL PRIMARY KEY,
+            document_id INTEGER NOT NULL REFERENCES kb_documents(id) ON DELETE CASCADE,
+            kb_type VARCHAR(20) NOT NULL,
+            content TEXT NOT NULL,
+            chunk_index INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS ix_kb_chunks_kb_type ON kb_chunks (kb_type)",
+        "CREATE INDEX IF NOT EXISTS ix_kb_chunks_document_id ON kb_chunks (document_id)",
+        """CREATE TABLE IF NOT EXISTS kb_conversations (
+            id SERIAL PRIMARY KEY,
+            kb_type VARCHAR(20) NOT NULL,
+            admin_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            messages JSON DEFAULT '[]',
+            updated_at TIMESTAMP DEFAULT NOW()
+        )""",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_kb_conversations_unique ON kb_conversations (kb_type, admin_id)",
     ]
     for sql in migrations:
         try:

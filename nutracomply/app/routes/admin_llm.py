@@ -52,12 +52,20 @@ async def llm_dashboard(request: Request, db: Session = Depends(get_db)):
 
     settings = get_settings()
 
+    _empty = {"documents": 0, "chunks": 0}
+    try:
+        reg_stats  = get_kb_stats("regulations", db)
+        prod_stats = get_kb_stats("products",    db)
+    except Exception:
+        reg_stats  = _empty
+        prod_stats = _empty
+
     return templates.TemplateResponse("admin/llm_dashboard.html", {
         "request":           request,
         "user":              user,
         "unread_alerts":     _unread_alerts(db),
-        "reg_stats":         get_kb_stats("regulations", db),
-        "prod_stats":        get_kb_stats("products",    db),
+        "reg_stats":         reg_stats,
+        "prod_stats":        prod_stats,
         "gemini_configured": bool(settings.gemini_api_key),
         "claude_configured": bool(settings.anthropic_api_key),
     })
@@ -88,13 +96,18 @@ async def llm_train(kb_type: str, request: Request, db: Session = Depends(get_db
     flash_message = request.query_params.get("msg", "").replace("+", " ")
     flash_type    = request.query_params.get("type", "info")
 
+    try:
+        stats = get_kb_stats(kb_type, db)
+    except Exception:
+        stats = {"documents": 0, "chunks": 0}
+
     return templates.TemplateResponse("admin/llm_train.html", {
         "request":       request,
         "user":          user,
         "unread_alerts": _unread_alerts(db),
         "kb_type":       kb_type,
         "documents":     documents,
-        "stats":         get_kb_stats(kb_type, db),
+        "stats":         stats,
         "flash_message": flash_message or None,
         "flash_type":    flash_type,
     })
