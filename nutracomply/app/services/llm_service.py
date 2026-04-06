@@ -290,6 +290,141 @@ def _ingest_document(db, kb_type: str, title: str, source: str,
     return doc
 
 
+# ─── Bulk FSSAI PDF ingestion ────────────────────────────────────────────────
+
+def ingest_fssai_pdfs(db, folder_path: str = None) -> dict:
+    """
+    Bulk-ingest all FSSAI regulation/gazette notification PDFs from the FSSAI/
+    folder into the Regulations knowledge base.
+
+    Additive — skips PDFs whose source key already exists in the KB.
+    Uses pdfplumber for text extraction, same as the single-file upload handler.
+
+    Returns: {"status": ..., "total_files": N, "ingested": N, "skipped": N,
+              "failed": N, "errors": [...]}
+    """
+    import os
+    from pathlib import Path
+    from app.models import KBDocument, KBType
+
+    if folder_path is None:
+        # Default: FSSAI/ folder at project root (one level above nutracomply/)
+        app_dir = Path(__file__).resolve().parent.parent  # nutracomply/app/..
+        project_root = app_dir.parent.parent              # above nutracomply/
+        folder_path = str(project_root / "FSSAI")
+
+    if not os.path.isdir(folder_path):
+        return {"status": "error", "message": f"Folder not found: {folder_path}",
+                "total_files": 0, "ingested": 0, "skipped": 0, "failed": 0, "errors": []}
+
+    # Gather all PDFs
+    pdf_files = sorted([
+        f for f in os.listdir(folder_path)
+        if f.lower().endswith(".pdf")
+    ])
+
+    if not pdf_files:
+        return {"status": "no_pdfs", "message": "No PDF files found in folder",
+                "total_files": 0, "ingested": 0, "skipped": 0, "failed": 0, "errors": []}
+
+    # Get existing sources to skip already-ingested files
+    existing_sources = {
+        d.source for d in
+        db.query(KBDocument.source).filter(
+            KBDocument.kb_type == KBType.REGULATIONS,
+            KBDocument.is_active == True,
+        ).all()
+    }
+
+    ingested = 0
+    skipped = 0
+    failed = 0
+    errors = []
+
+    for filename in pdf_files:
+        source_key = f"fssai:{filename}"
+
+        # Skip if already ingested
+        if source_key in existing_sources:
+            skipped += 1
+            continue
+
+        filepath = os.path.join(folder_path, filename)
+        try:
+            import pdfplumber
+            with pdfplumber.open(filepath) as pdf:
+                content = "\n\n".join(
+                    (page.extract_text() or "") for page in pdf.pages
+                )
+
+            content = content.strip()
+            if not content or len(content) < 50:
+                errors.append(f"{filename}: empty or unreadable")
+                failed += 1
+                continue
+
+            # Derive a human-readable title from the filename
+            title = _fssai_filename_to_title(filename)
+
+            _ingest_document(
+                db, "regulations",
+                title=title,
+                source=source_key,
+                content=content,
+            )
+            ingested += 1
+
+            # Log progress every 25 files
+            if (ingested + skipped + failed) % 25 == 0:
+                logger.info("[fssai-ingest] Progress: %d ingested, %d skipped, %d failed of %d",
+                            ingested, skipped, failed, len(pdf_files))
+
+        except Exception as exc:
+            errors.append(f"{filename}: {str(exc)[:120]}")
+            failed += 1
+
+    total = len(pdf_files)
+    status = "done" if ingested > 0 else ("up_to_date" if skipped == total else "error")
+    logger.info("[fssai-ingest] Complete: %d ingested, %d skipped, %d failed of %d total",
+                ingested, skipped, failed, total)
+
+    return {
+        "status": status,
+        "total_files": total,
+        "ingested": ingested,
+        "skipped": skipped,
+        "failed": failed,
+        "errors": errors[:20],  # cap error list
+    }
+
+
+def _fssai_filename_to_title(filename: str) -> str:
+    """Convert an FSSAI PDF filename to a readable document title.
+
+    Example: '5b56d3936c5e8Gazette_Notification_Gluten_11_05_2016 (1).pdf'
+           → 'FSSAI Gazette Notification: Gluten (11/05/2016)'
+    """
+    import re
+    name = filename.rsplit(".", 1)[0]  # strip .pdf
+    name = re.sub(r"^\w{12,14}", "", name)  # strip leading hex ID
+    name = re.sub(r"\s*\(\d+\)\s*$", "", name)  # strip " (1)" suffixes
+    name = name.replace("_", " ").strip()
+
+    # Extract date if present at end (DD_MM_YYYY pattern)
+    date_match = re.search(r"(\d{2})\s+(\d{2})\s+(\d{4})$", name)
+    date_str = ""
+    if date_match:
+        date_str = f" ({date_match.group(1)}/{date_match.group(2)}/{date_match.group(3)})"
+        name = name[:date_match.start()].strip()
+
+    # Clean up "Gazette Notification" prefix
+    name = re.sub(r"^Gazette\s+Notification\s*", "", name, flags=re.IGNORECASE)
+
+    if name:
+        return f"FSSAI Gazette Notification: {name}{date_str}"
+    return f"FSSAI Document: {filename[:80]}"
+
+
 # ─── KB seeding from DB ───────────────────────────────────────────────────────
 
 def seed_regulations_kb(db) -> dict:

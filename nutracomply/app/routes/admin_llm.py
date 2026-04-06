@@ -132,6 +132,43 @@ async def llm_seed(kb_type: str, request: Request, db: Session = Depends(get_db)
     )
 
 
+@router.post("/llm/regulations/ingest-fssai")
+async def llm_ingest_fssai(request: Request, db: Session = Depends(get_db)):
+    """Bulk-ingest all FSSAI regulation PDFs from the FSSAI/ folder.
+    Skips already-ingested files. Safe to run repeatedly."""
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    from app.services.llm_service import ingest_fssai_pdfs
+
+    try:
+        result = ingest_fssai_pdfs(db)
+
+        if result["status"] == "up_to_date":
+            msg = f"All+{result['total_files']}+FSSAI+PDFs+already+ingested"
+            typ = "info"
+        elif result["status"] == "done":
+            msg = (f"Ingested+{result['ingested']}+new+PDFs"
+                   f"+(skipped+{result['skipped']}+already+known,"
+                   f"+{result['failed']}+failed)")
+            typ = "success"
+        elif result["status"] == "error":
+            msg = result.get("message", "Unknown+error").replace(" ", "+")
+            typ = "error"
+        else:
+            msg = f"No+PDF+files+found+in+FSSAI+folder"
+            typ = "warning"
+    except Exception as exc:
+        msg = f"FSSAI+ingest+failed:+{str(exc)[:120].replace(' ', '+')}"
+        typ = "error"
+
+    return RedirectResponse(
+        url=f"/admin/llm/regulations/train?msg={msg}&type={typ}",
+        status_code=302,
+    )
+
+
 @router.post("/llm/{kb_type}/upload")
 async def llm_upload(
     kb_type: str,

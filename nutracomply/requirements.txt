@@ -48,6 +48,9 @@ requests==2.32.3
 # Security
 nh3==0.2.18
 
+# Local extraction pattern library
+scikit-learn>=1.4.0
+
 # Utilities
 pydantic==2.9.2
 pydantic-settings==2.5.2

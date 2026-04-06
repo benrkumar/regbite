@@ -25,6 +25,15 @@
         ↻ Auto-Seed from DB
       </button>
     </form>
+    {% if kb_type == "regulations" %}
+    <form method="post" action="/admin/llm/regulations/ingest-fssai" style="margin:0;">
+      <button type="submit" class="adm-btn adm-btn-success"
+              onclick="this.disabled=true;this.innerText='Ingesting…';this.form.submit();return true;"
+              title="Bulk-ingest all FSSAI gazette notification PDFs from the FSSAI/ folder. Skips already-ingested files.">
+        📄 Ingest FSSAI PDFs
+      </button>
+    </form>
+    {% endif %}
     <a href="/admin/llm/{{ kb_type }}/chat" class="adm-btn adm-btn-primary">💬 Test Chat →</a>
     <a href="/admin/llm" class="adm-btn">← Back</a>
   </div>
@@ -82,6 +91,8 @@
           </div>
           {% if doc.source and doc.source.startswith('db:') %}
           <span class="adm-badge badge-blue">DB Import</span>
+          {% elif doc.source and doc.source.startswith('fssai:') %}
+          <span class="adm-badge badge-green">FSSAI</span>
           {% elif doc.source and doc.source.startswith('upload:') %}
           <span class="adm-badge badge-purple">Uploaded</span>
           {% else %}
