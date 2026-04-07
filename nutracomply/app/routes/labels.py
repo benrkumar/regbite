@@ -337,7 +337,7 @@ async def reanalyze_label(
         return RedirectResponse(url="/login", status_code=302)
 
     label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
-    if not label or label.product.user_id != user.id:
+    if not label or not label.product or label.product.user_id != user.id:
         return RedirectResponse(url="/products")
 
     force_extract = request.query_params.get("force_extract") == "1"
@@ -382,7 +382,7 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
         return RedirectResponse(url="/login", status_code=302)
 
     label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
-    if not label or label.product.user_id != user.id:
+    if not label or not label.product or label.product.user_id != user.id:
         return RedirectResponse(url="/products")
 
     _ = label.checks
@@ -411,7 +411,7 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
         "score": score,
         "critical": critical,
         "violation_summary": violation_summary,
-        "failed_checks": sorted(failed, key=lambda c: c.rule.severity.value if c.rule else ""),
+        "failed_checks": sorted(failed, key=lambda c: c.rule.severity.value if c.rule else "zzz"),
         "warning_checks": warnings,
         "passed_checks": passed,
         "processing": bool(processing) and not label.extraction_json,
@@ -431,7 +431,7 @@ async def label_preview_page(label_id: int, page_num: int = 0, request: Request 
         return RedirectResponse(url="/login", status_code=302)
 
     label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
-    if not label or label.product.user_id != user.id:
+    if not label or not label.product or label.product.user_id != user.id:
         return JSONResponse({"detail": "Label not found"}, status_code=404)
 
     file_path = label.file_path
@@ -466,7 +466,7 @@ async def update_extraction_fields(label_id: int, request: Request, db: Session 
         return JSONResponse({"detail": "Not authenticated"}, status_code=401)
 
     label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
-    if not label or label.product.user_id != user.id:
+    if not label or not label.product or label.product.user_id != user.id:
         return JSONResponse({"detail": "Label not found"}, status_code=404)
 
     try:
