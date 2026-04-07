@@ -229,6 +229,7 @@ async def admin_blog(request: Request, db: Session = Depends(get_db)):
             "total_views": total_views,
         },
         "filter_status": status_filter,
+        "selected_category": request.query_params.get("category", ""),
         "flash_message": request.query_params.get("msg"),
         "flash_type": request.query_params.get("type", "info"),
     })

@@ -9,9 +9,12 @@ v2 improvements:
   - Smarter field normalization before comparisons
 """
 
+import logging
 import re
 from typing import Optional
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from app.models import ComplianceRule, ComplianceCheck, LabelVersion, CheckType, CheckResult, Severity
 
@@ -365,7 +368,7 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
                 )
                 raw = response.text.strip()
             except Exception as ge:
-                print(f"[compliance] Gemini format check failed for {rule.rule_code}: {ge}", flush=True)
+                logger.warning("[compliance] Gemini format check failed for %s: %s", rule.rule_code, ge)
 
         # Fallback: Gemma 4 (self-hosted)
         if raw is None and settings.gemma_enabled and settings.gemma_api_url:
@@ -375,7 +378,7 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
                     messages = [{"role": "user", "content": prompt}]
                     raw, _, _ = _gemma_request(messages, max_tokens=256)
             except Exception as ge:
-                print(f"[compliance] Gemma format check failed for {rule.rule_code}: {ge}", flush=True)
+                logger.warning("[compliance] Gemma format check failed for %s: %s", rule.rule_code, ge)
 
         if raw is None:
             raise ValueError("No LLM provider available for format check")
@@ -395,7 +398,7 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
             return CheckResult.WARNING, str(value)[:200] if field else None, f"Format check inconclusive: {reason}"
 
     except Exception as e:
-        print(f"[compliance] LLM format check failed for {rule.rule_code}: {e}")
+        logger.warning("[compliance] LLM format check failed for %s: %s", rule.rule_code, e)
         # Graceful fallback to WARNING
         return CheckResult.WARNING, None, f"Manual verification required: {description}"
 

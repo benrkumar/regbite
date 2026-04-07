@@ -129,7 +129,7 @@ async def llm_seed(kb_type: str, request: Request, db: Session = Depends(get_db)
         else:
             result = seed_products_kb(db)
 
-        if result["status"] == "already_seeded":
+        if result["status"] == "up_to_date":
             msg  = f"Knowledge+base+already+seeded+({result['document_count']}+documents+exist)"
             typ  = "info"
         else:

@@ -41,6 +41,12 @@ from __future__ import annotations
 import logging
 import time
 import hashlib
+import warnings
+
+# google-generativeai 0.8.x is deprecated in favour of google-genai; suppress the
+# FutureWarning it emits on every import until we migrate.
+warnings.filterwarnings("ignore", message=".*google.generativeai.*", category=FutureWarning)
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="google.generativeai")
 
 logger = logging.getLogger(__name__)
 
