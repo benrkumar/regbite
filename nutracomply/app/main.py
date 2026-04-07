@@ -279,6 +279,10 @@ def _run_migrations():
             updated_at TIMESTAMP DEFAULT NOW()
         )""",
         "CREATE UNIQUE INDEX IF NOT EXISTS ix_kb_conversations_unique ON kb_conversations (kb_type, admin_id)",
+        # v13: LabelVersion — extraction provenance columns (model added, DB missed)
+        "ALTER TABLE label_versions ADD COLUMN IF NOT EXISTS extraction_source VARCHAR(20)",
+        "ALTER TABLE label_versions ADD COLUMN IF NOT EXISTS tokens_input INTEGER",
+        "ALTER TABLE label_versions ADD COLUMN IF NOT EXISTS tokens_output INTEGER",
     ]
     for sql in migrations:
         try:
