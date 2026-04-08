@@ -294,7 +294,7 @@ Return ONLY valid JSON (no markdown):
 def _classify_with_gemini(name: str, text: str) -> dict:
     import google.generativeai as genai
     genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel("gemini-2.5-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash-lite")
     prompt = CLASSIFICATION_PROMPT.format(name=name, text=text[:3000])
     response = model.generate_content(prompt, generation_config={"temperature": 0.1})
     raw = re.sub(r"^```(?:json)?\s*", "", response.text.strip())
@@ -314,7 +314,7 @@ def suggest_rule_modifications(document_name: str, text_excerpt: str, existing_r
     try:
         import google.generativeai as genai
         genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-2.5-flash-lite")
 
         rules_summary = "\n".join(
             f"- {r['rule_code']}: {r['description'][:100]}" for r in existing_rules[:30]

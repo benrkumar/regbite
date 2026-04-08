@@ -371,7 +371,7 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=settings.gemini_api_key)
-                model = genai.GenerativeModel("gemini-2.5-flash")
+                model = genai.GenerativeModel("gemini-2.5-flash-lite")
                 response = model.generate_content(
                     prompt,
                     generation_config={"temperature": 0.1, "max_output_tokens": 256},
