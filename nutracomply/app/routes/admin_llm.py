@@ -61,14 +61,102 @@ async def llm_dashboard(request: Request, db: Session = Depends(get_db)):
         prod_stats = _empty
 
     return templates.TemplateResponse("admin/llm_dashboard.html", {
-        "request":           request,
-        "user":              user,
-        "unread_alerts":     _unread_alerts(db),
-        "reg_stats":         reg_stats,
-        "prod_stats":        prod_stats,
-        "gemini_configured": bool(settings.gemini_api_key),
-        "claude_configured": bool(settings.anthropic_api_key),
+        "request":            request,
+        "user":               user,
+        "unread_alerts":      _unread_alerts(db),
+        "reg_stats":          reg_stats,
+        "prod_stats":         prod_stats,
+        "gemma_configured":   bool(settings.gemma_enabled and settings.openrouter_api_key),
+        "gemma_model":        settings.gemma_model_name,
+        "gemini_configured":  bool(settings.gemini_api_key),
+        "claude_configured":  bool(settings.anthropic_api_key),
     })
+
+
+# ── Provider status / connectivity test ──────────────────────────────────────
+
+@router.get("/llm/provider-status")
+async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
+    """
+    Quick connectivity test for all configured LLM providers.
+    Sends a trivial one-token prompt to each; returns JSON with status + error.
+    """
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+
+    from app.config import get_settings
+    settings = get_settings()
+
+    result = {}
+
+    # ── Test Gemma via OpenRouter ─────────────────────────────────────────────
+    if settings.gemma_enabled and settings.openrouter_api_key:
+        import httpx as _httpx
+        try:
+            url = settings.openrouter_api_url.rstrip("/") + "/chat/completions"
+            headers = {
+                "content-type": "application/json",
+                "Authorization": f"Bearer {settings.openrouter_api_key}",
+                "HTTP-Referer": "https://steadfast-courage-production-0f66.up.railway.app",
+                "X-Title": "RegBite",
+            }
+            payload = {
+                "model": settings.gemma_model_name,
+                "messages": [{"role": "user", "content": "Reply with one word: OK"}],
+                "max_tokens": 5,
+                "temperature": 0,
+            }
+            resp = _httpx.post(url, headers=headers, json=payload, timeout=20.0)
+            if resp.status_code == 200:
+                result["gemma"] = {"status": "ok", "model": settings.gemma_model_name}
+            else:
+                try:
+                    err = resp.json()
+                    msg = err.get("error", {}).get("message") or err.get("message") or resp.text[:300]
+                except Exception:
+                    msg = resp.text[:300]
+                result["gemma"] = {
+                    "status": "error",
+                    "code": resp.status_code,
+                    "error": msg,
+                    "model": settings.gemma_model_name,
+                }
+        except Exception as exc:
+            result["gemma"] = {"status": "error", "error": str(exc)[:300], "model": settings.gemma_model_name}
+    else:
+        result["gemma"] = {"status": "not_configured"}
+
+    # ── Test Claude ───────────────────────────────────────────────────────────
+    if settings.anthropic_api_key:
+        try:
+            import anthropic as _ant
+            client = _ant.Anthropic(api_key=settings.anthropic_api_key)
+            client.messages.create(
+                model="claude-haiku-20240307",
+                max_tokens=5,
+                messages=[{"role": "user", "content": "Reply: OK"}],
+            )
+            result["claude"] = {"status": "ok"}
+        except Exception as exc:
+            result["claude"] = {"status": "error", "error": str(exc)[:200]}
+    else:
+        result["claude"] = {"status": "not_configured"}
+
+    # ── Test Gemini ───────────────────────────────────────────────────────────
+    if settings.gemini_api_key:
+        try:
+            import google.generativeai as _genai
+            _genai.configure(api_key=settings.gemini_api_key)
+            m = _genai.GenerativeModel("gemini-2.0-flash")
+            m.generate_content("Reply: OK", generation_config={"max_output_tokens": 5})
+            result["gemini"] = {"status": "ok"}
+        except Exception as exc:
+            result["gemini"] = {"status": "error", "error": str(exc)[:200]}
+    else:
+        result["gemini"] = {"status": "not_configured"}
+
+    return JSONResponse(result)
 
 
 # ── KB management (Train) ─────────────────────────────────────────────────────

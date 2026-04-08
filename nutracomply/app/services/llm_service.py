@@ -1004,10 +1004,13 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
         try:
             reply = _call_claude(system_prompt, user_message,
                                  history, settings.anthropic_api_key)
-            fallback_note = (
-                f"\n\n---\n*[Answered by Claude — Gemma was unavailable]*"
-                if gemma_error else ""
-            )
+            # Show why Gemma failed so the admin can diagnose it
+            if gemma_error:
+                # Trim to a readable length; strip noisy HTTP stack lines
+                err_short = gemma_error.replace("\n", " ")[:160]
+                fallback_note = f"\n\n---\n*⚠️ Gemma unavailable — Claude answered. Gemma error: `{err_short}`*"
+            else:
+                fallback_note = ""
             result = {
                 "reply":        reply + fallback_note,
                 "context_used": context_titles,
@@ -1025,10 +1028,14 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
         try:
             reply = _call_gemini(gemini_model, system_prompt, user_message,
                                  history, settings.gemini_api_key)
-            providers_tried = [p for p in ["Gemma", "Claude"] if p.lower() + "_error" in dir()]
+            notes = []
+            if gemma_error:
+                notes.append(f"Gemma: {gemma_error[:120]}")
+            if claude_error:
+                notes.append(f"Claude: {claude_error[:120]}")
             fallback_note = (
-                f"\n\n---\n*[Answered by Gemini — primary providers were unavailable]*"
-                if gemma_error or claude_error else ""
+                f"\n\n---\n*⚠️ Gemini answered as last resort. " + " | ".join(notes) + "*"
+                if notes else ""
             )
             result = {
                 "reply":        reply + fallback_note,

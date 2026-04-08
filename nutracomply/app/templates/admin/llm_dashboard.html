@@ -4,31 +4,91 @@
 
 {% block content %}
 
-{% if not gemini_configured and not claude_configured %}
-<div class="adm-flash adm-flash-error" style="margin-bottom:1.5rem;">
-  ⚠️ <strong>No LLM API key configured.</strong>
-  The chat interface requires at least one of <code>GEMINI_API_KEY</code> or
-  <code>ANTHROPIC_API_KEY</code> in your environment variables.
-</div>
-{% elif not gemini_configured %}
-<div class="adm-flash adm-flash-warning" style="margin-bottom:1.5rem;">
-  ⚠️ <strong>Gemini API key not configured.</strong>
-  Chat will use Claude (Anthropic) as the LLM provider. Add <code>GEMINI_API_KEY</code> for primary Gemini support.
-</div>
-{% endif %}
+{# ── Provider status bar ─────────────────────────────────────────────────── #}
+<div style="background:#fff;border:1px solid #EBEBEB;border-radius:12px;
+            padding:1rem 1.4rem;margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
+    <div>
+      <div style="font-size:0.78rem;font-weight:700;color:#262626;margin-bottom:0.1rem;">AI Provider Status</div>
+      <div style="font-size:0.72rem;color:#A3A3A3;">Primary → Gemma 4 · Fallback → Claude · Last resort → Gemini</div>
+    </div>
+    <button onclick="testProviders()" id="testBtn"
+            class="adm-btn adm-btn-primary" style="font-size:0.78rem;">
+      ⚡ Test Connections
+    </button>
+  </div>
 
-{# ── Two KB cards ──────────────────────────────────────────────────────────── #}
+  <div id="providerStatus" style="display:none;margin-top:1rem;
+       display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;">
+
+    {# Gemma card #}
+    <div id="card-gemma" style="border:1px solid #EBEBEB;border-radius:8px;padding:0.75rem 1rem;">
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;">
+        <span style="font-size:1rem;">🤖</span>
+        <strong style="font-size:0.84rem;color:#262626;">Gemma 4</strong>
+        <span class="adm-badge" id="badge-gemma" style="margin-left:auto;">
+          {% if gemma_configured %}Configured{% else %}Not set{% endif %}
+        </span>
+      </div>
+      <div style="font-size:0.7rem;color:#A3A3A3;">
+        <code>{{ gemma_model }}</code><br>via OpenRouter
+        {% if not gemma_configured %}
+        <br><span style="color:#DC2626;font-weight:600;">⚠ Set OPENROUTER_API_KEY in Railway</span>
+        {% endif %}
+      </div>
+      <div id="result-gemma" style="margin-top:0.4rem;font-size:0.72rem;"></div>
+    </div>
+
+    {# Claude card #}
+    <div id="card-claude" style="border:1px solid #EBEBEB;border-radius:8px;padding:0.75rem 1rem;">
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;">
+        <span style="font-size:1rem;">🧠</span>
+        <strong style="font-size:0.84rem;color:#262626;">Claude</strong>
+        <span class="adm-badge {% if claude_configured %}badge-green{% else %}badge-gray{% endif %}"
+              id="badge-claude" style="margin-left:auto;">
+          {% if claude_configured %}Configured{% else %}Not set{% endif %}
+        </span>
+      </div>
+      <div style="font-size:0.7rem;color:#A3A3A3;">
+        claude-sonnet-4-6<br>Fallback provider
+      </div>
+      <div id="result-claude" style="margin-top:0.4rem;font-size:0.72rem;"></div>
+    </div>
+
+    {# Gemini card #}
+    <div id="card-gemini" style="border:1px solid #EBEBEB;border-radius:8px;padding:0.75rem 1rem;">
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;">
+        <span style="font-size:1rem;">✨</span>
+        <strong style="font-size:0.84rem;color:#262626;">Gemini</strong>
+        <span class="adm-badge {% if gemini_configured %}badge-blue{% else %}badge-gray{% endif %}"
+              id="badge-gemini" style="margin-left:auto;">
+          {% if gemini_configured %}Configured{% else %}Not set{% endif %}
+        </span>
+      </div>
+      <div style="font-size:0.7rem;color:#A3A3A3;">
+        gemini-2.0-flash / 2.5-pro<br>Last-resort provider
+      </div>
+      <div id="result-gemini" style="margin-top:0.4rem;font-size:0.72rem;"></div>
+    </div>
+
+  </div>
+</div>
+
+{# ── KB cards ──────────────────────────────────────────────────────────────── #}
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.75rem;">
 
-  {# Regulations LLM card #}
   <div style="background:#fff;border:1px solid #EBEBEB;border-radius:14px;padding:1.5rem;">
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.1rem;">
       <span style="font-size:1.6rem;">📋</span>
       <div>
         <h3 style="margin:0;font-size:1rem;font-weight:800;color:#262626;">Regulations LLM</h3>
-        <p style="margin:0;font-size:0.77rem;color:#737373;">Powered by <strong>gemini-2.5-pro</strong>{% if claude_configured %} + Claude fallback{% endif %}</p>
+        <p style="margin:0;font-size:0.77rem;color:#737373;">
+          Primary: <strong>Gemma 4</strong>
+          {% if claude_configured %} · Fallback: Claude{% endif %}
+          {% if gemini_configured %} · Last resort: Gemini{% endif %}
+        </p>
       </div>
-      {% if gemini_configured or claude_configured %}
+      {% if gemma_configured or claude_configured or gemini_configured %}
       <span class="adm-badge badge-green" style="margin-left:auto;">Ready</span>
       {% else %}
       <span class="adm-badge badge-red" style="margin-left:auto;">No API Key</span>
@@ -53,15 +113,18 @@
     </div>
   </div>
 
-  {# Products LLM card #}
   <div style="background:#fff;border:1px solid #EBEBEB;border-radius:14px;padding:1.5rem;">
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.1rem;">
       <span style="font-size:1.6rem;">📦</span>
       <div>
         <h3 style="margin:0;font-size:1rem;font-weight:800;color:#262626;">Products LLM</h3>
-        <p style="margin:0;font-size:0.77rem;color:#737373;">Powered by <strong>gemini-2.0-flash</strong>{% if claude_configured %} + Claude fallback{% endif %}</p>
+        <p style="margin:0;font-size:0.77rem;color:#737373;">
+          Primary: <strong>Gemma 4</strong>
+          {% if claude_configured %} · Fallback: Claude{% endif %}
+          {% if gemini_configured %} · Last resort: Gemini{% endif %}
+        </p>
       </div>
-      {% if gemini_configured or claude_configured %}
+      {% if gemma_configured or claude_configured or gemini_configured %}
       <span class="adm-badge badge-green" style="margin-left:auto;">Ready</span>
       {% else %}
       <span class="adm-badge badge-red" style="margin-left:auto;">No API Key</span>
@@ -88,17 +151,6 @@
 
 </div>
 
-{# ── Quick start guide ─────────────────────────────────────────────────────── #}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:12px;padding:1.4rem 1.6rem;margin-bottom:1.5rem;">
-  <h4 class="adm-section-title">Quick Start</h4>
-  <ol style="margin:0;padding-left:1.3rem;font-size:0.85rem;color:#525252;line-height:2;">
-    <li>Click <strong>Manage KB</strong> on either LLM above.</li>
-    <li>Click <strong>Auto-Seed from DB</strong> to instantly load all existing regulations / products data.</li>
-    <li>Optionally upload additional <code>.txt</code>, <code>.pdf</code>, or <code>.csv</code> files.</li>
-    <li>Click <strong>Test Chat</strong> to query the LLM and verify it answers correctly.</li>
-  </ol>
-</div>
-
 {# ── How it works ──────────────────────────────────────────────────────────── #}
 <div style="background:#F8F8F8;border:1px solid #EBEBEB;border-radius:12px;padding:1.2rem 1.5rem;">
   <h4 class="adm-section-title">How it works — RAG Pipeline</h4>
@@ -116,14 +168,67 @@
     <div style="padding:0.8rem;">
       <div style="font-size:1.5rem;margin-bottom:0.4rem;">🤖</div>
       <div style="font-size:0.78rem;font-weight:700;color:#262626;margin-bottom:0.25rem;">3. Generate</div>
-      <div style="font-size:0.72rem;color:#737373;">Retrieved chunks + question are sent as context to Gemini.</div>
+      <div style="font-size:0.72rem;color:#737373;">Retrieved chunks + question sent to Gemma 4 (via OpenRouter).</div>
     </div>
     <div style="padding:0.8rem;">
       <div style="font-size:1.5rem;margin-bottom:0.4rem;">✅</div>
       <div style="font-size:0.78rem;font-weight:700;color:#262626;margin-bottom:0.25rem;">4. Answer</div>
-      <div style="font-size:0.72rem;color:#737373;">Gemini replies grounded in your actual data, not general knowledge.</div>
+      <div style="font-size:0.72rem;color:#737373;">Gemma 4 replies grounded in your actual data, not general knowledge.</div>
     </div>
   </div>
 </div>
+
+<script>
+async function testProviders() {
+  const btn = document.getElementById("testBtn");
+  btn.disabled = true;
+  btn.textContent = "Testing…";
+
+  // Show the grid immediately with "Testing…" state
+  const panel = document.getElementById("providerStatus");
+  panel.style.display = "grid";
+
+  ["gemma","claude","gemini"].forEach(p => {
+    document.getElementById(`result-${p}`).innerHTML =
+      `<span style="color:#A3A3A3;">⏳ Testing…</span>`;
+  });
+
+  try {
+    const resp = await fetch("/admin/llm/provider-status");
+    const data = await resp.json();
+
+    ["gemma","claude","gemini"].forEach(provider => {
+      const info   = data[provider] || {};
+      const badge  = document.getElementById(`badge-${provider}`);
+      const result = document.getElementById(`result-${provider}`);
+
+      if (info.status === "ok") {
+        badge.className  = "adm-badge badge-green";
+        badge.textContent = "✓ Online";
+        result.innerHTML = `<span style="color:#16A34A;font-weight:600;">Connected OK</span>`;
+      } else if (info.status === "not_configured") {
+        badge.className  = "adm-badge badge-gray";
+        badge.textContent = "Not set";
+        result.innerHTML = `<span style="color:#A3A3A3;">No API key configured</span>`;
+      } else {
+        badge.className  = "adm-badge badge-red";
+        badge.textContent = "✗ Error";
+        const errText = info.error ? info.error.substring(0, 200) : `HTTP ${info.code || "error"}`;
+        result.innerHTML = `<span style="color:#DC2626;font-weight:600;">Error ${info.code || ""}:</span>
+          <br><span style="color:#737373;font-size:0.68rem;word-break:break-word;">${errText}</span>`;
+      }
+    });
+
+  } catch (e) {
+    ["gemma","claude","gemini"].forEach(p => {
+      document.getElementById(`result-${p}`).innerHTML =
+        `<span style="color:#DC2626;">Network error: ${e.message}</span>`;
+    });
+  }
+
+  btn.disabled = false;
+  btn.textContent = "⚡ Test Connections";
+}
+</script>
 
 {% endblock %}
