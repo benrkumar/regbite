@@ -362,7 +362,13 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
                 from app.services.extraction_service import _is_gemma_available, _gemma_request
                 if _is_gemma_available():
                     messages = [{"role": "user", "content": prompt}]
-                    raw, _, _ = _gemma_request(messages, max_tokens=256)
+                    raw, _inp, _out = _gemma_request(messages, max_tokens=256)
+                    if raw:
+                        try:
+                            from app.services.api_logger import log_api_call
+                            log_api_call("compliance_format", "gemma", "google/gemma-4-31b-it", _inp, _out)
+                        except Exception:
+                            pass
             except Exception as ge:
                 logger.warning("[compliance] Gemma format check failed for %s: %s", rule.rule_code, ge)
 
@@ -377,6 +383,14 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
                     generation_config={"temperature": 0.1, "max_output_tokens": 256},
                 )
                 raw = response.text.strip()
+                try:
+                    from app.services.api_logger import log_api_call
+                    _usage = getattr(response, "usage_metadata", None)
+                    _inp = getattr(_usage, "prompt_token_count", None) if _usage else None
+                    _out = getattr(_usage, "candidates_token_count", None) if _usage else None
+                    log_api_call("compliance_format", "gemini", "gemini-3.1-flash-lite-preview", _inp, _out)
+                except Exception:
+                    pass
             except Exception as ge:
                 logger.warning("[compliance] Gemini format check failed for %s: %s", rule.rule_code, ge)
 

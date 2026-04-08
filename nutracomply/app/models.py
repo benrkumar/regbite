@@ -672,3 +672,19 @@ class ExtractionPattern(Base):
     source_label_id = Column(Integer, ForeignKey("label_versions.id"), nullable=True)
     confidence      = Column(Float, default=0.0)
     created_at      = Column(DateTime, default=datetime.utcnow)
+
+
+# ─── API Call Log ─────────────────────────────────────────────────────────────
+
+class APICallLog(Base):
+    """Tracks every LLM API call beyond label extraction (kb_chat, compliance_format, etc.)"""
+    __tablename__ = "api_call_logs"
+
+    id            = Column(Integer, primary_key=True, index=True)
+    call_type     = Column(String(30), nullable=False, index=True)  # "kb_chat","compliance_format","query_expansion"
+    provider      = Column(String(20), nullable=False)               # "gemma","gemini","claude"
+    model         = Column(String(100), nullable=True)
+    tokens_input  = Column(Integer, nullable=True)
+    tokens_output = Column(Integer, nullable=True)
+    cost_usd      = Column(Float, nullable=True)
+    created_at    = Column(DateTime, default=datetime.utcnow, index=True)

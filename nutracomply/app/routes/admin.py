@@ -745,8 +745,9 @@ async def admin_api_usage(
         "fallback": {"in": 0.0,   "out": 0.0},
     }
 
-    # Date range logic
-    today = datetime.utcnow().date()
+    # Date range logic — use IST (UTC+5:30) for date grouping
+    _IST = timedelta(hours=5, minutes=30)
+    today = (datetime.utcnow() + _IST).date()
     if period == "today":
         start_date = today
         end_date = today
@@ -764,8 +765,9 @@ async def admin_api_usage(
         start_date = today - timedelta(days=29)
         end_date = today
 
-    cutoff = datetime.combine(start_date, datetime.min.time())
-    cutoff_end = datetime.combine(end_date, datetime.max.time())
+    # Convert IST date boundaries → UTC for DB queries (DB stores UTC timestamps)
+    cutoff = datetime.combine(start_date, datetime.min.time()) - _IST
+    cutoff_end = datetime.combine(end_date, datetime.max.time()) - _IST
 
     # Totals scoped to date range
     base_q = db.query(LabelVersion).filter(
@@ -811,17 +813,19 @@ async def admin_api_usage(
     provider_stats.sort(key=lambda x: x["cost_usd"], reverse=True)
 
     # Daily breakdown
+    from sqlalchemy import text as _sa_text
+    _ist_date = func.date(LabelVersion.uploaded_at + _sa_text("INTERVAL '5 hours 30 minutes'"))
     daily_rows = (
         db.query(
-            func.date(LabelVersion.uploaded_at).label("day"),
+            _ist_date.label("day"),
             LabelVersion.extraction_source,
             func.count(LabelVersion.id).label("scans"),
             func.coalesce(func.sum(LabelVersion.tokens_input), 0).label("inp"),
             func.coalesce(func.sum(LabelVersion.tokens_output), 0).label("out"),
         )
         .filter(LabelVersion.uploaded_at >= cutoff, LabelVersion.uploaded_at <= cutoff_end)
-        .group_by(func.date(LabelVersion.uploaded_at), LabelVersion.extraction_source)
-        .order_by(func.date(LabelVersion.uploaded_at))
+        .group_by(_ist_date, LabelVersion.extraction_source)
+        .order_by(_ist_date)
         .all()
     )
 
@@ -849,17 +853,19 @@ async def admin_api_usage(
     if period == "today":
         try:
             from sqlalchemy import extract as sa_extract
+            from sqlalchemy import text as _sa_text2
+            _ist_ts = LabelVersion.uploaded_at + _sa_text2("INTERVAL '5 hours 30 minutes'")
             hourly_rows = (
                 db.query(
-                    sa_extract("hour", LabelVersion.uploaded_at).label("hr"),
+                    sa_extract("hour", _ist_ts).label("hr"),
                     LabelVersion.extraction_source,
                     func.count(LabelVersion.id).label("scans"),
                     func.coalesce(func.sum(LabelVersion.tokens_input), 0).label("inp"),
                     func.coalesce(func.sum(LabelVersion.tokens_output), 0).label("out"),
                 )
                 .filter(LabelVersion.uploaded_at >= cutoff, LabelVersion.uploaded_at <= cutoff_end)
-                .group_by(sa_extract("hour", LabelVersion.uploaded_at), LabelVersion.extraction_source)
-                .order_by(sa_extract("hour", LabelVersion.uploaded_at))
+                .group_by(sa_extract("hour", _ist_ts), LabelVersion.extraction_source)
+                .order_by(sa_extract("hour", _ist_ts))
                 .all()
             )
             hourly = {}
@@ -893,6 +899,39 @@ async def admin_api_usage(
     )
     overall_avg_conf = round(float(conf_row or 0), 2)
 
+    # ── Other LLM call stats (kb_chat, compliance_format, query_expansion) ──────
+    from app.models import APICallLog
+    other_call_stats = []
+    total_other_cost = 0.0
+    try:
+        other_rows = (
+            db.query(
+                APICallLog.call_type,
+                APICallLog.provider,
+                func.count(APICallLog.id).label("cnt"),
+                func.coalesce(func.sum(APICallLog.tokens_input), 0).label("inp"),
+                func.coalesce(func.sum(APICallLog.tokens_output), 0).label("out"),
+                func.coalesce(func.sum(APICallLog.cost_usd), 0).label("cost"),
+            )
+            .filter(APICallLog.created_at >= cutoff, APICallLog.created_at <= cutoff_end)
+            .group_by(APICallLog.call_type, APICallLog.provider)
+            .all()
+        )
+        for row in other_rows:
+            cost = float(row.cost or 0)
+            total_other_cost += cost
+            other_call_stats.append({
+                "call_type": row.call_type,
+                "provider": row.provider,
+                "count": row.cnt,
+                "tokens_in": int(row.inp),
+                "tokens_out": int(row.out),
+                "cost_usd": round(cost, 5),
+            })
+        other_call_stats.sort(key=lambda x: x["cost_usd"], reverse=True)
+    except Exception:
+        pass  # Table may not exist on older deployments
+
     return templates.TemplateResponse("admin/api_usage.html", {
         "request": request, "user": user, "unread_alerts": unread_alerts,
         "period": period,
@@ -907,6 +946,9 @@ async def admin_api_usage(
         "overall_avg_conf": overall_avg_conf,
         "source_counts": source_counts,
         "hourly_list": hourly_list,
+        "other_call_stats": other_call_stats,
+        "total_other_cost": round(total_other_cost, 4),
+        "total_combined_cost": round(total_ai_cost + total_other_cost, 4),
     })
 
 

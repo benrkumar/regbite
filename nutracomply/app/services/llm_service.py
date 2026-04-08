@@ -165,6 +165,12 @@ def _expand_query(query: str, kb_type: str, gemini_api_key: str = "") -> str:
         expanded = response.text.strip().strip('"').strip("'")
         if expanded and len(expanded) > len(query):
             logger.info("[llm-expand] %r → %r", query[:60], expanded[:80])
+            try:
+                from app.services.api_logger import log_api_call
+                log_api_call("query_expansion", "gemini", "gemini-3.1-flash-lite-preview",
+                             len(query) // 4, len(expanded) // 4)
+            except Exception:
+                pass
             return expanded
     except Exception as exc:
         logger.debug("[llm-expand] failed: %s", exc)
@@ -1012,6 +1018,14 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
                 "model":        settings.gemma_model_name,
             }
             _set_cache(kb_type, query, result)
+            # Log the call (best-effort)
+            try:
+                from app.services.api_logger import log_api_call
+                _est_in = len(user_message) // 4
+                _est_out = len(reply) // 4
+                log_api_call("kb_chat", "gemma", settings.gemma_model_name, _est_in, _est_out)
+            except Exception:
+                pass
             return result
         except Exception as exc:
             gemma_error = str(exc)
@@ -1036,6 +1050,14 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
                 "model":        CLAUDE_MODEL,
             }
             _set_cache(kb_type, query, result)
+            # Log the call (best-effort)
+            try:
+                from app.services.api_logger import log_api_call
+                _est_in = len(user_message) // 4
+                _est_out = len(reply) // 4
+                log_api_call("kb_chat", "claude", CLAUDE_MODEL, _est_in, _est_out)
+            except Exception:
+                pass
             return result
         except Exception as exc:
             claude_error = str(exc)
@@ -1062,6 +1084,14 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
                 "model":        gemini_model,
             }
             _set_cache(kb_type, query, result)
+            # Log the call (best-effort)
+            try:
+                from app.services.api_logger import log_api_call
+                _est_in = len(user_message) // 4
+                _est_out = len(reply) // 4
+                log_api_call("kb_chat", "gemini", gemini_model, _est_in, _est_out)
+            except Exception:
+                pass
             return result
         except Exception as exc:
             gemini_error = str(exc)

@@ -286,6 +286,19 @@ def _run_migrations():
         # v14: KBDocument — content_hash for duplicate upload detection
         "ALTER TABLE kb_documents ADD COLUMN IF NOT EXISTS content_hash VARCHAR(64)",
         "CREATE INDEX IF NOT EXISTS ix_kb_documents_content_hash ON kb_documents (content_hash)",
+        # v15: API call log table (tracks kb_chat, compliance_format, query_expansion)
+        """CREATE TABLE IF NOT EXISTS api_call_logs (
+            id SERIAL PRIMARY KEY,
+            call_type VARCHAR(30) NOT NULL,
+            provider VARCHAR(20) NOT NULL,
+            model VARCHAR(100),
+            tokens_input INTEGER,
+            tokens_output INTEGER,
+            cost_usd FLOAT,
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS ix_api_call_logs_call_type ON api_call_logs (call_type)",
+        "CREATE INDEX IF NOT EXISTS ix_api_call_logs_created_at ON api_call_logs (created_at)",
     ]
     for sql in migrations:
         try:
