@@ -7,14 +7,19 @@ the Regulations LLM (gemini-2.5-pro) and Products LLM (gemini-3.1-flash-lite-pre
 with Claude (Anthropic) as automatic fallback.
 """
 from pathlib import Path
+import uuid
+import time as _time
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
+
+# ── In-memory extraction job store (admin-only, single-process) ────────────
+_EXTRACTION_JOBS: dict = {}   # job_id → state dict
 
 router    = APIRouter(prefix="/admin")
 templates = Jinja2Templates(
@@ -674,6 +679,16 @@ async def label_extractor_page(request: Request, db: Session = Depends(get_db)):
     except Exception:
         field_patterns = []
 
+    try:
+        patterns_list = (
+            db.query(ExtractionPattern)
+            .order_by(ExtractionPattern.created_at.desc())
+            .limit(300)
+            .all()
+        )
+    except Exception:
+        patterns_list = []
+
     return templates.TemplateResponse("admin/label_extractor.html", {
         "request":                  request,
         "user":                     user,
@@ -690,12 +705,150 @@ async def label_extractor_page(request: Request, db: Session = Depends(get_db)):
         "claude_available":         bool(settings.anthropic_api_key),
         "local_enabled":            settings.local_extraction_enabled,
         "local_min_confidence":     settings.local_extraction_min_confidence,
+        "patterns_list":            patterns_list,
     })
 
 
-@router.post("/label-extractor/test")
-async def label_extractor_test(
+def _run_extraction_job(job_id: str, tmp_path: str, filename: str, file_size_kb: float):
+    """Run label extraction step-by-step, updating job state for live UI polling."""
+    import os
+    from app.config import get_settings
+    from app.services.extraction_service import (
+        _is_gemma_available, _normalize_extraction,
+        _calculate_confidence, _validate_extraction,
+        _call_gemma_vision, _call_gemma_text,
+        _call_claude_vision, _call_claude_text,
+    )
+
+    cfg = get_settings()
+    job = _EXTRACTION_JOBS[job_id]
+    start = _time.time()
+
+    def step(sid, label):
+        job["step_id"] = sid
+        job["step_label"] = label
+
+    def finish(source, step_label, result_dict, inp, out):
+        result_dict = _normalize_extraction(result_dict)
+        confidence = _calculate_confidence(result_dict, "vision")
+        warnings = result_dict.pop("_extraction_warnings", [])
+        job["done"] = True
+        job["result"] = {
+            "source":        source,
+            "source_step":   step_label,
+            "confidence":    confidence,
+            "elapsed_sec":   round(_time.time() - start, 2),
+            "input_tokens":  inp,
+            "output_tokens": out,
+            "extraction":    result_dict,
+            "warnings":      warnings,
+            "filename":      filename,
+            "file_size_kb":  file_size_kb,
+        }
+
+    try:
+        # Step 0 — cache (we skip real cache in admin test mode)
+        step("cache", "Checking cache…")
+        _time.sleep(0.2)
+
+        # Step 1 — OCR
+        step("ocr", "Running OCR (PaddleOCR + Tesseract)…")
+        ocr_text = ""
+        try:
+            from app.services.ocr_service import run_ocr
+            ocr_text = run_ocr(tmp_path) or ""
+        except Exception:
+            pass
+
+        # Step 1.5 — Local patterns
+        step("local", "Checking local pattern library…")
+        _time.sleep(0.1)
+
+        # Step 2 — Gemma 4 Vision
+        if _is_gemma_available():
+            step("gemma_vision", "Running Gemma 4 Vision (google/gemma-4-31b-it)…")
+            try:
+                result, inp, out = _call_gemma_vision(tmp_path)
+                if result:
+                    finish("gemma", "Gemma 4 Vision", result, inp, out)
+                    return
+            except Exception as e:
+                job["step_label"] = f"Gemma Vision failed: {str(e)[:80]} — trying Claude…"
+                _time.sleep(0.3)
+
+        # Step 3 — Claude Vision
+        if cfg.anthropic_api_key:
+            step("claude_vision", "Running Claude Vision (claude-sonnet-4-6)…")
+            try:
+                import os
+                os.environ.setdefault("ANTHROPIC_API_KEY", cfg.anthropic_api_key)
+                result, inp, out = _call_claude_vision(tmp_path)
+                if result:
+                    finish("claude", "Claude Vision", result, inp, out)
+                    return
+            except Exception as e:
+                job["step_label"] = f"Claude Vision failed: {str(e)[:80]} — trying text…"
+                _time.sleep(0.3)
+
+        # Step 4 — Gemma Text
+        if _is_gemma_available() and ocr_text:
+            step("gemma_text", "Running Gemma 4 Text…")
+            try:
+                result, inp, out = _call_gemma_text(ocr_text)
+                if result:
+                    finish("gemma", "Gemma 4 Text", result, inp, out)
+                    return
+            except Exception:
+                pass
+
+        # Step 5 — Claude Text
+        if cfg.anthropic_api_key and ocr_text:
+            step("claude_text", "Running Claude Text…")
+            try:
+                result, inp, out = _call_claude_text(ocr_text)
+                if result:
+                    finish("claude", "Claude Text", result, inp, out)
+                    return
+            except Exception:
+                pass
+
+        # Step 6 — Gemini
+        if cfg.gemini_api_key:
+            step("gemini", "Running Gemini (gemini-3.1-flash-lite-preview)…")
+            try:
+                from app.services.extraction_service import _call_gemini_vision
+                result = _call_gemini_vision(tmp_path)
+                if result:
+                    finish("gemini", "Gemini Vision", result, 0, 0)
+                    return
+            except Exception:
+                pass
+
+        # Step 7 — nothing worked
+        step("done", "Extraction complete (fallback)")
+        job["done"] = True
+        job["result"] = {
+            "source": "fallback", "source_step": "Rule-based fallback",
+            "confidence": 0.0, "elapsed_sec": round(_time.time() - start, 2),
+            "input_tokens": 0, "output_tokens": 0,
+            "extraction": {}, "warnings": ["No AI provider succeeded"],
+            "filename": filename, "file_size_kb": file_size_kb,
+        }
+
+    except Exception as e:
+        job["done"] = True
+        job["error"] = str(e)
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
+
+@router.post("/label-extractor/upload")
+async def label_extractor_upload(
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     file: UploadFile = File(...),
 ):
@@ -703,11 +856,8 @@ async def label_extractor_test(
     if redirect:
         return JSONResponse({"error": "Not authorised"}, status_code=401)
 
-    import tempfile
-    import os
-    import time
-    from app.services.extraction_service import extract_label_data_from_image
-
+    import tempfile, os
+    job_id = str(uuid.uuid4())[:12]
     suffix = Path(file.filename).suffix.lower() if file.filename else ".jpg"
     content = await file.read()
 
@@ -715,30 +865,45 @@ async def label_extractor_test(
         tmp.write(content)
         tmp_path = tmp.name
 
-    try:
-        start = time.time()
-        extraction, confidence, source, inp_tokens, out_tokens = extract_label_data_from_image(tmp_path)
-        elapsed = round(time.time() - start, 2)
-        warnings = extraction.pop("_extraction_warnings", [])
-        return JSONResponse({
-            "success":       True,
-            "source":        source,
-            "confidence":    confidence,
-            "elapsed_sec":   elapsed,
-            "input_tokens":  inp_tokens,
-            "output_tokens": out_tokens,
-            "extraction":    extraction,
-            "warnings":      warnings,
-            "filename":      file.filename,
-            "file_size_kb":  round(len(content) / 1024, 1),
-        })
-    except Exception as e:
-        return JSONResponse({"success": False, "error": str(e)})
-    finally:
-        try:
-            os.unlink(tmp_path)
-        except Exception:
-            pass
+    _EXTRACTION_JOBS[job_id] = {
+        "step_id":    "queued",
+        "step_label": "Queued…",
+        "done":       False,
+        "result":     None,
+        "error":      None,
+        "started_at": _time.time(),
+    }
+    background_tasks.add_task(
+        _run_extraction_job, job_id, tmp_path,
+        file.filename or "upload", round(len(content) / 1024, 1)
+    )
+    return JSONResponse({"job_id": job_id})
+
+
+@router.get("/label-extractor/job/{job_id}")
+async def label_extractor_job(job_id: str, request: Request, db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+
+    job = _EXTRACTION_JOBS.get(job_id)
+    if not job:
+        return JSONResponse({"error": "Job not found"}, status_code=404)
+
+    elapsed = round(_time.time() - job["started_at"], 1)
+
+    if job["error"]:
+        return JSONResponse({"done": True, "success": False, "error": job["error"], "elapsed_sec": elapsed})
+
+    if job["done"] and job["result"]:
+        return JSONResponse({"done": True, "success": True, "elapsed_sec": elapsed, **job["result"]})
+
+    return JSONResponse({
+        "done":        False,
+        "step_id":     job["step_id"],
+        "step_label":  job["step_label"],
+        "elapsed_sec": elapsed,
+    })
 
 
 @router.post("/llm/{kb_type}/chat/clear")

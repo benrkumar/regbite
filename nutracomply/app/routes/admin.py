@@ -844,6 +844,44 @@ async def admin_api_usage(
         all_days.append({"day": ds, **(daily.get(ds, {"total": 0, "gemma": 0, "claude": 0, "gemini": 0, "local": 0, "fallback": 0, "cost": 0.0}))})
         d += timedelta(days=1)
 
+    # ── Hourly breakdown (only for "today" period) ──────────────────────────
+    hourly_list = []
+    if period == "today":
+        try:
+            from sqlalchemy import extract as sa_extract
+            hourly_rows = (
+                db.query(
+                    sa_extract("hour", LabelVersion.uploaded_at).label("hr"),
+                    LabelVersion.extraction_source,
+                    func.count(LabelVersion.id).label("scans"),
+                    func.coalesce(func.sum(LabelVersion.tokens_input), 0).label("inp"),
+                    func.coalesce(func.sum(LabelVersion.tokens_output), 0).label("out"),
+                )
+                .filter(LabelVersion.uploaded_at >= cutoff, LabelVersion.uploaded_at <= cutoff_end)
+                .group_by(sa_extract("hour", LabelVersion.uploaded_at), LabelVersion.extraction_source)
+                .order_by(sa_extract("hour", LabelVersion.uploaded_at))
+                .all()
+            )
+            hourly = {}
+            for row in hourly_rows:
+                h = int(row.hr)
+                if h not in hourly:
+                    hourly[h] = {"total": 0, "gemma": 0, "claude": 0, "gemini": 0, "local": 0, "fallback": 0, "cost": 0.0}
+                src = row.extraction_source or "fallback"
+                hourly[h][src] = hourly[h].get(src, 0) + row.scans
+                hourly[h]["total"] += row.scans
+                rate = COST_RATES.get(src, {"in": 0, "out": 0})
+                hourly[h]["cost"] += (int(row.inp) / 1_000_000) * rate["in"] + (int(row.out) / 1_000_000) * rate["out"]
+            # Fill all 24 hours with zeros
+            for h in range(24):
+                label = f"{h:02d}:00"
+                hourly_list.append({
+                    "hour": label,
+                    **hourly.get(h, {"total": 0, "gemma": 0, "claude": 0, "gemini": 0, "local": 0, "fallback": 0, "cost": 0.0})
+                })
+        except Exception:
+            pass
+
     # Most used provider
     most_used = max(source_counts, key=lambda s: source_counts[s]) if total_scans > 0 else "—"
 
@@ -868,6 +906,7 @@ async def admin_api_usage(
         "most_used_provider": most_used,
         "overall_avg_conf": overall_avg_conf,
         "source_counts": source_counts,
+        "hourly_list": hourly_list,
     })
 
 

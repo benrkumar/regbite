@@ -76,9 +76,9 @@
 {# ── Charts row ────────────────────────────────────────────────────────────── #}
 <div style="display:grid;grid-template-columns:3fr 2fr;gap:1rem;margin-bottom:1.5rem;">
 
-  {# Line chart — scans per day #}
+  {# Line chart — scans per day / hour #}
   <div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.25rem 1.5rem;">
-    <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">Scans per Day</div>
+    <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">{% if period == "today" %}Scans per Hour{% else %}Scans per Day{% endif %}</div>
     <canvas id="scansChart" height="300" style="max-height:300px;"></canvas>
   </div>
 
@@ -94,7 +94,7 @@
 
 {# ── Cost bar chart ────────────────────────────────────────────────────────── #}
 <div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
-  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">AI Cost per Day (USD)</div>
+  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">{% if period == "today" %}AI Cost per Hour (USD){% else %}AI Cost per Day (USD){% endif %}</div>
   <canvas id="costChart" height="200" style="max-height:200px;"></canvas>
 </div>
 
@@ -211,7 +211,47 @@
   </div>
 </div>
 
-{# ── Daily breakdown table ─────────────────────────────────────────────────── #}
+{# ── Daily / Hourly breakdown table ───────────────────────────────────────── #}
+{% if period == "today" and hourly_list %}
+<div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
+  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:0.9rem;">Hourly Breakdown — Today</div>
+  <div style="overflow-x:auto;">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Hour</th>
+          <th>Total</th>
+          <th style="color:#5A9A98;">Gemma</th>
+          <th style="color:#D4845A;">Claude</th>
+          <th style="color:#5A7AD4;">Gemini</th>
+          <th style="color:#AAAAAA;">Local</th>
+          <th style="color:#CCCCCC;">Fallback</th>
+          <th>Est. Cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in hourly_list %}
+        {% if row.total > 0 %}
+        <tr>
+          <td style="font-size:0.8rem;color:#525252;font-family:monospace;">{{ row.hour }}</td>
+          <td style="font-size:0.82rem;font-weight:600;color:#111;">{{ row.total }}</td>
+          <td style="font-size:0.82rem;color:{% if row.gemma > 0 %}#5A9A98{% else %}#D4D4D4{% endif %};">{{ row.gemma }}</td>
+          <td style="font-size:0.82rem;color:{% if row.claude > 0 %}#D4845A{% else %}#D4D4D4{% endif %};">{{ row.claude }}</td>
+          <td style="font-size:0.82rem;color:{% if row.gemini > 0 %}#5A7AD4{% else %}#D4D4D4{% endif %};">{{ row.gemini }}</td>
+          <td style="font-size:0.82rem;color:{% if row.local > 0 %}#525252{% else %}#D4D4D4{% endif %};">{{ row.local }}</td>
+          <td style="font-size:0.82rem;color:#A3A3A3;">{{ row.fallback }}</td>
+          <td style="font-size:0.8rem;font-family:monospace;color:{% if row.cost > 0.001 %}#8B3A3A{% else %}#A3A3A3{% endif %};">${{ "%.6f"|format(row.cost) }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if hourly_list | selectattr("total", "greaterthan", 0) | list | length == 0 %}
+    <p style="text-align:center;color:#A3A3A3;padding:1.5rem;">No scans today yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% else %}
 <div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
   <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:0.9rem;">Daily Breakdown <span style="font-weight:400;color:#A3A3A3;font-size:0.72rem;">({{ daily_list | length }} days)</span></div>
   {% if daily_list %}
@@ -249,6 +289,7 @@
   <div style="text-align:center;padding:2rem;color:#A3A3A3;font-size:0.85rem;">No data in this period.</div>
   {% endif %}
 </div>
+{% endif %}
 
 {% if total_scans == 0 %}
 <div style="text-align:center;padding:3rem;color:#A3A3A3;font-size:0.88rem;">
@@ -259,28 +300,29 @@
 {# ── Chart.js scripts ──────────────────────────────────────────────────────── #}
 <script>
 (function() {
-  const daily = {{ daily_list | tojson }};
+  const isToday = "{{ period }}" === "today";
+  const chartData = isToday ? {{ hourly_list | tojson }} : {{ daily_list | tojson }};
+  const labels = isToday ? chartData.map(d => d.hour) : chartData.map(d => d.day);
   const providerStats = {{ provider_stats | tojson }};
-  const labels = daily.map(d => d.day);
 
-  // ── Line chart: scans per day ──────────────────────────────────────────────
+  // ── Line chart: scans per day / hour ──────────────────────────────────────
   new Chart(document.getElementById('scansChart'), {
     type: 'line',
     data: {
       labels,
       datasets: [
-        { label: 'Gemma',    data: daily.map(d => d.gemma),    borderColor: '#5A9A98', backgroundColor: 'rgba(90,154,152,0.08)',  fill: true, tension: 0.3, pointRadius: 3 },
-        { label: 'Claude',   data: daily.map(d => d.claude),   borderColor: '#D4845A', backgroundColor: 'rgba(212,132,90,0.08)',  fill: true, tension: 0.3, pointRadius: 3 },
-        { label: 'Gemini',   data: daily.map(d => d.gemini),   borderColor: '#5A7AD4', backgroundColor: 'rgba(90,122,212,0.08)', fill: true, tension: 0.3, pointRadius: 3 },
-        { label: 'Local',    data: daily.map(d => d.local),    borderColor: '#AAAAAA', backgroundColor: 'rgba(170,170,170,0.08)', fill: true, tension: 0.3, pointRadius: 3 },
-        { label: 'Fallback', data: daily.map(d => d.fallback), borderColor: '#CCCCCC', backgroundColor: 'rgba(204,204,204,0.05)', fill: true, tension: 0.3, pointRadius: 2, borderDash: [4,3] },
+        { label: 'Gemma',    data: chartData.map(d => d.gemma),    borderColor: '#5A9A98', backgroundColor: 'rgba(90,154,152,0.08)',  fill: true, tension: 0.3, pointRadius: 3 },
+        { label: 'Claude',   data: chartData.map(d => d.claude),   borderColor: '#D4845A', backgroundColor: 'rgba(212,132,90,0.08)',  fill: true, tension: 0.3, pointRadius: 3 },
+        { label: 'Gemini',   data: chartData.map(d => d.gemini),   borderColor: '#5A7AD4', backgroundColor: 'rgba(90,122,212,0.08)', fill: true, tension: 0.3, pointRadius: 3 },
+        { label: 'Local',    data: chartData.map(d => d.local),    borderColor: '#AAAAAA', backgroundColor: 'rgba(170,170,170,0.08)', fill: true, tension: 0.3, pointRadius: 3 },
+        { label: 'Fallback', data: chartData.map(d => d.fallback), borderColor: '#CCCCCC', backgroundColor: 'rgba(204,204,204,0.05)', fill: true, tension: 0.3, pointRadius: 2, borderDash: [4,3] },
       ]
     },
     options: {
       responsive: true,
       plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } },
       scales: {
-        x: { ticks: { maxTicksLimit: 10, font: { size: 10 } }, grid: { color: '#F0F0F0' } },
+        x: { ticks: { maxTicksLimit: isToday ? 24 : 10, font: { size: 10 } }, grid: { color: '#F0F0F0' } },
         y: { beginAtZero: true, ticks: { precision: 0, font: { size: 10 } }, grid: { color: '#F0F0F0' } }
       }
     }
@@ -308,14 +350,14 @@
     });
   }
 
-  // ── Bar chart: cost per day ────────────────────────────────────────────────
+  // ── Bar chart: cost per day / hour ────────────────────────────────────────
   new Chart(document.getElementById('costChart'), {
     type: 'bar',
     data: {
       labels,
       datasets: [{
         label: 'Cost (USD)',
-        data: daily.map(d => parseFloat(d.cost.toFixed(6))),
+        data: chartData.map(d => parseFloat(d.cost.toFixed(6))),
         backgroundColor: 'rgba(90,154,152,0.7)',
         borderColor: '#5A9A98',
         borderWidth: 1,
@@ -326,7 +368,7 @@
       responsive: true,
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { maxTicksLimit: 14, font: { size: 10 } }, grid: { display: false } },
+        x: { ticks: { maxTicksLimit: isToday ? 24 : 14, font: { size: 10 } }, grid: { display: false } },
         y: {
           beginAtZero: true,
           ticks: {
