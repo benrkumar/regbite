@@ -483,6 +483,7 @@
     <div class="tab-bar">
       <button class="tab-btn active" data-tab="tab-live-test">&#128302; Live Test</button>
       <button class="tab-btn" data-tab="tab-llm-patterns">&#128218; Label LLM &amp; Patterns</button>
+      <button class="tab-btn" data-tab="tab-benchmark">&#127942; Benchmark</button>
     </div>
 
     {# ── Tab 1: Live Test ── #}
@@ -685,6 +686,42 @@
       </div>
 
     </div>{# end tab-llm-patterns #}
+
+    {# ── Tab 3: Benchmark ── #}
+    <div id="tab-benchmark" class="tab-panel hidden">
+      <div class="lex-card">
+        <div class="lex-card-title">AI Model Benchmark</div>
+        <p style="font-size:0.82rem;color:#525252;margin:0 0 1rem;line-height:1.6;">
+          Upload a label image or PDF to run it through <strong>all configured AI providers simultaneously</strong>
+          and compare speed, accuracy, and cost. Use this to decide which provider gives the best
+          results for your labels.
+        </p>
+
+        {# Upload zone #}
+        <div id="bmDropZone" style="border:2px dashed #D4D4D4;border-radius:0.6rem;padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem;transition:border-color 0.2s;"
+             onclick="document.getElementById('bmFileInput').click()"
+             ondragover="event.preventDefault();this.style.borderColor='#5A9A98'"
+             ondragleave="this.style.borderColor='#D4D4D4'"
+             ondrop="event.preventDefault();this.style.borderColor='#D4D4D4';handleBmFile(event.dataTransfer.files[0])">
+          <div style="font-size:1.5rem;margin-bottom:0.5rem;">&#9889;</div>
+          <div style="font-size:0.88rem;font-weight:600;color:#525252;">Drop file here or click to browse</div>
+          <div id="bmFileName" style="font-size:0.75rem;color:#5A9A98;margin-top:0.4rem;"></div>
+          <input type="file" id="bmFileInput" accept=".jpg,.jpeg,.png,.webp,.pdf" style="display:none" onchange="handleBmFile(this.files[0])">
+        </div>
+        <button id="bmRunBtn" class="adm-btn adm-btn-primary" onclick="runBenchmark()" disabled style="width:100%;margin-bottom:1rem;">Run Benchmark</button>
+        <div id="bmStatus" style="display:none;font-size:0.82rem;color:#5A9A98;text-align:center;padding:0.5rem;"></div>
+      </div>
+
+      {# Results table #}
+      <div id="bmResults" class="lex-card" style="display:none;">
+        <div class="lex-card-title">Benchmark Results</div>
+        <div id="bmResultsInner"></div>
+        <p style="font-size:0.72rem;color:#A3A3A3;margin:1rem 0 0;line-height:1.5;">
+          &#11088; = best in category. Cost is estimated based on token usage &times; published API rates.
+          Run multiple times for more reliable averages.
+        </p>
+      </div>
+    </div>
 
   </div>{# end right col #}
 </div>
@@ -911,5 +948,137 @@
 
   initPatternLib();
 })();
+
+// ── Benchmark ──────────────────────────────────────────────────────────────
+var bmFile = null, bmPollTimer = null;
+
+window.handleBmFile = function(f) {
+  if (!f) return;
+  bmFile = f;
+  document.getElementById('bmFileName').textContent = f.name + ' (' + (f.size/1024).toFixed(1) + ' KB)';
+  document.getElementById('bmRunBtn').disabled = false;
+};
+
+window.runBenchmark = function() {
+  if (!bmFile) return;
+  var runBtn = document.getElementById('bmRunBtn');
+  runBtn.disabled = true;
+  runBtn.innerHTML = '<span class="spinner"></span> Running\u2026';
+  document.getElementById('bmStatus').style.display = 'block';
+  document.getElementById('bmStatus').textContent = 'Uploading file\u2026';
+  document.getElementById('bmResults').style.display = 'none';
+
+  var fd = new FormData();
+  fd.append('file', bmFile);
+
+  fetch('/admin/label-extractor/benchmark/start', { method: 'POST', body: fd, credentials: 'same-origin' })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.error) throw new Error(data.error);
+    pollBenchmark(data.job_id);
+  })
+  .catch(function(err) {
+    runBtn.innerHTML = 'Run Benchmark';
+    runBtn.disabled = false;
+    document.getElementById('bmStatus').textContent = 'Error: ' + err;
+  });
+};
+
+function pollBenchmark(jobId) {
+  if (bmPollTimer) clearTimeout(bmPollTimer);
+  fetch('/admin/label-extractor/benchmark/job/' + jobId, { credentials: 'same-origin' })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var status = document.getElementById('bmStatus');
+    if (data.error) {
+      status.textContent = 'Error: ' + data.error;
+      document.getElementById('bmRunBtn').innerHTML = 'Run Benchmark';
+      document.getElementById('bmRunBtn').disabled = false;
+      return;
+    }
+    // Show partial results as they come in
+    if (data.results && data.results.length > 0) renderBmResults(data.results, data.done);
+
+    if (!data.done) {
+      status.textContent = '\u23f3 ' + (data.current || 'Running\u2026') + ' (' + data.elapsed + 's elapsed)';
+      bmPollTimer = setTimeout(function() { pollBenchmark(jobId); }, 1500);
+      return;
+    }
+    // Done
+    status.style.display = 'none';
+    document.getElementById('bmRunBtn').innerHTML = 'Run Benchmark Again';
+    document.getElementById('bmRunBtn').disabled = false;
+    renderBmResults(data.results, true);
+  })
+  .catch(function(err) {
+    document.getElementById('bmStatus').textContent = 'Poll error: ' + err;
+    document.getElementById('bmRunBtn').innerHTML = 'Run Benchmark';
+    document.getElementById('bmRunBtn').disabled = false;
+  });
+}
+
+function renderBmResults(results, final) {
+  var box = document.getElementById('bmResults');
+  box.style.display = 'block';
+  if (!results || !results.length) {
+    document.getElementById('bmResultsInner').innerHTML = '<p style="color:#A3A3A3;text-align:center;">No results yet\u2026</p>';
+    return;
+  }
+
+  // Find bests
+  var successes = results.filter(function(r) { return r.status === 'success'; });
+  var bestConf   = successes.length ? Math.max.apply(null, successes.map(function(r) { return r.confidence; })) : 0;
+  var bestSpeed  = successes.length ? Math.min.apply(null, successes.map(function(r) { return r.elapsed; })) : 0;
+  var costRows   = successes.filter(function(r) { return r.cost_usd > 0; });
+  var bestCost   = costRows.length ? Math.min.apply(null, costRows.map(function(r) { return r.cost_usd; })) : 0;
+  var bestFields = successes.length ? Math.max.apply(null, successes.map(function(r) { return r.field_count; })) : 0;
+
+  var html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.82rem;">';
+  html += '<thead><tr style="border-bottom:2px solid #EBEBEB;">';
+  ['Provider','Status','Time','Confidence','Fields','Tokens In','Est. Cost',''].forEach(function(h) {
+    html += '<th style="text-align:left;padding:0.5rem 0.6rem;font-size:0.72rem;color:#737373;font-weight:600;white-space:nowrap;">' + h + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  results.forEach(function(r) {
+    var isSuccess   = r.status === 'success';
+    var isBestConf  = isSuccess && r.confidence === bestConf && bestConf > 0;
+    var isBestSpeed = isSuccess && r.elapsed === bestSpeed;
+    var isBestCost  = isSuccess && r.cost_usd === bestCost && bestCost > 0;
+    var isBestFields = isSuccess && r.field_count === bestFields && bestFields > 0;
+
+    var confColor = r.confidence >= 0.8 ? '#3D7A4A' : r.confidence >= 0.6 ? '#8B6A00' : '#8B3A3A';
+    var statusBadge = isSuccess
+      ? '<span style="background:#DCFCE7;color:#3D7A4A;border-radius:99px;padding:0.1rem 0.5rem;font-size:0.7rem;font-weight:600;">\u2713 OK</span>'
+      : '<span style="background:#FEE2E2;color:#DC2626;border-radius:99px;padding:0.1rem 0.5rem;font-size:0.7rem;font-weight:600;">\u2717 Error</span>';
+
+    html += '<tr style="border-bottom:1px solid #F5F5F5;">' +
+      '<td style="padding:0.6rem;font-weight:600;">' + r.provider + '</td>' +
+      '<td style="padding:0.6rem;">' + (isSuccess ? statusBadge : statusBadge + '<div style="font-size:0.68rem;color:#DC2626;margin-top:0.2rem;">' + (r.error || '') + '</div>') + '</td>' +
+      '<td style="padding:0.6rem;">' + (isBestSpeed ? '\u2b50 ' : '') + r.elapsed + 's</td>' +
+      '<td style="padding:0.6rem;color:' + confColor + ';font-weight:600;">' + (isBestConf ? '\u2b50 ' : '') + Math.round(r.confidence * 100) + '%</td>' +
+      '<td style="padding:0.6rem;">' + (isBestFields ? '\u2b50 ' : '') + r.field_count + '</td>' +
+      '<td style="padding:0.6rem;color:#737373;">' + r.tokens_in.toLocaleString() + '</td>' +
+      '<td style="padding:0.6rem;font-family:monospace;">' + (isBestCost ? '\u2b50 ' : '') + '$' + r.cost_usd.toFixed(6) + '</td>' +
+      '<td style="padding:0.6rem;"></td>' +
+      '</tr>';
+  });
+
+  if (!final) {
+    html += '<tr><td colspan="8" style="padding:0.5rem;text-align:center;color:#A3A3A3;font-size:0.75rem;">More providers running\u2026</td></tr>';
+  }
+  html += '</tbody></table></div>';
+
+  // Winner summary if done
+  if (final && successes.length > 0) {
+    var winner = successes.reduce(function(a, b) { return b.confidence > a.confidence ? b : a; });
+    html += '<div style="margin-top:1rem;padding:0.75rem 1rem;background:#F0F9F8;border:1px solid #5A9A98;border-radius:0.5rem;font-size:0.82rem;">' +
+      '\ud83c\udfc6 <strong>Recommended:</strong> <strong>' + winner.provider + '</strong> \u2014 highest confidence (' + Math.round(winner.confidence * 100) + '%)' +
+      ' with ' + winner.field_count + ' fields extracted in ' + winner.elapsed + 's.' +
+      '</div>';
+  }
+
+  document.getElementById('bmResultsInner').innerHTML = html;
+}
 </script>
 {% endblock %}
