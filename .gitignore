@@ -13,6 +13,10 @@ nutracomply/nutracomply.db
 # Uploaded files
 nutracomply/uploads/
 
+# FSSAI regulation PDFs — too large for git (552 MB); upload via admin UI
+nutracomply/FSSAI/*.pdf
+FSSAI/*.pdf
+
 # Python cache
 __pycache__/
 *.pyc

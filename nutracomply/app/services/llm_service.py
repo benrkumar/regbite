@@ -314,10 +314,11 @@ def ingest_fssai_pdfs(db, folder_path: str = None) -> dict:
     from app.models import KBDocument, KBType
 
     if folder_path is None:
-        # Default: FSSAI/ folder at project root (one level above nutracomply/)
-        app_dir = Path(__file__).resolve().parent.parent  # nutracomply/app/..
-        project_root = app_dir.parent.parent              # above nutracomply/
-        folder_path = str(project_root / "FSSAI")
+        # FSSAI/ sits alongside the app/ package inside nutracomply/
+        # Dockerfile: COPY nutracomply/ /app  → runtime path is /app/app/services/llm_service.py
+        # 3 x .parent: services → app → nutracomply (= /app on Railway)
+        nutracomply_root = Path(__file__).resolve().parent.parent.parent
+        folder_path = str(nutracomply_root / "FSSAI")
 
     if not os.path.isdir(folder_path):
         return {"status": "error", "message": f"Folder not found: {folder_path}",
