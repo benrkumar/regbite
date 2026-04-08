@@ -106,7 +106,7 @@
           {{ doc.chunk_count }}
         </td>
         <td style="font-size:0.78rem;color:#737373;">
-          {{ doc.uploaded_at.strftime('%d %b %Y') }}
+          {{ doc.uploaded_at.strftime('%d %b %Y') if doc.uploaded_at else '—' }}
         </td>
         <td>
           <form method="post"
