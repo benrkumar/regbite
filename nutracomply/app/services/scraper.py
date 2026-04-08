@@ -1,11 +1,12 @@
 """
 FSSAI Regulation Scraper
 
-Monitors exactly two FSSAI pages:
-1. https://fssai.gov.in/cms/food-safety-and-standards-regulations.php
-   — official Food Safety & Standards Regulations list
-2. https://fssai.gov.in/notifications.php?notification=gazette-notification
-   — Gazette Notifications issued by FSSAI
+Monitors:
+1. FSSAI — two pages only:
+   - https://fssai.gov.in/cms/food-safety-and-standards-regulations.php
+   - https://fssai.gov.in/notifications.php?notification=gazette-notification
+2. AYUSH — Ministry of AYUSH advisories and regulation pages
+3. Legal Metrology — Department of Consumer Affairs packaged commodities rules
 
 Change detection: SHA-256 hash of each tracked document.
 New/changed docs are downloaded, text-extracted, and LLM-classified.
@@ -27,6 +28,10 @@ settings = get_settings()
 
 FSSAI_REGULATIONS_URL = "https://fssai.gov.in/cms/food-safety-and-standards-regulations.php"
 FSSAI_GAZETTE_URL     = "https://fssai.gov.in/notifications.php?notification=gazette-notification"
+AYUSH_ADVISORIES_URL  = "https://ayush.gov.in/advisories"
+AYUSH_REGULATIONS_URL = "https://ayush.gov.in/regulation-rules-and-acts"
+LEGAL_METROLOGY_URL   = "https://consumeraffairs.nic.in/policies-rules/legal-metrology-packaged-commodities-rules-2011"
+LEGAL_METROLOGY_ACT_URL = "https://consumeraffairs.gov.in/pages/legal-metrology-act"
 
 HEADERS = {
     "User-Agent": (
@@ -84,13 +89,14 @@ def _is_regulation_document(url: str, link_text: str) -> bool:
 
 def scrape_fssai_pages() -> list[dict]:
     """
-    Scrapes exactly two FSSAI pages.
-    Returns list of discovered documents:
-        {source_url, document_name, section}
+    Scrapes FSSAI (2 URLs), AYUSH, and Legal Metrology pages.
+    Returns list of discovered documents: {source_url, document_name, section}
     """
     discovered = []
     discovered += _scrape_regulations_page()
     discovered += _scrape_gazette_page()
+    discovered += _scrape_ayush_pages()
+    discovered += _scrape_legal_metrology_page()
     return discovered
 
 
@@ -146,6 +152,58 @@ def _scrape_gazette_page() -> list[dict]:
         print(f"[scraper] Gazette notifications page error: {e}")
 
     return results[:100]
+
+
+def _scrape_ayush_pages() -> list[dict]:
+    """Scrape Ministry of AYUSH advisories and regulation pages."""
+    results = []
+    for url in [AYUSH_ADVISORIES_URL, AYUSH_REGULATIONS_URL]:
+        try:
+            resp = httpx.get(url, headers=HEADERS, timeout=30, follow_redirects=True)
+            soup = BeautifulSoup(resp.text, "lxml")
+            for link in soup.find_all("a", href=True):
+                href = link["href"]
+                name = link.get_text(strip=True) or Path(href).name
+                if ".pdf" in href.lower() or any(kw in href.lower() for kw in
+                        ["advisory", "notification", "circular", "regulation", "guideline"]):
+                    full_url = _resolve_url(href, url)
+                    if not _is_regulation_document(full_url, name):
+                        continue
+                    if name and len(name) > 5:
+                        results.append({
+                            "source_url": full_url,
+                            "document_name": name[:400],
+                            "section": "ayush",
+                        })
+        except Exception as e:
+            print(f"[scraper] AYUSH page error ({url}): {e}")
+    return results[:25]
+
+
+def _scrape_legal_metrology_page() -> list[dict]:
+    """Scrape Department of Consumer Affairs — Legal Metrology packaged commodities rules."""
+    results = []
+    for url in [LEGAL_METROLOGY_URL, LEGAL_METROLOGY_ACT_URL]:
+        try:
+            resp = httpx.get(url, headers=HEADERS, timeout=30, follow_redirects=True)
+            soup = BeautifulSoup(resp.text, "lxml")
+            for link in soup.find_all("a", href=True):
+                href = link["href"]
+                name = link.get_text(strip=True) or Path(href).name
+                if ".pdf" in href.lower() or any(kw in href.lower() for kw in
+                        ["amendment", "rule", "notification", "circular", "packaged"]):
+                    full_url = _resolve_url(href, url)
+                    if not _is_regulation_document(full_url, name):
+                        continue
+                    if name and len(name) > 5:
+                        results.append({
+                            "source_url": full_url,
+                            "document_name": name[:400],
+                            "section": "legal_metrology",
+                        })
+        except Exception as e:
+            print(f"[scraper] Legal Metrology page error ({url}): {e}")
+    return results[:20]
 
 
 def _resolve_url(href: str, base_url: str) -> str:
