@@ -159,6 +159,58 @@ async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
     return JSONResponse(result)
 
 
+@router.get("/llm/openrouter-models")
+async def llm_openrouter_models(request: Request, db: Session = Depends(get_db)):
+    """
+    Fetch all Gemma-related models available on OpenRouter for the current API key.
+    Returns JSON list so admin can find the exact model slug to configure.
+    """
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+
+    from app.config import get_settings
+    settings = get_settings()
+
+    if not settings.openrouter_api_key:
+        return JSONResponse({"error": "OPENROUTER_API_KEY not configured"}, status_code=400)
+
+    import httpx as _httpx
+    try:
+        resp = _httpx.get(
+            "https://openrouter.ai/api/v1/models",
+            headers={
+                "Authorization": f"Bearer {settings.openrouter_api_key}",
+                "HTTP-Referer": "https://steadfast-courage-production-0f66.up.railway.app",
+            },
+            timeout=15.0,
+        )
+        if not resp.is_success:
+            return JSONResponse({"error": f"HTTP {resp.status_code}", "body": resp.text[:500]})
+
+        all_models = resp.json().get("data", [])
+        # Filter to Google/Gemma models only
+        google_models = [
+            {
+                "id":          m["id"],
+                "name":        m.get("name", m["id"]),
+                "context":     m.get("context_length"),
+                "pricing_in":  m.get("pricing", {}).get("prompt"),
+                "pricing_out": m.get("pricing", {}).get("completion"),
+            }
+            for m in all_models
+            if "google" in m["id"].lower() or "gemma" in m["id"].lower()
+        ]
+        google_models.sort(key=lambda x: x["id"])
+        return JSONResponse({
+            "configured_model": settings.gemma_model_name,
+            "google_models":    google_models,
+            "total_models":     len(all_models),
+        })
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)[:300]}, status_code=500)
+
+
 # ── KB management (Train) ─────────────────────────────────────────────────────
 
 @router.get("/llm/{kb_type}/train")

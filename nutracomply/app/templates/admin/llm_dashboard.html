@@ -12,10 +12,16 @@
       <div style="font-size:0.78rem;font-weight:700;color:#262626;margin-bottom:0.1rem;">AI Provider Status</div>
       <div style="font-size:0.72rem;color:#A3A3A3;">Primary → Gemma 4 · Fallback → Claude · Last resort → Gemini</div>
     </div>
-    <button onclick="testProviders()" id="testBtn"
-            class="adm-btn adm-btn-primary" style="font-size:0.78rem;">
-      ⚡ Test Connections
-    </button>
+    <div style="display:flex;gap:0.5rem;">
+      <button onclick="testProviders()" id="testBtn"
+              class="adm-btn adm-btn-primary" style="font-size:0.78rem;">
+        ⚡ Test Connections
+      </button>
+      <button onclick="browseModels()" id="modelsBtn"
+              class="adm-btn" style="font-size:0.78rem;">
+        🔍 Browse OpenRouter Models
+      </button>
+    </div>
   </div>
 
   <div id="providerStatus" style="display:none;margin-top:1rem;
@@ -178,7 +184,119 @@
   </div>
 </div>
 
+{# ── Model browser modal ─────────────────────────────────────────────────── #}
+<div id="modelsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);
+     z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;width:min(700px,95vw);max-height:80vh;
+              display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.18);">
+    <div style="padding:1.2rem 1.5rem;border-bottom:1px solid #EBEBEB;
+                display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <strong style="font-size:0.95rem;color:#262626;">OpenRouter — Google / Gemma Models</strong>
+        <div id="modelsBrief" style="font-size:0.72rem;color:#A3A3A3;margin-top:0.1rem;"></div>
+      </div>
+      <button onclick="closeModels()" style="background:none;border:none;font-size:1.3rem;
+              cursor:pointer;color:#A3A3A3;padding:0 0.3rem;">&times;</button>
+    </div>
+    <div style="padding:0.75rem 1.5rem;border-bottom:1px solid #EBEBEB;">
+      <input id="modelSearch" type="text" placeholder="Filter models…"
+             oninput="filterModels(this.value)"
+             style="width:100%;padding:0.4rem 0.7rem;border:1px solid #EBEBEB;
+                    border-radius:7px;font-size:0.83rem;box-sizing:border-box;">
+    </div>
+    <div id="modelsList" style="overflow-y:auto;flex:1;padding:0.5rem 0;">
+      <div style="padding:1.5rem;text-align:center;color:#A3A3A3;">Loading…</div>
+    </div>
+    <div style="padding:0.9rem 1.5rem;border-top:1px solid #EBEBEB;
+                font-size:0.73rem;color:#737373;background:#F8F8F8;">
+      To use a model: add <code>GEMMA_MODEL_NAME=model-id-here</code> to Railway environment variables and redeploy.
+    </div>
+  </div>
+</div>
+
 <script>
+let _allModels = [];
+
+function closeModels() {
+  document.getElementById("modelsModal").style.display = "none";
+}
+
+async function browseModels() {
+  const modal = document.getElementById("modelsModal");
+  modal.style.display = "flex";
+  document.getElementById("modelsList").innerHTML =
+    `<div style="padding:1.5rem;text-align:center;color:#A3A3A3;">⏳ Fetching models from OpenRouter…</div>`;
+  document.getElementById("modelsBrief").textContent = "";
+
+  try {
+    const resp = await fetch("/admin/llm/openrouter-models");
+    const data = await resp.json();
+
+    if (data.error) {
+      document.getElementById("modelsList").innerHTML =
+        `<div style="padding:1.5rem;color:#DC2626;font-size:0.85rem;">${data.error}</div>`;
+      return;
+    }
+
+    _allModels = data.google_models || [];
+    document.getElementById("modelsBrief").textContent =
+      `${_allModels.length} Google/Gemma models available · ${data.total_models} total · ` +
+      `Configured: ${data.configured_model}`;
+    renderModels(_allModels, data.configured_model);
+  } catch(e) {
+    document.getElementById("modelsList").innerHTML =
+      `<div style="padding:1.5rem;color:#DC2626;">Network error: ${e.message}</div>`;
+  }
+}
+
+function filterModels(q) {
+  const filtered = _allModels.filter(m =>
+    m.id.toLowerCase().includes(q.toLowerCase()) ||
+    m.name.toLowerCase().includes(q.toLowerCase())
+  );
+  renderModels(filtered);
+}
+
+function renderModels(models, configuredId) {
+  if (!models.length) {
+    document.getElementById("modelsList").innerHTML =
+      `<div style="padding:1.5rem;text-align:center;color:#A3A3A3;">No models match.</div>`;
+    return;
+  }
+  document.getElementById("modelsList").innerHTML = models.map(m => {
+    const isActive = m.id === configuredId;
+    return `
+      <div style="padding:0.65rem 1.5rem;border-bottom:1px solid #F5F5F5;
+                  display:flex;align-items:center;gap:0.75rem;
+                  ${isActive ? 'background:#F0F9F4;' : ''}">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <code style="font-size:0.8rem;color:#262626;font-weight:${isActive?'700':'400'};">${m.id}</code>
+            ${isActive ? '<span style="font-size:0.65rem;background:#D1FAE5;color:#065F46;font-weight:700;padding:0.1rem 0.4rem;border-radius:3px;">CURRENT</span>' : ''}
+          </div>
+          <div style="font-size:0.7rem;color:#A3A3A3;margin-top:0.1rem;">${m.name}${m.context ? ` · ${(m.context/1000).toFixed(0)}K ctx` : ''}</div>
+        </div>
+        <button onclick="copyModelId('${m.id}')" title="Copy model ID"
+                style="background:none;border:1px solid #EBEBEB;border-radius:6px;
+                       padding:0.25rem 0.6rem;cursor:pointer;font-size:0.72rem;color:#525252;">
+          Copy
+        </button>
+      </div>`;
+  }).join("");
+}
+
+function copyModelId(id) {
+  navigator.clipboard.writeText(id).then(() => {
+    // brief visual feedback — show a toast
+    const t = document.createElement("div");
+    t.textContent = `Copied: ${id}`;
+    t.style = "position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#262626;" +
+              "color:#fff;padding:0.5rem 1.2rem;border-radius:8px;font-size:0.82rem;z-index:99999;";
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+  });
+}
+
 async function testProviders() {
   const btn = document.getElementById("testBtn");
   btn.disabled = true;

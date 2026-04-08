@@ -890,7 +890,23 @@ def _call_gemma_chat(system_prompt: str, user_message: str,
     }
 
     resp = httpx.post(url, headers=headers, json=payload, timeout=120.0)
-    resp.raise_for_status()
+
+    if not resp.is_success:
+        # Extract the full OpenRouter error message before discarding the response
+        try:
+            err_body = resp.json()
+            # OpenRouter wraps errors as {"error": {"message": "...", "code": ...}}
+            err_detail = (
+                err_body.get("error", {}).get("message")
+                or err_body.get("message")
+                or str(err_body)[:400]
+            )
+        except Exception:
+            err_detail = resp.text[:400]
+        raise ValueError(
+            f"OpenRouter HTTP {resp.status_code} — {err_detail}"
+        )
+
     data = resp.json()
     return data["choices"][0]["message"]["content"].strip()
 
