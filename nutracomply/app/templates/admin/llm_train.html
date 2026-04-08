@@ -241,11 +241,11 @@
 
     <div class="kb-action-section">
       <div class="kb-action-section-lbl" style="color:#DC2626;">Danger Zone</div>
-      <form method="post" action="/admin/llm/{{ kb_type }}/reset"
-            onsubmit="return confirm('⚠️ Delete the selected documents from the KB? This cannot be undone. Use Auto-Seed from DB afterward to rebuild.')">
+      <!-- hidden form submitted by JS after confirmation -->
+      <form id="deleteKbForm" method="post" action="/admin/llm/{{ kb_type }}/reset">
         {% if kb_type == "regulations" %}
         <div class="kb-reset-row" style="margin-bottom:0.4rem;">
-          <select name="subset">
+          <select name="subset" id="deleteSubset">
             <option value="fssai">FSSAI only</option>
             <option value="ayush">AYUSH only</option>
             <option value="legal_metrology">Legal Metrology only</option>
@@ -255,10 +255,58 @@
         {% else %}
         <input type="hidden" name="subset" value="all">
         {% endif %}
-        <button type="submit" class="adm-btn" style="width:100%;background:#FEE2E2;color:#DC2626;border-color:#FECACA;justify-content:center;">
+        <button type="button" class="adm-btn" onclick="openDeleteModal()"
+          style="width:100%;background:#FEE2E2;color:#DC2626;border-color:#FECACA;justify-content:center;">
           🗑 Delete from KB
         </button>
       </form>
+
+      <!-- DELETE confirmation modal -->
+      <div id="deleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:0.75rem;padding:2rem;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+          <div style="font-size:1rem;font-weight:700;color:#DC2626;margin-bottom:0.5rem;">⚠️ Confirm Deletion</div>
+          <p style="font-size:0.82rem;color:#525252;margin:0 0 1rem;line-height:1.5;">
+            This will permanently remove the selected documents from the knowledge base.
+            This <strong>cannot be undone</strong>. Type <code style="background:#FEE2E2;padding:0.1rem 0.35rem;border-radius:0.25rem;color:#DC2626;font-weight:700;">DELETE</code> to confirm.
+          </p>
+          <input id="deleteConfirmInput" type="text" placeholder="Type DELETE here"
+            style="width:100%;box-sizing:border-box;border:1px solid #FECACA;border-radius:0.4rem;padding:0.5rem 0.75rem;font-size:0.9rem;margin-bottom:1rem;outline:none;"
+            oninput="document.getElementById('deleteConfirmBtn').disabled = this.value !== 'DELETE'">
+          <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+            <button onclick="closeDeleteModal()" style="padding:0.4rem 1rem;border:1px solid #EBEBEB;border-radius:0.4rem;background:#F8F8F8;cursor:pointer;font-size:0.82rem;">Cancel</button>
+            <button id="deleteConfirmBtn" disabled onclick="submitDelete()"
+              style="padding:0.4rem 1rem;border:1px solid #FECACA;border-radius:0.4rem;background:#DC2626;color:#fff;cursor:pointer;font-size:0.82rem;opacity:0.5;"
+              onmouseover="if(!this.disabled)this.style.opacity='1'" onmouseout="if(!this.disabled)this.style.opacity=''">
+              Delete from KB
+            </button>
+          </div>
+        </div>
+      </div>
+      <script>
+        function openDeleteModal() {
+          document.getElementById('deleteConfirmInput').value = '';
+          document.getElementById('deleteConfirmBtn').disabled = true;
+          document.getElementById('deleteConfirmBtn').style.opacity = '0.5';
+          document.getElementById('deleteModal').style.display = 'flex';
+          setTimeout(() => document.getElementById('deleteConfirmInput').focus(), 100);
+        }
+        function closeDeleteModal() { document.getElementById('deleteModal').style.display = 'none'; }
+        function submitDelete() { document.getElementById('deleteKbForm').submit(); }
+        document.getElementById('deleteConfirmInput') && document.getElementById('deleteConfirmInput').addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && !document.getElementById('deleteConfirmBtn').disabled) submitDelete();
+          if (e.key === 'Escape') closeDeleteModal();
+        });
+        document.getElementById('deleteModal').addEventListener('click', function(e) {
+          if (e.target === this) closeDeleteModal();
+        });
+        // Enable/style confirm button when DELETE is typed
+        document.addEventListener('input', function(e) {
+          if (e.target.id === 'deleteConfirmInput') {
+            const btn = document.getElementById('deleteConfirmBtn');
+            btn.style.opacity = e.target.value === 'DELETE' ? '1' : '0.5';
+          }
+        });
+      </script>
       <p style="font-size:0.7rem;color:#A3A3A3;margin:0.4rem 0 0;line-height:1.4;">
         Removes this framework's documents from the KB. Use <strong>Auto-Seed from DB</strong> afterward to rebuild.
       </p>
