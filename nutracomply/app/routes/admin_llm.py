@@ -101,6 +101,28 @@ async def llm_train(kb_type: str, request: Request, db: Session = Depends(get_db
     except Exception:
         stats = {"documents": 0, "chunks": 0}
 
+    # Extra context for regulations: compliance rules + regulation changes
+    fssai_rules = lm_rules = ayush_rules = []
+    total_rules = 0
+    reg_changes = []
+    if kb_type == "regulations":
+        from app.models import ComplianceRule, RegulationChange
+        rules = (
+            db.query(ComplianceRule)
+            .filter(ComplianceRule.active == True)
+            .order_by(ComplianceRule.rule_code)
+            .all()
+        )
+        fssai_rules = [r for r in rules if r.rule_code.startswith("FSSAI")]
+        lm_rules    = [r for r in rules if r.rule_code.startswith("LM")]
+        ayush_rules = [r for r in rules if r.rule_code.startswith("AYUSH")]
+        total_rules = len(rules)
+        reg_changes = (
+            db.query(RegulationChange)
+            .order_by(RegulationChange.effective_date.desc())
+            .all()
+        )
+
     return templates.TemplateResponse("admin/llm_train.html", {
         "request":       request,
         "user":          user,
@@ -110,6 +132,12 @@ async def llm_train(kb_type: str, request: Request, db: Session = Depends(get_db
         "stats":         stats,
         "flash_message": flash_message or None,
         "flash_type":    flash_type,
+        # Regulations-only extras
+        "fssai_rules":   fssai_rules,
+        "lm_rules":      lm_rules,
+        "ayush_rules":   ayush_rules,
+        "total_rules":   total_rules,
+        "reg_changes":   reg_changes,
     })
 
 
@@ -141,6 +169,43 @@ async def llm_seed(kb_type: str, request: Request, db: Session = Depends(get_db)
 
     return RedirectResponse(
         url=f"/admin/llm/{kb_type}/train?msg={msg}&type={typ}",
+        status_code=302,
+    )
+
+
+@router.post("/llm/regulations/sync-rules")
+async def llm_sync_rules(request: Request, db: Session = Depends(get_db)):
+    """Force-sync all compliance rules from the seed JSON file into the database.
+    Inserts any new rules that don't already exist. Never deletes existing data."""
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    import json
+    from pathlib import Path as _Path
+    from app.models import ComplianceRule as _ComplianceRule
+
+    rules_path = _Path(__file__).parent.parent / "data" / "fssai_rules_seed.json"
+    try:
+        with open(rules_path, encoding="utf-8") as f:
+            rules_data = json.load(f)
+
+        existing_codes = {r.rule_code for r in db.query(_ComplianceRule.rule_code).all()}
+        new_rules = [r for r in rules_data if r["rule_code"] not in existing_codes]
+
+        if new_rules:
+            for r in new_rules:
+                db.add(_ComplianceRule(**r))
+            db.commit()
+
+        msg = f"Synced+{len(new_rules)}+new+rules.+Total:+{len(existing_codes)+len(new_rules)}+rules+in+database."
+        typ = "success"
+    except Exception as exc:
+        msg = f"Sync+failed:+{str(exc)[:120].replace(' ', '+')}"
+        typ = "error"
+
+    return RedirectResponse(
+        url=f"/admin/llm/regulations/train?msg={msg}&type={typ}",
         status_code=302,
     )
 

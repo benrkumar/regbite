@@ -362,120 +362,24 @@ async def edit_rule(rule_id: int, request: Request, db: Session = Depends(get_db
 # ── Regulations Knowledge ─────────────────────────────────────────────────────
 
 @router.get("/regulations-kb")
-async def admin_regulations_kb(request: Request, db: Session = Depends(get_db)):
-    user, redirect = _require_admin(request, db)
-    if redirect:
-        return redirect
-
-    from app.models import KBDocument, KBChunk, KBType
-
-    # Get all active rules grouped by framework
-    rules = db.query(ComplianceRule).filter(ComplianceRule.active == True).order_by(ComplianceRule.rule_code).all()
-
-    fssai_rules = [r for r in rules if r.rule_code.startswith("FSSAI")]
-    lm_rules = [r for r in rules if r.rule_code.startswith("LM")]
-    ayush_rules = [r for r in rules if r.rule_code.startswith("AYUSH")]
-
-    # Get KB stats
-    reg_docs = db.query(KBDocument).filter(
-        KBDocument.kb_type == KBType.REGULATIONS,
-        KBDocument.is_active == True,
-    ).all()
-    reg_chunks = db.query(KBChunk).filter(KBChunk.kb_type == KBType.REGULATIONS).count()
-
-    prod_docs = db.query(KBDocument).filter(
-        KBDocument.kb_type == KBType.PRODUCTS,
-        KBDocument.is_active == True,
-    ).count()
-    prod_chunks = db.query(KBChunk).filter(KBChunk.kb_type == KBType.PRODUCTS).count()
-
-    # Get regulation changes
-    reg_changes = db.query(RegulationChange).order_by(RegulationChange.effective_date.desc()).all()
-
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
-
-    return templates.TemplateResponse("admin/regulations_kb.html", {
-        "request": request,
-        "user": user,
-        "unread_alerts": unread_alerts,
-        "fssai_rules": fssai_rules,
-        "lm_rules": lm_rules,
-        "ayush_rules": ayush_rules,
-        "total_rules": len(rules),
-        "reg_docs": reg_docs,
-        "reg_chunks": reg_chunks,
-        "prod_docs": prod_docs,
-        "prod_chunks": prod_chunks,
-        "reg_changes": reg_changes,
-    })
+async def admin_regulations_kb_redirect(request: Request):
+    """Consolidated into the LLM Train page."""
+    return RedirectResponse(url="/admin/llm/regulations/train", status_code=301)
 
 
 @router.post("/regulations-kb/sync-rules")
-async def admin_sync_rules(request: Request, db: Session = Depends(get_db)):
-    """Force-sync all rules from the seed JSON file into the database.
-    Inserts any new rules that don't already exist. Never deletes existing data."""
-    user, redirect = _require_admin(request, db)
-    if redirect:
-        return redirect
-
-    import json
-
-    rules_path = Path(__file__).parent.parent / "data" / "fssai_rules_seed.json"
-    with open(rules_path, encoding="utf-8") as f:
-        rules_data = json.load(f)
-
-    existing_codes = {r.rule_code for r in db.query(ComplianceRule.rule_code).all()}
-    new_rules = [r for r in rules_data if r["rule_code"] not in existing_codes]
-
-    if new_rules:
-        for r in new_rules:
-            db.add(ComplianceRule(**r))
-        db.commit()
-
-    from urllib.parse import quote
-    msg = f"Synced {len(new_rules)} new rules. Total: {len(existing_codes) + len(new_rules)} rules in database."
-    return RedirectResponse(url=f"/admin/regulations-kb?msg={quote(msg)}&type=success", status_code=302)
+async def admin_sync_rules_redirect(request: Request):
+    return RedirectResponse(url="/admin/llm/regulations/sync-rules", status_code=307)
 
 
 @router.post("/regulations-kb/seed-llm")
-async def admin_seed_regulations_llm(request: Request, db: Session = Depends(get_db)):
-    """Force-seed the Regulations LLM knowledge base from DB data.
-    Permanent storage — data is never auto-deleted."""
-    user, redirect = _require_admin(request, db)
-    if redirect:
-        return redirect
-
-    from app.services.llm_service import seed_regulations_kb
-    result = seed_regulations_kb(db)
-
-    from urllib.parse import quote
-    msg = f"Regulations KB: {result.get('status', 'done')} — {result.get('document_count', 0)} documents indexed."
-    return RedirectResponse(url=f"/admin/regulations-kb?msg={quote(msg)}&type=success", status_code=302)
+async def admin_seed_llm_redirect(request: Request):
+    return RedirectResponse(url="/admin/llm/regulations/seed", status_code=307)
 
 
 @router.post("/regulations-kb/reseed-llm")
-async def admin_reseed_regulations_llm(request: Request, db: Session = Depends(get_db)):
-    """Clear and re-seed the Regulations LLM KB from current DB data.
-    Use this when rules have been updated and the KB needs a full refresh."""
-    user, redirect = _require_admin(request, db)
-    if redirect:
-        return redirect
-
-    from app.models import KBDocument, KBChunk, KBType
-
-    # Clear existing regulation KB docs (keep products KB intact)
-    reg_docs = db.query(KBDocument).filter(KBDocument.kb_type == KBType.REGULATIONS).all()
-    for doc in reg_docs:
-        db.query(KBChunk).filter(KBChunk.document_id == doc.id).delete()
-        db.delete(doc)
-    db.commit()
-
-    from app.services.llm_service import seed_regulations_kb
-    result = seed_regulations_kb(db)
-
-    from urllib.parse import quote
-    msg = f"Re-seeded Regulations KB — {result.get('document_count', 0)} documents indexed from {len(reg_docs)} cleared."
-    return RedirectResponse(url=f"/admin/regulations-kb?msg={quote(msg)}&type=success", status_code=302)
+async def admin_reseed_llm_redirect(request: Request):
+    return RedirectResponse(url="/admin/llm/regulations/reset", status_code=307)
 
 
 # ── Alerts ────────────────────────────────────────────────────────────────────

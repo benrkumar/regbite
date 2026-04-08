@@ -264,7 +264,7 @@ def _suggest_rule_updates(db, critical_changes):
                         title=f"Rule update suggested: {change.document_name[:80]}",
                         message=f"{len(suggestions)} rule changes suggested by AI. Review in admin panel.",
                         ntype="alert",
-                        link="/admin/regulations-kb/",
+                        link="/admin/llm/regulations/train",
                     )
     except Exception as e:
         log.error("[scheduler] Rule suggestion error: %s", e)
