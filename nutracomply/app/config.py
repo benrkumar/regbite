@@ -23,12 +23,18 @@ class Settings(BaseSettings):
     # Anthropic (Claude) — used for label extraction
     anthropic_api_key: str = ""
 
-    # Gemma 4 (self-hosted via vLLM on GPU server)
-    gemma_api_url: str = ""                          # e.g. "https://{pod}-8000.proxy.runpod.net/v1"
-    gemma_api_key: str = ""                          # vLLM bearer token (empty = no auth)
-    gemma_model_name: str = "google/gemma-4-31b-it"  # model ID loaded in vLLM
-    gemma_enabled: bool = True                       # killswitch — set False to skip Gemma
-    gemma_visual_token_budget: int = 560             # 560=standard, 1120=detailed fine-print
+    # OpenRouter — used for Gemma 4 (and any future OpenRouter models)
+    openrouter_api_key: str = ""                     # sk-or-... from openrouter.ai/keys
+    openrouter_api_url: str = "https://openrouter.ai/api/v1"
+
+    # Gemma 4 via OpenRouter
+    gemma_model_name: str = "google/gemma-4-27b-it"  # OpenRouter model ID
+    gemma_enabled: bool = True                        # killswitch — set False to skip Gemma
+    gemma_visual_token_budget: int = 560              # 560=standard, 1120=detailed fine-print
+
+    # Legacy vLLM fields (kept for backwards compat, no longer used)
+    gemma_api_url: str = ""
+    gemma_api_key: str = ""
 
     # Email (Brevo SMTP)
     brevo_smtp_host: str = "smtp-relay.brevo.com"

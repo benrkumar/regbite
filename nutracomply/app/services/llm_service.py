@@ -826,18 +826,23 @@ def _call_gemini(model_name: str, system_prompt: str, user_message: str,
     return response.text.strip()
 
 
-# ─── Gemma 4 (self-hosted via vLLM) ─────────────────────────────────────────
+# ─── Gemma 4 via OpenRouter ──────────────────────────────────────────────────
 
 def _call_gemma_chat(system_prompt: str, user_message: str,
-                     history: list, api_url: str, api_key: str,
+                     history: list, api_key: str,
                      model_name: str) -> str:
-    """Call Gemma 4 via vLLM OpenAI-compatible API. Raises on failure."""
+    """Call Gemma 4 via OpenRouter's OpenAI-compatible API. Raises on failure."""
     import httpx
+    from app.config import get_settings as _gs
+    api_url = _gs().openrouter_api_url
 
     url = api_url.rstrip("/") + "/chat/completions"
-    headers = {"content-type": "application/json"}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
+    headers = {
+        "content-type": "application/json",
+        "Authorization": f"Bearer {api_key}",
+        "HTTP-Referer": "https://steadfast-courage-production-0f66.up.railway.app",
+        "X-Title": "RegBite",
+    }
 
     # Build OpenAI-style messages: system + history + current user message
     messages = [{"role": "system", "content": system_prompt}]
@@ -909,7 +914,7 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
     from app.config import get_settings
     settings = get_settings()
 
-    has_gemma  = bool(settings.gemma_enabled and settings.gemma_api_url)
+    has_gemma  = bool(settings.gemma_enabled and settings.openrouter_api_key)
     has_gemini = bool(settings.gemini_api_key)
     has_claude = bool(settings.anthropic_api_key)
 
@@ -917,7 +922,7 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
         return {
             "reply": (
                 "No LLM provider is configured. "
-                "Set GEMMA_API_URL, GEMINI_API_KEY, or ANTHROPIC_API_KEY in your environment."
+                "Set OPENROUTER_API_KEY, GEMINI_API_KEY, or ANTHROPIC_API_KEY in your environment."
             ),
             "context_used": [],
             "error": "no_api_key",
@@ -947,7 +952,7 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
     if is_regulations and has_gemma:
         try:
             reply = _call_gemma_chat(system_prompt, user_message, history,
-                                      settings.gemma_api_url, settings.gemma_api_key,
+                                      settings.openrouter_api_key,
                                       settings.gemma_model_name)
             result = {"reply": reply, "context_used": context_titles, "provider": "gemma"}
             _set_cache(kb_type, query, result)
@@ -972,7 +977,7 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
     if not is_regulations and has_gemma:
         try:
             reply = _call_gemma_chat(system_prompt, user_message, history,
-                                      settings.gemma_api_url, settings.gemma_api_key,
+                                      settings.openrouter_api_key,
                                       settings.gemma_model_name)
             result = {"reply": reply, "context_used": context_titles, "provider": "gemma"}
             _set_cache(kb_type, query, result)

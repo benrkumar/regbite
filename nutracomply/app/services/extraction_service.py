@@ -401,60 +401,37 @@ def _call_claude_text(ocr_text: str) -> tuple:
     return _parse_json_response(raw), inp, out
 
 
-# ─── Gemma 4 (self-hosted via vLLM, OpenAI-compatible) ─────────────────────
-
-import time as _time
-
-_gemma_health = {"available": False, "checked_at": 0.0}
-
+# ─── Gemma 4 via OpenRouter ──────────────────────────────────────────────────
 
 def _is_gemma_available() -> bool:
-    """Check if self-hosted Gemma server is reachable. Caches result for 60 s."""
-    if not settings.gemma_enabled or not settings.gemma_api_url:
-        return False
-
-    now = _time.time()
-    if now - _gemma_health["checked_at"] < 60:
-        return _gemma_health["available"]
-
-    import httpx
-    try:
-        url = settings.gemma_api_url.rstrip("/") + "/models"
-        headers = {}
-        if settings.gemma_api_key:
-            headers["Authorization"] = f"Bearer {settings.gemma_api_key}"
-        resp = httpx.get(url, headers=headers, timeout=5.0)
-        ok = resp.status_code == 200
-    except Exception:
-        ok = False
-
-    _gemma_health["available"] = ok
-    _gemma_health["checked_at"] = now
-    return ok
+    """Return True if Gemma via OpenRouter is configured and enabled."""
+    return bool(settings.gemma_enabled and settings.openrouter_api_key)
 
 
 def _gemma_request(messages: list, max_tokens: int = 8192) -> tuple:
-    """Make a direct HTTP call to the vLLM OpenAI-compatible API.
+    """Call Gemma 4 via OpenRouter's OpenAI-compatible API.
 
     Returns:
         (text: str, input_tokens: int, output_tokens: int)
     """
     import httpx
 
-    url = settings.gemma_api_url.rstrip("/") + "/chat/completions"
-    headers = {"content-type": "application/json"}
-    if settings.gemma_api_key:
-        headers["Authorization"] = f"Bearer {settings.gemma_api_key}"
+    url = settings.openrouter_api_url.rstrip("/") + "/chat/completions"
+    headers = {
+        "content-type": "application/json",
+        "Authorization": f"Bearer {settings.openrouter_api_key}",
+        "HTTP-Referer": "https://steadfast-courage-production-0f66.up.railway.app",
+        "X-Title": "RegBite",
+    }
 
     payload = {
         "model": settings.gemma_model_name,
         "messages": messages,
         "max_tokens": max_tokens,
         "temperature": 0.1,
-        "response_format": {"type": "json_object"},
     }
 
-    _log(f"[gemma-api] Sending request to Gemma ({settings.gemma_model_name})...")
+    _log(f"[gemma-api] Sending request to {settings.gemma_model_name} via OpenRouter...")
     resp = httpx.post(url, headers=headers, json=payload, timeout=180.0)
     if resp.status_code != 200:
         _log(f"[gemma-api] HTTP {resp.status_code}: {resp.text[:500]}")
@@ -470,7 +447,7 @@ def _gemma_request(messages: list, max_tokens: int = 8192) -> tuple:
 
 
 def _call_gemma_vision(image_path: str) -> tuple:
-    """Use Gemma 4 Vision via vLLM to extract label data from an image or PDF.
+    """Use Gemma 4 Vision via OpenRouter to extract label data from an image or PDF.
 
     Returns:
         (extraction_dict, input_tokens, output_tokens)
@@ -632,7 +609,7 @@ def extract_label_data_from_image(image_path: str) -> tuple:
         except Exception as e:
             _log(f"[extraction] Claude Vision failed: {e}")
 
-    # Fallback: Gemma 4 Vision (self-hosted, ~$0.001/label)
+    # Fallback: Gemma 4 Vision (OpenRouter)
     if _is_gemma_available():
         try:
             result, inp, out = _call_gemma_vision(image_path)
