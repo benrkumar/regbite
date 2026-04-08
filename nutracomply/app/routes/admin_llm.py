@@ -289,7 +289,7 @@ async def llm_seed(kb_type: str, request: Request, db: Session = Depends(get_db)
     if kb_type not in _VALID_KB:
         return RedirectResponse(url="/admin/llm", status_code=302)
 
-    from app.services.llm_service import seed_regulations_kb, seed_products_kb
+    from app.services.llm_service import seed_regulations_kb, seed_products_kb, invalidate_cache
 
     try:
         if kb_type == "regulations":
@@ -297,11 +297,13 @@ async def llm_seed(kb_type: str, request: Request, db: Session = Depends(get_db)
         else:
             result = seed_products_kb(db)
 
+        invalidate_cache(kb_type)
+
         if result["status"] == "up_to_date":
             msg  = f"Knowledge+base+already+seeded+({result['document_count']}+documents+exist)"
             typ  = "info"
         else:
-            msg  = f"Seeded+{result['document_count']}+documents+from+database"
+            msg  = f"seeded:{result['document_count']}".replace(" ", "+")
             typ  = "success"
     except Exception as exc:
         msg = f"Seed+failed:+{str(exc)[:120].replace(' ', '+')}"
@@ -324,6 +326,7 @@ async def llm_sync_rules(request: Request, db: Session = Depends(get_db)):
     import json
     from pathlib import Path as _Path
     from app.models import ComplianceRule as _ComplianceRule
+    from app.services.llm_service import invalidate_cache
 
     rules_path = _Path(__file__).parent.parent / "data" / "fssai_rules_seed.json"
     try:
@@ -337,6 +340,8 @@ async def llm_sync_rules(request: Request, db: Session = Depends(get_db)):
             for r in new_rules:
                 db.add(_ComplianceRule(**r))
             db.commit()
+
+        invalidate_cache("regulations")
 
         msg = f"Synced+{len(new_rules)}+new+rules.+Total:+{len(existing_codes)+len(new_rules)}+rules+in+database."
         typ = "success"
@@ -353,7 +358,8 @@ async def llm_sync_rules(request: Request, db: Session = Depends(get_db)):
 @router.post("/llm/{kb_type}/reset")
 async def llm_reset_kb(kb_type: str, request: Request, db: Session = Depends(get_db)):
     """
-    Selectively delete + re-seed a subset of the regulations KB.
+    Selectively delete a subset of the regulations KB.
+    Does NOT auto-reseed — the user should click Auto-Seed from DB afterward.
     subset param: "all" | "fssai" | "ayush" | "legal_metrology"
     """
     user, redirect = _require_admin(request, db)
@@ -364,7 +370,7 @@ async def llm_reset_kb(kb_type: str, request: Request, db: Session = Depends(get
 
     from sqlalchemy import or_
     from app.models import KBDocument, KBChunk, KBType
-    from app.services.llm_service import seed_regulations_kb, seed_products_kb, invalidate_cache
+    from app.services.llm_service import invalidate_cache
 
     form   = await request.form()
     subset = form.get("subset", "all")  # "all" | "fssai" | "ayush" | "legal_metrology"
@@ -411,19 +417,9 @@ async def llm_reset_kb(kb_type: str, request: Request, db: Session = Depends(get
 
         invalidate_cache(kb_type)
 
-        # Re-seed the same subset from DB
-        if kb_type == "regulations":
-            fw = None if subset == "all" else subset
-            result = seed_regulations_kb(db, framework=fw)
-        else:
-            result = seed_products_kb(db)
-
         label = {"fssai": "FSSAI", "ayush": "AYUSH",
                  "legal_metrology": "Legal+Metrology", "all": "All"}.get(subset, subset)
-        msg = (
-            f"Reset+{label}:+deleted+{deleted_docs}+docs+{deleted_chunks}+chunks."
-            f"+Re-seeded+{result['new_documents']}+documents+from+DB."
-        )
+        msg = f"deleted:{label}:{deleted_docs}"
         typ = "success"
     except Exception as exc:
         msg = f"Reset+failed:+{str(exc)[:120].replace(' ', '+')}"

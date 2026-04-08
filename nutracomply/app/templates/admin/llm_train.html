@@ -135,7 +135,26 @@
 
 {# ── Flash message ── #}
 {% if flash_message %}
-<div class="adm-flash adm-flash-{{ flash_type }}" style="margin-bottom:1rem;">{{ flash_message }}</div>
+{% set _fm = flash_message %}
+{% if _fm.startswith('deleted:') %}
+  {# Format: deleted:<label>:<count> #}
+  {% set _parts = _fm.split(':') %}
+  {% set _label = _parts[1] if _parts|length > 1 else 'selected' %}
+  {% set _count = _parts[2] if _parts|length > 2 else '?' %}
+  <div class="adm-flash adm-flash-{{ flash_type }}" style="margin-bottom:1rem;">
+    Deleted {{ _count }} document(s) from the <strong>{{ _label }}</strong> knowledge base.
+    KB is now empty for this framework — click <strong>Auto-Seed from DB</strong> to rebuild.
+  </div>
+{% elif _fm.startswith('seeded:') %}
+  {# Format: seeded:<count> #}
+  {% set _parts = _fm.split(':') %}
+  {% set _count = _parts[1] if _parts|length > 1 else '?' %}
+  <div class="adm-flash adm-flash-{{ flash_type }}" style="margin-bottom:1rem;">
+    Seeded {{ _count }} document(s) from DB — knowledge base updated.
+  </div>
+{% else %}
+  <div class="adm-flash adm-flash-{{ flash_type }}" style="margin-bottom:1rem;">{{ _fm }}</div>
+{% endif %}
 {% endif %}
 
 <div class="kb-page">
@@ -223,7 +242,7 @@
     <div class="kb-action-section">
       <div class="kb-action-section-lbl" style="color:#DC2626;">Danger Zone</div>
       <form method="post" action="/admin/llm/{{ kb_type }}/reset"
-            onsubmit="return confirm('⚠️ Delete and re-seed the selected subset? This cannot be undone.')">
+            onsubmit="return confirm('⚠️ Delete the selected documents from the KB? This cannot be undone. Use Auto-Seed from DB afterward to rebuild.')">
         {% if kb_type == "regulations" %}
         <div class="kb-reset-row" style="margin-bottom:0.4rem;">
           <select name="subset">
@@ -237,9 +256,12 @@
         <input type="hidden" name="subset" value="all">
         {% endif %}
         <button type="submit" class="adm-btn" style="width:100%;background:#FEE2E2;color:#DC2626;border-color:#FECACA;justify-content:center;">
-          🗑 Delete &amp; Re-seed
+          🗑 Delete from KB
         </button>
       </form>
+      <p style="font-size:0.7rem;color:#A3A3A3;margin:0.4rem 0 0;line-height:1.4;">
+        Removes this framework's documents from the KB. Use <strong>Auto-Seed from DB</strong> afterward to rebuild.
+      </p>
     </div>
 
   </div>{# /.kb-action-panel #}

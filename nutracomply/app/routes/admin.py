@@ -17,7 +17,7 @@ from app.models import (
     User, Product, LabelVersion, ComplianceCheck, ComplianceRule,
     Alert, AlertStatus, AlertType, RegulationChange, Severity, CheckResult,
     PublishedAlert, PublishedAlertSeverity, PublishedAlertStatus,
-    ComplianceReport, PlanType, UserRole,
+    ComplianceReport, PlanType, UserRole, Subscription, PaymentRecord,
 )
 
 router = APIRouter(prefix="/admin")
@@ -722,49 +722,95 @@ async def admin_toggle_active(user_id: int, request: Request, db: Session = Depe
 # ── API Usage Reporting ───────────────────────────────────────────────────────
 
 @router.get("/api-usage")
-async def admin_api_usage(request: Request, db: Session = Depends(get_db)):
+async def admin_api_usage(
+    request: Request,
+    db: Session = Depends(get_db),
+    period: str = "30d",        # "today", "7d", "30d", "90d", "custom"
+    date_from: str = None,      # YYYY-MM-DD
+    date_to: str = None,        # YYYY-MM-DD
+):
+    from datetime import timedelta, date as date_cls
+
     user, redirect = _require_admin(request, db)
     if redirect:
         return redirect
 
     unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
 
-    # Totals
-    total_scans = db.query(LabelVersion).count()
-    claude_scans = db.query(LabelVersion).filter(LabelVersion.extraction_source == "claude").count()
-    gemma_scans  = db.query(LabelVersion).filter(LabelVersion.extraction_source == "gemma").count()
-    gemini_scans = db.query(LabelVersion).filter(LabelVersion.extraction_source == "gemini").count()
-    local_scans  = db.query(LabelVersion).filter(LabelVersion.extraction_source == "local").count()
-    fallback_scans = db.query(LabelVersion).filter(LabelVersion.extraction_source == "fallback").count()
+    COST_RATES = {
+        "gemma":    {"in": 0.10,  "out": 0.40},   # OpenRouter gemma-4-31b $/1M tokens
+        "claude":   {"in": 3.00,  "out": 15.00},   # claude-sonnet-4-6 $/1M tokens
+        "gemini":   {"in": 0.075, "out": 0.30},    # gemini-3.1-flash-lite $/1M tokens
+        "local":    {"in": 0.0,   "out": 0.0},
+        "fallback": {"in": 0.0,   "out": 0.0},
+    }
 
-    token_totals = db.query(
-        func.coalesce(func.sum(LabelVersion.tokens_input), 0),
-        func.coalesce(func.sum(LabelVersion.tokens_output), 0),
-    ).first()
-    total_input_tokens  = int(token_totals[0] or 0)
-    total_output_tokens = int(token_totals[1] or 0)
-    total_tokens = total_input_tokens + total_output_tokens
+    # Date range logic
+    today = datetime.utcnow().date()
+    if period == "today":
+        start_date = today
+        end_date = today
+    elif period == "7d":
+        start_date = today - timedelta(days=6)
+        end_date = today
+    elif period == "90d":
+        start_date = today - timedelta(days=89)
+        end_date = today
+    elif period == "custom" and date_from and date_to:
+        start_date = date_cls.fromisoformat(date_from)
+        end_date = date_cls.fromisoformat(date_to)
+    else:  # default 30d
+        period = "30d"
+        start_date = today - timedelta(days=29)
+        end_date = today
 
-    # Cost estimate (claude-sonnet-4-6 pricing: $3/M input, $15/M output)
-    INPUT_COST_PER_M  = 3.0
-    OUTPUT_COST_PER_M = 15.0
-    estimated_cost_usd = (
-        (total_input_tokens  / 1_000_000) * INPUT_COST_PER_M +
-        (total_output_tokens / 1_000_000) * OUTPUT_COST_PER_M
+    cutoff = datetime.combine(start_date, datetime.min.time())
+    cutoff_end = datetime.combine(end_date, datetime.max.time())
+
+    # Totals scoped to date range
+    base_q = db.query(LabelVersion).filter(
+        LabelVersion.uploaded_at >= cutoff,
+        LabelVersion.uploaded_at <= cutoff_end,
     )
+    total_scans = base_q.count()
 
-    # Per-scan breakdown (last 100 Claude scans)
-    recent_labels = (
-        db.query(LabelVersion)
-        .filter(LabelVersion.extraction_source == "claude")
-        .order_by(LabelVersion.uploaded_at.desc())
-        .limit(100)
+    source_counts = {}
+    for src in ["gemma", "claude", "gemini", "local", "fallback"]:
+        source_counts[src] = base_q.filter(LabelVersion.extraction_source == src).count()
+
+    # Token totals by source for cost calculation
+    token_by_source = (
+        db.query(
+            LabelVersion.extraction_source,
+            func.coalesce(func.sum(LabelVersion.tokens_input), 0).label("inp"),
+            func.coalesce(func.sum(LabelVersion.tokens_output), 0).label("out"),
+            func.count(LabelVersion.id).label("cnt"),
+            func.coalesce(func.avg(LabelVersion.extraction_confidence), 0).label("avg_conf"),
+        )
+        .filter(LabelVersion.uploaded_at >= cutoff, LabelVersion.uploaded_at <= cutoff_end)
+        .group_by(LabelVersion.extraction_source)
         .all()
     )
 
-    # Daily aggregates — last 30 days
-    from datetime import timedelta
-    cutoff = datetime.utcnow() - timedelta(days=30)
+    provider_stats = []
+    total_ai_cost = 0.0
+    for row in token_by_source:
+        src = row.extraction_source or "fallback"
+        rate = COST_RATES.get(src, {"in": 0, "out": 0})
+        cost = (int(row.inp) / 1_000_000) * rate["in"] + (int(row.out) / 1_000_000) * rate["out"]
+        total_ai_cost += cost
+        provider_stats.append({
+            "source": src,
+            "scans": row.cnt,
+            "tokens_in": int(row.inp),
+            "tokens_out": int(row.out),
+            "cost_usd": round(cost, 4),
+            "avg_confidence": round(float(row.avg_conf or 0), 2),
+            "cost_per_scan": round(cost / max(row.cnt, 1), 5),
+        })
+    provider_stats.sort(key=lambda x: x["cost_usd"], reverse=True)
+
+    # Daily breakdown
     daily_rows = (
         db.query(
             func.date(LabelVersion.uploaded_at).label("day"),
@@ -773,47 +819,182 @@ async def admin_api_usage(request: Request, db: Session = Depends(get_db)):
             func.coalesce(func.sum(LabelVersion.tokens_input), 0).label("inp"),
             func.coalesce(func.sum(LabelVersion.tokens_output), 0).label("out"),
         )
-        .filter(LabelVersion.uploaded_at >= cutoff)
+        .filter(LabelVersion.uploaded_at >= cutoff, LabelVersion.uploaded_at <= cutoff_end)
         .group_by(func.date(LabelVersion.uploaded_at), LabelVersion.extraction_source)
         .order_by(func.date(LabelVersion.uploaded_at))
         .all()
     )
 
-    # Collapse into per-day dict for template
     daily: dict = {}
     for row in daily_rows:
         day = str(row.day)
         if day not in daily:
-            daily[day] = {"claude": 0, "gemma": 0, "gemini": 0, "local": 0, "fallback": 0,
-                          "tokens": 0, "cost": 0.0}
+            daily[day] = {"total": 0, "gemma": 0, "claude": 0, "gemini": 0, "local": 0, "fallback": 0, "cost": 0.0}
         src = row.extraction_source or "fallback"
         daily[day][src] = daily[day].get(src, 0) + row.scans
-        t = int(row.inp) + int(row.out)
-        daily[day]["tokens"] += t
-        daily[day]["cost"] += (
-            (int(row.inp) / 1_000_000) * INPUT_COST_PER_M +
-            (int(row.out) / 1_000_000) * OUTPUT_COST_PER_M
-        )
+        daily[day]["total"] += row.scans
+        rate = COST_RATES.get(src, {"in": 0, "out": 0})
+        daily[day]["cost"] += (int(row.inp) / 1_000_000) * rate["in"] + (int(row.out) / 1_000_000) * rate["out"]
 
-    daily_list = sorted(
-        [{"day": k, **v} for k, v in daily.items()],
-        key=lambda x: x["day"]
+    # Fill missing days with zeros
+    all_days = []
+    d = start_date
+    while d <= end_date:
+        ds = str(d)
+        all_days.append({"day": ds, **(daily.get(ds, {"total": 0, "gemma": 0, "claude": 0, "gemini": 0, "local": 0, "fallback": 0, "cost": 0.0}))})
+        d += timedelta(days=1)
+
+    # Most used provider
+    most_used = max(source_counts, key=lambda s: source_counts[s]) if total_scans > 0 else "—"
+
+    # Overall avg confidence
+    conf_row = (
+        db.query(func.coalesce(func.avg(LabelVersion.extraction_confidence), 0))
+        .filter(LabelVersion.uploaded_at >= cutoff, LabelVersion.uploaded_at <= cutoff_end)
+        .scalar()
     )
+    overall_avg_conf = round(float(conf_row or 0), 2)
 
     return templates.TemplateResponse("admin/api_usage.html", {
+        "request": request, "user": user, "unread_alerts": unread_alerts,
+        "period": period,
+        "date_from": str(start_date), "date_to": str(end_date),
+        "total_scans": total_scans,
+        "provider_stats": provider_stats,
+        "total_ai_cost": round(total_ai_cost, 4),
+        "daily_list": all_days,
+        "cost_rates": COST_RATES,
+        "avg_cost_per_scan": round(total_ai_cost / max(total_scans, 1), 5),
+        "most_used_provider": most_used,
+        "overall_avg_conf": overall_avg_conf,
+        "source_counts": source_counts,
+    })
+
+
+@router.get("/finance")
+async def admin_finance(
+    request: Request,
+    db: Session = Depends(get_db),
+    period: str = "30d",
+    date_from: str = None,
+    date_to: str = None,
+):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    from datetime import datetime, timedelta, date as date_cls
+    from sqlalchemy import func
+
+    today = datetime.utcnow().date()
+    if period == "today":
+        start_date = today
+        end_date = today
+    elif period == "7d":
+        start_date = today - timedelta(days=6)
+        end_date = today
+    elif period == "90d":
+        start_date = today - timedelta(days=89)
+        end_date = today
+    elif period == "all":
+        # oldest user signup
+        first = db.query(func.min(User.created_at)).scalar()
+        start_date = first.date() if first else today - timedelta(days=365)
+        end_date = today
+    elif period == "custom" and date_from and date_to:
+        start_date = date_cls.fromisoformat(date_from)
+        end_date = date_cls.fromisoformat(date_to)
+    else:
+        period = "30d"
+        start_date = today - timedelta(days=29)
+        end_date = today
+
+    cutoff = datetime(start_date.year, start_date.month, start_date.day, 0, 0, 0)
+    cutoff_end = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
+
+    # ── User / signup stats ─────────────────────────────────────────────────
+    total_users = db.query(func.count(User.id)).filter(User.is_admin == False).scalar() or 0
+    new_users_period = db.query(func.count(User.id)).filter(
+        User.created_at >= cutoff, User.created_at <= cutoff_end, User.is_admin == False
+    ).scalar() or 0
+
+    # Daily signups
+    signup_rows = (
+        db.query(func.date(User.created_at).label("day"), func.count(User.id).label("cnt"))
+        .filter(User.created_at >= cutoff, User.created_at <= cutoff_end, User.is_admin == False)
+        .group_by(func.date(User.created_at))
+        .order_by(func.date(User.created_at))
+        .all()
+    )
+    signup_by_day = {str(r.day): r.cnt for r in signup_rows}
+
+    # ── Revenue stats ───────────────────────────────────────────────────────
+    # PaymentRecord.amount_paise is in paise (₹1 = 100 paise)
+    total_revenue_paise = db.query(func.coalesce(func.sum(PaymentRecord.amount_paise), 0)).filter(
+        PaymentRecord.status == "paid"
+    ).scalar() or 0
+    period_revenue_paise = db.query(func.coalesce(func.sum(PaymentRecord.amount_paise), 0)).filter(
+        PaymentRecord.status == "paid",
+        PaymentRecord.created_at >= cutoff,
+        PaymentRecord.created_at <= cutoff_end,
+    ).scalar() or 0
+
+    # Daily revenue
+    revenue_rows = (
+        db.query(
+            func.date(PaymentRecord.created_at).label("day"),
+            func.coalesce(func.sum(PaymentRecord.amount_paise), 0).label("paise"),
+            func.count(PaymentRecord.id).label("cnt"),
+        )
+        .filter(PaymentRecord.status == "paid", PaymentRecord.created_at >= cutoff, PaymentRecord.created_at <= cutoff_end)
+        .group_by(func.date(PaymentRecord.created_at))
+        .order_by(func.date(PaymentRecord.created_at))
+        .all()
+    )
+    revenue_by_day = {str(r.day): {"inr": int(r.paise) / 100, "cnt": r.cnt} for r in revenue_rows}
+
+    # ── Subscription stats ──────────────────────────────────────────────────
+    sub_by_plan = {}
+    try:
+        plan_rows = (
+            db.query(Subscription.plan, func.count(Subscription.id))
+            .filter(Subscription.status == "active")
+            .group_by(Subscription.plan)
+            .all()
+        )
+        sub_by_plan = {str(p): c for p, c in plan_rows}
+    except Exception:
+        pass
+
+    active_subs = sum(sub_by_plan.values())
+
+    # ── Build daily list (fill zeros) ───────────────────────────────────────
+    daily_list = []
+    d = start_date
+    while d <= end_date:
+        ds = str(d)
+        daily_list.append({
+            "day": ds,
+            "signups": signup_by_day.get(ds, 0),
+            "revenue_inr": revenue_by_day.get(ds, {}).get("inr", 0),
+            "payments": revenue_by_day.get(ds, {}).get("cnt", 0),
+        })
+        d += timedelta(days=1)
+
+    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+
+    return templates.TemplateResponse("admin/finance.html", {
         "request": request,
         "user": user,
         "unread_alerts": unread_alerts,
-        "total_scans": total_scans,
-        "claude_scans": claude_scans,
-        "gemma_scans": gemma_scans,
-        "gemini_scans": gemini_scans,
-        "local_scans": local_scans,
-        "fallback_scans": fallback_scans,
-        "total_input_tokens": total_input_tokens,
-        "total_output_tokens": total_output_tokens,
-        "total_tokens": total_tokens,
-        "estimated_cost_usd": round(estimated_cost_usd, 4),
-        "recent_labels": recent_labels,
+        "period": period,
+        "date_from": str(start_date),
+        "date_to": str(end_date),
+        "total_users": total_users,
+        "new_users_period": new_users_period,
+        "active_subs": active_subs,
+        "sub_by_plan": sub_by_plan,
+        "total_revenue_inr": total_revenue_paise / 100,
+        "period_revenue_inr": period_revenue_paise / 100,
         "daily_list": daily_list,
     })
