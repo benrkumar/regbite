@@ -348,15 +348,16 @@ class KBDocument(Base):
     """A source document ingested into a knowledge base."""
     __tablename__ = "kb_documents"
 
-    id          = Column(Integer, primary_key=True, index=True)
-    kb_type     = Column(SAEnum(KBType), nullable=False, index=True)
-    title       = Column(String(500), nullable=False)
-    source      = Column(String(500))           # e.g. "db:rule:42", "upload:file.pdf"
-    content     = Column(Text, nullable=False)
-    chunk_count = Column(Integer, default=0)
-    uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
-    is_active   = Column(Boolean, default=True)
+    id           = Column(Integer, primary_key=True, index=True)
+    kb_type      = Column(SAEnum(KBType), nullable=False, index=True)
+    title        = Column(String(500), nullable=False)
+    source       = Column(String(500))           # e.g. "db:rule:42", "upload:file.pdf"
+    content      = Column(Text, nullable=False)
+    content_hash = Column(String(64), nullable=True, index=True)  # SHA-256 of raw bytes — dedup
+    chunk_count  = Column(Integer, default=0)
+    uploaded_by  = Column(Integer, ForeignKey("users.id"), nullable=True)
+    uploaded_at  = Column(DateTime, default=datetime.utcnow)
+    is_active    = Column(Boolean, default=True)
 
     chunks = relationship("KBChunk", back_populates="document",
                           cascade="all, delete-orphan")

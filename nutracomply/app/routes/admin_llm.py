@@ -21,6 +21,9 @@ from app.routes.auth import get_current_user_from_cookie
 # ── In-memory extraction job store (admin-only, single-process) ────────────
 _EXTRACTION_JOBS: dict = {}   # job_id → state dict
 
+# ── Benchmark job store ──────────────────────────────────────────────────────
+_BENCHMARK_JOBS: dict = {}   # job_id → {done, results: list, error, started_at}
+
 router    = APIRouter(prefix="/admin")
 templates = Jinja2Templates(
     directory=str(Path(__file__).parent.parent / "templates")
@@ -488,6 +491,8 @@ async def llm_upload(
         return RedirectResponse(url="/admin/llm", status_code=302)
 
     from app.services.llm_service import _ingest_document
+    from app.models import KBDocument, KBType
+    import hashlib, io as _io
 
     try:
         filename = file.filename or "upload"
@@ -497,13 +502,42 @@ async def llm_upload(
         if not raw_bytes:
             raise ValueError("File is empty")
 
+        # ── Duplicate detection ──────────────────────────────────────────────
+        content_hash = hashlib.sha256(raw_bytes).hexdigest()
+        source_key   = f"upload:{filename}"
+
+        # 1) Identical content (same file, possibly renamed)
+        hash_dupe = db.query(KBDocument.id, KBDocument.title).filter(
+            KBDocument.kb_type    == KBType(kb_type),
+            KBDocument.content_hash == content_hash,
+            KBDocument.is_active  == True,
+        ).first()
+        if hash_dupe:
+            safe_name = filename.replace(' ', '+')
+            safe_orig = (hash_dupe.title or "").replace(' ', '+')[:60]
+            msg = f"Skipped+{safe_name}+—+identical+content+already+indexed+as+{safe_orig}"
+            return RedirectResponse(
+                url=f"/admin/llm/{kb_type}/train?msg={msg}&type=skipped",
+                status_code=302,
+            )
+
+        # 2) Same filename already in KB
+        name_dupe = db.query(KBDocument.id).filter(
+            KBDocument.kb_type   == KBType(kb_type),
+            KBDocument.source    == source_key,
+            KBDocument.is_active == True,
+        ).first()
+        if name_dupe:
+            safe_name = filename.replace(' ', '+')
+            msg = f"Skipped+{safe_name}+—+already+indexed+(same+filename)"
+            return RedirectResponse(
+                url=f"/admin/llm/{kb_type}/train?msg={msg}&type=skipped",
+                status_code=302,
+            )
+        # ────────────────────────────────────────────────────────────────────
+
         if filename.lower().endswith(".pdf"):
-            import pdfplumber
-            import io
-            with pdfplumber.open(io.BytesIO(raw_bytes)) as pdf:
-                content = "\n\n".join(
-                    (page.extract_text() or "") for page in pdf.pages
-                )
+            content = _extract_pdf_content_for_kb(raw_bytes, filename)
         else:
             content = raw_bytes.decode("utf-8", errors="replace")
 
@@ -514,9 +548,10 @@ async def llm_upload(
         doc = _ingest_document(
             db, kb_type,
             title=display_title,
-            source=f"upload:{filename}",
+            source=source_key,
             content=content,
             uploaded_by_id=user.id,
+            content_hash=content_hash,
         )
         msg = f"Uploaded+and+indexed+{doc.chunk_count}+chunks+from+{filename.replace(' ', '+')}"
         typ = "success"
@@ -707,6 +742,189 @@ async def label_extractor_page(request: Request, db: Session = Depends(get_db)):
         "local_min_confidence":     settings.local_extraction_min_confidence,
         "patterns_list":            patterns_list,
     })
+
+
+def _extract_pdf_content_for_kb(raw_bytes: bytes, filename: str) -> str:
+    """Extract text from a PDF for KB ingestion.
+
+    Priority:
+    1. pdfplumber — fast, free, works for digital PDFs
+    2. Gemma 4 Vision — for scanned/image PDFs via OpenRouter
+    3. Claude Vision — paid fallback
+    Returns extracted text (may be empty string if all fail).
+    """
+    import io, tempfile, os
+    from app.config import get_settings
+    cfg = get_settings()
+
+    # ── Step 1: pdfplumber (digital PDFs) ──────────────────────────────────
+    text = ""
+    try:
+        import pdfplumber
+        with pdfplumber.open(io.BytesIO(raw_bytes)) as pdf:
+            pages = [(page.extract_text() or "") for page in pdf.pages]
+        text = "\n\n".join(pages).strip()
+    except Exception:
+        pass
+
+    # If we got reasonable text (>100 chars), use it directly
+    if len(text) > 100:
+        return text[:50_000]  # cap at 50K chars for KB
+
+    # ── Step 2: Gemma 4 Vision (scanned PDFs) ─────────────────────────────
+    from app.services.extraction_service import _is_gemma_available
+    if _is_gemma_available():
+        try:
+            # Write to temp file for the vision function
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                tmp.write(raw_bytes)
+                tmp_path = tmp.name
+            try:
+                from app.services.extraction_service import _call_gemma_vision, _normalize_extraction
+                result, _, _ = _call_gemma_vision(tmp_path)
+                if result:
+                    # For KB we want the raw text, not structured JSON
+                    # Convert extraction dict to readable text
+                    lines = []
+                    for k, v in result.items():
+                        if v and not k.startswith("_"):
+                            lines.append(f"{k}: {v}")
+                    extracted = "\n".join(lines)
+                    if len(extracted) > 50:
+                        return (text + "\n\n" + extracted).strip()[:50_000]
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    # ── Step 3: Claude Vision ──────────────────────────────────────────────
+    if cfg.anthropic_api_key:
+        try:
+            import os as _os
+            _os.environ.setdefault("ANTHROPIC_API_KEY", cfg.anthropic_api_key)
+            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+                tmp.write(raw_bytes)
+                tmp_path = tmp.name
+            try:
+                from app.services.extraction_service import _call_claude_vision
+                result, _, _ = _call_claude_vision(tmp_path)
+                if result:
+                    lines = [f"{k}: {v}" for k, v in result.items() if v and not k.startswith("_")]
+                    extracted = "\n".join(lines)
+                    if len(extracted) > 50:
+                        return (text + "\n\n" + extracted).strip()[:50_000]
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    return text  # return whatever pdfplumber got (may be empty)
+
+
+def _run_benchmark_job(job_id: str, tmp_path: str, filename: str, file_size_kb: float):
+    """Run all available providers on the same file, collect comparison stats."""
+    import os
+    from app.config import get_settings
+    from app.services.extraction_service import (
+        _is_gemma_available, _normalize_extraction, _calculate_confidence,
+        _call_gemma_vision, _call_gemma_text,
+        _call_claude_vision, _call_claude_text,
+    )
+    import time as _t
+
+    cfg = get_settings()
+    job = _BENCHMARK_JOBS[job_id]
+    results = []
+
+    def run_provider(name, step_label, fn, *args):
+        start = _t.time()
+        try:
+            out = fn(*args)
+            # fn returns (result_dict, inp_tokens, out_tokens)
+            result_dict, inp, out_tok = out
+            if result_dict:
+                result_dict = _normalize_extraction(result_dict)
+                confidence = _calculate_confidence(result_dict, "vision")
+                field_count = sum(1 for v in result_dict.values() if v and not str(v).startswith('_'))
+            else:
+                confidence, field_count, inp, out_tok = 0.0, 0, inp, out_tok
+            elapsed = round(_t.time() - start, 2)
+            # cost
+            RATES = {"gemma": (0.10, 0.40), "claude": (3.00, 15.00), "gemini": (0.075, 0.30)}
+            src = name.lower().split()[0]
+            r = RATES.get(src, (0, 0))
+            cost = (inp / 1_000_000) * r[0] + (out_tok / 1_000_000) * r[1]
+            results.append({
+                "provider": name,
+                "status": "success",
+                "elapsed": elapsed,
+                "confidence": round(confidence, 3),
+                "field_count": field_count,
+                "tokens_in": inp,
+                "tokens_out": out_tok,
+                "cost_usd": round(cost, 6),
+                "error": None,
+            })
+        except Exception as e:
+            elapsed = round(_t.time() - start, 2)
+            results.append({
+                "provider": name,
+                "status": "error",
+                "elapsed": elapsed,
+                "confidence": 0.0,
+                "field_count": 0,
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "cost_usd": 0.0,
+                "error": str(e)[:120],
+            })
+
+    try:
+        if _is_gemma_available():
+            job["current"] = "Gemma 4 Vision…"
+            run_provider("Gemma 4 Vision", "gemma", _call_gemma_vision, tmp_path)
+
+        if cfg.anthropic_api_key:
+            import os as _os
+            _os.environ.setdefault("ANTHROPIC_API_KEY", cfg.anthropic_api_key)
+            job["current"] = "Claude Vision…"
+            run_provider("Claude Vision", "claude", _call_claude_vision, tmp_path)
+
+        if cfg.gemini_api_key:
+            job["current"] = "Gemini Vision…"
+            try:
+                from app.services.extraction_service import _call_gemini_vision
+                start = _t.time()
+                r = _call_gemini_vision(tmp_path)
+                if r:
+                    r = _normalize_extraction(r)
+                    conf = _calculate_confidence(r, "vision")
+                    fc = sum(1 for v in r.values() if v)
+                else:
+                    conf, fc = 0.0, 0
+                elapsed = round(_t.time() - start, 2)
+                results.append({"provider": "Gemini Vision", "status": "success", "elapsed": elapsed,
+                    "confidence": round(conf, 3), "field_count": fc, "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0, "error": None})
+            except Exception as e:
+                results.append({"provider": "Gemini Vision", "status": "error", "elapsed": 0, "confidence": 0,
+                    "field_count": 0, "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0, "error": str(e)[:120]})
+
+        job["done"] = True
+        job["results"] = results
+    except Exception as e:
+        job["done"] = True
+        job["error"] = str(e)
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
 
 
 def _run_extraction_job(job_id: str, tmp_path: str, filename: str, file_size_kb: float):
@@ -903,6 +1121,57 @@ async def label_extractor_job(job_id: str, request: Request, db: Session = Depen
         "step_id":     job["step_id"],
         "step_label":  job["step_label"],
         "elapsed_sec": elapsed,
+    })
+
+
+@router.post("/label-extractor/benchmark/start")
+async def label_extractor_benchmark_start(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    file: UploadFile = File(...),
+):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+
+    import tempfile, os
+    job_id = str(uuid.uuid4())[:12]
+    suffix = Path(file.filename).suffix.lower() if file.filename else ".jpg"
+    content = await file.read()
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    _BENCHMARK_JOBS[job_id] = {
+        "current": "Starting…", "done": False,
+        "results": [], "error": None,
+        "started_at": _time.time(),
+        "filename": file.filename,
+        "file_size_kb": round(len(content)/1024, 1),
+    }
+    background_tasks.add_task(_run_benchmark_job, job_id, tmp_path, file.filename or "upload", round(len(content)/1024, 1))
+    return JSONResponse({"job_id": job_id})
+
+
+@router.get("/label-extractor/benchmark/job/{job_id}")
+async def label_extractor_benchmark_status(job_id: str, request: Request, db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+    job = _BENCHMARK_JOBS.get(job_id)
+    if not job:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+    elapsed = round(_time.time() - job["started_at"], 1)
+    if job["error"]:
+        return JSONResponse({"done": True, "error": job["error"], "elapsed": elapsed})
+    return JSONResponse({
+        "done": job["done"],
+        "current": job.get("current", "Running…"),
+        "results": job["results"],
+        "elapsed": elapsed,
+        "filename": job.get("filename"),
+        "file_size_kb": job.get("file_size_kb"),
     })
 
 

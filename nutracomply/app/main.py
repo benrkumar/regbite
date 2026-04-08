@@ -283,6 +283,9 @@ def _run_migrations():
         "ALTER TABLE label_versions ADD COLUMN IF NOT EXISTS extraction_source VARCHAR(20)",
         "ALTER TABLE label_versions ADD COLUMN IF NOT EXISTS tokens_input INTEGER",
         "ALTER TABLE label_versions ADD COLUMN IF NOT EXISTS tokens_output INTEGER",
+        # v14: KBDocument — content_hash for duplicate upload detection
+        "ALTER TABLE kb_documents ADD COLUMN IF NOT EXISTS content_hash VARCHAR(64)",
+        "CREATE INDEX IF NOT EXISTS ix_kb_documents_content_hash ON kb_documents (content_hash)",
     ]
     for sql in migrations:
         try:

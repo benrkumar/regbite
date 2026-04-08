@@ -262,7 +262,8 @@ def chunk_text(text: str, max_chars: int = 1200) -> list[str]:
 # ─── Document ingestion ───────────────────────────────────────────────────────
 
 def _ingest_document(db, kb_type: str, title: str, source: str,
-                     content: str, uploaded_by_id: int | None = None):
+                     content: str, uploaded_by_id: int | None = None,
+                     content_hash: str | None = None):
     """
     Create a KBDocument, chunk its content, insert KBChunk rows, and commit.
     Skips exact-duplicate chunks already present in this KB.
@@ -275,6 +276,7 @@ def _ingest_document(db, kb_type: str, title: str, source: str,
         title=title,
         source=source,
         content=content,
+        content_hash=content_hash,
         uploaded_by=uploaded_by_id,
     )
     db.add(doc)
