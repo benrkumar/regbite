@@ -1,305 +1,612 @@
 {% extends "admin/base_admin.html" %}
-{% block title %}{{ kb_type | title }} KB — Train{% endblock %}
+{% block title %}{{ kb_type | title }} Knowledge Base{% endblock %}
 {% block page_title %}{{ kb_type | title }} Knowledge Base{% endblock %}
 
 {% block content %}
+<style>
+/* ── Page-level ── */
+.kb-page { display:flex; flex-direction:column; gap:1.5rem; }
+
+/* ── Stat chips ── */
+.kb-stats { display:flex; gap:0.65rem; flex-wrap:wrap; align-items:center; }
+.kb-stat-chip {
+  background:#fff; border:1px solid #EBEBEB; border-radius:8px;
+  padding:0.65rem 1rem; display:flex; flex-direction:column; align-items:center;
+  min-width:90px;
+}
+.kb-stat-chip .val { font-size:1.4rem; font-weight:700; color:#262626; line-height:1; }
+.kb-stat-chip .lbl { font-size:0.65rem; color:#A3A3A3; font-weight:500; margin-top:0.2rem;
+                     letter-spacing:0.04em; text-align:center; }
+
+/* ── Two-panel top section ── */
+.kb-top-grid {
+  display:grid; grid-template-columns:300px 1fr; gap:1.25rem; align-items:start;
+}
+@media(max-width:860px){ .kb-top-grid { grid-template-columns:1fr; } }
+
+/* ── Action panel ── */
+.kb-action-panel {
+  background:#fff; border:1px solid #EBEBEB; border-radius:12px;
+  overflow:hidden;
+}
+.kb-action-section { padding:1rem 1.1rem; border-bottom:1px solid #F5F5F5; }
+.kb-action-section:last-child { border-bottom:none; }
+.kb-action-section-lbl {
+  font-size:0.65rem; font-weight:700; letter-spacing:0.08em; color:#A3A3A3;
+  text-transform:uppercase; margin-bottom:0.6rem;
+}
+.kb-action-section .adm-btn { width:100%; justify-content:center; margin-bottom:0.4rem; }
+.kb-action-section .adm-btn:last-child { margin-bottom:0; }
+.kb-reset-row { display:flex; gap:0.4rem; align-items:stretch; }
+.kb-reset-row select {
+  flex:1; padding:0.4rem 0.6rem; border:1px solid #FECACA; border-radius:6px;
+  font-size:0.8rem; color:#DC2626; background:#FEF2F2; cursor:pointer;
+}
+.kb-reset-row button { white-space:nowrap; }
+
+/* ── Upload panel ── */
+.kb-upload-panel {
+  background:#fff; border:1px solid #EBEBEB; border-radius:12px;
+  padding:1.25rem 1.4rem;
+}
+.kb-upload-panel h4 { font-size:0.9rem; font-weight:700; color:#262626; margin:0 0 0.3rem; }
+.kb-upload-panel p  { font-size:0.78rem; color:#737373; margin:0 0 1rem; }
+
+.kb-drop-zone {
+  border:2px dashed #D4D4D4; border-radius:10px;
+  padding:2rem 1.5rem; text-align:center;
+  cursor:pointer; transition:border-color 0.15s, background 0.15s;
+  background:#FAFAFA;
+}
+.kb-drop-zone:hover, .kb-drop-zone.drag-over {
+  border-color:#649CC4; background:#F0F7FF;
+}
+.kb-drop-zone .icon { font-size:1.8rem; margin-bottom:0.5rem; }
+.kb-drop-zone .main { font-size:0.88rem; font-weight:600; color:#525252; }
+.kb-drop-zone .sub  { font-size:0.75rem; color:#A3A3A3; margin-top:0.2rem; }
+.kb-drop-zone input[type=file] { display:none; }
+
+/* ── File queue ── */
+.kb-file-queue { margin-top:0.9rem; display:none; }
+.kb-file-queue.has-files { display:block; }
+.kb-file-item {
+  display:flex; align-items:center; gap:0.6rem;
+  padding:0.4rem 0.65rem; border-radius:6px; margin-bottom:0.3rem;
+  background:#F8F8F8; border:1px solid #EBEBEB; font-size:0.8rem;
+}
+.kb-file-item .fi-name { flex:1; color:#262626; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.kb-file-item .fi-size { color:#A3A3A3; font-size:0.72rem; flex-shrink:0; }
+.kb-file-item .fi-status { flex-shrink:0; font-size:0.75rem; min-width:60px; text-align:right; }
+.kb-file-item .fi-remove {
+  cursor:pointer; color:#A3A3A3; font-size:1rem; line-height:1;
+  padding:0 0.2rem; flex-shrink:0;
+}
+.kb-file-item .fi-remove:hover { color:#DC2626; }
+.fi-status.pending  { color:#A3A3A3; }
+.fi-status.uploading{ color:#649CC4; }
+.fi-status.done     { color:#16A34A; font-weight:600; }
+.fi-status.error    { color:#DC2626; font-weight:600; }
+
+.kb-queue-footer { display:flex; align-items:center; justify-content:space-between; margin-top:0.75rem; gap:0.5rem; }
+.kb-queue-footer .summary { font-size:0.75rem; color:#737373; }
+
+/* ── Documents table extra styles ── */
+.kb-doc-filter {
+  padding:0.4rem 0.7rem; border:1px solid #EBEBEB; border-radius:7px;
+  font-size:0.82rem; width:220px;
+}
+
+/* ── Collapsible rule sections ── */
+.kb-collapsible { background:#fff; border:1px solid #EBEBEB; border-radius:8px; margin-bottom:0.75rem; overflow:hidden; }
+.kb-collapsible-hdr {
+  padding:0.85rem 1.2rem; display:flex; align-items:center; justify-content:space-between;
+  cursor:pointer; user-select:none;
+}
+.kb-collapsible-hdr:hover { background:#FAFAFA; }
+.kb-collapsible-hdr-left { display:flex; align-items:center; gap:0.65rem; }
+.kb-collapsible-title { font-size:0.9rem; font-weight:600; color:#262626; }
+.kb-collapsible-count { font-size:0.72rem; color:#A3A3A3; }
+.kb-collapsible-arrow {
+  font-size:0.75rem; color:#A3A3A3; transition:transform 0.2s;
+  transform:rotate(0deg);
+}
+.kb-collapsible.open .kb-collapsible-arrow { transform:rotate(180deg); }
+.kb-collapsible-body { display:none; border-top:1px solid #EBEBEB; }
+.kb-collapsible.open .kb-collapsible-body { display:block; }
+
+.fw-rule-row { padding:0.55rem 1.2rem; border-bottom:1px solid #F5F5F5; display:flex; align-items:flex-start; gap:0.75rem; font-size:0.79rem; }
+.fw-rule-row:last-child { border-bottom:none; }
+.fw-rule-row:hover { background:#FAFAFA; }
+.fw-rule-code { font-family:monospace; font-size:0.7rem; color:#A3A3A3; min-width:140px; flex-shrink:0; padding-top:0.1rem; }
+.fw-rule-desc { flex:1; color:#525252; line-height:1.5; }
+.fw-rule-src  { font-size:0.66rem; color:#A3A3A3; margin-top:0.1rem; }
+.fw-sev { font-size:0.58rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:3px; white-space:nowrap; flex-shrink:0; }
+.fw-sev-CRITICAL { background:#F5D5D5; color:#8B3A3A; }
+.fw-sev-HIGH     { background:#FFF0E0; color:#8B6914; }
+.fw-sev-MEDIUM   { background:#FFF0E0; color:#8B6914; }
+.fw-sev-LOW      { background:#F5F5F5; color:#737373; }
+
+.rc-row { padding:0.65rem 1.2rem; border-bottom:1px solid #F5F5F5; }
+.rc-row:last-child { border-bottom:none; }
+.rc-title { font-size:0.84rem; font-weight:600; color:#262626; margin-bottom:0.2rem; }
+.rc-meta  { font-size:0.7rem; color:#A3A3A3; display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; }
+.rc-summary { font-size:0.77rem; color:#525252; margin-top:0.3rem; line-height:1.5; }
+</style>
 
 {# ── Flash message ── #}
 {% if flash_message %}
-<div class="adm-flash adm-flash-{{ flash_type }}">{{ flash_message }}</div>
+<div class="adm-flash adm-flash-{{ flash_type }}" style="margin-bottom:1rem;">{{ flash_message }}</div>
 {% endif %}
 
-{# ── Header row ────────────────────────────────────────────────────────────── #}
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.5rem;">
+<div class="kb-page">
 
-  <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
-    <div class="adm-stat" style="min-width:110px;">
-      <div class="adm-stat-val">{{ stats.documents }}</div>
-      <div class="adm-stat-lbl">KB Documents</div>
+{# ── Stats row + Test Chat ─────────────────────────────────────────────────── #}
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
+  <div class="kb-stats">
+    <div class="kb-stat-chip">
+      <span class="val">{{ stats.documents }}</span>
+      <span class="lbl">KB Documents</span>
     </div>
-    <div class="adm-stat" style="min-width:110px;">
-      <div class="adm-stat-val">{{ stats.chunks }}</div>
-      <div class="adm-stat-lbl">Indexed Chunks</div>
+    <div class="kb-stat-chip">
+      <span class="val">{{ stats.chunks }}</span>
+      <span class="lbl">Indexed Chunks</span>
     </div>
     {% if kb_type == "regulations" %}
-    <div class="adm-stat" style="min-width:110px;">
-      <div class="adm-stat-val">{{ total_rules }}</div>
-      <div class="adm-stat-lbl">Active Rules</div>
+    <div class="kb-stat-chip">
+      <span class="val">{{ fssai_rules|length }}</span>
+      <span class="lbl">FSSAI Rules</span>
     </div>
-    <div class="adm-stat" style="min-width:110px;">
-      <div class="adm-stat-val">{{ fssai_rules|length }}</div>
-      <div class="adm-stat-lbl">FSSAI Rules</div>
+    <div class="kb-stat-chip">
+      <span class="val">{{ lm_rules|length }}</span>
+      <span class="lbl">Legal Metrology</span>
     </div>
-    <div class="adm-stat" style="min-width:110px;">
-      <div class="adm-stat-val">{{ lm_rules|length }}</div>
-      <div class="adm-stat-lbl">Legal Metrology</div>
-    </div>
-    <div class="adm-stat" style="min-width:110px;">
-      <div class="adm-stat-val">{{ ayush_rules|length }}</div>
-      <div class="adm-stat-lbl">AYUSH / ASU</div>
+    <div class="kb-stat-chip">
+      <span class="val">{{ ayush_rules|length }}</span>
+      <span class="lbl">AYUSH / ASU</span>
     </div>
     {% endif %}
   </div>
-
-  <div style="display:flex;gap:0.6rem;flex-wrap:wrap;align-items:center;">
-    {% if kb_type == "regulations" %}
-    <form method="post" action="/admin/llm/regulations/sync-rules" style="margin:0;">
-      <button type="submit" class="adm-btn adm-btn-primary"
-              onclick="this.disabled=true;this.textContent='Syncing…';this.closest('form').submit();"
-              title="Import any new compliance rules from the seed JSON file. Never deletes existing rules.">
-        ↑ Sync Rules from File
-      </button>
-    </form>
-    {% endif %}
-    <form method="post" action="/admin/llm/{{ kb_type }}/seed" style="margin:0;">
-      <button type="submit" class="adm-btn adm-btn-success"
-              onclick="return confirm('Auto-import all {{ kb_type }} data from the database? This will skip if documents already exist.')">
-        ↻ Auto-Seed from DB
-      </button>
-    </form>
-    {% if kb_type == "regulations" %}
-    <form method="post" action="/admin/llm/regulations/ingest-fssai" style="margin:0;">
-      <button type="submit" class="adm-btn adm-btn-success"
-              onclick="this.disabled=true;this.innerText='Ingesting…';this.form.submit();return true;"
-              title="Bulk-ingest all FSSAI gazette notification PDFs from the FSSAI/ folder. Skips already-ingested files.">
-        📄 Ingest FSSAI PDFs
-      </button>
-    </form>
-    {% endif %}
-    <form method="post" action="/admin/llm/{{ kb_type }}/reset" style="margin:0;display:flex;gap:0.4rem;align-items:center;"
-          onsubmit="return confirm('⚠️ Delete and re-seed the selected subset? This cannot be undone.')">
-      {% if kb_type == "regulations" %}
-      <select name="subset" style="padding:0.4rem 0.6rem;border:1px solid #FECACA;border-radius:6px;
-                                   font-size:0.8rem;color:#DC2626;background:#FEF2F2;cursor:pointer;">
-        <option value="fssai">FSSAI</option>
-        <option value="ayush">AYUSH</option>
-        <option value="legal_metrology">Legal Metrology</option>
-        <option value="all">All Regulations</option>
-      </select>
-      {% else %}
-      <input type="hidden" name="subset" value="all">
-      {% endif %}
-      <button type="submit" class="adm-btn" style="background:#FEE2E2;color:#DC2626;border-color:#FECACA;">
-        🗑 Reset from Scratch
-      </button>
-    </form>
+  <div style="display:flex;gap:0.5rem;">
     <a href="/admin/llm/{{ kb_type }}/chat" class="adm-btn adm-btn-primary">💬 Test Chat →</a>
     <a href="/admin/llm" class="adm-btn">← Back</a>
   </div>
 </div>
 
-{# ── Warning if rule frameworks are missing (regulations only) ── #}
+{# ── Missing rules warning ── #}
 {% if kb_type == "regulations" and (lm_rules|length == 0 or ayush_rules|length == 0) %}
-<div class="adm-flash adm-flash-error" style="margin-bottom:1rem;">
-  <strong>Missing regulations:</strong>
-  {% if lm_rules|length == 0 %}Legal Metrology rules not loaded.{% endif %}
-  {% if ayush_rules|length == 0 %}AYUSH rules not loaded.{% endif %}
-  Click <strong>"Sync Rules from File"</strong> above to import them.
+<div class="adm-flash adm-flash-error">
+  <strong>Missing rules:</strong>
+  {% if lm_rules|length == 0 %}Legal Metrology not loaded. {% endif %}
+  {% if ayush_rules|length == 0 %}AYUSH not loaded. {% endif %}
+  Click <strong>Sync Rules from File</strong> to import them.
 </div>
 {% endif %}
 
-{# ── Upload form ───────────────────────────────────────────────────────────── #}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:12px;padding:1.3rem 1.5rem;margin-bottom:1.75rem;">
-  <h4 class="adm-section-title">Upload New Document</h4>
-  <p style="font-size:0.8rem;color:#737373;margin:0 0 1rem;">
-    Supported formats: <code>.txt</code>, <code>.pdf</code>, <code>.csv</code>
-    &nbsp;—&nbsp; documents will be automatically chunked and indexed.
-  </p>
-  <form method="post" action="/admin/llm/{{ kb_type }}/upload"
-        enctype="multipart/form-data"
-        style="display:flex;gap:0.75rem;align-items:flex-end;flex-wrap:wrap;">
-    <div style="flex:1;min-width:200px;">
-      <label style="font-size:0.78rem;font-weight:600;color:#525252;display:block;margin-bottom:0.3rem;">
-        Document Title <span style="color:#A3A3A3;font-weight:400;">(optional)</span>
-      </label>
-      <input type="text" name="title" placeholder="Leave blank to use filename"
-             style="width:100%;padding:0.45rem 0.7rem;border:1px solid #EBEBEB;border-radius:7px;
-                    font-size:0.84rem;box-sizing:border-box;" />
+{# ── Two-panel: Actions + Upload ──────────────────────────────────────────── #}
+<div class="kb-top-grid">
+
+  {# Left: KB actions panel #}
+  <div class="kb-action-panel">
+
+    {% if kb_type == "regulations" %}
+    <div class="kb-action-section">
+      <div class="kb-action-section-lbl">Compliance Rules</div>
+      <form method="post" action="/admin/llm/regulations/sync-rules" style="margin:0;">
+        <button type="submit" class="adm-btn adm-btn-primary"
+                onclick="this.disabled=true;this.textContent='Syncing…';this.closest('form').submit();"
+                title="Import any new rules from the seed JSON file. Safe — never deletes existing rules.">
+          ↑ Sync Rules from File
+        </button>
+      </form>
     </div>
-    <div style="flex:1;min-width:230px;">
-      <label style="font-size:0.78rem;font-weight:600;color:#525252;display:block;margin-bottom:0.3rem;">
-        File
-      </label>
-      <input type="file" name="file" accept=".txt,.pdf,.csv" required
-             style="font-size:0.84rem;padding:0.3rem 0;" />
+    {% endif %}
+
+    <div class="kb-action-section">
+      <div class="kb-action-section-lbl">Knowledge Base</div>
+      <form method="post" action="/admin/llm/{{ kb_type }}/seed" style="margin:0 0 0.4rem;">
+        <button type="submit" class="adm-btn adm-btn-success"
+                onclick="return confirm('Auto-import all {{ kb_type }} data from the database? Already-indexed documents will be skipped.')">
+          ↻ Auto-Seed from DB
+        </button>
+      </form>
+      {% if kb_type == "regulations" %}
+      <form method="post" action="/admin/llm/regulations/ingest-fssai" style="margin:0;">
+        <button type="submit" class="adm-btn adm-btn-success"
+                onclick="this.disabled=true;this.innerText='Ingesting…';this.form.submit();return true;"
+                title="Bulk-ingest all FSSAI PDFs from the /FSSAI server folder. Skips already-ingested files.">
+          📄 Ingest FSSAI PDFs from Server
+        </button>
+      </form>
+      {% endif %}
     </div>
-    <button type="submit" class="adm-btn adm-btn-primary" style="white-space:nowrap;">
-      Upload &amp; Index
-    </button>
-  </form>
+
+    <div class="kb-action-section">
+      <div class="kb-action-section-lbl" style="color:#DC2626;">Danger Zone</div>
+      <form method="post" action="/admin/llm/{{ kb_type }}/reset"
+            onsubmit="return confirm('⚠️ Delete and re-seed the selected subset? This cannot be undone.')">
+        {% if kb_type == "regulations" %}
+        <div class="kb-reset-row" style="margin-bottom:0.4rem;">
+          <select name="subset">
+            <option value="fssai">FSSAI only</option>
+            <option value="ayush">AYUSH only</option>
+            <option value="legal_metrology">Legal Metrology only</option>
+            <option value="all">All Regulations</option>
+          </select>
+        </div>
+        {% else %}
+        <input type="hidden" name="subset" value="all">
+        {% endif %}
+        <button type="submit" class="adm-btn" style="width:100%;background:#FEE2E2;color:#DC2626;border-color:#FECACA;justify-content:center;">
+          🗑 Delete &amp; Re-seed
+        </button>
+      </form>
+    </div>
+
+  </div>{# /.kb-action-panel #}
+
+  {# Right: upload panel #}
+  <div class="kb-upload-panel">
+    <h4>Upload Documents</h4>
+    <p>Select one or more files — each will be chunked and indexed automatically.<br>
+       Supported formats: <code>.pdf</code>, <code>.txt</code>, <code>.csv</code></p>
+
+    {# Drop zone #}
+    <div class="kb-drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="icon">📂</div>
+      <div class="main">Drop files here or click to browse</div>
+      <div class="sub">Multiple files supported — PDFs, TXT, CSV</div>
+      <input type="file" id="fileInput" accept=".pdf,.txt,.csv" multiple>
+    </div>
+
+    {# File queue #}
+    <div class="kb-file-queue" id="fileQueue">
+      <div id="fileList"></div>
+      <div class="kb-queue-footer">
+        <span class="summary" id="queueSummary"></span>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="adm-btn" onclick="clearQueue()" style="font-size:0.78rem;">Clear</button>
+          <button class="adm-btn adm-btn-primary" id="uploadAllBtn" onclick="uploadAll()" style="font-size:0.78rem;">
+            Upload All
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>{# /.kb-top-grid #}
+
+
+{# ── Indexed Documents table ───────────────────────────────────────────────── #}
+<div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem;flex-wrap:wrap;gap:0.5rem;">
+    <h4 class="adm-section-title" style="margin:0;">Indexed Documents
+      <span style="font-size:0.78rem;font-weight:400;color:#A3A3A3;">({{ documents|length }})</span>
+    </h4>
+    <input class="kb-doc-filter" id="docFilter" type="text"
+           placeholder="Filter by title or source…"
+           oninput="filterDocs(this.value)">
+  </div>
+  <div class="adm-table-wrap">
+    <table class="adm-table" id="docsTable">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th style="width:90px;">Type</th>
+          <th style="width:70px;text-align:center;">Chunks</th>
+          <th style="width:110px;">Added</th>
+          <th style="width:80px;"></th>
+        </tr>
+      </thead>
+      <tbody id="docsBody">
+        {% for doc in documents %}
+        <tr data-title="{{ doc.title | lower }}" data-source="{{ (doc.source or '') | lower }}">
+          <td>
+            <div style="font-weight:600;color:#262626;font-size:0.84rem;margin-bottom:0.15rem;">{{ doc.title }}</div>
+            <div style="font-size:0.7rem;color:#A3A3A3;word-break:break-all;">{{ doc.source or '—' }}</div>
+          </td>
+          <td>
+            {% if doc.source and doc.source.startswith('db:') %}
+            <span class="adm-badge badge-blue">DB Import</span>
+            {% elif doc.source and doc.source.startswith('fssai:') %}
+            <span class="adm-badge badge-green">FSSAI PDF</span>
+            {% elif doc.source and doc.source.startswith('upload:') %}
+            <span class="adm-badge badge-purple">Uploaded</span>
+            {% else %}
+            <span class="adm-badge badge-gray">Manual</span>
+            {% endif %}
+          </td>
+          <td style="font-weight:700;color:#262626;text-align:center;">{{ doc.chunk_count }}</td>
+          <td style="font-size:0.77rem;color:#737373;">
+            {{ doc.uploaded_at.strftime('%d %b %Y') if doc.uploaded_at else '—' }}
+          </td>
+          <td>
+            <form method="post"
+                  action="/admin/llm/{{ kb_type }}/documents/{{ doc.id }}/delete"
+                  style="margin:0;"
+                  onsubmit="return confirm('Delete \'{{ doc.title[:40] }}\'? Removes {{ doc.chunk_count }} chunk(s).')">
+              <button type="submit" class="adm-btn adm-btn-danger" style="font-size:0.72rem;padding:0.25rem 0.6rem;">
+                Delete
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr id="emptyRow">
+          <td colspan="5" style="text-align:center;color:#A3A3A3;padding:2.5rem 1rem;">
+            <div style="font-size:1.5rem;margin-bottom:0.4rem;">📭</div>
+            No documents indexed yet. Use <strong>Auto-Seed from DB</strong> or upload files above.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
-{# ── Documents table ───────────────────────────────────────────────────────── #}
-<div class="adm-table-wrap">
-  <table class="adm-table">
-    <thead>
-      <tr>
-        <th>Title</th>
-        <th>Source</th>
-        <th style="width:80px;text-align:center;">Chunks</th>
-        <th style="width:130px;">Added</th>
-        <th style="width:90px;">Action</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for doc in documents %}
-      <tr>
-        <td>
-          <div style="font-weight:600;color:#262626;font-size:0.85rem;margin-bottom:0.2rem;">
-            {{ doc.title }}
-          </div>
-          {% if doc.source and doc.source.startswith('db:') %}
-          <span class="adm-badge badge-blue">DB Import</span>
-          {% elif doc.source and doc.source.startswith('fssai:') %}
-          <span class="adm-badge badge-green">FSSAI</span>
-          {% elif doc.source and doc.source.startswith('upload:') %}
-          <span class="adm-badge badge-purple">Uploaded</span>
-          {% else %}
-          <span class="adm-badge badge-gray">Manual</span>
-          {% endif %}
-        </td>
-        <td style="font-size:0.77rem;color:#737373;max-width:220px;word-break:break-all;">
-          {{ doc.source or '—' }}
-        </td>
-        <td style="font-weight:700;color:#262626;text-align:center;">
-          {{ doc.chunk_count }}
-        </td>
-        <td style="font-size:0.78rem;color:#737373;">
-          {{ doc.uploaded_at.strftime('%d %b %Y') if doc.uploaded_at else '—' }}
-        </td>
-        <td>
-          <form method="post"
-                action="/admin/llm/{{ kb_type }}/documents/{{ doc.id }}/delete"
-                style="margin:0;"
-                onsubmit="return confirm('Delete \'{{ doc.title[:40] }}\'? This removes {{ doc.chunk_count }} chunk(s).')">
-            <button type="submit" class="adm-btn adm-btn-danger" style="font-size:0.73rem;">
-              Delete
-            </button>
-          </form>
-        </td>
-      </tr>
-      {% else %}
-      <tr>
-        <td colspan="5" style="text-align:center;color:#A3A3A3;padding:2.5rem 1rem;">
-          <div style="font-size:1.5rem;margin-bottom:0.4rem;">📭</div>
-          No documents yet. Use <strong>Auto-Seed from DB</strong> or upload a file above.
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
 
 {% if kb_type == "regulations" %}
+{# ── Compliance Rules (collapsible) ───────────────────────────────────────── #}
+<div>
+  <h4 class="adm-section-title" style="margin-bottom:0.75rem;">Compliance Rules</h4>
 
-{# ── Compliance Rules ─────────────────────────────────────────────────────── #}
-<style>
-  .fw-card { background:#fff; border:1px solid #EBEBEB; border-radius:6px; margin-bottom:1rem; overflow:hidden; }
-  .fw-card-hdr { padding:1rem 1.25rem; border-bottom:1px solid #EBEBEB; display:flex; align-items:center; justify-content:space-between; }
-  .fw-card-title { font-size:0.92rem; font-weight:600; color:#262626; }
-  .fw-card-count { font-size:0.72rem; color:#A3A3A3; font-weight:500; }
-  .fw-rule-row { padding:0.6rem 1.25rem; border-bottom:1px solid #F5F5F5; display:flex; align-items:flex-start; gap:0.75rem; font-size:0.8rem; }
-  .fw-rule-row:last-child { border-bottom:none; }
-  .fw-rule-row:hover { background:#FAFAFA; }
-  .fw-rule-code { font-family:monospace; font-size:0.72rem; color:#A3A3A3; min-width:130px; flex-shrink:0; padding-top:0.1rem; }
-  .fw-rule-desc { flex:1; color:#525252; line-height:1.5; }
-  .fw-rule-src { font-size:0.68rem; color:#A3A3A3; margin-top:0.15rem; }
-  .fw-sev { font-size:0.6rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:3px; white-space:nowrap; flex-shrink:0; }
-  .fw-sev-CRITICAL { background:#F5D5D5; color:#8B3A3A; }
-  .fw-sev-HIGH { background:#FFF0E0; color:#8B6914; }
-  .fw-sev-MEDIUM { background:#FFF0E0; color:#8B6914; }
-  .fw-sev-LOW { background:#F5F5F5; color:#737373; }
-  .rc-row { padding:0.65rem 1.25rem; border-bottom:1px solid #F5F5F5; }
-  .rc-row:last-child { border-bottom:none; }
-  .rc-title { font-size:0.85rem; font-weight:600; color:#262626; margin-bottom:0.2rem; }
-  .rc-meta { font-size:0.72rem; color:#A3A3A3; }
-  .rc-summary { font-size:0.78rem; color:#525252; margin-top:0.3rem; line-height:1.5; }
-</style>
-
-<h4 class="adm-section-title" style="margin-top:2rem;margin-bottom:0.75rem;">Compliance Rules</h4>
-
-<div class="fw-card">
-  <div class="fw-card-hdr">
-    <div class="fw-card-title">FSSAI — Food Safety &amp; Standards</div>
-    <div class="fw-card-count">{{ fssai_rules|length }} rules</div>
-  </div>
-  {% for rule in fssai_rules %}
-  <div class="fw-rule-row">
-    <div class="fw-rule-code">{{ rule.rule_code }}</div>
-    <div class="fw-rule-desc">
-      {{ rule.description }}
-      <div class="fw-rule-src">{{ rule.regulation_source }}</div>
+  {# FSSAI #}
+  <div class="kb-collapsible" id="sec-fssai">
+    <div class="kb-collapsible-hdr" onclick="toggleSection('sec-fssai')">
+      <div class="kb-collapsible-hdr-left">
+        <span class="kb-collapsible-title">FSSAI — Food Safety &amp; Standards</span>
+        <span class="kb-collapsible-count">{{ fssai_rules|length }} rules</span>
+      </div>
+      <span class="kb-collapsible-arrow">▾</span>
     </div>
-    <span class="fw-sev fw-sev-{{ rule.severity.value }}">{{ rule.severity.value }}</span>
-  </div>
-  {% else %}
-  <div style="padding:1.5rem;text-align:center;color:#A3A3A3;font-size:0.82rem;">No FSSAI rules loaded — click <strong>Sync Rules from File</strong> above.</div>
-  {% endfor %}
-</div>
-
-<div class="fw-card">
-  <div class="fw-card-hdr">
-    <div class="fw-card-title">Legal Metrology — Packaged Commodities Rules</div>
-    <div class="fw-card-count">{{ lm_rules|length }} rules</div>
-  </div>
-  {% for rule in lm_rules %}
-  <div class="fw-rule-row">
-    <div class="fw-rule-code">{{ rule.rule_code }}</div>
-    <div class="fw-rule-desc">
-      {{ rule.description }}
-      <div class="fw-rule-src">{{ rule.regulation_source }}</div>
+    <div class="kb-collapsible-body">
+      {% for rule in fssai_rules %}
+      <div class="fw-rule-row">
+        <div class="fw-rule-code">{{ rule.rule_code }}</div>
+        <div class="fw-rule-desc">
+          {{ rule.description }}
+          <div class="fw-rule-src">{{ rule.regulation_source }}</div>
+        </div>
+        <span class="fw-sev fw-sev-{{ rule.severity.value }}">{{ rule.severity.value }}</span>
+      </div>
+      {% else %}
+      <div style="padding:1.25rem;text-align:center;color:#A3A3A3;font-size:0.82rem;">
+        No FSSAI rules — click <strong>Sync Rules from File</strong>.
+      </div>
+      {% endfor %}
     </div>
-    <span class="fw-sev fw-sev-{{ rule.severity.value }}">{{ rule.severity.value }}</span>
   </div>
-  {% else %}
-  <div style="padding:1.5rem;text-align:center;color:#A3A3A3;font-size:0.82rem;">No Legal Metrology rules — click <strong>Sync Rules from File</strong> above.</div>
-  {% endfor %}
-</div>
 
-<div class="fw-card">
-  <div class="fw-card-hdr">
-    <div class="fw-card-title">AYUSH — Ayurvedic, Siddha &amp; Unani Drugs</div>
-    <div class="fw-card-count">{{ ayush_rules|length }} rules</div>
-  </div>
-  {% for rule in ayush_rules %}
-  <div class="fw-rule-row">
-    <div class="fw-rule-code">{{ rule.rule_code }}</div>
-    <div class="fw-rule-desc">
-      {{ rule.description }}
-      <div class="fw-rule-src">{{ rule.regulation_source }}</div>
+  {# Legal Metrology #}
+  <div class="kb-collapsible" id="sec-lm">
+    <div class="kb-collapsible-hdr" onclick="toggleSection('sec-lm')">
+      <div class="kb-collapsible-hdr-left">
+        <span class="kb-collapsible-title">Legal Metrology — Packaged Commodities Rules</span>
+        <span class="kb-collapsible-count">{{ lm_rules|length }} rules</span>
+      </div>
+      <span class="kb-collapsible-arrow">▾</span>
     </div>
-    <span class="fw-sev fw-sev-{{ rule.severity.value }}">{{ rule.severity.value }}</span>
-  </div>
-  {% else %}
-  <div style="padding:1.5rem;text-align:center;color:#A3A3A3;font-size:0.82rem;">No AYUSH rules — click <strong>Sync Rules from File</strong> above.</div>
-  {% endfor %}
-</div>
-
-{# ── Regulation Changes ────────────────────────────────────────────────────── #}
-{% if reg_changes %}
-<h4 class="adm-section-title" style="margin-top:1.5rem;margin-bottom:0.75rem;">Regulation Updates &amp; Changes</h4>
-<div class="fw-card">
-  <div class="fw-card-hdr">
-    <div class="fw-card-title">Tracked Regulation Updates</div>
-    <div class="fw-card-count">{{ reg_changes|length }} updates</div>
-  </div>
-  {% for rc in reg_changes %}
-  <div class="rc-row">
-    <div class="rc-title">{{ rc.document_name or 'Regulation Update' }}</div>
-    <div class="rc-meta">
-      {{ rc.change_type.value }} ·
-      <span class="fw-sev fw-sev-{{ rc.severity.value }}">{{ rc.severity.value }}</span> ·
-      Effective: {{ rc.effective_date.strftime('%d %b %Y') if rc.effective_date else 'TBD' }}
-      {% if rc.source_url %} · <a href="{{ rc.source_url }}" target="_blank" style="color:#262626;">Source ↗</a>{% endif %}
+    <div class="kb-collapsible-body">
+      {% for rule in lm_rules %}
+      <div class="fw-rule-row">
+        <div class="fw-rule-code">{{ rule.rule_code }}</div>
+        <div class="fw-rule-desc">
+          {{ rule.description }}
+          <div class="fw-rule-src">{{ rule.regulation_source }}</div>
+        </div>
+        <span class="fw-sev fw-sev-{{ rule.severity.value }}">{{ rule.severity.value }}</span>
+      </div>
+      {% else %}
+      <div style="padding:1.25rem;text-align:center;color:#A3A3A3;font-size:0.82rem;">
+        No Legal Metrology rules — click <strong>Sync Rules from File</strong>.
+      </div>
+      {% endfor %}
     </div>
-    {% if rc.summary_text %}
-    <div class="rc-summary">{{ rc.summary_text[:300] }}{% if rc.summary_text|length > 300 %}...{% endif %}</div>
-    {% endif %}
   </div>
-  {% endfor %}
-</div>
-{% endif %}
 
-{% endif %}{# end kb_type == "regulations" #}
+  {# AYUSH #}
+  <div class="kb-collapsible" id="sec-ayush">
+    <div class="kb-collapsible-hdr" onclick="toggleSection('sec-ayush')">
+      <div class="kb-collapsible-hdr-left">
+        <span class="kb-collapsible-title">AYUSH — Ayurvedic, Siddha &amp; Unani Drugs</span>
+        <span class="kb-collapsible-count">{{ ayush_rules|length }} rules</span>
+      </div>
+      <span class="kb-collapsible-arrow">▾</span>
+    </div>
+    <div class="kb-collapsible-body">
+      {% for rule in ayush_rules %}
+      <div class="fw-rule-row">
+        <div class="fw-rule-code">{{ rule.rule_code }}</div>
+        <div class="fw-rule-desc">
+          {{ rule.description }}
+          <div class="fw-rule-src">{{ rule.regulation_source }}</div>
+        </div>
+        <span class="fw-sev fw-sev-{{ rule.severity.value }}">{{ rule.severity.value }}</span>
+      </div>
+      {% else %}
+      <div style="padding:1.25rem;text-align:center;color:#A3A3A3;font-size:0.82rem;">
+        No AYUSH rules — click <strong>Sync Rules from File</strong>.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Regulation Changes #}
+  {% if reg_changes %}
+  <div class="kb-collapsible" id="sec-changes">
+    <div class="kb-collapsible-hdr" onclick="toggleSection('sec-changes')">
+      <div class="kb-collapsible-hdr-left">
+        <span class="kb-collapsible-title">Tracked Regulation Updates</span>
+        <span class="kb-collapsible-count">{{ reg_changes|length }} updates</span>
+      </div>
+      <span class="kb-collapsible-arrow">▾</span>
+    </div>
+    <div class="kb-collapsible-body">
+      {% for rc in reg_changes %}
+      <div class="rc-row">
+        <div class="rc-title">{{ rc.document_name or 'Regulation Update' }}</div>
+        <div class="rc-meta">
+          <span>{{ rc.change_type.value }}</span>
+          <span class="fw-sev fw-sev-{{ rc.severity.value }}">{{ rc.severity.value }}</span>
+          <span>Effective: {{ rc.effective_date.strftime('%d %b %Y') if rc.effective_date else 'TBD' }}</span>
+          {% if rc.source_url %}<a href="{{ rc.source_url }}" target="_blank" style="color:#262626;">Source ↗</a>{% endif %}
+        </div>
+        {% if rc.summary_text %}
+        <div class="rc-summary">{{ rc.summary_text[:300] }}{% if rc.summary_text|length > 300 %}…{% endif %}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}{# end regulations #}
+
+</div>{# /.kb-page #}
+
+<script>
+const KB_TYPE       = "{{ kb_type }}";
+const UPLOAD_URL    = `/admin/llm/${KB_TYPE}/upload`;
+
+/* ────────────────────────── Collapsible sections ─────────────────────────── */
+function toggleSection(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle("open");
+}
+
+/* ─────────────────────────── Document filter ─────────────────────────────── */
+function filterDocs(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll("#docsBody tr[data-title]").forEach(row => {
+    const match = row.dataset.title.includes(q) || row.dataset.source.includes(q);
+    row.style.display = match ? "" : "none";
+  });
+}
+
+/* ──────────────────────────── Drag & Drop / File input ───────────────────── */
+let fileQueue = [];  // {file, status: "pending"|"uploading"|"done"|"error", msg}
+
+const dropZone  = document.getElementById("dropZone");
+const fileInput = document.getElementById("fileInput");
+
+dropZone.addEventListener("dragover",  e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+dropZone.addEventListener("dragleave", e => { dropZone.classList.remove("drag-over"); });
+dropZone.addEventListener("drop",      e => {
+  e.preventDefault();
+  dropZone.classList.remove("drag-over");
+  addFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener("change", e => addFiles(e.target.files));
+
+function addFiles(files) {
+  const allowed = [".pdf", ".txt", ".csv"];
+  Array.from(files).forEach(f => {
+    const ext = f.name.slice(f.name.lastIndexOf(".")).toLowerCase();
+    if (!allowed.includes(ext)) return;
+    // Deduplicate by name
+    if (fileQueue.some(q => q.file.name === f.name)) return;
+    fileQueue.push({ file: f, status: "pending", msg: "" });
+  });
+  fileInput.value = "";  // allow re-selecting same file
+  renderQueue();
+}
+
+function removeFile(idx) {
+  fileQueue.splice(idx, 1);
+  renderQueue();
+}
+
+function clearQueue() {
+  fileQueue = fileQueue.filter(q => q.status === "uploading");
+  renderQueue();
+}
+
+function renderQueue() {
+  const container = document.getElementById("fileQueue");
+  const list      = document.getElementById("fileList");
+  const summary   = document.getElementById("queueSummary");
+
+  if (fileQueue.length === 0) {
+    container.classList.remove("has-files");
+    return;
+  }
+  container.classList.add("has-files");
+
+  list.innerHTML = fileQueue.map((q, i) => {
+    const size = q.file.size < 1024*1024
+      ? `${(q.file.size/1024).toFixed(0)} KB`
+      : `${(q.file.size/1024/1024).toFixed(1)} MB`;
+    const statusHtml = {
+      pending:   `<span class="fi-status pending">Queued</span>`,
+      uploading: `<span class="fi-status uploading">⏳ Uploading…</span>`,
+      done:      `<span class="fi-status done">✓ Done</span>`,
+      error:     `<span class="fi-status error" title="${q.msg}">✗ Failed</span>`,
+    }[q.status];
+    const canRemove = q.status !== "uploading";
+    return `
+      <div class="kb-file-item">
+        <span class="fi-name" title="${q.file.name}">📄 ${q.file.name}</span>
+        <span class="fi-size">${size}</span>
+        ${statusHtml}
+        ${canRemove ? `<span class="fi-remove" onclick="removeFile(${i})" title="Remove">✕</span>` : ""}
+      </div>`;
+  }).join("");
+
+  const pending = fileQueue.filter(q => q.status === "pending").length;
+  const done    = fileQueue.filter(q => q.status === "done").length;
+  const errors  = fileQueue.filter(q => q.status === "error").length;
+  const parts   = [];
+  if (pending)  parts.push(`${pending} pending`);
+  if (done)     parts.push(`${done} uploaded`);
+  if (errors)   parts.push(`${errors} failed`);
+  summary.textContent = parts.join(" · ");
+
+  const uploadBtn = document.getElementById("uploadAllBtn");
+  uploadBtn.disabled = (pending === 0);
+  uploadBtn.textContent = pending > 0 ? `Upload ${pending} File${pending > 1 ? "s" : ""}` : "Upload All";
+}
+
+async function uploadAll() {
+  const pending = fileQueue.filter(q => q.status === "pending");
+  if (!pending.length) return;
+
+  document.getElementById("uploadAllBtn").disabled = true;
+
+  for (const item of pending) {
+    item.status = "uploading";
+    renderQueue();
+
+    try {
+      const fd = new FormData();
+      fd.append("file", item.file);
+      fd.append("title", "");  // use filename as title
+
+      const resp = await fetch(UPLOAD_URL, { method: "POST", body: fd });
+
+      // The route returns a redirect (302), fetch follows it.
+      // If the final URL contains "type=success" or "type=error" we parse it.
+      const finalUrl = resp.url || "";
+      if (finalUrl.includes("type=error")) {
+        const msg = new URL(finalUrl).searchParams.get("msg") || "Upload failed";
+        item.status = "error";
+        item.msg    = decodeURIComponent(msg.replace(/\+/g, " "));
+      } else {
+        item.status = "done";
+      }
+    } catch (e) {
+      item.status = "error";
+      item.msg    = e.message;
+    }
+    renderQueue();
+  }
+
+  // If all done, reload to refresh the documents table after a brief pause
+  const allDone   = fileQueue.every(q => q.status !== "pending" && q.status !== "uploading");
+  const anyDone   = fileQueue.some(q => q.status === "done");
+  if (allDone && anyDone) {
+    setTimeout(() => window.location.reload(), 1200);
+  }
+}
+</script>
 
 {% endblock %}
