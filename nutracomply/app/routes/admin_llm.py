@@ -626,6 +626,125 @@ async def llm_chat_send(kb_type: str, request: Request, db: Session = Depends(ge
     })
 
 
+# ── Label Extractor ──────────────────────────────────────────────────────────
+
+@router.get("/label-extractor")
+async def label_extractor_page(request: Request, db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    from sqlalchemy import func
+    from app.models import LabelVersion, ExtractionPattern
+    from app.config import get_settings
+
+    settings = get_settings()
+
+    try:
+        source_counts = (
+            db.query(LabelVersion.extraction_source, func.count(LabelVersion.id))
+            .filter(LabelVersion.extraction_source.isnot(None))
+            .group_by(LabelVersion.extraction_source)
+            .all()
+        )
+        source_stats = {s: c for s, c in source_counts}
+    except Exception:
+        source_stats = {}
+
+    try:
+        avg_conf = (
+            db.query(LabelVersion.extraction_source, func.avg(LabelVersion.confidence))
+            .filter(LabelVersion.extraction_source.isnot(None))
+            .group_by(LabelVersion.extraction_source)
+            .all()
+        )
+        conf_stats = {s: round(float(c or 0), 3) for s, c in avg_conf}
+    except Exception:
+        conf_stats = {}
+
+    try:
+        pattern_count = db.query(func.count(ExtractionPattern.id)).scalar() or 0
+    except Exception:
+        pattern_count = 0
+
+    try:
+        field_patterns = (
+            db.query(ExtractionPattern.field_name, func.count(ExtractionPattern.id))
+            .group_by(ExtractionPattern.field_name)
+            .order_by(func.count(ExtractionPattern.id).desc())
+            .limit(10)
+            .all()
+        )
+    except Exception:
+        field_patterns = []
+
+    return templates.TemplateResponse("admin/label_extractor.html", {
+        "request":                  request,
+        "user":                     user,
+        "unread_alerts":            _unread_alerts(db),
+        "source_stats":             source_stats,
+        "conf_stats":               conf_stats,
+        "pattern_count":            pattern_count,
+        "field_patterns":           field_patterns,
+        "gemma_model":              settings.gemma_model_name,
+        "gemini_model":             "gemini-3.1-flash-lite-preview",
+        "claude_model":             "claude-sonnet-4-6",
+        "gemma_available":          bool(settings.gemma_enabled and settings.openrouter_api_key),
+        "gemini_available":         bool(settings.gemini_api_key),
+        "claude_available":         bool(settings.anthropic_api_key),
+        "local_enabled":            settings.local_extraction_enabled,
+        "local_min_confidence":     settings.local_extraction_min_confidence,
+    })
+
+
+@router.post("/label-extractor/test")
+async def label_extractor_test(
+    request: Request,
+    db: Session = Depends(get_db),
+    file: UploadFile = File(...),
+):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+
+    import tempfile
+    import os
+    import time
+    from app.services.extraction_service import extract_label_data_from_image
+
+    suffix = Path(file.filename).suffix.lower() if file.filename else ".jpg"
+    content = await file.read()
+
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        start = time.time()
+        extraction, confidence, source, inp_tokens, out_tokens = extract_label_data_from_image(tmp_path)
+        elapsed = round(time.time() - start, 2)
+        warnings = extraction.pop("_extraction_warnings", [])
+        return JSONResponse({
+            "success":       True,
+            "source":        source,
+            "confidence":    confidence,
+            "elapsed_sec":   elapsed,
+            "input_tokens":  inp_tokens,
+            "output_tokens": out_tokens,
+            "extraction":    extraction,
+            "warnings":      warnings,
+            "filename":      file.filename,
+            "file_size_kb":  round(len(content) / 1024, 1),
+        })
+    except Exception as e:
+        return JSONResponse({"success": False, "error": str(e)})
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
+
 @router.post("/llm/{kb_type}/chat/clear")
 async def llm_chat_clear(kb_type: str, request: Request, db: Session = Depends(get_db)):
     user, redirect = _require_admin(request, db)

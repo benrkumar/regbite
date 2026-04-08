@@ -234,18 +234,20 @@ function escapeHtml(text) {
 }
 
 function providerLabel(provider, modelHint) {
-  if (provider === "gemma")  return `RegBite AI · Gemma 4 (${modelHint || MODEL_NAME})`;
-  if (provider === "claude") return `RegBite AI · Claude (fallback)`;
-  if (provider === "gemini") return `RegBite AI · Gemini (fallback)`;
-  return `RegBite AI (${MODEL_NAME})`;
+  const m = modelHint || MODEL_NAME;
+  if (provider === "gemma")  return `RegBite AI · ${m}`;
+  if (provider === "claude") return `RegBite AI · ${m} (fallback)`;
+  if (provider === "gemini") return `RegBite AI · ${m} (fallback)`;
+  return `RegBite AI · ${m}`;
 }
 
 function updateHeaderModel(provider, modelHint) {
   const label = document.getElementById("activeModelLabel");
   if (!label) return;
-  if (provider === "gemma")  label.textContent = modelHint || MODEL_NAME;
-  if (provider === "claude") label.textContent = "claude-sonnet-4-6 (fallback)";
-  if (provider === "gemini") label.textContent = "gemini (fallback)";
+  const m = modelHint || MODEL_NAME;
+  if (provider === "gemma")  label.textContent = m;
+  if (provider === "claude") label.textContent = `${m} (fallback)`;
+  if (provider === "gemini") label.textContent = `${m} (fallback)`;
 }
 
 function appendMessage(role, content, contextUsed, provider, modelHint) {

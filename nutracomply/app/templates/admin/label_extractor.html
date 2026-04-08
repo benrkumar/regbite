@@ -1,0 +1,612 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Label Extractor{% endblock %}
+{% block page_title %}Label Extractor{% endblock %}
+
+{% block content %}
+<style>
+  .lex-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .lex-grid { grid-template-columns: 1fr; }
+  }
+
+  .lex-card {
+    background: #FFFFFF;
+    border: 1px solid #EBEBEB;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+  .lex-card:last-child { margin-bottom: 0; }
+
+  .lex-card-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #262626;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 0 0 1.1rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid #F0F0F0;
+  }
+
+  /* Pipeline steps */
+  .pipeline-steps { list-style: none; margin: 0; padding: 0; }
+  .pipeline-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid #F5F5F5;
+    font-size: 0.8rem;
+  }
+  .pipeline-step:last-child { border-bottom: none; }
+  .step-dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 0.22rem;
+  }
+  .step-dot-active { background: #5A9A98; }
+  .step-dot-inactive { background: #D4D4D4; }
+  .step-num {
+    font-size: 0.67rem;
+    color: #A3A3A3;
+    min-width: 1.8rem;
+    flex-shrink: 0;
+    padding-top: 0.05rem;
+  }
+  .step-body { flex: 1; min-width: 0; }
+  .step-label { font-weight: 500; color: #262626; }
+  .step-desc { color: #737373; font-size: 0.75rem; margin-top: 0.1rem; }
+  .step-status {
+    flex-shrink: 0;
+    font-size: 0.67rem;
+    font-weight: 600;
+    padding: 0.12rem 0.45rem;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .step-status-ok  { background: #D8F0DF; color: #3D7A50; }
+  .step-status-off { background: #F5F5F5; color: #A3A3A3; }
+
+  /* Formats */
+  .fmt-group { margin-bottom: 0.65rem; }
+  .fmt-label { font-size: 0.72rem; font-weight: 600; color: #737373; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.3rem; }
+  .fmt-pills { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .fmt-pill {
+    font-size: 0.72rem; font-weight: 500; padding: 0.15rem 0.5rem;
+    border-radius: 3px; background: #F5F5F5; color: #525252; border: 1px solid #E5E5E5;
+  }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 2px dashed #D4D4D4;
+    border-radius: 0.5rem;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #FAFAFA;
+    margin-bottom: 1rem;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: #5A9A98;
+    background: #D4EDEC;
+  }
+  .drop-zone-icon { font-size: 2rem; color: #A3A3A3; margin-bottom: 0.5rem; }
+  .drop-zone-text { font-size: 0.82rem; color: #737373; }
+  .drop-zone-sub  { font-size: 0.72rem; color: #A3A3A3; margin-top: 0.25rem; }
+  .drop-zone-file { font-size: 0.82rem; color: #5A9A98; font-weight: 500; margin-top: 0.4rem; }
+
+  /* Results */
+  .result-hidden { display: none; }
+  .result-meta {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  .conf-badge {
+    padding: 0.2rem 0.7rem;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+  .conf-green  { background: #D8F0DF; color: #3D7A50; }
+  .conf-amber  { background: #FFF0E0; color: #8B6914; }
+  .conf-red    { background: #F5D5D5; color: #8B3A3A; }
+  .source-badge {
+    padding: 0.2rem 0.65rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: #D4EDEC;
+    color: #5A9A98;
+  }
+  .meta-chip {
+    font-size: 0.75rem;
+    color: #737373;
+    background: #F5F5F5;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    border: 1px solid #EBEBEB;
+  }
+
+  .field-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  .field-table th {
+    text-align: left;
+    padding: 0.45rem 0.75rem;
+    background: #FAFAFA;
+    font-size: 0.67rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #A3A3A3;
+    border-bottom: 1px solid #EBEBEB;
+  }
+  .field-table td {
+    padding: 0.45rem 0.75rem;
+    border-bottom: 1px solid #F5F5F5;
+    vertical-align: top;
+    color: #262626;
+  }
+  .field-table td:first-child { color: #525252; font-weight: 500; white-space: nowrap; }
+  .field-table tr:last-child td { border-bottom: none; }
+  .field-val-null { color: #D4D4D4; font-style: italic; }
+
+  /* Bar charts */
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.55rem;
+    font-size: 0.78rem;
+  }
+  .bar-label { min-width: 7rem; color: #525252; font-weight: 500; }
+  .bar-track { flex: 1; height: 0.55rem; background: #F0F0F0; border-radius: 2px; overflow: hidden; }
+  .bar-fill  { height: 100%; background: #81C2C0; border-radius: 2px; transition: width 0.4s ease; }
+  .bar-val   { min-width: 3rem; text-align: right; color: #737373; }
+
+  .stat-summary {
+    display: flex;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .stat-chip { text-align: center; }
+  .stat-chip-val { font-size: 1.5rem; font-weight: 700; color: #5A9A98; line-height: 1; }
+  .stat-chip-lbl { font-size: 0.68rem; color: #A3A3A3; margin-top: 0.2rem; }
+
+  .warnings-list { margin: 0.75rem 0 0; padding: 0; list-style: none; }
+  .warnings-list li {
+    font-size: 0.78rem;
+    color: #8B6914;
+    background: #FFF0E0;
+    padding: 0.35rem 0.65rem;
+    border-radius: 3px;
+    margin-bottom: 0.3rem;
+    border-left: 3px solid #F0C070;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 1rem; height: 1rem;
+    border: 2px solid #E5E5E5;
+    border-top-color: #5A9A98;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 0.4rem;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<div class="lex-grid">
+
+  {# ── Left column ── #}
+  <div>
+
+    {# Pipeline card #}
+    <div class="lex-card">
+      <div class="lex-card-title">Extraction Pipeline</div>
+      <ul class="pipeline-steps">
+
+        <li class="pipeline-step">
+          <div class="step-dot step-dot-active"></div>
+          <span class="step-num">Step 0</span>
+          <div class="step-body">
+            <div class="step-label">Cache Check</div>
+            <div class="step-desc">Reuse prior extraction if confidence &ge; 0.85</div>
+          </div>
+        </li>
+
+        <li class="pipeline-step">
+          <div class="step-dot step-dot-active"></div>
+          <span class="step-num">Step 1</span>
+          <div class="step-body">
+            <div class="step-label">OCR</div>
+            <div class="step-desc">PaddleOCR + Tesseract</div>
+          </div>
+        </li>
+
+        <li class="pipeline-step">
+          <div class="step-dot {% if local_enabled %}step-dot-active{% else %}step-dot-inactive{% endif %}"></div>
+          <span class="step-num">Step 1&frac12;</span>
+          <div class="step-body">
+            <div class="step-label">Local Patterns</div>
+            <div class="step-desc">Regex (&ge; {{ local_min_confidence }} → skip AI) &nbsp;[{{ pattern_count }} patterns]</div>
+          </div>
+          <span class="step-status {% if local_enabled %}step-status-ok{% else %}step-status-off{% endif %}">
+            {% if local_enabled %}&#10003; Active{% else %}&#10007; Disabled{% endif %}
+          </span>
+        </li>
+
+        <li class="pipeline-step">
+          <div class="step-dot {% if gemma_available %}step-dot-active{% else %}step-dot-inactive{% endif %}"></div>
+          <span class="step-num">Step 2</span>
+          <div class="step-body">
+            <div class="step-label">Gemma 4 Vision</div>
+            <div class="step-desc">{{ gemma_model }} via OpenRouter</div>
+          </div>
+          <span class="step-status {% if gemma_available %}step-status-ok{% else %}step-status-off{% endif %}">
+            {% if gemma_available %}&#10003; Active{% else %}&#10007; Not configured{% endif %}
+          </span>
+        </li>
+
+        <li class="pipeline-step">
+          <div class="step-dot {% if claude_available %}step-dot-active{% else %}step-dot-inactive{% endif %}"></div>
+          <span class="step-num">Step 3</span>
+          <div class="step-body">
+            <div class="step-label">Claude Vision</div>
+            <div class="step-desc">{{ claude_model }} fallback</div>
+          </div>
+          <span class="step-status {% if claude_available %}step-status-ok{% else %}step-status-off{% endif %}">
+            {% if claude_available %}&#10003; Active{% else %}&#10007; Not configured{% endif %}
+          </span>
+        </li>
+
+        <li class="pipeline-step">
+          <div class="step-dot {% if gemma_available %}step-dot-active{% else %}step-dot-inactive{% endif %}"></div>
+          <span class="step-num">Step 4</span>
+          <div class="step-body">
+            <div class="step-label">Gemma 4 Text</div>
+            <div class="step-desc">{{ gemma_model }}, text mode</div>
+          </div>
+          <span class="step-status {% if gemma_available %}step-status-ok{% else %}step-status-off{% endif %}">
+            {% if gemma_available %}&#10003; Active{% else %}&#10007; Not configured{% endif %}
+          </span>
+        </li>
+
+        <li class="pipeline-step">
+          <div class="step-dot {% if claude_available %}step-dot-active{% else %}step-dot-inactive{% endif %}"></div>
+          <span class="step-num">Step 5</span>
+          <div class="step-body">
+            <div class="step-label">Claude Text</div>
+            <div class="step-desc">{{ claude_model }} fallback</div>
+          </div>
+          <span class="step-status {% if claude_available %}step-status-ok{% else %}step-status-off{% endif %}">
+            {% if claude_available %}&#10003; Active{% else %}&#10007; Not configured{% endif %}
+          </span>
+        </li>
+
+        <li class="pipeline-step">
+          <div class="step-dot {% if gemini_available %}step-dot-active{% else %}step-dot-inactive{% endif %}"></div>
+          <span class="step-num">Step 6</span>
+          <div class="step-body">
+            <div class="step-label">Gemini</div>
+            <div class="step-desc">{{ gemini_model }}</div>
+          </div>
+          <span class="step-status {% if gemini_available %}step-status-ok{% else %}step-status-off{% endif %}">
+            {% if gemini_available %}&#10003; Active{% else %}&#10007; Not configured{% endif %}
+          </span>
+        </li>
+
+        <li class="pipeline-step">
+          <div class="step-dot step-dot-active"></div>
+          <span class="step-num">Step 7</span>
+          <div class="step-body">
+            <div class="step-label">Rule-based Regex</div>
+            <div class="step-desc">Zero-cost last resort</div>
+          </div>
+          <span class="step-status step-status-ok">&#10003; Always on</span>
+        </li>
+
+      </ul>
+    </div>
+
+    {# Supported formats card #}
+    <div class="lex-card">
+      <div class="lex-card-title">Supported Formats</div>
+      <div class="fmt-group">
+        <div class="fmt-label">Images</div>
+        <div class="fmt-pills">
+          <span class="fmt-pill">JPG</span>
+          <span class="fmt-pill">PNG</span>
+          <span class="fmt-pill">WEBP</span>
+          <span class="fmt-pill">HEIC</span>
+        </div>
+      </div>
+      <div class="fmt-group">
+        <div class="fmt-label">Documents</div>
+        <div class="fmt-pills">
+          <span class="fmt-pill">PDF (up to 5 pages)</span>
+        </div>
+      </div>
+      <div class="fmt-group">
+        <div class="fmt-label">Text</div>
+        <div class="fmt-pills">
+          <span class="fmt-pill">Plain OCR text paste</span>
+        </div>
+      </div>
+    </div>
+
+  </div>{# end left col #}
+
+  {# ── Right column ── #}
+  <div>
+
+    {# Live Test card #}
+    <div class="lex-card">
+      <div class="lex-card-title">Live Test</div>
+
+      <div id="dropZone" class="drop-zone">
+        <div class="drop-zone-icon">⊞</div>
+        <div class="drop-zone-text">Drag &amp; drop a label image or PDF here</div>
+        <div class="drop-zone-sub">or click to browse — JPG, PNG, WEBP, PDF</div>
+        <div class="drop-zone-file" id="chosenFile"></div>
+      </div>
+      <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp,.pdf" style="display:none" />
+
+      <button id="runBtn" class="adm-btn adm-btn-primary" onclick="runExtraction()" disabled style="width:100%;">
+        Run Extraction
+      </button>
+
+      {# Results #}
+      <div id="resultSection" class="result-hidden" style="margin-top:1.25rem;">
+        <div id="resultMeta" class="result-meta"></div>
+
+        <div class="adm-table-wrap" style="margin-bottom:0.85rem;">
+          <table class="field-table">
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody id="fieldTableBody"></tbody>
+          </table>
+        </div>
+
+        <ul id="warningsList" class="warnings-list" style="display:none;"></ul>
+      </div>
+
+      <div id="errorSection" class="result-hidden" style="margin-top:1rem;">
+        <div class="adm-flash adm-flash-error" id="errorMsg"></div>
+      </div>
+    </div>
+
+    {# Stats card #}
+    <div class="lex-card">
+      <div class="lex-card-title">Extraction Stats</div>
+
+      {% set total_scans = source_stats.values() | sum %}
+      <div class="stat-summary">
+        <div class="stat-chip">
+          <div class="stat-chip-val">{{ total_scans }}</div>
+          <div class="stat-chip-lbl">Total Scans</div>
+        </div>
+        {% for src, count in source_stats.items() %}
+        <div class="stat-chip">
+          <div class="stat-chip-val">{{ count }}</div>
+          <div class="stat-chip-lbl">{{ src | capitalize }}</div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if source_stats %}
+      <div style="margin-bottom:1rem;">
+        <div style="font-size:0.72rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.65rem;">Scans by Source</div>
+        {% for src, count in source_stats.items() %}
+        {% set pct = (count / total_scans * 100) | round(1) if total_scans > 0 else 0 %}
+        <div class="bar-row">
+          <span class="bar-label">{{ src | capitalize }}</span>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:{{ pct }}%;"></div>
+          </div>
+          <span class="bar-val">{{ count }} <span style="color:#D4D4D4;">({{ pct }}%)</span></span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div>
+        <div style="font-size:0.72rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.65rem;">Avg Confidence by Source</div>
+        {% for src, conf in conf_stats.items() %}
+        <div class="bar-row">
+          <span class="bar-label">{{ src | capitalize }}</span>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:{{ (conf * 100) | round(1) }}%;background:{% if conf >= 0.8 %}#81C2C0{% elif conf >= 0.6 %}#F0C070{% else %}#E89898{% endif %};"></div>
+          </div>
+          <span class="bar-val">{{ conf }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p style="font-size:0.82rem;color:#A3A3A3;text-align:center;padding:1.5rem 0;">No extraction data yet. Run the first test above.</p>
+      {% endif %}
+    </div>
+
+    {# Pattern Library card #}
+    <div class="lex-card">
+      <div class="lex-card-title">Pattern Library</div>
+      <div class="stat-summary" style="margin-bottom:1rem;">
+        <div class="stat-chip">
+          <div class="stat-chip-val">{{ pattern_count }}</div>
+          <div class="stat-chip-lbl">Total Patterns</div>
+        </div>
+        <div class="stat-chip">
+          <div class="stat-chip-val">{{ field_patterns | length }}</div>
+          <div class="stat-chip-lbl">Fields Covered</div>
+        </div>
+      </div>
+
+      {% if field_patterns %}
+      {% set max_fp = field_patterns[0][1] if field_patterns else 1 %}
+      <div style="font-size:0.72rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.65rem;">Top Fields by Pattern Count</div>
+      {% for field, cnt in field_patterns %}
+      <div class="bar-row">
+        <span class="bar-label" style="font-size:0.73rem;">{{ field | replace('_', ' ') }}</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:{{ (cnt / max_fp * 100) | round(1) }}%;"></div>
+        </div>
+        <span class="bar-val">{{ cnt }}</span>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p style="font-size:0.82rem;color:#A3A3A3;text-align:center;padding:1rem 0;">No patterns learned yet.</p>
+      {% endif %}
+    </div>
+
+  </div>{# end right col #}
+</div>
+
+<script>
+(function () {
+  var dropZone   = document.getElementById('dropZone');
+  var fileInput  = document.getElementById('fileInput');
+  var chosenFile = document.getElementById('chosenFile');
+  var runBtn     = document.getElementById('runBtn');
+  var selectedFile = null;
+
+  // Click to browse
+  dropZone.addEventListener('click', function () { fileInput.click(); });
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files.length) {
+      setFile(fileInput.files[0]);
+    }
+  });
+
+  // Drag & drop
+  dropZone.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', function () {
+    dropZone.classList.remove('drag-over');
+  });
+  dropZone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) {
+      setFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  function setFile(f) {
+    selectedFile = f;
+    chosenFile.textContent = f.name + ' (' + (f.size / 1024).toFixed(1) + ' KB)';
+    runBtn.disabled = false;
+  }
+
+  window.runExtraction = function () {
+    if (!selectedFile) return;
+
+    // Show spinner in button
+    runBtn.disabled = true;
+    runBtn.innerHTML = '<span class="spinner"></span> Extracting…';
+
+    // Hide previous results
+    document.getElementById('resultSection').classList.add('result-hidden');
+    document.getElementById('errorSection').classList.add('result-hidden');
+
+    var fd = new FormData();
+    fd.append('file', selectedFile);
+
+    fetch('/admin/label-extractor/test', {
+      method: 'POST',
+      body: fd,
+      credentials: 'same-origin',
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      runBtn.innerHTML = 'Run Extraction';
+      runBtn.disabled = false;
+
+      if (!data.success) {
+        document.getElementById('errorMsg').textContent = 'Error: ' + (data.error || 'Unknown error');
+        document.getElementById('errorSection').classList.remove('result-hidden');
+        return;
+      }
+
+      renderResults(data);
+    })
+    .catch(function (err) {
+      runBtn.innerHTML = 'Run Extraction';
+      runBtn.disabled = false;
+      document.getElementById('errorMsg').textContent = 'Request failed: ' + err;
+      document.getElementById('errorSection').classList.remove('result-hidden');
+    });
+  };
+
+  function renderResults(data) {
+    // Meta row
+    var conf = data.confidence || 0;
+    var confClass = conf >= 0.8 ? 'conf-green' : conf >= 0.6 ? 'conf-amber' : 'conf-red';
+    var confPct = Math.round(conf * 100);
+
+    var sourceLabel = (data.source || 'unknown').charAt(0).toUpperCase() + (data.source || 'unknown').slice(1);
+
+    var meta = document.getElementById('resultMeta');
+    meta.innerHTML =
+      '<span class="conf-badge ' + confClass + '">' + confPct + '% confidence</span>' +
+      '<span class="source-badge">' + sourceLabel + '</span>' +
+      '<span class="meta-chip">' + data.elapsed_sec + 's</span>' +
+      (data.input_tokens  ? '<span class="meta-chip">' + data.input_tokens  + ' in-tokens</span>' : '') +
+      (data.output_tokens ? '<span class="meta-chip">' + data.output_tokens + ' out-tokens</span>' : '') +
+      '<span class="meta-chip">' + (data.file_size_kb || 0) + ' KB</span>';
+
+    // Fields table
+    var tbody = document.getElementById('fieldTableBody');
+    tbody.innerHTML = '';
+    var ext = data.extraction || {};
+    Object.keys(ext).forEach(function (k) {
+      if (k.startsWith('_')) return;
+      var v = ext[k];
+      var display;
+      if (v === null || v === undefined) {
+        display = '<span class="field-val-null">null</span>';
+      } else if (typeof v === 'object') {
+        display = '<pre style="margin:0;font-size:0.73rem;white-space:pre-wrap;word-break:break-all;">' + JSON.stringify(v, null, 2) + '</pre>';
+      } else {
+        display = String(v);
+      }
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + k.replace(/_/g, ' ') + '</td><td>' + display + '</td>';
+      tbody.appendChild(tr);
+    });
+
+    // Warnings
+    var wList = document.getElementById('warningsList');
+    wList.innerHTML = '';
+    if (data.warnings && data.warnings.length) {
+      data.warnings.forEach(function (w) {
+        var li = document.createElement('li');
+        li.textContent = w;
+        wList.appendChild(li);
+      });
+      wList.style.display = 'block';
+    } else {
+      wList.style.display = 'none';
+    }
+
+    document.getElementById('resultSection').classList.remove('result-hidden');
+  }
+})();
+</script>
+{% endblock %}

@@ -190,6 +190,9 @@
       <a href="/admin/llm/regulations/train" class="adm-nav-link {% if '/admin/llm/regulations/train' in request.url.path %}active{% endif %}">
         <span class="adm-nav-icon">▤</span> Regulations KB
       </a>
+      <a href="/admin/label-extractor" class="adm-nav-link {% if '/admin/label-extractor' in request.url.path %}active{% endif %}">
+        <span class="adm-nav-icon">⊡</span> Label Extractor
+      </a>
       <a href="/admin/alerts" class="adm-nav-link {% if '/admin/alerts' in request.url.path %}active{% endif %}">
         <span class="adm-nav-icon">◎</span> Alerts
         {% if unread_alerts is defined and unread_alerts > 0 %}

@@ -590,7 +590,7 @@ def _call_gemini_text(ocr_text: str) -> Optional[dict]:
 def extract_label_data_from_image(image_path: str) -> tuple:
     """
     Extract structured label data from an image file.
-    Priority: Claude Vision → Gemma 4 Vision → Gemini Vision
+    Priority: Gemma 4 Vision → Claude Vision → Gemini Vision
 
     Returns:
         (extraction_dict, confidence, source, input_tokens, output_tokens)
@@ -600,25 +600,9 @@ def extract_label_data_from_image(image_path: str) -> tuple:
     key_from_env = os.environ.get("ANTHROPIC_API_KEY", "")
     _log(f"[extraction] Claude key (settings): {'SET len=' + str(len(key_from_settings)) if key_from_settings else 'EMPTY'}")
     _log(f"[extraction] Claude key (os.environ): {'SET len=' + str(len(key_from_env)) if key_from_env else 'EMPTY'}")
-    _log(f"[extraction] Gemma enabled={settings.gemma_enabled}, url={'SET' if settings.gemma_api_url else 'EMPTY'}")
+    _log(f"[extraction] Gemma enabled={settings.gemma_enabled}, key={'SET' if settings.openrouter_api_key else 'EMPTY'}")
 
-    # Try Claude first (primary, highest quality)
-    if key_from_env or settings.anthropic_api_key:
-        try:
-            result, inp, out = _call_claude_vision(image_path)
-            if result:
-                result = _normalize_extraction(result)
-                confidence = _calculate_confidence(result, "vision")
-                warnings = _validate_extraction(result)
-                if warnings:
-                    result["_extraction_warnings"] = warnings
-                    _log(f"[extraction] Claude Vision warnings: {warnings}")
-                _log(f"[extraction] Claude Vision succeeded (confidence={confidence})")
-                return result, confidence, "claude", inp, out
-        except Exception as e:
-            _log(f"[extraction] Claude Vision failed: {e}")
-
-    # Fallback: Gemma 4 Vision (OpenRouter)
+    # Try Gemma first (cheap primary)
     if _is_gemma_available():
         try:
             result, inp, out = _call_gemma_vision(image_path)
@@ -633,6 +617,22 @@ def extract_label_data_from_image(image_path: str) -> tuple:
                 return result, confidence, "gemma", inp, out
         except Exception as e:
             _log(f"[extraction] Gemma Vision failed: {e}")
+
+    # Fallback: Claude Vision (paid fallback)
+    if key_from_env or settings.anthropic_api_key:
+        try:
+            result, inp, out = _call_claude_vision(image_path)
+            if result:
+                result = _normalize_extraction(result)
+                confidence = _calculate_confidence(result, "vision")
+                warnings = _validate_extraction(result)
+                if warnings:
+                    result["_extraction_warnings"] = warnings
+                    _log(f"[extraction] Claude Vision warnings: {warnings}")
+                _log(f"[extraction] Claude Vision succeeded (confidence={confidence})")
+                return result, confidence, "claude", inp, out
+        except Exception as e:
+            _log(f"[extraction] Claude Vision failed: {e}")
 
     # Fallback: Gemini Vision (API)
     if settings.gemini_api_key:
@@ -656,7 +656,7 @@ def extract_label_data_from_image(image_path: str) -> tuple:
 def extract_label_data(ocr_text: str) -> tuple:
     """
     Extract structured label data from OCR text.
-    Priority: Claude Text → Gemma 4 Text → Gemini Text → Rule-based
+    Priority: Gemma 4 Text → Claude Text → Gemini Text → Rule-based
 
     Returns:
         (extraction_dict, confidence, source, input_tokens, output_tokens)
@@ -664,25 +664,9 @@ def extract_label_data(ocr_text: str) -> tuple:
     if not ocr_text.strip():
         return {}, 0.0, "none", 0, 0
 
-    # Try Claude first (primary)
     import os
-    if settings.anthropic_api_key or os.environ.get("ANTHROPIC_API_KEY", ""):
-        try:
-            result, inp, out = _call_claude_text(ocr_text)
-            if result:
-                result = _normalize_extraction(result)
-                result = _cross_check_with_ocr(result, ocr_text)
-                confidence = _calculate_confidence(result, "text")
-                warnings = _validate_extraction(result)
-                if warnings:
-                    result["_extraction_warnings"] = warnings
-                    _log(f"[extraction] Claude text warnings: {warnings}")
-                _log(f"[extraction] Claude text succeeded (confidence={confidence})")
-                return result, confidence, "claude", inp, out
-        except Exception as e:
-            _log(f"[extraction] Claude text failed: {e}")
 
-    # Fallback: Gemma 4 Text (self-hosted)
+    # Try Gemma first (cheap primary)
     if _is_gemma_available():
         try:
             result, inp, out = _call_gemma_text(ocr_text)
@@ -698,6 +682,23 @@ def extract_label_data(ocr_text: str) -> tuple:
                 return result, confidence, "gemma", inp, out
         except Exception as e:
             _log(f"[extraction] Gemma text failed: {e}")
+
+    # Fallback: Claude Text (paid fallback)
+    if settings.anthropic_api_key or os.environ.get("ANTHROPIC_API_KEY", ""):
+        try:
+            result, inp, out = _call_claude_text(ocr_text)
+            if result:
+                result = _normalize_extraction(result)
+                result = _cross_check_with_ocr(result, ocr_text)
+                confidence = _calculate_confidence(result, "text")
+                warnings = _validate_extraction(result)
+                if warnings:
+                    result["_extraction_warnings"] = warnings
+                    _log(f"[extraction] Claude text warnings: {warnings}")
+                _log(f"[extraction] Claude text succeeded (confidence={confidence})")
+                return result, confidence, "claude", inp, out
+        except Exception as e:
+            _log(f"[extraction] Claude text failed: {e}")
 
     # Fallback: Gemini (API)
     if settings.gemini_api_key:
