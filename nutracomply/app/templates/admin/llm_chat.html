@@ -3,6 +3,8 @@
 {% block page_title %}Test Chat — {{ kb_type | title }} LLM{% endblock %}
 
 {% block content %}
+{# marked.js for markdown rendering in chat bubbles #}
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
 <style>
   /* ── Layout ── */
   .chat-wrap {
@@ -42,7 +44,7 @@
   .msg-body { max-width: 72%; }
   .msg-bubble {
     padding: 0.65rem 0.95rem; border-radius: 12px;
-    font-size: 0.87rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+    font-size: 0.87rem; line-height: 1.6; word-break: break-word;
   }
   .msg-row.user  .msg-bubble {
     background: #649CC4; color: #fff;
@@ -52,6 +54,40 @@
     background: #fff; color: #262626;
     border: 1px solid #EBEBEB;
     border-radius: 12px 12px 12px 2px;
+  }
+  /* Markdown elements inside model bubbles */
+  .msg-row.model .msg-bubble p  { margin: 0 0 0.5rem; }
+  .msg-row.model .msg-bubble p:last-child { margin-bottom: 0; }
+  .msg-row.model .msg-bubble ul,
+  .msg-row.model .msg-bubble ol { margin: 0.3rem 0 0.5rem 1.2rem; padding: 0; }
+  .msg-row.model .msg-bubble li { margin-bottom: 0.2rem; }
+  .msg-row.model .msg-bubble strong { font-weight: 700; color: #111; }
+  .msg-row.model .msg-bubble em { font-style: italic; }
+  .msg-row.model .msg-bubble code {
+    background: #F4F4F4; border: 1px solid #E0E0E0;
+    border-radius: 3px; padding: 0.05rem 0.3rem;
+    font-family: monospace; font-size: 0.82rem;
+  }
+  .msg-row.model .msg-bubble pre {
+    background: #F4F4F4; border: 1px solid #E0E0E0; border-radius: 6px;
+    padding: 0.6rem 0.85rem; overflow-x: auto; margin: 0.4rem 0;
+  }
+  .msg-row.model .msg-bubble pre code { background: none; border: none; padding: 0; }
+  .msg-row.model .msg-bubble table {
+    border-collapse: collapse; width: 100%; margin: 0.5rem 0; font-size: 0.82rem;
+  }
+  .msg-row.model .msg-bubble th,
+  .msg-row.model .msg-bubble td {
+    border: 1px solid #EBEBEB; padding: 0.3rem 0.6rem; text-align: left;
+  }
+  .msg-row.model .msg-bubble th { background: #F8F8F8; font-weight: 600; }
+  .msg-row.model .msg-bubble hr { border: none; border-top: 1px solid #EBEBEB; margin: 0.5rem 0; }
+  .msg-row.model .msg-bubble h1,
+  .msg-row.model .msg-bubble h2,
+  .msg-row.model .msg-bubble h3 { font-size: 0.9rem; font-weight: 700; margin: 0.5rem 0 0.25rem; }
+  .msg-row.model .msg-bubble blockquote {
+    border-left: 3px solid #EBEBEB; margin: 0.4rem 0;
+    padding: 0.2rem 0.75rem; color: #737373;
   }
   .msg-meta { font-size: 0.67rem; margin-top: 0.25rem; color: #A3A3A3; }
   .msg-row.user .msg-meta { text-align: right; }
@@ -90,7 +126,7 @@
             margin-bottom:0.85rem;flex-wrap:wrap;gap:0.5rem;">
   <div style="font-size:0.83rem;color:#737373;">
     <strong>{{ kb_type | title }} LLM</strong>
-    &mdash; model: <code>{{ model_name }}</code>
+    &mdash; primary: <code id="activeModelLabel">{{ model_name }}</code>
     &mdash; responses grounded in your knowledge base
   </div>
   <div style="display:flex;gap:0.5rem;">
@@ -137,8 +173,13 @@
     <div class="msg-row {{ msg.role }}">
       <div class="msg-avatar">{{ 'U' if msg.role == 'user' else '🤖' }}</div>
       <div class="msg-body">
+        {# model messages are re-rendered with marked.js on load; user messages use pre-wrap #}
+        {% if msg.role == 'user' %}
+        <div class="msg-bubble" style="white-space:pre-wrap">{{ msg.content }}</div>
+        {% else %}
         <div class="msg-bubble">{{ msg.content }}</div>
-        <div class="msg-meta">{{ 'You' if msg.role == 'user' else 'RegBite AI (' ~ model_name ~ ')' }}</div>
+        {% endif %}
+        <div class="msg-meta">{{ 'You' if msg.role == 'user' else 'RegBite AI · Gemma 4' }}</div>
       </div>
     </div>
     {% endfor %}
@@ -177,6 +218,9 @@
 const KB_TYPE    = "{{ kb_type }}";
 const MODEL_NAME = "{{ model_name }}";
 
+// Configure marked.js: enable GitHub-flavoured tables and line breaks
+marked.setOptions({ gfm: true, breaks: true });
+
 function scrollToBottom() {
   const el = document.getElementById("chatMessages");
   el.scrollTop = el.scrollHeight;
@@ -186,11 +230,25 @@ function escapeHtml(text) {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\n/g, "<br>");
+    .replace(/>/g, "&gt;");
 }
 
-function appendMessage(role, content, contextUsed, provider) {
+function providerLabel(provider, modelHint) {
+  if (provider === "gemma")  return `RegBite AI · Gemma 4 (${modelHint || MODEL_NAME})`;
+  if (provider === "claude") return `RegBite AI · Claude (fallback)`;
+  if (provider === "gemini") return `RegBite AI · Gemini (fallback)`;
+  return `RegBite AI (${MODEL_NAME})`;
+}
+
+function updateHeaderModel(provider, modelHint) {
+  const label = document.getElementById("activeModelLabel");
+  if (!label) return;
+  if (provider === "gemma")  label.textContent = modelHint || MODEL_NAME;
+  if (provider === "claude") label.textContent = "claude-sonnet-4-6 (fallback)";
+  if (provider === "gemini") label.textContent = "gemini (fallback)";
+}
+
+function appendMessage(role, content, contextUsed, provider, modelHint) {
   const container = document.getElementById("chatMessages");
   const typing    = document.getElementById("typingIndicator");
 
@@ -198,15 +256,16 @@ function appendMessage(role, content, contextUsed, provider) {
   const empty = document.getElementById("emptyState");
   if (empty) empty.remove();
 
-  let metaLabel;
-  if (role === "user") {
-    metaLabel = "You";
-  } else if (provider === "claude") {
-    metaLabel = "RegBite AI (Claude — fallback)";
+  const metaLabel = role === "user" ? "You" : providerLabel(provider, modelHint);
+  const avatar    = role === "user" ? "U" : "🤖";
+
+  // Render markdown for model replies; plain-escape for user messages
+  let bubbleContent;
+  if (role === "model") {
+    bubbleContent = marked.parse(content);
   } else {
-    metaLabel = `RegBite AI (${MODEL_NAME})`;
+    bubbleContent = `<span style="white-space:pre-wrap">${escapeHtml(content)}</span>`;
   }
-  const avatar = role === "user" ? "U" : "🤖";
 
   let ctxHtml = "";
   if (contextUsed && contextUsed.length > 0) {
@@ -221,13 +280,21 @@ function appendMessage(role, content, contextUsed, provider) {
   row.innerHTML = `
     <div class="msg-avatar">${avatar}</div>
     <div class="msg-body">
-      <div class="msg-bubble">${escapeHtml(content)}</div>
+      <div class="msg-bubble">${bubbleContent}</div>
       ${ctxHtml}
       <div class="msg-meta">${metaLabel}</div>
     </div>`;
 
   container.insertBefore(row, typing);
   scrollToBottom();
+}
+
+// Re-render any pre-existing messages (from conversation history) with markdown
+function renderExistingMessages() {
+  document.querySelectorAll(".msg-row.model .msg-bubble").forEach(el => {
+    const raw = el.textContent;
+    el.innerHTML = marked.parse(raw);
+  });
 }
 
 async function sendMessage() {
@@ -255,7 +322,8 @@ async function sendMessage() {
     document.getElementById("typingIndicator").classList.remove("visible");
 
     const reply = data.reply || data.error || "No response received.";
-    appendMessage("model", reply, data.context_used, data.provider);
+    appendMessage("model", reply, data.context_used, data.provider, data.model);
+    if (data.provider) updateHeaderModel(data.provider, data.model);
 
   } catch (e) {
     document.getElementById("typingIndicator").classList.remove("visible");
@@ -274,11 +342,9 @@ async function clearChat() {
 
   const container = document.getElementById("chatMessages");
   const typing    = document.getElementById("typingIndicator");
-  // Remove all message rows, leaving only the typing indicator
   Array.from(container.children).forEach(child => {
     if (child !== typing) child.remove();
   });
-  // Re-add empty state
   const emptyDiv = document.createElement("div");
   emptyDiv.id = "emptyState";
   emptyDiv.style = "text-align:center;color:#A3A3A3;padding:3.5rem 1rem;";
@@ -296,7 +362,8 @@ function handleKeydown(e) {
   }
 }
 
-// Scroll to bottom on initial load if history exists
+// On load: render markdown for any pre-loaded history, then scroll
+renderExistingMessages();
 scrollToBottom();
 </script>
 {% endblock %}
