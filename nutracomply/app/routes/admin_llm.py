@@ -3,7 +3,7 @@ LLM Studio — Admin routes
 =========================
 All routes require is_admin=True.
 Provides knowledge-base management (train) and chat test interfaces for
-the Regulations LLM (gemini-2.5-pro) and Products LLM (gemini-2.0-flash),
+the Regulations LLM (gemini-2.5-pro) and Products LLM (gemini-3.1-flash-lite-preview),
 with Claude (Anthropic) as automatic fallback.
 """
 from pathlib import Path
@@ -148,7 +148,7 @@ async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
         try:
             import google.generativeai as _genai
             _genai.configure(api_key=settings.gemini_api_key)
-            m = _genai.GenerativeModel("gemini-2.5-flash-lite")
+            m = _genai.GenerativeModel("gemini-3.1-flash-lite-preview")
             m.generate_content("Reply: OK", generation_config={"max_output_tokens": 5})
             result["gemini"] = {"status": "ok"}
         except Exception as exc:
@@ -583,7 +583,7 @@ async def llm_chat_page(kb_type: str, request: Request, db: Session = Depends(ge
         "unread_alerts": _unread_alerts(db),
         "kb_type":       kb_type,
         "messages":      conv.messages or [],
-        "model_name":    MODELS.get(kb_type, "gemini-2.0-flash"),
+        "model_name":    MODELS.get(kb_type, "gemini-3.1-flash-lite-preview"),
     })
 
 

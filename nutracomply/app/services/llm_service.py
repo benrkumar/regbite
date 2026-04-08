@@ -8,7 +8,7 @@ Retrieval uses PostgreSQL LIKE-based full-text scoring with stopword filtering
 and title boosting — no pgvector required.
 
 v3 improvements:
-  - Stable Gemini model names (gemini-2.5-pro, gemini-2.0-flash)
+  - Stable Gemini model names (gemini-2.5-pro, gemini-3.1-flash-lite-preview)
   - Claude fallback: if Gemini API fails, automatically retries with Anthropic
   - Better error reporting surfaced to the chat UI
 
@@ -33,7 +33,7 @@ v5 improvements:
 
 Models used:
   regulations → gemini-2.5-pro (precision for legal/regulatory reasoning)
-  products    → gemini-2.0-flash (fast for structured product/label data)
+  products    → gemini-3.1-flash-lite-preview (fast for structured product/label data)
   fallback    → claude-sonnet-4-6 (Anthropic) when Gemini unavailable
 """
 from __future__ import annotations
@@ -99,8 +99,8 @@ def invalidate_cache(kb_type: str | None = None) -> int:
 
 # Gemini model names (used when Gemma/OpenRouter is unavailable)
 _GEMINI_MODELS: dict[str, str] = {
-    "regulations": "gemini-2.5-flash-lite-lite",
-    "products":    "gemini-2.5-flash-lite-lite",
+    "regulations": "gemini-3.1-flash-lite-preview",
+    "products":    "gemini-3.1-flash-lite-preview",
 }
 
 # Display names shown in the chat UI header (reflects primary provider = Gemma 4)
@@ -152,7 +152,7 @@ def _expand_query(query: str, kb_type: str, gemini_api_key: str = "") -> str:
     try:
         import google.generativeai as genai
         genai.configure(api_key=gemini_api_key)
-        model = genai.GenerativeModel("gemini-2.5-flash-lite")
+        model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
         prompt = (
             f"Expand this short search query into a detailed search query for {domain}. "
             f"Return ONLY the expanded query (one sentence, max 25 words). No preamble.\n"
@@ -985,7 +985,7 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
     # Build RAG context
     context_chunks, system_prompt, user_message = _build_context(kb_type, query, db)
     context_titles = [c["document_title"] for c in context_chunks]
-    gemini_model = _GEMINI_MODELS.get(kb_type, "gemini-2.0-flash")
+    gemini_model = _GEMINI_MODELS.get(kb_type, "gemini-3.1-flash-lite-preview")
 
     # ─── Provider priority (same for ALL kb_types): ───────────────────────────
     #   1. Gemma 4 via OpenRouter  — primary (self-hosted economics)
