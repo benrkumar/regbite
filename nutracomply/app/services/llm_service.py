@@ -434,14 +434,25 @@ def _fssai_filename_to_title(filename: str) -> str:
 
 # ─── KB seeding from DB ───────────────────────────────────────────────────────
 
-def seed_regulations_kb(db) -> dict:
+def seed_regulations_kb(db, framework: str | None = None) -> dict:
     """
     Auto-populate the Regulations knowledge base from existing DB rows.
     Additive — only inserts documents whose source doesn't already exist.
     Data is permanently stored and never auto-deleted.
     Sources: ComplianceRule, RegulationChange, Ingredient.
+
+    Args:
+        framework: None = seed all rules; "fssai" = FSSAI-* rules + changes + ingredients;
+                   "ayush" = AYUSH-* rules only; "legal_metrology" = LM-* rules only.
     """
     from app.models import KBDocument, KBType, ComplianceRule, RegulationChange, Ingredient
+
+    # Rule-code prefix map
+    _prefix = {
+        "fssai":           "FSSAI",
+        "ayush":           "AYUSH",
+        "legal_metrology": "LM",
+    }
 
     # Get existing sources to avoid duplicates
     existing_sources = {
@@ -455,7 +466,10 @@ def seed_regulations_kb(db) -> dict:
     count = 0
 
     # ── Compliance Rules ──────────────────────────────────────────────────────
-    for rule in db.query(ComplianceRule).filter(ComplianceRule.active == True).all():
+    rules_q = db.query(ComplianceRule).filter(ComplianceRule.active == True)
+    if framework and framework in _prefix:
+        rules_q = rules_q.filter(ComplianceRule.rule_code.like(f"{_prefix[framework]}%"))
+    for rule in rules_q.all():
         source = f"db:compliance_rule:{rule.id}"
         if source in existing_sources:
             continue
@@ -476,51 +490,51 @@ def seed_regulations_kb(db) -> dict:
         )
         count += 1
 
-    # ── Regulation Changes ────────────────────────────────────────────────────
-    for change in db.query(RegulationChange).all():
-        source = f"db:regulation_change:{change.id}"
-        if source in existing_sources:
-            continue
-        eff = change.effective_date.strftime("%Y-%m-%d") if change.effective_date else "TBD"
-        content = (
-            f"Regulation Update: {change.document_name or 'Unnamed'}\n"
-            f"Change Type: {change.change_type.value}\n"
-            f"Detected: {change.detected_at.strftime('%Y-%m-%d')}\n"
-            f"Effective Date: {eff}\n"
-            f"Severity: {change.severity.value}\n"
-            f"Summary: {change.summary_text or 'N/A'}\n"
-            f"Affected Rules: {', '.join(change.affected_rule_codes or [])}\n"
-            f"Source URL: {change.source_url or 'N/A'}"
-        )
-        _ingest_document(
-            db, "regulations",
-            title=f"Reg Change: {(change.document_name or 'Update')[:70]}",
-            source=source,
-            content=content,
-        )
-        count += 1
+    # ── Regulation Changes + Ingredients — FSSAI scope only ──────────────────
+    if framework in (None, "fssai"):
+        for change in db.query(RegulationChange).all():
+            source = f"db:regulation_change:{change.id}"
+            if source in existing_sources:
+                continue
+            eff = change.effective_date.strftime("%Y-%m-%d") if change.effective_date else "TBD"
+            content = (
+                f"Regulation Update: {change.document_name or 'Unnamed'}\n"
+                f"Change Type: {change.change_type.value}\n"
+                f"Detected: {change.detected_at.strftime('%Y-%m-%d')}\n"
+                f"Effective Date: {eff}\n"
+                f"Severity: {change.severity.value}\n"
+                f"Summary: {change.summary_text or 'N/A'}\n"
+                f"Affected Rules: {', '.join(change.affected_rule_codes or [])}\n"
+                f"Source URL: {change.source_url or 'N/A'}"
+            )
+            _ingest_document(
+                db, "regulations",
+                title=f"Reg Change: {(change.document_name or 'Update')[:70]}",
+                source=source,
+                content=content,
+            )
+            count += 1
 
-    # ── Ingredients ───────────────────────────────────────────────────────────
-    for ing in db.query(Ingredient).all():
-        source = f"db:ingredient:{ing.id}"
-        if source in existing_sources:
-            continue
-        content = (
-            f"Ingredient: {ing.name}\n"
-            f"Status: {ing.status.value}\n"
-            f"Aliases: {', '.join(ing.aliases or [])}\n"
-            f"Max Daily Dose: {ing.max_daily_dose or 'N/A'}\n"
-            f"Source Restriction: {ing.source_restriction or 'None'}\n"
-            f"Ban Reason: {ing.ban_reason or 'N/A'}\n"
-            f"Regulation Reference: {ing.regulation_reference or 'N/A'}"
-        )
-        _ingest_document(
-            db, "regulations",
-            title=f"Ingredient: {ing.name}",
-            source=source,
-            content=content,
-        )
-        count += 1
+        for ing in db.query(Ingredient).all():
+            source = f"db:ingredient:{ing.id}"
+            if source in existing_sources:
+                continue
+            content = (
+                f"Ingredient: {ing.name}\n"
+                f"Status: {ing.status.value}\n"
+                f"Aliases: {', '.join(ing.aliases or [])}\n"
+                f"Max Daily Dose: {ing.max_daily_dose or 'N/A'}\n"
+                f"Source Restriction: {ing.source_restriction or 'None'}\n"
+                f"Ban Reason: {ing.ban_reason or 'N/A'}\n"
+                f"Regulation Reference: {ing.regulation_reference or 'N/A'}"
+            )
+            _ingest_document(
+                db, "regulations",
+                title=f"Ingredient: {ing.name}",
+                source=source,
+                content=content,
+            )
+            count += 1
 
     total = len(existing_sources) + count
     return {"status": "seeded" if count > 0 else "up_to_date", "document_count": total, "new_documents": count}

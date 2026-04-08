@@ -147,31 +147,76 @@ async def llm_seed(kb_type: str, request: Request, db: Session = Depends(get_db)
 
 @router.post("/llm/{kb_type}/reset")
 async def llm_reset_kb(kb_type: str, request: Request, db: Session = Depends(get_db)):
-    """Delete ALL documents + chunks for this KB, then re-seed from DB."""
+    """
+    Selectively delete + re-seed a subset of the regulations KB.
+    subset param: "all" | "fssai" | "ayush" | "legal_metrology"
+    """
     user, redirect = _require_admin(request, db)
     if redirect:
         return redirect
     if kb_type not in _VALID_KB:
         return RedirectResponse(url="/admin/llm", status_code=302)
 
+    from sqlalchemy import or_
     from app.models import KBDocument, KBChunk, KBType
     from app.services.llm_service import seed_regulations_kb, seed_products_kb, invalidate_cache
 
+    form   = await request.form()
+    subset = form.get("subset", "all")  # "all" | "fssai" | "ayush" | "legal_metrology"
+
     try:
-        # Hard-delete all chunks and documents for this KB
-        deleted_chunks = db.query(KBChunk).filter(KBChunk.kb_type == KBType(kb_type)).delete()
-        deleted_docs   = db.query(KBDocument).filter(KBDocument.kb_type == KBType(kb_type)).delete()
-        db.commit()
+        if kb_type != "regulations" or subset == "all":
+            # Full wipe for products KB or explicit "all"
+            deleted_chunks = db.query(KBChunk).filter(
+                KBChunk.kb_type == KBType(kb_type)).delete(synchronize_session=False)
+            deleted_docs = db.query(KBDocument).filter(
+                KBDocument.kb_type == KBType(kb_type)).delete(synchronize_session=False)
+            db.commit()
+        else:
+            # Selective wipe — match by title prefix (rule codes: FSSAI-*, AYUSH-ASU-*, LM-*)
+            if subset == "fssai":
+                pattern_filters = or_(
+                    KBDocument.source.like("fssai:%"),          # uploaded PDFs
+                    KBDocument.title.like("Rule FSSAI%"),       # compliance rules
+                    KBDocument.source.like("db:regulation_change:%"),  # regulation changes
+                    KBDocument.source.like("db:ingredient:%"),  # ingredients
+                )
+            elif subset == "ayush":
+                pattern_filters = KBDocument.title.like("Rule AYUSH%")
+            else:  # legal_metrology
+                pattern_filters = KBDocument.title.like("Rule LM%")
+
+            # Delete matching chunks first (FK safety), then docs
+            matching_doc_ids = [
+                d.id for d in db.query(KBDocument.id).filter(
+                    KBDocument.kb_type == KBType.REGULATIONS,
+                    pattern_filters,
+                ).all()
+            ]
+            deleted_chunks = 0
+            deleted_docs   = 0
+            if matching_doc_ids:
+                deleted_chunks = db.query(KBChunk).filter(
+                    KBChunk.document_id.in_(matching_doc_ids)
+                ).delete(synchronize_session=False)
+                deleted_docs = db.query(KBDocument).filter(
+                    KBDocument.id.in_(matching_doc_ids)
+                ).delete(synchronize_session=False)
+            db.commit()
+
         invalidate_cache(kb_type)
 
-        # Re-seed from DB immediately
+        # Re-seed the same subset from DB
         if kb_type == "regulations":
-            result = seed_regulations_kb(db)
+            fw = None if subset == "all" else subset
+            result = seed_regulations_kb(db, framework=fw)
         else:
             result = seed_products_kb(db)
 
+        label = {"fssai": "FSSAI", "ayush": "AYUSH",
+                 "legal_metrology": "Legal+Metrology", "all": "All"}.get(subset, subset)
         msg = (
-            f"Reset+complete:+deleted+{deleted_docs}+docs+{deleted_chunks}+chunks."
+            f"Reset+{label}:+deleted+{deleted_docs}+docs+{deleted_chunks}+chunks."
             f"+Re-seeded+{result['new_documents']}+documents+from+DB."
         )
         typ = "success"
