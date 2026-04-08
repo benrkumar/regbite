@@ -356,22 +356,8 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
 
         raw = None
 
-        # Try Gemini first (existing, fast)
-        if raw is None and settings.gemini_api_key:
-            try:
-                import google.generativeai as genai
-                genai.configure(api_key=settings.gemini_api_key)
-                model = genai.GenerativeModel("gemini-2.0-flash")
-                response = model.generate_content(
-                    prompt,
-                    generation_config={"temperature": 0.1, "max_output_tokens": 256},
-                )
-                raw = response.text.strip()
-            except Exception as ge:
-                logger.warning("[compliance] Gemini format check failed for %s: %s", rule.rule_code, ge)
-
-        # Fallback: Gemma 4 (self-hosted)
-        if raw is None and settings.gemma_enabled and settings.gemma_api_url:
+        # Try Gemma first (free via OpenRouter)
+        if raw is None:
             try:
                 from app.services.extraction_service import _is_gemma_available, _gemma_request
                 if _is_gemma_available():
@@ -379,6 +365,20 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
                     raw, _, _ = _gemma_request(messages, max_tokens=256)
             except Exception as ge:
                 logger.warning("[compliance] Gemma format check failed for %s: %s", rule.rule_code, ge)
+
+        # Fallback: Gemini
+        if raw is None and settings.gemini_api_key:
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=settings.gemini_api_key)
+                model = genai.GenerativeModel("gemini-2.5-flash-preview-04-17")
+                response = model.generate_content(
+                    prompt,
+                    generation_config={"temperature": 0.1, "max_output_tokens": 256},
+                )
+                raw = response.text.strip()
+            except Exception as ge:
+                logger.warning("[compliance] Gemini format check failed for %s: %s", rule.rule_code, ge)
 
         if raw is None:
             raise ValueError("No LLM provider available for format check")

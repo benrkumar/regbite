@@ -433,9 +433,18 @@ def _gemma_request(messages: list, max_tokens: int = 8192) -> tuple:
 
     _log(f"[gemma-api] Sending request to {settings.gemma_model_name} via OpenRouter...")
     resp = httpx.post(url, headers=headers, json=payload, timeout=180.0)
-    if resp.status_code != 200:
-        _log(f"[gemma-api] HTTP {resp.status_code}: {resp.text[:500]}")
-    resp.raise_for_status()
+    if not resp.is_success:
+        try:
+            err_body = resp.json()
+            err_detail = (
+                err_body.get("error", {}).get("message")
+                or err_body.get("message")
+                or str(err_body)[:400]
+            )
+        except Exception:
+            err_detail = resp.text[:400]
+        _log(f"[gemma-api] HTTP {resp.status_code}: {err_detail}")
+        raise ValueError(f"OpenRouter HTTP {resp.status_code} — {err_detail}")
 
     data = resp.json()
     usage = data.get("usage", {})
