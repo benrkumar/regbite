@@ -34,6 +34,12 @@
       </button>
     </form>
     {% endif %}
+    <form method="post" action="/admin/llm/{{ kb_type }}/reset" style="margin:0;"
+          onsubmit="return confirm('⚠️ This will DELETE all {{ stats.documents }} documents and {{ stats.chunks }} chunks in the {{ kb_type }} KB, then re-seed from DB. This cannot be undone. Continue?')">
+      <button type="submit" class="adm-btn" style="background:#FEE2E2;color:#DC2626;border-color:#FECACA;">
+        🗑 Reset KB from Scratch
+      </button>
+    </form>
     <a href="/admin/llm/{{ kb_type }}/chat" class="adm-btn adm-btn-primary">💬 Test Chat →</a>
     <a href="/admin/llm" class="adm-btn">← Back</a>
   </div>

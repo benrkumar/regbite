@@ -145,6 +145,46 @@ async def llm_seed(kb_type: str, request: Request, db: Session = Depends(get_db)
     )
 
 
+@router.post("/llm/{kb_type}/reset")
+async def llm_reset_kb(kb_type: str, request: Request, db: Session = Depends(get_db)):
+    """Delete ALL documents + chunks for this KB, then re-seed from DB."""
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+    if kb_type not in _VALID_KB:
+        return RedirectResponse(url="/admin/llm", status_code=302)
+
+    from app.models import KBDocument, KBChunk, KBType
+    from app.services.llm_service import seed_regulations_kb, seed_products_kb, invalidate_cache
+
+    try:
+        # Hard-delete all chunks and documents for this KB
+        deleted_chunks = db.query(KBChunk).filter(KBChunk.kb_type == KBType(kb_type)).delete()
+        deleted_docs   = db.query(KBDocument).filter(KBDocument.kb_type == KBType(kb_type)).delete()
+        db.commit()
+        invalidate_cache(kb_type)
+
+        # Re-seed from DB immediately
+        if kb_type == "regulations":
+            result = seed_regulations_kb(db)
+        else:
+            result = seed_products_kb(db)
+
+        msg = (
+            f"Reset+complete:+deleted+{deleted_docs}+docs+{deleted_chunks}+chunks."
+            f"+Re-seeded+{result['new_documents']}+documents+from+DB."
+        )
+        typ = "success"
+    except Exception as exc:
+        msg = f"Reset+failed:+{str(exc)[:120].replace(' ', '+')}"
+        typ = "error"
+
+    return RedirectResponse(
+        url=f"/admin/llm/{kb_type}/train?msg={msg}&type={typ}",
+        status_code=302,
+    )
+
+
 @router.post("/llm/regulations/ingest-fssai")
 async def llm_ingest_fssai(request: Request, db: Session = Depends(get_db)):
     """Bulk-ingest all FSSAI regulation PDFs from the FSSAI/ folder.
