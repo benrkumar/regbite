@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""                     # sk-or-... from openrouter.ai/keys
     openrouter_api_url: str = "https://openrouter.ai/api/v1"
 
-    # Gemma 4 via OpenRouter
-    gemma_model_name: str = "google/gemma-4-27b-it"  # OpenRouter model ID
+    # Gemma via OpenRouter — use Browse OpenRouter Models on /admin/llm to find exact slug
+    gemma_model_name: str = "google/gemma-3-27b-it"  # OpenRouter model ID (override with GEMMA_MODEL_NAME)
     gemma_enabled: bool = True                        # killswitch — set False to skip Gemma
     gemma_visual_token_budget: int = 560              # 560=standard, 1120=detailed fine-print
 

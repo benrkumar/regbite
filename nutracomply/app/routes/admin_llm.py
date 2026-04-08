@@ -133,7 +133,7 @@ async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
             import anthropic as _ant
             client = _ant.Anthropic(api_key=settings.anthropic_api_key)
             client.messages.create(
-                model="claude-haiku-20240307",
+                model="claude-3-5-haiku-20241022",
                 max_tokens=5,
                 messages=[{"role": "user", "content": "Reply: OK"}],
             )
@@ -148,7 +148,7 @@ async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
         try:
             import google.generativeai as _genai
             _genai.configure(api_key=settings.gemini_api_key)
-            m = _genai.GenerativeModel("gemini-2.0-flash")
+            m = _genai.GenerativeModel("gemini-1.5-flash")
             m.generate_content("Reply: OK", generation_config={"max_output_tokens": 5})
             result["gemini"] = {"status": "ok"}
         except Exception as exc:
