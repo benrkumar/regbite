@@ -99,14 +99,14 @@ def invalidate_cache(kb_type: str | None = None) -> int:
 
 # Gemini model names (used when Gemma/OpenRouter is unavailable)
 _GEMINI_MODELS: dict[str, str] = {
-    "regulations": "gemini-2.5-pro-preview-03-25",
-    "products":    "gemini-2.5-flash-preview-04-17",
+    "regulations": "gemini-2.5-pro",
+    "products":    "gemini-2.5-flash",
 }
 
 # Display names shown in the chat UI header (reflects primary provider = Gemma 4)
 MODELS: dict[str, str] = {
-    "regulations": "google/gemma-4-27b-it",
-    "products":    "google/gemma-4-27b-it",
+    "regulations": "google/gemma-4-31b-it:free",
+    "products":    "google/gemma-4-31b-it:free",
 }
 
 CLAUDE_MODEL = "claude-sonnet-4-6"
@@ -152,7 +152,7 @@ def _expand_query(query: str, kb_type: str, gemini_api_key: str = "") -> str:
     try:
         import google.generativeai as genai
         genai.configure(api_key=gemini_api_key)
-        model = genai.GenerativeModel("gemini-2.5-flash-preview-04-17")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         prompt = (
             f"Expand this short search query into a detailed search query for {domain}. "
             f"Return ONLY the expanded query (one sentence, max 25 words). No preamble.\n"

@@ -148,7 +148,7 @@ async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
         try:
             import google.generativeai as _genai
             _genai.configure(api_key=settings.gemini_api_key)
-            m = _genai.GenerativeModel("gemini-2.5-flash-preview-04-17")
+            m = _genai.GenerativeModel("gemini-2.5-flash")
             m.generate_content("Reply: OK", generation_config={"max_output_tokens": 5})
             result["gemini"] = {"status": "ok"}
         except Exception as exc:
