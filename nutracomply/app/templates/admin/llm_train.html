@@ -664,39 +664,58 @@ function toggleAuditDetails() {
 }
 
 async function runAudit() {
-  _auditSetScanning();
+  // Cache element refs (null-safe throughout)
+  const $btn  = document.getElementById("auditBtn");
+  const $prog = document.getElementById("auditProgressWrap");
+  const $err  = document.getElementById("auditError");
+  const $sum  = document.getElementById("auditSummary");
+  const $det  = document.getElementById("auditDetails");
+  const $ts   = document.getElementById("auditTimestamp");
+
+  // Immediate visual feedback — user MUST see the button change
+  if ($btn)  { $btn.disabled = true; $btn.textContent = "Scanning…"; }
+  if ($prog) $prog.style.display = "block";
+  if ($err)  $err.style.display  = "none";
+  if ($sum)  $sum.style.display  = "none";
+  if ($det)  $det.style.display  = "none";
+
+  function _reset(errMsg) {
+    if ($prog) $prog.style.display = "none";
+    if ($btn)  { $btn.disabled = false; $btn.textContent = "Run Audit"; }
+    if (errMsg && $err) {
+      $err.style.cssText = "display:block;font-size:0.78rem;font-weight:600;color:#DC2626;background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;padding:0.5rem 0.65rem;margin-top:0.5rem;";
+      $err.textContent = errMsg;
+    } else if (errMsg) {
+      alert("KB Audit error: " + errMsg);
+    }
+  }
+
+  // Use AbortController (widely supported) instead of AbortSignal.timeout
+  const ctrl = new AbortController();
+  const tid  = setTimeout(() => ctrl.abort(), 30000);
+
   try {
-    const resp = await fetch(AUDIT_URL, { signal: AbortSignal.timeout(15000) });
-    if (!resp.ok) {
-      document.getElementById("auditProgressWrap").style.display = "none";
-      document.getElementById("auditError").style.display        = "block";
-      document.getElementById("auditError").textContent = `HTTP ${resp.status} — are you still logged in?`;
-      document.getElementById("auditBtn").disabled    = false;
-      document.getElementById("auditBtn").textContent = "Run Audit";
-      return;
-    }
+    const resp = await fetch(AUDIT_URL, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (!resp.ok) { _reset(`HTTP ${resp.status} — are you still logged in?`); return; }
     const d = await resp.json();
-    if (d.error) {
-      document.getElementById("auditProgressWrap").style.display = "none";
-      document.getElementById("auditError").style.display        = "block";
-      document.getElementById("auditError").textContent          = d.error;
-      document.getElementById("auditBtn").disabled    = false;
-      document.getElementById("auditBtn").textContent = "Run Audit";
-      return;
-    }
+    if (d.error) { _reset(d.error); return; }
 
     const healthColor = d.health_score >= 80 ? "#16A34A" : d.health_score >= 50 ? "#D97706" : "#DC2626";
     const problems    = d.zero_chunk_count + d.one_chunk_count;
 
     // Compact summary
-    document.getElementById("auditScoreBadge").style.color    = healthColor;
-    document.getElementById("auditScoreBadge").textContent    = `${d.health_score}%`;
-    document.getElementById("auditScoreLabel").textContent    = `health · ${d.total_docs} docs · avg ${d.avg_chunks} chunks`;
-    document.getElementById("auditTimestamp").textContent     = new Date().toLocaleTimeString();
-    document.getElementById("auditProblemLine").innerHTML     = problems > 0
+    const $badge  = document.getElementById("auditScoreBadge");
+    const $slabel = document.getElementById("auditScoreLabel");
+    const $prob   = document.getElementById("auditProblemLine");
+    const $reIdx  = document.getElementById("reindexBtn");
+    if ($badge)  { $badge.style.color = healthColor; $badge.textContent = `${d.health_score}%`; }
+    if ($slabel) $slabel.textContent = `health · ${d.total_docs} docs · avg ${d.avg_chunks} chunks`;
+    if ($ts)     $ts.textContent = new Date().toLocaleTimeString();
+    if ($prob)   $prob.innerHTML = problems > 0
       ? `<span style="color:#D97706;">${d.zero_chunk_count} empty · ${d.one_chunk_count} thin — click Re-index to fix</span>`
       : `<span style="color:#16A34A;">All documents adequately chunked</span>`;
-    document.getElementById("reindexBtn").style.display       = problems > 0 ? "inline-flex" : "none";
+    if ($reIdx)  $reIdx.style.display = problems > 0 ? "inline-flex" : "none";
 
     // Full details (hidden by default)
     const srcRows = Object.entries(d.source_stats).map(([src, s]) =>
@@ -727,7 +746,7 @@ async function runAudit() {
         </div>
       </div>`;
 
-    document.getElementById("auditDetails").innerHTML = `
+    if ($det) $det.innerHTML = `
       <div style="margin-bottom:0.5rem;">
         <div style="font-size:0.65rem;font-weight:600;color:#737373;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">Chunk distribution</div>
         ${histBars}
@@ -746,14 +765,15 @@ async function runAudit() {
       </div>
       ${problemList}`;
 
-    _auditSetDone();
+    if ($prog) $prog.style.display = "none";
+    if ($sum)  $sum.style.display  = "block";
+    if ($btn)  { $btn.disabled = false; $btn.textContent = "Run Audit"; }
 
   } catch (e) {
-    document.getElementById("auditProgressWrap").style.display = "none";
-    document.getElementById("auditError").style.display        = "block";
-    document.getElementById("auditError").textContent          = `Error: ${e.message}`;
-    document.getElementById("auditBtn").disabled    = false;
-    document.getElementById("auditBtn").textContent = "Run Audit";
+    clearTimeout(tid);
+    const msg = e.name === "AbortError" ? "Audit timed out (>30s) — try again" : `Error: ${e.message}`;
+    console.error("[KB Audit] failed:", e);
+    _reset(msg);
   }
 }
 
