@@ -210,7 +210,7 @@
 <div id="auditPanel" style="background:#fff;border:1px solid #EBEBEB;border-radius:10px;margin-bottom:1.25rem;overflow:hidden;">
   <div style="padding:0.85rem 1.2rem;border-bottom:1px solid #F5F5F5;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
     <div>
-      <span style="font-size:0.85rem;font-weight:600;color:#262626;">🔍 KB Health Audit</span>
+      <span style="font-size:0.85rem;font-weight:600;color:#262626;">KB Health Audit</span>
       <span style="font-size:0.72rem;color:#A3A3A3;margin-left:0.5rem;" id="auditTimestamp"></span>
     </div>
     <div style="display:flex;gap:0.5rem;align-items:center;">
@@ -220,8 +220,8 @@
       </button>
     </div>
   </div>
-  <div id="auditBody" style="padding:1rem 1.2rem;display:none;">
-    <!-- filled by JS -->
+  <div id="auditBody" style="padding:0.9rem 1.2rem;border-top:1px solid #F5F5F5;">
+    <div style="color:#A3A3A3;font-size:0.82rem;">Scanning KB…</div>
   </div>
 </div>
 
@@ -627,12 +627,15 @@ async function runAudit() {
   const body = document.getElementById("auditBody");
   btn.disabled = true;
   btn.textContent = "Auditing…";
-  body.style.display = "block";
   body.innerHTML = `<div style="color:#A3A3A3;font-size:0.82rem;">Scanning ${KB_TYPE} KB…</div>`;
 
   try {
     const resp = await fetch(AUDIT_URL);
-    const d    = await resp.json();
+    if (!resp.ok) {
+      body.innerHTML = `<div style="color:#DC2626;font-size:0.82rem;">Audit request failed (HTTP ${resp.status}). Are you still logged in?</div>`;
+      btn.disabled = false; btn.textContent = "Run Audit"; return;
+    }
+    const d = await resp.json();
 
     if (d.error) {
       body.innerHTML = `<div style="color:#DC2626;">Audit error: ${d.error}</div>`;
@@ -798,10 +801,10 @@ async function startReindex() {
   }
 }
 
-// Auto-run audit on page load
-window.addEventListener("DOMContentLoaded", () => {
-  setTimeout(runAudit, 500);
-});
+// Auto-run audit on page load + refresh stats every 30s
+runAudit();
+refreshDocCount();
+setInterval(refreshDocCount, 30000);
 
 /* ────────────────────────── Collapsible sections ─────────────────────────── */
 function toggleSection(id) {
