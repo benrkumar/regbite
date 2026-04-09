@@ -331,8 +331,10 @@ async function testProviders() {
       } else {
         badge.className  = "adm-badge badge-red";
         badge.textContent = "✗ Error";
-        const errText = info.error ? info.error.substring(0, 200) : `HTTP ${info.code || "error"}`;
-        result.innerHTML = `<span style="color:#DC2626;font-weight:600;">Error ${info.code || ""}:</span>
+        const errText = (info.error && info.error.trim())
+          ? info.error.substring(0, 200)
+          : (info.code ? `HTTP ${info.code}` : "Unknown error — check Railway logs");
+        result.innerHTML = `<span style="color:#DC2626;font-weight:600;">Error${info.code ? " " + info.code : ""}:</span>
           <br><span style="color:#737373;font-size:0.68rem;word-break:break-word;">${errText}</span>`;
       }
     });

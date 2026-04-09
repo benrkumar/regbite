@@ -134,7 +134,8 @@ async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
                     "model": settings.gemma_model_name,
                 }
         except Exception as exc:
-            result["gemma"] = {"status": "error", "error": str(exc)[:300], "model": settings.gemma_model_name}
+            err_msg = str(exc) or repr(exc)
+            result["gemma"] = {"status": "error", "error": err_msg[:300], "model": settings.gemma_model_name}
     else:
         result["gemma"] = {"status": "not_configured"}
 
@@ -144,13 +145,14 @@ async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
             import anthropic as _ant
             client = _ant.Anthropic(api_key=settings.anthropic_api_key)
             client.messages.create(
-                model="claude-sonnet-4-5",
+                model="claude-sonnet-4-6",
                 max_tokens=5,
                 messages=[{"role": "user", "content": "Reply: OK"}],
             )
             result["claude"] = {"status": "ok"}
         except Exception as exc:
-            result["claude"] = {"status": "error", "error": str(exc)[:200]}
+            err_msg = str(exc) or repr(exc)
+            result["claude"] = {"status": "error", "error": err_msg[:300]}
     else:
         result["claude"] = {"status": "not_configured"}
 
@@ -159,11 +161,12 @@ async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
         try:
             import google.generativeai as _genai
             _genai.configure(api_key=settings.gemini_api_key)
-            m = _genai.GenerativeModel("gemini-3.1-flash-lite-preview")
+            m = _genai.GenerativeModel("gemini-2.5-flash")
             m.generate_content("Reply: OK", generation_config={"max_output_tokens": 5})
             result["gemini"] = {"status": "ok"}
         except Exception as exc:
-            result["gemini"] = {"status": "error", "error": str(exc)[:200]}
+            err_msg = str(exc) or repr(exc)
+            result["gemini"] = {"status": "error", "error": err_msg[:300]}
     else:
         result["gemini"] = {"status": "not_configured"}
 
