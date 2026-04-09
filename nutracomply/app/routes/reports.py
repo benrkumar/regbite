@@ -2,10 +2,8 @@
 Compliance Reports Routes — generate, download, share
 """
 import io
-import os
-from datetime import datetime
 from fastapi import APIRouter, Request, Depends
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 from pathlib import Path
@@ -91,7 +89,6 @@ async def view_report(report_id: int, request: Request, db: Session = Depends(ge
     unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
 
     shared = request.query_params.get("shared", "")
-    token = request.query_params.get("token", "")
 
     return templates.TemplateResponse("report_detail.html", {
         "request": request,

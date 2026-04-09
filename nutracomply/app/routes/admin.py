@@ -190,7 +190,7 @@ async def admin_create_user(
     existing = db.query(User).filter(User.email == email).first()
     if existing:
         return RedirectResponse(
-            url=f"/admin/users?msg=Email+already+registered&type=error",
+            url="/admin/users?msg=Email+already+registered&type=error",
             status_code=302,
         )
 
@@ -262,7 +262,6 @@ async def admin_products(request: Request, db: Session = Depends(get_db)):
         return redirect
 
     # Get all users who have products, with their products
-    from sqlalchemy.orm import joinedload
 
     users_with_products = (
         db.query(User)

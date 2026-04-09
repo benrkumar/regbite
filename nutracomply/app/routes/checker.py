@@ -10,13 +10,12 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from pathlib import Path
-from typing import Optional
 
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
 from app.models import (
     Product, LabelVersion, ComplianceRule, ComplianceCheck, CheckResult,
-    Alert, AlertStatus, Severity
+    Alert, AlertStatus
 )
 from app.config import get_settings
 

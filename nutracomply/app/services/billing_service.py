@@ -5,7 +5,6 @@ error dicts rather than raising exceptions.
 """
 import hmac
 import hashlib
-import json
 from datetime import datetime
 from app.config import get_settings
 

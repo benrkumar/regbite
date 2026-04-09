@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean, DateTime,
     Float, ForeignKey, JSON, Enum as _SAEnumType, Index

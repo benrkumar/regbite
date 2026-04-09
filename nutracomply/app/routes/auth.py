@@ -71,8 +71,6 @@ def _seed_demo_products(user: User, db: Session):
         return
 
     # All rule codes
-    all_codes = list(rules.keys())
-
     demos = [
         {
             "name": "Omega-3 Fish Oil 1000mg",

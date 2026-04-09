@@ -2,7 +2,6 @@
 Quota enforcement service.
 Checks user's current plan limits and returns whether an action is allowed.
 """
-from app.database import SessionLocal
 from app.services.billing_service import PLANS
 
 

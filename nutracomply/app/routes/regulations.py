@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from fastapi import APIRouter, Request, Depends, Query
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session

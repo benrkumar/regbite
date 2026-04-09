@@ -1,9 +1,8 @@
 import io
-import os
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Request, Depends, UploadFile, File, Form, BackgroundTasks
+from fastapi import APIRouter, Request, Depends, UploadFile, File, BackgroundTasks
 from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -66,7 +65,7 @@ async def upload_label(
         client_ip = request.client.host if request.client else "unknown"
         allowed, retry_after = limiter.check("upload", client_ip, limit=30, window=3600)  # 30/hr
         if not allowed:
-            return RedirectResponse(url=f"/products?error=Upload+rate+limit+exceeded.", status_code=302)
+            return RedirectResponse(url="/products?error=Upload+rate+limit+exceeded.", status_code=302)
     except Exception:
         pass
 

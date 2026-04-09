@@ -56,7 +56,7 @@ CACHE_TTL_SECONDS = 3600  # 1 hour
 
 
 def _cache_key(kb_type: str, query: str) -> str:
-    return hashlib.md5(f"{kb_type}:{query.lower().strip()}".encode()).hexdigest()
+    return hashlib.md5(f"{kb_type}:{query.lower().strip()}".encode(), usedforsecurity=False).hexdigest()
 
 
 def _get_cached(kb_type: str, query: str):
@@ -1170,7 +1170,7 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
             if claude_error:
                 notes.append(f"Claude: {claude_error[:120]}")
             fallback_note = (
-                f"\n\n---\n*⚠️ Gemini answered as last resort. " + " | ".join(notes) + "*"
+                "\n\n---\n*⚠️ Gemini answered as last resort. " + " | ".join(notes) + "*"
                 if notes else ""
             )
             result = {

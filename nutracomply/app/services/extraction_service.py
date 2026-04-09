@@ -24,7 +24,6 @@ import base64
 import io
 import json
 import re
-import sys
 from pathlib import Path
 from typing import Optional
 from app.config import get_settings
@@ -338,7 +337,7 @@ def _call_claude_vision(image_path: str) -> tuple:
     # PDFs: render each page as a high-res image so Claude can read fine print
     # (native PDF support misses small text like FSSAI numbers and batch codes)
     if suffix == ".pdf":
-        _log(f"[extraction] Converting PDF to high-res images for Claude Vision...")
+        _log("[extraction] Converting PDF to high-res images for Claude Vision...")
         pages = _pdf_to_images(image_path, dpi=300)
         if not pages:
             _log("[extraction] PDF→image conversion returned no pages")
@@ -788,7 +787,7 @@ def _cross_check_with_ocr(extraction: dict, ocr_text: str) -> dict:
             start = mfg_match.start()
             snippet = text[start:start + 200].strip()
             extraction["manufacturer_details"] = snippet
-            _log(f"[ocr-crosscheck] Fixed manufacturer_details from OCR")
+            _log("[ocr-crosscheck] Fixed manufacturer_details from OCR")
 
     # Net quantity
     if not extraction.get("net_quantity"):
@@ -805,7 +804,7 @@ def _cross_check_with_ocr(extraction: dict, ocr_text: str) -> dict:
         srv_match = re.search(r'serving\s+size[:\s]*([^\n]{5,80})', text, re.IGNORECASE)
         if srv_match:
             extraction["serving_size"] = srv_match.group(1).strip()
-            _log(f"[ocr-crosscheck] Fixed serving_size from OCR")
+            _log("[ocr-crosscheck] Fixed serving_size from OCR")
 
     # Storage conditions
     if not extraction.get("storage_conditions"):
@@ -822,7 +821,7 @@ def _cross_check_with_ocr(extraction: dict, ocr_text: str) -> dict:
             else:
                 end = min(len(text), store_match.start() + 200)
             extraction["storage_conditions"] = text[start:end].strip()
-            _log(f"[ocr-crosscheck] Fixed storage_conditions from OCR")
+            _log("[ocr-crosscheck] Fixed storage_conditions from OCR")
 
     # Allergen declarations
     allergens = extraction.get("allergen_declarations", [])
@@ -831,7 +830,7 @@ def _cross_check_with_ocr(extraction: dict, ocr_text: str) -> dict:
             allerg_match = re.search(r'allergen[s]?[:\s]*([^\n]{5,200})', text, re.IGNORECASE)
             if allerg_match:
                 extraction["allergen_declarations"] = [allerg_match.group(1).strip()]
-                _log(f"[ocr-crosscheck] Fixed allergen_declarations from OCR")
+                _log("[ocr-crosscheck] Fixed allergen_declarations from OCR")
 
     # MRP
     if not extraction.get("mrp"):
@@ -846,10 +845,10 @@ def _cross_check_with_ocr(extraction: dict, ocr_text: str) -> dict:
         phone_match = re.search(r'(?:\+91[\s\-]?)?(?:\d[\s\-]?){10,12}', text)
         if email_match:
             extraction["customer_care_details"] = email_match.group(0)
-            _log(f"[ocr-crosscheck] Fixed customer_care_details (email) from OCR")
+            _log("[ocr-crosscheck] Fixed customer_care_details (email) from OCR")
         elif phone_match:
             extraction["customer_care_details"] = phone_match.group(0).strip()
-            _log(f"[ocr-crosscheck] Fixed customer_care_details (phone) from OCR")
+            _log("[ocr-crosscheck] Fixed customer_care_details (phone) from OCR")
 
     return extraction
 

@@ -3,7 +3,6 @@ Blog routes — public blog listing + post detail, and admin blog management.
 """
 import uuid
 from datetime import datetime
-from urllib.parse import quote
 
 from fastapi import APIRouter, Request, Depends, Form, UploadFile, File
 from fastapi.responses import RedirectResponse, JSONResponse
@@ -17,7 +16,7 @@ from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
 from app.models import (
     BlogPost, BlogCategory, BlogPostStatus,
-    Alert, AlertStatus, User,
+    Alert, AlertStatus,
 )
 
 # Allowed HTML tags/attributes for blog content (Quill.js output)
@@ -379,7 +378,7 @@ async def admin_blog_update(
     db.commit()
 
     return RedirectResponse(
-        url=f"/admin/blog?msg=Post+updated+successfully&type=success",
+        url="/admin/blog?msg=Post+updated+successfully&type=success",
         status_code=302,
     )
 
@@ -467,7 +466,7 @@ async def admin_blog_category_create(
     existing = db.query(BlogCategory).filter(BlogCategory.slug == slug).first()
     if existing:
         return RedirectResponse(
-            url=f"/admin/blog/categories?msg=Category+already+exists&type=error",
+            url="/admin/blog/categories?msg=Category+already+exists&type=error",
             status_code=302,
         )
 

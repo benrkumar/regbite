@@ -11,7 +11,6 @@ v2 improvements:
 
 import logging
 import re
-from typing import Optional
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -137,7 +136,7 @@ def _check_presence(rule: ComplianceRule, config: dict, extraction: dict):
         if value:
             return CheckResult.PASS, "true", f"'{field}' is confirmed present on label"
         else:
-            return CheckResult.FAIL, "false", f"Required statement not found on label"
+            return CheckResult.FAIL, "false", "Required statement not found on label"
 
     # Required text pattern within a list of strings (or any string field)
     required_text = config.get("required_text")
@@ -291,7 +290,7 @@ def _check_not_in_list(rule: ComplianceRule, config: dict, extraction: dict):
             str(found_banned),
             f"BANNED ingredient(s) detected: {found_banned}"
         )
-    return CheckResult.PASS, None, f"No banned ingredients from this rule detected"
+    return CheckResult.PASS, None, "No banned ingredients from this rule detected"
 
 
 def _check_value_in_list(rule: ComplianceRule, config: dict, extraction: dict):

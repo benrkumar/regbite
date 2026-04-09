@@ -9,7 +9,6 @@ regex alone cannot extract.
 This creates a self-improving loop: more Claude extractions → fewer future calls.
 """
 
-from typing import Optional
 from sqlalchemy.orm import Session
 
 

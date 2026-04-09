@@ -46,7 +46,6 @@ def _run_daily_scrape():
     try:
         from app.services.scraper import (
             scrape_fssai_pages, download_and_hash, classify_regulation_change,
-            suggest_rule_modifications,
         )
         from app.services.notification import send_regulation_change_email
 

@@ -9,7 +9,6 @@ Priority:
 
 import io
 from pathlib import Path
-from typing import Optional
 
 
 def extract_text_from_file(file_path: str) -> tuple[str, float]:
@@ -114,7 +113,6 @@ def _ocr_image_bytes(img_bytes: bytes) -> tuple[str, float]:
 def _preprocess_image(img):
     """Deskew and enhance contrast for better OCR accuracy."""
     import cv2
-    import numpy as np
 
     # Convert to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)

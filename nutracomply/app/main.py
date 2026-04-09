@@ -1,4 +1,3 @@
-import os
 import json
 import time
 import asyncio
@@ -344,7 +343,7 @@ def _seed_initial_data():
     from datetime import datetime
     from app.models import (
         ComplianceRule, Ingredient, RegulationChange, Severity, ChangeType,
-        RuleCategory, RuleFramework, RegulationStatus
+        RuleFramework, RegulationStatus
     )
     db = SessionLocal()
     try:
@@ -702,8 +701,6 @@ except Exception as _llm_err:
 
 # ── Exception handlers ─────────────────────────────────────────────────────────
 
-from fastapi.responses import HTMLResponse
-from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
@@ -751,7 +748,7 @@ async def dashboard(request: Request):
     from datetime import datetime
     from app.routes.auth import get_current_user_from_cookie
     from app.database import get_db
-    from app.models import Product, Alert, AlertStatus, LabelVersion, ComplianceCheck, LicenseRenewal, PublishedAlert, PublishedAlertStatus, Notification
+    from app.models import Product, Alert, AlertStatus, LabelVersion, LicenseRenewal, PublishedAlert, PublishedAlertStatus, Notification
     from sqlalchemy.orm import selectinload
 
     db = next(get_db())

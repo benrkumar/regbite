@@ -1,14 +1,12 @@
 """
 Compliance Report Service — generates unique report IDs and PDF reports.
 """
-import os
 import secrets
 from datetime import datetime, timedelta
-from pathlib import Path
 
 from sqlalchemy.orm import Session, joinedload
 
-from app.models import ComplianceReport, Product, LabelVersion, ComplianceCheck, CheckResult, Severity
+from app.models import ComplianceReport, Product, ComplianceCheck
 
 
 def _generate_report_ref(db: Session) -> str:
@@ -108,7 +106,6 @@ def generate_share_token(db: Session, report: "ComplianceReport") -> str:
 
 def generate_pdf_html(report: "ComplianceReport", product: "Product", brand_name=None, brand_color=None) -> str:
     """Generate the HTML content for a PDF report."""
-    from datetime import datetime
 
     _brand_name = brand_name or "RegBite"
     _brand_color = brand_color or "#6366f1"
@@ -130,8 +127,6 @@ def generate_pdf_html(report: "ComplianceReport", product: "Product", brand_name
     check_rows = ""
     for cr in (report.check_results or []):
         result = cr.get("result", "")
-        sev = cr.get("severity", "")
-
         if result == "PASS":
             result_icon = "&#10003;"
             result_color = "#16a34a"

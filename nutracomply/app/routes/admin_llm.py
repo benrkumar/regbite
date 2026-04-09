@@ -389,9 +389,9 @@ async def llm_reset_kb(kb_type: str, request: Request, db: Session = Depends(get
     try:
         if kb_type != "regulations" or subset == "all":
             # Full wipe for products KB or explicit "all"
-            deleted_chunks = db.query(KBChunk).filter(
+            db.query(KBChunk).filter(
                 KBChunk.kb_type == KBType(kb_type)).delete(synchronize_session=False)
-            deleted_docs = db.query(KBDocument).filter(
+            db.query(KBDocument).filter(
                 KBDocument.kb_type == KBType(kb_type)).delete(synchronize_session=False)
             db.commit()
         else:
@@ -415,13 +415,11 @@ async def llm_reset_kb(kb_type: str, request: Request, db: Session = Depends(get
                     pattern_filters,
                 ).all()
             ]
-            deleted_chunks = 0
-            deleted_docs   = 0
             if matching_doc_ids:
-                deleted_chunks = db.query(KBChunk).filter(
+                db.query(KBChunk).filter(
                     KBChunk.document_id.in_(matching_doc_ids)
                 ).delete(synchronize_session=False)
-                deleted_docs = db.query(KBDocument).filter(
+                db.query(KBDocument).filter(
                     KBDocument.id.in_(matching_doc_ids)
                 ).delete(synchronize_session=False)
             db.commit()
@@ -467,7 +465,7 @@ async def llm_ingest_fssai(request: Request, db: Session = Depends(get_db)):
             msg = result.get("message", "Unknown+error").replace(" ", "+")
             typ = "error"
         else:
-            msg = f"No+PDF+files+found+in+FSSAI+folder"
+            msg = "No+PDF+files+found+in+FSSAI+folder"
             typ = "warning"
     except Exception as exc:
         msg = f"FSSAI+ingest+failed:+{str(exc)[:120].replace(' ', '+')}"
@@ -1002,8 +1000,7 @@ def _run_benchmark_job(job_id: str, tmp_path: str, filename: str, file_size_kb: 
     from app.config import get_settings
     from app.services.extraction_service import (
         _is_gemma_available, _normalize_extraction, _calculate_confidence,
-        _call_gemma_vision, _call_gemma_text,
-        _call_claude_vision, _call_claude_text,
+        _call_gemma_vision, _call_claude_vision,
     )
     import time as _t
 
@@ -1102,8 +1099,7 @@ def _run_extraction_job(job_id: str, tmp_path: str, filename: str, file_size_kb:
     from app.config import get_settings
     from app.services.extraction_service import (
         _is_gemma_available, _normalize_extraction,
-        _calculate_confidence, _validate_extraction,
-        _call_gemma_vision, _call_gemma_text,
+        _calculate_confidence, _call_gemma_vision, _call_gemma_text,
         _call_claude_vision, _call_claude_text,
     )
 
@@ -1243,7 +1239,7 @@ async def label_extractor_upload(
     if redirect:
         return JSONResponse({"error": "Not authorised"}, status_code=401)
 
-    import tempfile, os
+    import tempfile
     job_id = str(uuid.uuid4())[:12]
     suffix = Path(file.filename).suffix.lower() if file.filename else ".jpg"
     content = await file.read()
@@ -1304,7 +1300,7 @@ async def label_extractor_benchmark_start(
     if redirect:
         return JSONResponse({"error": "Not authorised"}, status_code=401)
 
-    import tempfile, os
+    import tempfile
     job_id = str(uuid.uuid4())[:12]
     suffix = Path(file.filename).suffix.lower() if file.filename else ".jpg"
     content = await file.read()
