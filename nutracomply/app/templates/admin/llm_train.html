@@ -302,14 +302,14 @@
       <div id="auditProgressWrap" style="height:3px;background:#F0F0F0;border-radius:2px;margin-bottom:0.65rem;overflow:hidden;display:none;">
         <div id="auditProgressBar" style="height:100%;width:40%;background:#5A9A98;border-radius:2px;animation:audit-slide 1.2s ease-in-out infinite;"></div>
       </div>
-      {# Compact result — hidden until audit completes #}
-      <div id="auditSummary" style="display:none;margin-bottom:0.5rem;">
-        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
-          <span id="auditScoreBadge" style="font-size:1.1rem;font-weight:700;"></span>
-          <span id="auditScoreLabel" style="font-size:0.72rem;color:#737373;"></span>
+      {# Result card — prominent, hidden until audit completes #}
+      <div id="auditSummary" style="display:none;margin-bottom:0.6rem;background:#F8F8F8;border:1px solid #EBEBEB;border-radius:8px;padding:0.75rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.45rem;">
+          <span id="auditScoreBadge" style="font-size:1.6rem;font-weight:800;line-height:1;"></span>
+          <span id="auditScoreLabel" style="font-size:0.72rem;color:#737373;text-align:right;"></span>
         </div>
-        <div id="auditProblemLine" style="font-size:0.72rem;margin-bottom:0.4rem;"></div>
-        <button id="auditDetailsToggle" onclick="toggleAuditDetails()"
+        <div id="auditProblemLine" style="font-size:0.78rem;font-weight:600;margin-bottom:0.4rem;"></div>
+        <button type="button" id="auditDetailsToggle" onclick="toggleAuditDetails()"
           style="font-size:0.68rem;color:#5A9A98;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;">
           Show details ↓
         </button>
@@ -317,11 +317,11 @@
       {# Full details — collapsed by default #}
       <div id="auditDetails" style="display:none;margin-bottom:0.5rem;"></div>
       <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-        <button class="adm-btn" id="auditBtn" onclick="runAudit()" style="font-size:0.72rem;flex:1;">Run Audit</button>
-        <button class="adm-btn adm-btn-primary" id="reindexBtn" onclick="startReindex()"
+        <button type="button" class="adm-btn" id="auditBtn" onclick="runAudit()" style="font-size:0.72rem;flex:1;">Run Audit</button>
+        <button type="button" class="adm-btn adm-btn-primary" id="reindexBtn" onclick="startReindex()"
           style="font-size:0.72rem;flex:1;display:none;">↻ Re-index</button>
       </div>
-      <div id="auditError" style="display:none;font-size:0.72rem;color:#DC2626;margin-top:0.4rem;"></div>
+      <div id="auditError" style="display:none;font-size:0.78rem;font-weight:600;color:#DC2626;background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;padding:0.5rem 0.65rem;margin-top:0.5rem;"></div>
     </div>
 
     <div class="kb-action-section">
@@ -664,7 +664,8 @@ function toggleAuditDetails() {
 }
 
 async function runAudit() {
-  // Cache element refs (null-safe throughout)
+  console.log("[KB Audit] runAudit() called");
+  // Reset button to neutral state in case it's showing a previous score
   const $btn  = document.getElementById("auditBtn");
   const $prog = document.getElementById("auditProgressWrap");
   const $err  = document.getElementById("auditError");
@@ -672,8 +673,8 @@ async function runAudit() {
   const $det  = document.getElementById("auditDetails");
   const $ts   = document.getElementById("auditTimestamp");
 
-  // Immediate visual feedback — user MUST see the button change
-  if ($btn)  { $btn.disabled = true; $btn.textContent = "Scanning…"; }
+  // Immediate visual feedback — reset any previous score color + show scanning
+  if ($btn)  { $btn.disabled = true; $btn.textContent = "Scanning…"; $btn.style.cssText = ""; }
   if ($prog) $prog.style.display = "block";
   if ($err)  $err.style.display  = "none";
   if ($sum)  $sum.style.display  = "none";
@@ -681,7 +682,7 @@ async function runAudit() {
 
   function _reset(errMsg) {
     if ($prog) $prog.style.display = "none";
-    if ($btn)  { $btn.disabled = false; $btn.textContent = "Run Audit"; }
+    if ($btn)  { $btn.disabled = false; $btn.textContent = "Run Audit"; $btn.style.cssText = ""; }
     if (errMsg && $err) {
       $err.style.cssText = "display:block;font-size:0.78rem;font-weight:600;color:#DC2626;background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;padding:0.5rem 0.65rem;margin-top:0.5rem;";
       $err.textContent = errMsg;
@@ -766,8 +767,8 @@ async function runAudit() {
       ${problemList}`;
 
     if ($prog) $prog.style.display = "none";
-    if ($sum)  $sum.style.display  = "block";
-    if ($btn)  { $btn.disabled = false; $btn.textContent = "Run Audit"; }
+    if ($sum)  { $sum.style.display = "block"; $sum.style.animation = "none"; void $sum.offsetWidth; $sum.style.animation = ""; }
+    if ($btn)  { $btn.disabled = false; $btn.textContent = `✓ ${d.health_score}% health`; $btn.style.cssText += ";background:#EDFAF3;color:#3D7A50;border-color:#BBF7D0;"; }
 
   } catch (e) {
     clearTimeout(tid);
