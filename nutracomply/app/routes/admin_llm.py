@@ -121,6 +121,15 @@ async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
             resp = _httpx.post(url, headers=headers, json=payload, timeout=20.0)
             if resp.status_code == 200:
                 result["gemma"] = {"status": "ok", "model": settings.gemma_model_name}
+            elif resp.status_code == 429:
+                # Rate limited — model is configured correctly, just temporarily throttled
+                retry_after = resp.headers.get("Retry-After", "")
+                result["gemma"] = {
+                    "status": "rate_limited",
+                    "code": 429,
+                    "retry_after": retry_after,
+                    "model": settings.gemma_model_name,
+                }
             else:
                 try:
                     err = resp.json()

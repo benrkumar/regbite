@@ -430,16 +430,17 @@ def _gemma_request(messages: list, max_tokens: int = 8192) -> tuple:
         "temperature": 0.1,
     }
 
+    import time as _time
     _log(f"[gemma-api] Sending request to {settings.gemma_model_name} via OpenRouter...")
-    resp = httpx.post(url, headers=headers, json=payload, timeout=180.0)
 
-    # ── 429 Rate-limit: respect Retry-After, retry once ───────────────────
-    if resp.status_code == 429:
-        import time as _time
-        retry_after = min(int(resp.headers.get("Retry-After", "20")), 60)
-        _log(f"[gemma-api] Rate limited (429) — waiting {retry_after}s then retrying…")
-        _time.sleep(retry_after)
+    # ── Up to 3 attempts with exponential backoff on 429 ─────────────────
+    for _attempt in range(3):
         resp = httpx.post(url, headers=headers, json=payload, timeout=180.0)
+        if resp.status_code != 429:
+            break
+        wait = min(int(resp.headers.get("Retry-After", str(10 * 2 ** _attempt))), 60)
+        _log(f"[gemma-api] Rate limited (429) attempt {_attempt+1}/3 — waiting {wait}s…")
+        _time.sleep(wait)
 
     if not resp.is_success:
         try:

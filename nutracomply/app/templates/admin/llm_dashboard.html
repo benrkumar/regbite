@@ -328,6 +328,12 @@ async function testProviders() {
         badge.className  = "adm-badge badge-gray";
         badge.textContent = "Not set";
         result.innerHTML = `<span style="color:#A3A3A3;">No API key configured</span>`;
+      } else if (info.status === "rate_limited") {
+        badge.className  = "adm-badge badge-yellow";
+        badge.textContent = "⏱ Rate Limited";
+        const hint = info.retry_after ? ` — retry after ${info.retry_after}s` : "";
+        result.innerHTML = `<span style="color:#D97706;font-weight:600;">Temporarily throttled (429)${hint}</span>
+          <br><span style="color:#737373;font-size:0.68rem;">Model is configured correctly. OpenRouter is rate-limiting this key right now — try again in a minute.</span>`;
       } else {
         badge.className  = "adm-badge badge-red";
         badge.textContent = "✗ Error";
