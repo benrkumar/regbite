@@ -638,14 +638,13 @@ async def llm_audit(kb_type: str, request: Request, db: Session = Depends(get_db
     from sqlalchemy import func
 
     try:
-        # Only fetch the columns needed — avoids loading MB of content text
+        # Fetch only small metadata columns — no content, no TOAST reads
         rows = (
             db.query(
                 KBDocument.id,
                 KBDocument.title,
                 KBDocument.source,
                 KBDocument.chunk_count,
-                func.length(KBDocument.content).label("content_len"),
             )
             .filter(KBDocument.kb_type == KBType(kb_type),
                     KBDocument.is_active == True)
@@ -657,9 +656,9 @@ async def llm_audit(kb_type: str, request: Request, db: Session = Depends(get_db
             KBChunk.kb_type == KBType(kb_type)
         ).scalar() or 0
 
-        zero_chunk  = [r for r in rows if r.chunk_count == 0]
-        one_chunk   = [r for r in rows if r.chunk_count == 1 and (r.content_len or 0) > 1000]
-        good        = [r for r in rows if r.chunk_count >= 2]
+        zero_chunk = [r for r in rows if r.chunk_count == 0]
+        one_chunk  = [r for r in rows if r.chunk_count == 1]
+        good       = [r for r in rows if r.chunk_count >= 2]
 
         # Source breakdown
         source_stats: dict = {}
@@ -685,7 +684,7 @@ async def llm_audit(kb_type: str, request: Request, db: Session = Depends(get_db
 
         problem_docs = [
             {"id": r.id, "title": (r.title or "")[:80], "source": r.source,
-             "chunks": r.chunk_count, "content_len": r.content_len or 0}
+             "chunks": r.chunk_count, "content_len": 0}
             for r in (zero_chunk + one_chunk)[:50]
         ]
 

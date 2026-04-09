@@ -666,7 +666,7 @@ function toggleAuditDetails() {
 async function runAudit() {
   _auditSetScanning();
   try {
-    const resp = await fetch(AUDIT_URL);
+    const resp = await fetch(AUDIT_URL, { signal: AbortSignal.timeout(15000) });
     if (!resp.ok) {
       document.getElementById("auditProgressWrap").style.display = "none";
       document.getElementById("auditError").style.display        = "block";
@@ -794,8 +794,7 @@ async function startReindex() {
   }
 }
 
-// Auto-run on load + keep stats live every 30s
-runAudit();
+// Keep stats live every 30s — audit only runs on manual click
 refreshDocCount();
 setInterval(refreshDocCount, 30000);
 
