@@ -204,6 +204,7 @@
             {% if s.call_type == 'kb_chat' %}💬 KB Chat
             {% elif s.call_type == 'compliance_format' %}✅ Compliance Format
             {% elif s.call_type == 'query_expansion' %}🔍 Query Expansion
+            {% elif s.call_type == 'kb_pdf_extract' %}📄 KB PDF Extract
             {% else %}{{ s.call_type }}{% endif %}
           </td>
           <td style="padding:9px 8px;">

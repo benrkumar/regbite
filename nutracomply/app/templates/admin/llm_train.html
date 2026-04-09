@@ -88,6 +88,54 @@
 .fi-status.skipped  { color:#D97706; font-weight:600; }
 .fi-status.error    { color:#DC2626; font-weight:600; }
 
+/* ── Per-file progress bar ── */
+.fi-progress-wrap {
+  flex:1; height:3px; background:#F0F0F0; border-radius:2px; overflow:hidden;
+  display:none;
+}
+.fi-progress-bar {
+  height:100%; background:#649CC4; border-radius:2px;
+  transition:width 0.3s ease; width:0%;
+  animation:progressPulse 1.2s ease-in-out infinite;
+}
+@keyframes progressPulse {
+  0%,100% { opacity:1; }
+  50%      { opacity:0.6; }
+}
+
+/* ── Overall progress bar ── */
+.kb-overall-progress {
+  display:none; margin-bottom:0.75rem;
+  background:#F5F5F5; border-radius:6px; padding:0.65rem 0.85rem;
+  border:1px solid #EBEBEB;
+}
+.kb-overall-label {
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:0.75rem; color:#525252; margin-bottom:0.45rem;
+}
+.kb-overall-bar-wrap {
+  height:5px; background:#E5E5E5; border-radius:3px; overflow:hidden;
+}
+.kb-overall-bar {
+  height:100%; background:#5A9A98; border-radius:3px;
+  transition:width 0.4s ease;
+}
+
+/* ── File item entrance animation ── */
+@keyframes fiSlideIn {
+  from { opacity:0; transform:translateX(-8px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+.kb-file-item { animation:fiSlideIn 0.18s ease; }
+
+/* ── Upload complete banner ── */
+.kb-upload-done {
+  display:none; margin-top:0.75rem; padding:0.65rem 0.85rem;
+  background:#EDFAF3; border:1px solid #BBF7D0; border-radius:6px;
+  font-size:0.8rem; color:#3D7A50; font-weight:600;
+  animation:fiSlideIn 0.2s ease;
+}
+
 .kb-queue-footer { display:flex; align-items:center; justify-content:space-between; margin-top:0.75rem; gap:0.5rem; }
 .kb-queue-footer .summary { font-size:0.75rem; color:#737373; }
 
@@ -331,6 +379,20 @@
 
     {# File queue #}
     <div class="kb-file-queue" id="fileQueue">
+      {# Overall progress bar #}
+      <div class="kb-overall-progress" id="overallProgress">
+        <div class="kb-overall-label">
+          <span id="overallLabel">Uploading…</span>
+          <span id="overallPct" style="font-weight:700;color:#5A9A98;">0%</span>
+        </div>
+        <div class="kb-overall-bar-wrap">
+          <div class="kb-overall-bar" id="overallBar" style="width:0%"></div>
+        </div>
+      </div>
+
+      {# Done banner #}
+      <div class="kb-upload-done" id="uploadDoneBanner"></div>
+
       <div id="fileList"></div>
       <div class="kb-queue-footer">
         <span class="summary" id="queueSummary"></span>
@@ -596,12 +658,58 @@ function renderQueue() {
   const container = document.getElementById("fileQueue");
   const list      = document.getElementById("fileList");
   const summary   = document.getElementById("queueSummary");
+  const overallProg = document.getElementById("overallProgress");
+  const overallBar  = document.getElementById("overallBar");
+  const overallLbl  = document.getElementById("overallLabel");
+  const overallPct  = document.getElementById("overallPct");
+  const doneBanner  = document.getElementById("uploadDoneBanner");
 
   if (fileQueue.length === 0) {
     container.classList.remove("has-files");
+    overallProg.style.display = "none";
+    doneBanner.style.display  = "none";
     return;
   }
   container.classList.add("has-files");
+
+  // Overall progress
+  const total    = fileQueue.length;
+  const done     = fileQueue.filter(q => ["done","skipped","error"].includes(q.status)).length;
+  const uploading = fileQueue.some(q => q.status === "uploading");
+  const pct      = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  if (uploading || done > 0) {
+    overallProg.style.display = "block";
+    overallBar.style.width    = pct + "%";
+    overallPct.textContent    = pct + "%";
+    if (uploading) {
+      const cur = fileQueue.find(q => q.status === "uploading");
+      overallLbl.textContent = `Uploading ${cur ? cur.file.name : "…"} (${done}/${total})`;
+    } else if (done === total) {
+      overallLbl.textContent = `Complete — ${done} file${done !== 1 ? "s" : ""} processed`;
+    }
+  } else {
+    overallProg.style.display = "none";
+  }
+
+  // Done banner
+  const allSettled = fileQueue.length > 0 && fileQueue.every(q => ["done","skipped","error"].includes(q.status));
+  if (allSettled) {
+    const doneCount    = fileQueue.filter(q => q.status === "done").length;
+    const skippedCount = fileQueue.filter(q => q.status === "skipped").length;
+    const errorCount   = fileQueue.filter(q => q.status === "error").length;
+    const parts = [];
+    if (doneCount)    parts.push(`✓ ${doneCount} indexed`);
+    if (skippedCount) parts.push(`⊘ ${skippedCount} skipped`);
+    if (errorCount)   parts.push(`✗ ${errorCount} failed`);
+    doneBanner.style.display = "block";
+    doneBanner.style.background = errorCount > 0 ? "#FFF7ED" : "#EDFAF3";
+    doneBanner.style.borderColor = errorCount > 0 ? "#FED7AA" : "#BBF7D0";
+    doneBanner.style.color = errorCount > 0 ? "#92400E" : "#3D7A50";
+    doneBanner.textContent = parts.join("  ·  ");
+  } else {
+    doneBanner.style.display = "none";
+  }
 
   list.innerHTML = fileQueue.map((q, i) => {
     const size = q.file.size < 1024*1024
@@ -615,12 +723,14 @@ function renderQueue() {
       error:     `<span class="fi-status error" title="${q.msg}">✗ Failed</span>`,
     }[q.status];
     const canRemove = q.status !== "uploading";
+    const isUploading = q.status === "uploading";
     return `
-      <div class="kb-file-item">
+      <div class="kb-file-item" style="flex-wrap:wrap;gap:0.4rem;">
         <span class="fi-name" title="${q.file.name}">📄 ${q.file.name}</span>
         <span class="fi-size">${size}</span>
         ${statusHtml}
         ${canRemove ? `<span class="fi-remove" onclick="removeFile(${i})" title="Remove">✕</span>` : ""}
+        ${isUploading ? `<div class="fi-progress-wrap" style="display:block;flex-basis:100%;margin-top:-0.15rem;"><div class="fi-progress-bar" style="width:70%;"></div></div>` : ""}
       </div>`;
   }).join("");
 

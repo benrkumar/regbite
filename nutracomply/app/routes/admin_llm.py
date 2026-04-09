@@ -781,7 +781,7 @@ def _extract_pdf_content_for_kb(raw_bytes: bytes, filename: str) -> str:
                 tmp_path = tmp.name
             try:
                 from app.services.extraction_service import _call_gemma_vision, _normalize_extraction
-                result, _, _ = _call_gemma_vision(tmp_path)
+                result, _g_inp, _g_out = _call_gemma_vision(tmp_path)
                 if result:
                     # For KB we want the raw text, not structured JSON
                     # Convert extraction dict to readable text
@@ -791,6 +791,12 @@ def _extract_pdf_content_for_kb(raw_bytes: bytes, filename: str) -> str:
                             lines.append(f"{k}: {v}")
                     extracted = "\n".join(lines)
                     if len(extracted) > 50:
+                        try:
+                            from app.services.api_logger import log_api_call
+                            from app.config import get_settings as _gs2
+                            log_api_call("kb_pdf_extract", "gemma", _gs2().gemma_model_name, _g_inp, _g_out)
+                        except Exception:
+                            pass
                         return (text + "\n\n" + extracted).strip()[:50_000]
             finally:
                 try:
@@ -810,11 +816,16 @@ def _extract_pdf_content_for_kb(raw_bytes: bytes, filename: str) -> str:
                 tmp_path = tmp.name
             try:
                 from app.services.extraction_service import _call_claude_vision
-                result, _, _ = _call_claude_vision(tmp_path)
+                result, _c_inp, _c_out = _call_claude_vision(tmp_path)
                 if result:
                     lines = [f"{k}: {v}" for k, v in result.items() if v and not k.startswith("_")]
                     extracted = "\n".join(lines)
                     if len(extracted) > 50:
+                        try:
+                            from app.services.api_logger import log_api_call
+                            log_api_call("kb_pdf_extract", "claude", "claude-sonnet-4-6", _c_inp, _c_out)
+                        except Exception:
+                            pass
                         return (text + "\n\n" + extracted).strip()[:50_000]
             finally:
                 try:
