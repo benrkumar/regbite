@@ -885,8 +885,11 @@ function renderQueue() {
     overallBar.style.width    = pct + "%";
     overallPct.textContent    = pct + "%";
     if (uploading) {
-      const cur = fileQueue.find(q => q.status === "uploading");
-      overallLbl.textContent = `Uploading ${cur ? cur.file.name : "…"} (${done}/${total})`;
+      const activeItems = fileQueue.filter(q => q.status === "uploading");
+      const lbl = activeItems.length === 1
+        ? `Uploading ${activeItems[0].file.name} (${done}/${total})`
+        : `Uploading ${activeItems.length} files in parallel (${done}/${total})`;
+      overallLbl.textContent = lbl;
     } else if (done === total) {
       overallLbl.textContent = `Complete — ${done} file${done !== 1 ? "s" : ""} processed`;
     }
@@ -951,86 +954,91 @@ function renderQueue() {
   uploadBtn.textContent = pending > 0 ? `Upload ${pending} File${pending > 1 ? "s" : ""}` : "Upload All";
 }
 
+const UPLOAD_CONCURRENCY = 4;  // process this many files simultaneously
+
+async function _uploadOne(item) {
+  item.status = "uploading";
+  item.msg    = "";
+  item.note   = "Queuing…";
+  renderQueue();
+
+  try {
+    const fd = new FormData();
+    fd.append("file", item.file);
+    fd.append("title", "");
+
+    const resp = await fetch(UPLOAD_URL, { method: "POST", body: fd });
+    if (!resp.ok) {
+      item.status = "error";
+      item.msg    = `Server error ${resp.status}`;
+      renderQueue();
+      return;
+    }
+
+    const data = await resp.json();
+
+    if (data.status === "skipped") {
+      item.status = "skipped";
+      item.msg    = data.message || "Already indexed";
+      renderQueue();
+      return;
+    }
+    if (data.status === "error") {
+      item.status = "error";
+      item.msg    = data.error || "Upload failed";
+      renderQueue();
+      return;
+    }
+
+    // Background job — poll until done
+    if (data.job_id) {
+      const statusUrl = UPLOAD_URL + "/status/" + data.job_id;
+      let attempts = 0;
+      while (attempts < 120) {   // max 4 minutes
+        await new Promise(r => setTimeout(r, 2000));
+        attempts++;
+        const sData = await (await fetch(statusUrl)).json();
+
+        if (sData.status === "done") {
+          item.status = "done";
+          item.msg    = `${sData.chunks} chunk${sData.chunks !== 1 ? "s" : ""} indexed`;
+          renderQueue();
+          refreshDocCount();
+          return;
+        } else if (sData.status === "error") {
+          item.status = "error";
+          item.msg    = sData.error || "Processing failed";
+          renderQueue();
+          return;
+        } else {
+          item.note = sData.note || "Processing…";
+          renderQueue();
+        }
+      }
+      item.status = "error";
+      item.msg    = "Timed out waiting for processing";
+    }
+
+  } catch (e) {
+    item.status = "error";
+    item.msg    = e.message;
+  }
+  renderQueue();
+}
+
 async function uploadAll() {
   const pending = fileQueue.filter(q => q.status === "pending");
   if (!pending.length) return;
 
   document.getElementById("uploadAllBtn").disabled = true;
 
-  for (const item of pending) {
-    item.status = "uploading";
-    item.msg    = "";
-    renderQueue();
-
-    try {
-      const fd = new FormData();
-      fd.append("file", item.file);
-      fd.append("title", "");
-
-      const resp = await fetch(UPLOAD_URL, { method: "POST", body: fd });
-      if (!resp.ok) {
-        item.status = "error";
-        item.msg    = `Server error ${resp.status}`;
-        renderQueue();
-        continue;
-      }
-
-      const data = await resp.json();
-
-      // Synchronous outcomes (duplicate detection)
-      if (data.status === "skipped") {
-        item.status = "skipped";
-        item.msg    = data.message || "Already indexed";
-        renderQueue();
-        continue;
-      }
-      if (data.status === "error") {
-        item.status = "error";
-        item.msg    = data.error || "Upload failed";
-        renderQueue();
-        continue;
-      }
-
-      // Background job — poll until done
-      if (data.job_id) {
-        const statusUrl = UPLOAD_URL + "/status/" + data.job_id;
-        let attempts = 0;
-        while (attempts < 120) {   // max 4 minutes (120 × 2s)
-          await new Promise(r => setTimeout(r, 2000));
-          attempts++;
-          const sResp = await fetch(statusUrl);
-          const sData = await sResp.json();
-
-          if (sData.status === "done") {
-            item.status = "done";
-            item.msg    = `${sData.chunks} chunk${sData.chunks !== 1 ? "s" : ""} indexed`;
-            break;
-          } else if (sData.status === "error") {
-            item.status = "error";
-            item.msg    = sData.error || "Processing failed";
-            break;
-          } else {
-            // Still processing — show live note
-            item.note = sData.note || "Processing…";
-            renderQueue();
-          }
-        }
-        if (item.status === "uploading") {
-          item.status = "error";
-          item.msg    = "Timed out waiting for processing";
-        }
-      }
-
-    } catch (e) {
-      item.status = "error";
-      item.msg    = e.message;
-    }
-    renderQueue();
-    // Refresh live doc count after each file
-    refreshDocCount();
+  // Process in parallel batches of UPLOAD_CONCURRENCY
+  for (let i = 0; i < pending.length; i += UPLOAD_CONCURRENCY) {
+    const batch = pending.slice(i, i + UPLOAD_CONCURRENCY);
+    await Promise.all(batch.map(_uploadOne));
   }
 
-  // Final refresh of doc count + table
+  // Final doc count refresh
   refreshDocCount();
 }
 

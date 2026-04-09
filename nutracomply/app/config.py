@@ -52,9 +52,9 @@ class Settings(BaseSettings):
     # Admin
     admin_email: str = ""
 
-    # Database pool
-    db_pool_size: int = 5
-    db_max_overflow: int = 10
+    # Database pool — sized for parallel KB uploads (4 concurrent) + web requests
+    db_pool_size: int = 10
+    db_max_overflow: int = 20
     db_pool_timeout: int = 15
     db_statement_timeout: int = 30000  # ms
 
