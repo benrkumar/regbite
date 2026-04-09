@@ -298,8 +298,8 @@
         <span>KB Health</span>
         <span id="auditTimestamp" style="font-size:0.6rem;color:#A3A3A3;font-weight:400;text-transform:none;letter-spacing:0;"></span>
       </div>
-      {# Indeterminate progress bar — visible while scanning #}
-      <div id="auditProgressWrap" style="height:3px;background:#F0F0F0;border-radius:2px;margin-bottom:0.65rem;overflow:hidden;">
+      {# Indeterminate progress bar — only visible while scanning #}
+      <div id="auditProgressWrap" style="height:3px;background:#F0F0F0;border-radius:2px;margin-bottom:0.65rem;overflow:hidden;display:none;">
         <div id="auditProgressBar" style="height:100%;width:40%;background:#5A9A98;border-radius:2px;animation:audit-slide 1.2s ease-in-out infinite;"></div>
       </div>
       {# Compact result — hidden until audit completes #}
