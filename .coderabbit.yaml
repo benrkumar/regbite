@@ -1,0 +1,93 @@
+# CodeRabbit configuration for RegBite (NutraComply)
+# AI-powered FSSAI compliance platform — FastAPI + Jinja2 + PostgreSQL
+
+reviews:
+  # Review every PR — including draft PRs
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: true
+    base_branches:
+      - main
+
+  # Path-specific instructions
+  path_instructions:
+    - path: "nutracomply/app/services/compliance_engine.py"
+      instructions: |
+        This is the core compliance engine. It checks nutraceutical labels against
+        64 FSSAI/Legal Metrology/AYUSH rules. Pay close attention to:
+        - Category filtering logic (AYUSH rules should only apply to Ayurvedic/ASU products)
+        - Rule severity levels (CRITICAL/HIGH/MEDIUM/LOW) are applied correctly
+        - Any change to scoring logic could affect compliance outcomes for real products
+        - LLM calls in _check_format_llm() must have fallbacks if the model fails
+
+    - path: "nutracomply/app/services/llm_service.py"
+      instructions: |
+        RAG service for Regulations and Products knowledge bases.
+        - chunk_text() changes affect how all 700+ regulation documents are indexed
+        - Any new LLM call must be logged via api_logger.log_api_call() for cost tracking
+        - Cache invalidation (invalidate_cache) must be called after any KB mutation
+        - Thread safety: reindex_kb() and _ingest_document() are called from background threads
+
+    - path: "nutracomply/app/routes/admin_llm.py"
+      instructions: |
+        All routes are admin-only. Background job pattern is critical here:
+        - POST endpoints must return job_id immediately (Railway has 30s timeout)
+        - Background threads must use their own SessionLocal(), never share the request's db session
+        - _UPLOAD_JOBS and _REINDEX_JOBS are in-memory dicts — not persisted across restarts
+
+    - path: "nutracomply/app/routes/**.py"
+      instructions: |
+        FastAPI routes with Jinja2 SSR. Check for:
+        - All admin routes must call _require_admin() before any logic
+        - Flash messages use URL query params (?msg=...&type=...) — user-controlled, check for XSS
+        - No raw SQL — use SQLAlchemy ORM only
+        - Background tasks that open DB sessions must call db.close() in a finally block
+
+    - path: "nutracomply/app/models.py"
+      instructions: |
+        SQLAlchemy models. Any new model or column needs a migration block in main.py
+        (the v{N} migration pattern). Check that indexes are added for columns used in
+        WHERE clauses or ORDER BY.
+
+    - path: "nutracomply/app/templates/**/*.html"
+      instructions: |
+        Jinja2 templates with inline JS. Design theme is monochrome Japanese minimal
+        (Noto Sans JP, #111111 ink, #F8F8F8 bg, #EBEBEB borders).
+        - Check for unescaped user content that could cause XSS
+        - Fetch calls should handle non-OK responses and show user-facing error messages
+        - Polling loops must have a max-attempts guard to prevent infinite loops
+
+    - path: "nutracomply/app/services/extraction_service.py"
+      instructions: |
+        Label image extraction via Gemini Vision + Claude Vision + local heuristics.
+        - Gemma/OpenRouter calls must handle 429 (rate limit) with retry logic
+        - Extraction results are cached by content hash — cache invalidation must be correct
+        - Confidence scores drive caching decisions (threshold: 0.85)
+
+    - path: "nutracomply/app/services/api_logger.py"
+      instructions: |
+        Cost tracking for all LLM API calls. This function must NEVER raise —
+        failures should be silently swallowed so they don't break the main request flow.
+
+  # Global review instructions
+  instructions: |
+    This is RegBite, a FastAPI + PostgreSQL compliance SaaS deployed on Railway.
+    Key context:
+    - Railway enforces a 30s HTTP timeout — any slow operation must use the
+      background job pattern (POST returns job_id, GET polls status)
+    - All LLM calls (Gemini, Claude, Gemma via OpenRouter) must have error handling
+      and cost logging via app/services/api_logger.py
+    - The compliance rules (64 total) live in app/data/compliance_rules.json —
+      changes to rule logic directly affect customer compliance reports
+    - Authentication uses JWT cookies — admin check is user.is_admin flag
+    - No ORM-bypass raw SQL queries
+
+chat:
+  auto_reply: true
+
+language: "en-US"
