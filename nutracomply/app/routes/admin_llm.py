@@ -24,6 +24,9 @@ _EXTRACTION_JOBS: dict = {}   # job_id → state dict
 # ── Benchmark job store ──────────────────────────────────────────────────────
 _BENCHMARK_JOBS: dict = {}   # job_id → {done, results: list, error, started_at}
 
+# ── KB upload job store ──────────────────────────────────────────────────────
+_UPLOAD_JOBS: dict = {}   # job_id → {status, filename, chunks, error, started_at}
+
 router    = APIRouter(prefix="/admin")
 templates = Jinja2Templates(
     directory=str(Path(__file__).parent.parent / "templates")
@@ -476,6 +479,52 @@ async def llm_ingest_fssai(request: Request, db: Session = Depends(get_db)):
     )
 
 
+def _run_upload_job(job_id: str, kb_type: str, raw_bytes: bytes,
+                    filename: str, display_title: str, source_key: str,
+                    content_hash: str, user_id: int):
+    """Background thread: extract + ingest one KB document."""
+    from app.database import SessionLocal
+    from app.services.llm_service import _ingest_document
+    db2 = SessionLocal()
+    try:
+        _UPLOAD_JOBS[job_id]["note"] = "Extracting text…"
+        if filename.lower().endswith(".pdf"):
+            content = _extract_pdf_content_for_kb(raw_bytes, filename)
+        else:
+            content = raw_bytes.decode("utf-8", errors="replace")
+
+        content = content.strip()
+        if not content:
+            _UPLOAD_JOBS[job_id] = {
+                "status": "error", "filename": filename,
+                "error": "File appears empty or unreadable after extraction",
+            }
+            return
+
+        _UPLOAD_JOBS[job_id]["note"] = "Chunking and indexing…"
+        doc = _ingest_document(
+            db2, kb_type,
+            title=display_title,
+            source=source_key,
+            content=content,
+            uploaded_by_id=user_id,
+            content_hash=content_hash,
+        )
+        _UPLOAD_JOBS[job_id] = {
+            "status": "done",
+            "filename": filename,
+            "chunks": doc.chunk_count,
+        }
+    except Exception as exc:
+        _UPLOAD_JOBS[job_id] = {
+            "status": "error",
+            "filename": filename,
+            "error": str(exc)[:200],
+        }
+    finally:
+        db2.close()
+
+
 @router.post("/llm/{kb_type}/upload")
 async def llm_upload(
     kb_type: str,
@@ -486,13 +535,12 @@ async def llm_upload(
 ):
     user, redirect = _require_admin(request, db)
     if redirect:
-        return redirect
+        return JSONResponse({"status": "error", "error": "Not authorised"}, status_code=401)
     if kb_type not in _VALID_KB:
-        return RedirectResponse(url="/admin/llm", status_code=302)
+        return JSONResponse({"status": "error", "error": "Invalid KB type"}, status_code=400)
 
-    from app.services.llm_service import _ingest_document
     from app.models import KBDocument, KBType
-    import hashlib, io as _io
+    import hashlib, threading
 
     try:
         filename = file.filename or "upload"
@@ -500,70 +548,82 @@ async def llm_upload(
         raw_bytes = await file.read()
 
         if not raw_bytes:
-            raise ValueError("File is empty")
+            return JSONResponse({"status": "error", "error": "File is empty"})
 
-        # ── Duplicate detection ──────────────────────────────────────────────
+        # ── Duplicate detection (fast — done synchronously) ──────────────────
         content_hash = hashlib.sha256(raw_bytes).hexdigest()
         source_key   = f"upload:{filename}"
 
-        # 1) Identical content (same file, possibly renamed)
         hash_dupe = db.query(KBDocument.id, KBDocument.title).filter(
-            KBDocument.kb_type    == KBType(kb_type),
+            KBDocument.kb_type      == KBType(kb_type),
             KBDocument.content_hash == content_hash,
-            KBDocument.is_active  == True,
+            KBDocument.is_active    == True,
         ).first()
         if hash_dupe:
-            safe_name = filename.replace(' ', '+')
-            safe_orig = (hash_dupe.title or "").replace(' ', '+')[:60]
-            msg = f"Skipped+{safe_name}+—+identical+content+already+indexed+as+{safe_orig}"
-            return RedirectResponse(
-                url=f"/admin/llm/{kb_type}/train?msg={msg}&type=skipped",
-                status_code=302,
-            )
+            return JSONResponse({
+                "status": "skipped",
+                "filename": filename,
+                "message": f"Already indexed as: {(hash_dupe.title or filename)[:80]}",
+            })
 
-        # 2) Same filename already in KB
         name_dupe = db.query(KBDocument.id).filter(
             KBDocument.kb_type   == KBType(kb_type),
             KBDocument.source    == source_key,
             KBDocument.is_active == True,
         ).first()
         if name_dupe:
-            safe_name = filename.replace(' ', '+')
-            msg = f"Skipped+{safe_name}+—+already+indexed+(same+filename)"
-            return RedirectResponse(
-                url=f"/admin/llm/{kb_type}/train?msg={msg}&type=skipped",
-                status_code=302,
-            )
-        # ────────────────────────────────────────────────────────────────────
+            return JSONResponse({
+                "status": "skipped",
+                "filename": filename,
+                "message": "Already indexed (same filename)",
+            })
 
-        if filename.lower().endswith(".pdf"):
-            content = _extract_pdf_content_for_kb(raw_bytes, filename)
-        else:
-            content = raw_bytes.decode("utf-8", errors="replace")
+        # ── Start background extraction + ingestion ───────────────────────────
+        job_id = str(uuid.uuid4())[:12]
+        _UPLOAD_JOBS[job_id] = {
+            "status": "processing",
+            "filename": filename,
+            "note": "Starting…",
+        }
+        threading.Thread(
+            target=_run_upload_job,
+            args=(job_id, kb_type, raw_bytes, filename,
+                  display_title, source_key, content_hash, user.id),
+            daemon=True,
+        ).start()
 
-        content = content.strip()
-        if not content:
-            raise ValueError("File appears to be empty or unreadable after extraction")
-
-        doc = _ingest_document(
-            db, kb_type,
-            title=display_title,
-            source=source_key,
-            content=content,
-            uploaded_by_id=user.id,
-            content_hash=content_hash,
-        )
-        msg = f"Uploaded+and+indexed+{doc.chunk_count}+chunks+from+{filename.replace(' ', '+')}"
-        typ = "success"
+        return JSONResponse({"status": "processing", "job_id": job_id, "filename": filename})
 
     except Exception as exc:
-        msg = f"Upload+failed:+{str(exc)[:120].replace(' ', '+')}"
-        typ = "error"
+        return JSONResponse({"status": "error", "error": str(exc)[:200]})
 
-    return RedirectResponse(
-        url=f"/admin/llm/{kb_type}/train?msg={msg}&type={typ}",
-        status_code=302,
-    )
+
+@router.get("/llm/{kb_type}/upload/status/{job_id}")
+async def llm_upload_status(kb_type: str, job_id: str, request: Request,
+                             db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+    job = _UPLOAD_JOBS.get(job_id)
+    if not job:
+        return JSONResponse({"status": "not_found"})
+    return JSONResponse(job)
+
+
+@router.get("/llm/{kb_type}/doc-count")
+async def llm_doc_count(kb_type: str, request: Request, db: Session = Depends(get_db)):
+    """Return current doc + chunk counts for live refresh without page reload."""
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+    from app.models import KBDocument, KBChunk, KBType
+    try:
+        docs   = db.query(KBDocument).filter(KBDocument.kb_type == KBType(kb_type),
+                                              KBDocument.is_active == True).count()
+        chunks = db.query(KBChunk).filter(KBChunk.kb_type == KBType(kb_type)).count()
+        return JSONResponse({"docs": docs, "chunks": chunks})
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)[:200]}, status_code=500)
 
 
 @router.post("/llm/{kb_type}/documents/{doc_id}/delete")
@@ -748,16 +808,20 @@ def _extract_pdf_content_for_kb(raw_bytes: bytes, filename: str) -> str:
     """Extract text from a PDF for KB ingestion.
 
     Priority:
-    1. pdfplumber — fast, free, works for digital PDFs
-    2. Gemma 4 Vision — for scanned/image PDFs via OpenRouter
-    3. Claude Vision — paid fallback
+    1. pdfplumber — fast, free, handles all digital/text PDFs (FSSAI regulations are always digital)
+    2. Claude Vision — paid fallback for truly scanned/image-only PDFs (no text layer)
+
+    NOTE: Gemma Vision is intentionally skipped here — regulation PDFs are digital text
+    docs where pdfplumber excels. Gemma Vision is reserved for label image extraction
+    and would cause unnecessary rate-limit (429) errors during bulk KB uploads.
+
     Returns extracted text (may be empty string if all fail).
     """
     import io, tempfile, os
     from app.config import get_settings
     cfg = get_settings()
 
-    # ── Step 1: pdfplumber (digital PDFs) ──────────────────────────────────
+    # ── Step 1: pdfplumber (fast, works for all digital PDFs) ─────────────
     text = ""
     try:
         import pdfplumber
@@ -767,46 +831,12 @@ def _extract_pdf_content_for_kb(raw_bytes: bytes, filename: str) -> str:
     except Exception:
         pass
 
-    # If we got reasonable text (>100 chars), use it directly
-    if len(text) > 100:
+    # Any reasonable text → use it immediately (regulation PDFs always have text)
+    if len(text) > 50:
         return text[:50_000]  # cap at 50K chars for KB
 
-    # ── Step 2: Gemma 4 Vision (scanned PDFs) ─────────────────────────────
-    from app.services.extraction_service import _is_gemma_available
-    if _is_gemma_available():
-        try:
-            # Write to temp file for the vision function
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-                tmp.write(raw_bytes)
-                tmp_path = tmp.name
-            try:
-                from app.services.extraction_service import _call_gemma_vision, _normalize_extraction
-                result, _g_inp, _g_out = _call_gemma_vision(tmp_path)
-                if result:
-                    # For KB we want the raw text, not structured JSON
-                    # Convert extraction dict to readable text
-                    lines = []
-                    for k, v in result.items():
-                        if v and not k.startswith("_"):
-                            lines.append(f"{k}: {v}")
-                    extracted = "\n".join(lines)
-                    if len(extracted) > 50:
-                        try:
-                            from app.services.api_logger import log_api_call
-                            from app.config import get_settings as _gs2
-                            log_api_call("kb_pdf_extract", "gemma", _gs2().gemma_model_name, _g_inp, _g_out)
-                        except Exception:
-                            pass
-                        return (text + "\n\n" + extracted).strip()[:50_000]
-            finally:
-                try:
-                    os.unlink(tmp_path)
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-    # ── Step 3: Claude Vision ──────────────────────────────────────────────
+    # ── Step 2: Claude Vision (scanned/image-only PDFs only) ──────────────
+    # Only reached if pdfplumber found < 50 chars (truly image PDF, very rare for regulations)
     if cfg.anthropic_api_key:
         try:
             import os as _os

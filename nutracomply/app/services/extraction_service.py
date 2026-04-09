@@ -433,6 +433,15 @@ def _gemma_request(messages: list, max_tokens: int = 8192) -> tuple:
 
     _log(f"[gemma-api] Sending request to {settings.gemma_model_name} via OpenRouter...")
     resp = httpx.post(url, headers=headers, json=payload, timeout=180.0)
+
+    # ── 429 Rate-limit: respect Retry-After, retry once ───────────────────
+    if resp.status_code == 429:
+        import time as _time
+        retry_after = min(int(resp.headers.get("Retry-After", "20")), 60)
+        _log(f"[gemma-api] Rate limited (429) — waiting {retry_after}s then retrying…")
+        _time.sleep(retry_after)
+        resp = httpx.post(url, headers=headers, json=payload, timeout=180.0)
+
     if not resp.is_success:
         try:
             err_body = resp.json()

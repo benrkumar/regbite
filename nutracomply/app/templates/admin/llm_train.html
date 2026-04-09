@@ -715,12 +715,13 @@ function renderQueue() {
     const size = q.file.size < 1024*1024
       ? `${(q.file.size/1024).toFixed(0)} KB`
       : `${(q.file.size/1024/1024).toFixed(1)} MB`;
+    const uploadNote = q.note || "Processing…";
     const statusHtml = {
       pending:   `<span class="fi-status pending">Queued</span>`,
-      uploading: `<span class="fi-status uploading">⏳ Uploading…</span>`,
-      done:      `<span class="fi-status done">✓ Done</span>`,
+      uploading: `<span class="fi-status uploading" title="${uploadNote}">⏳ ${uploadNote}</span>`,
+      done:      `<span class="fi-status done" title="${q.msg}">✓ ${q.msg || 'Indexed'}</span>`,
       skipped:   `<span class="fi-status skipped" title="${q.msg}">⊘ Already indexed</span>`,
-      error:     `<span class="fi-status error" title="${q.msg}">✗ Failed</span>`,
+      error:     `<span class="fi-status error" title="${q.msg}">✗ ${q.msg ? q.msg.slice(0,40) : 'Failed'}</span>`,
     }[q.status];
     const canRemove = q.status !== "uploading";
     const isUploading = q.status === "uploading";
@@ -756,42 +757,111 @@ async function uploadAll() {
 
   for (const item of pending) {
     item.status = "uploading";
+    item.msg    = "";
     renderQueue();
 
     try {
       const fd = new FormData();
       fd.append("file", item.file);
-      fd.append("title", "");  // use filename as title
+      fd.append("title", "");
 
       const resp = await fetch(UPLOAD_URL, { method: "POST", body: fd });
-
-      // The route returns a redirect (302), fetch follows it.
-      // If the final URL contains "type=success" or "type=error" we parse it.
-      const finalUrl = resp.url || "";
-      if (finalUrl.includes("type=error")) {
-        const msg = new URL(finalUrl).searchParams.get("msg") || "Upload failed";
+      if (!resp.ok) {
         item.status = "error";
-        item.msg    = decodeURIComponent(msg.replace(/\+/g, " "));
-      } else if (finalUrl.includes("type=skipped")) {
-        const msg = new URL(finalUrl).searchParams.get("msg") || "Already indexed";
-        item.status = "skipped";
-        item.msg    = decodeURIComponent(msg.replace(/\+/g, " "));
-      } else {
-        item.status = "done";
+        item.msg    = `Server error ${resp.status}`;
+        renderQueue();
+        continue;
       }
+
+      const data = await resp.json();
+
+      // Synchronous outcomes (duplicate detection)
+      if (data.status === "skipped") {
+        item.status = "skipped";
+        item.msg    = data.message || "Already indexed";
+        renderQueue();
+        continue;
+      }
+      if (data.status === "error") {
+        item.status = "error";
+        item.msg    = data.error || "Upload failed";
+        renderQueue();
+        continue;
+      }
+
+      // Background job — poll until done
+      if (data.job_id) {
+        const statusUrl = UPLOAD_URL + "/status/" + data.job_id;
+        let attempts = 0;
+        while (attempts < 120) {   // max 4 minutes (120 × 2s)
+          await new Promise(r => setTimeout(r, 2000));
+          attempts++;
+          const sResp = await fetch(statusUrl);
+          const sData = await sResp.json();
+
+          if (sData.status === "done") {
+            item.status = "done";
+            item.msg    = `${sData.chunks} chunk${sData.chunks !== 1 ? "s" : ""} indexed`;
+            break;
+          } else if (sData.status === "error") {
+            item.status = "error";
+            item.msg    = sData.error || "Processing failed";
+            break;
+          } else {
+            // Still processing — show live note
+            item.note = sData.note || "Processing…";
+            renderQueue();
+          }
+        }
+        if (item.status === "uploading") {
+          item.status = "error";
+          item.msg    = "Timed out waiting for processing";
+        }
+      }
+
     } catch (e) {
       item.status = "error";
       item.msg    = e.message;
     }
     renderQueue();
+    // Refresh live doc count after each file
+    refreshDocCount();
   }
 
-  // If all done, reload to refresh the documents table after a brief pause
-  const allDone   = fileQueue.every(q => q.status !== "pending" && q.status !== "uploading");
-  const anyDone   = fileQueue.some(q => q.status === "done");
-  if (allDone && anyDone) {
-    setTimeout(() => window.location.reload(), 1200);
-  }
+  // Final refresh of doc count + table
+  refreshDocCount();
+}
+
+async function refreshDocCount() {
+  try {
+    const resp = await fetch(`/admin/llm/${KB_TYPE}/doc-count`);
+    const data = await resp.json();
+    if (data.docs !== undefined) {
+      // Update stat chips without page reload
+      document.querySelectorAll(".kb-stat-chip").forEach(chip => {
+        const lbl = chip.querySelector(".lbl");
+        if (lbl && lbl.textContent.trim() === "KB Documents") {
+          chip.querySelector(".val").textContent = data.docs;
+        }
+        if (lbl && lbl.textContent.trim() === "Indexed Chunks") {
+          chip.querySelector(".val").textContent = data.chunks;
+        }
+      });
+      // Show refresh link for docs table
+      const banner = document.getElementById("uploadDoneBanner");
+      if (banner && banner.style.display !== "none") {
+        if (!document.getElementById("reloadDocsLink")) {
+          const link = document.createElement("a");
+          link.id = "reloadDocsLink";
+          link.href = "#";
+          link.style.cssText = "margin-left:1rem;font-size:0.75rem;color:#4A7BA3;text-decoration:underline;";
+          link.textContent = "↻ Reload to see indexed docs";
+          link.onclick = () => window.location.reload();
+          banner.appendChild(link);
+        }
+      }
+    }
+  } catch (_) {}
 }
 </script>
 
