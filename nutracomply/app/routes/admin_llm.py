@@ -638,38 +638,45 @@ async def llm_audit(kb_type: str, request: Request, db: Session = Depends(get_db
     from sqlalchemy import func
 
     try:
-        docs = (
-            db.query(KBDocument)
+        # Only fetch the columns needed — avoids loading MB of content text
+        rows = (
+            db.query(
+                KBDocument.id,
+                KBDocument.title,
+                KBDocument.source,
+                KBDocument.chunk_count,
+                func.length(KBDocument.content).label("content_len"),
+            )
             .filter(KBDocument.kb_type == KBType(kb_type),
                     KBDocument.is_active == True)
             .all()
         )
 
-        total_docs   = len(docs)
+        total_docs   = len(rows)
         total_chunks = db.query(func.count(KBChunk.id)).filter(
             KBChunk.kb_type == KBType(kb_type)
         ).scalar() or 0
 
-        zero_chunk  = [d for d in docs if d.chunk_count == 0]
-        one_chunk   = [d for d in docs if d.chunk_count == 1 and len(d.content or "") > 1000]
-        good        = [d for d in docs if d.chunk_count >= 2]
+        zero_chunk  = [r for r in rows if r.chunk_count == 0]
+        one_chunk   = [r for r in rows if r.chunk_count == 1 and (r.content_len or 0) > 1000]
+        good        = [r for r in rows if r.chunk_count >= 2]
 
         # Source breakdown
         source_stats: dict = {}
-        for doc in docs:
-            src = (doc.source or "unknown").split(":")[0]
+        for r in rows:
+            src = (r.source or "unknown").split(":")[0]
             if src not in source_stats:
                 source_stats[src] = {"docs": 0, "chunks": 0}
             source_stats[src]["docs"]   += 1
-            source_stats[src]["chunks"] += doc.chunk_count
+            source_stats[src]["chunks"] += r.chunk_count
 
         # Chunk distribution histogram: 0,1,2-5,6-15,16+
         hist = {"0": 0, "1": 0, "2-5": 0, "6-15": 0, "16+": 0}
-        for doc in docs:
-            c = doc.chunk_count
-            if   c == 0: hist["0"]    += 1
-            elif c == 1: hist["1"]    += 1
-            elif c <= 5: hist["2-5"]  += 1
+        for r in rows:
+            c = r.chunk_count
+            if   c == 0:  hist["0"]    += 1
+            elif c == 1:  hist["1"]    += 1
+            elif c <= 5:  hist["2-5"]  += 1
             elif c <= 15: hist["6-15"] += 1
             else:         hist["16+"]  += 1
 
@@ -677,9 +684,9 @@ async def llm_audit(kb_type: str, request: Request, db: Session = Depends(get_db
         avg_chunks   = round(total_chunks / max(total_docs, 1), 1)
 
         problem_docs = [
-            {"id": d.id, "title": d.title[:80], "source": d.source,
-             "chunks": d.chunk_count, "content_len": len(d.content or "")}
-            for d in (zero_chunk + one_chunk)[:50]  # cap at 50 for response size
+            {"id": r.id, "title": (r.title or "")[:80], "source": r.source,
+             "chunks": r.chunk_count, "content_len": r.content_len or 0}
+            for r in (zero_chunk + one_chunk)[:50]
         ]
 
         return JSONResponse({
