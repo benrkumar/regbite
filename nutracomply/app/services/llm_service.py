@@ -234,35 +234,76 @@ SYSTEM_PROMPTS: dict[str, str] = {
 
 # ─── Text chunking ────────────────────────────────────────────────────────────
 
-def chunk_text(text: str, max_chars: int = 1200) -> list[str]:
+def chunk_text(text: str, max_chars: int = 2000) -> list[str]:
     """
     Split *text* into chunks of at most *max_chars* characters.
-    Splits on paragraph boundaries first (double newlines), then on word
-    boundaries for paragraphs that exceed the limit.
+
+    Strategy (in order):
+    1. Split on double newlines (paragraph breaks) — ideal for well-formatted docs
+    2. If that yields only 1 "paragraph" AND content is large, also split on single
+       newlines — handles pdfplumber output where pages are joined with \n not \n\n
+    3. Word-split any remaining paragraphs that exceed max_chars
+    4. Add 10% overlap between consecutive large chunks to preserve context
+
+    max_chars increased from 1200 → 2000 to capture more regulatory context per chunk.
     Returns a list of non-empty, stripped strings.
     """
-    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
-    chunks: list[str] = []
+    def _word_split(text_block: str, limit: int) -> list[str]:
+        """Split a text block into word-boundary chunks of at most `limit` chars."""
+        words = text_block.split()
+        result = []
+        current: list[str] = []
+        current_len = 0
+        for word in words:
+            if current_len + len(word) + 1 > limit and current:
+                result.append(" ".join(current))
+                # 10% overlap: keep last ~10% of words for context continuity
+                overlap_chars = 0
+                overlap: list[str] = []
+                for w in reversed(current):
+                    if overlap_chars + len(w) + 1 > limit // 10:
+                        break
+                    overlap.insert(0, w)
+                    overlap_chars += len(w) + 1
+                current = overlap + [word]
+                current_len = sum(len(w) + 1 for w in current)
+            else:
+                current.append(word)
+                current_len += len(word) + 1
+        if current:
+            result.append(" ".join(current))
+        return result
 
+    # Step 1: try double-newline split
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+
+    # Step 2: if single paragraph and content is substantial, try single-newline split
+    # This handles pdfplumber output that joins pages/sections with \n instead of \n\n
+    if len(paragraphs) <= 1 and len(text) > max_chars:
+        single_nl = [p.strip() for p in text.split("\n") if p.strip()]
+        if len(single_nl) > 1:
+            # Group short single-newline lines into logical paragraphs of up to max_chars
+            grouped: list[str] = []
+            current_group = ""
+            for line in single_nl:
+                if current_group and len(current_group) + len(line) + 1 > max_chars:
+                    grouped.append(current_group.strip())
+                    current_group = line
+                else:
+                    current_group = (current_group + " " + line).strip() if current_group else line
+            if current_group:
+                grouped.append(current_group.strip())
+            paragraphs = grouped
+
+    # Step 3: word-split paragraphs that exceed max_chars
+    chunks: list[str] = []
     for para in paragraphs:
         if len(para) <= max_chars:
             chunks.append(para)
         else:
-            words = para.split()
-            current: list[str] = []
-            current_len = 0
-            for word in words:
-                if current_len + len(word) + 1 > max_chars and current:
-                    chunks.append(" ".join(current))
-                    current = [word]
-                    current_len = len(word)
-                else:
-                    current.append(word)
-                    current_len += len(word) + 1
-            if current:
-                chunks.append(" ".join(current))
+            chunks.extend(_word_split(para, max_chars))
 
-    return [c for c in chunks if c]
+    return [c for c in chunks if c and len(c) >= 20]  # min 20 chars to filter noise
 
 
 # ─── Document ingestion ───────────────────────────────────────────────────────
@@ -291,13 +332,9 @@ def _ingest_document(db, kb_type: str, title: str, source: str,
     chunks = chunk_text(content)
     inserted = 0
     for i, chunk_content in enumerate(chunks):
-        # Skip exact-duplicate chunks already in this KB
-        existing = db.query(KBChunk.id).filter(
-            KBChunk.kb_type == KBType(kb_type),
-            KBChunk.content == chunk_content,
-        ).first()
-        if existing:
-            continue
+        # Note: no cross-document dedup — each document gets its full set of chunks.
+        # Cross-doc dedup caused documents to show chunk_count=1 because shared
+        # boilerplate/headers/footers (common in regulation PDFs) were silently skipped.
         db.add(KBChunk(
             document_id=doc.id,
             kb_type=KBType(kb_type),
@@ -309,6 +346,65 @@ def _ingest_document(db, kb_type: str, title: str, source: str,
     doc.chunk_count = inserted
     db.commit()
     return doc
+
+
+def reindex_kb(db, kb_type: str) -> dict:
+    """
+    Re-chunk all existing KBDocuments for a KB type using the current chunk_text logic.
+
+    Fixes documents that were under-indexed due to:
+    - Cross-document chunk deduplication (now removed)
+    - Old max_chars=1200 limit (now 2000)
+    - Single-newline PDF text not being split properly
+
+    Each document's KBChunks are deleted and re-created from doc.content.
+    Returns stats: {total_docs, reindexed, skipped_empty, total_new_chunks}
+    """
+    from app.models import KBDocument, KBChunk, KBType
+
+    docs = (
+        db.query(KBDocument)
+        .filter(KBDocument.kb_type == KBType(kb_type),
+                KBDocument.is_active == True)
+        .all()
+    )
+
+    total_docs = len(docs)
+    reindexed = 0
+    skipped_empty = 0
+    total_new_chunks = 0
+
+    for doc in docs:
+        if not doc.content or len(doc.content.strip()) < 20:
+            skipped_empty += 1
+            continue
+
+        # Delete existing chunks for this document
+        db.query(KBChunk).filter(KBChunk.document_id == doc.id).delete(synchronize_session=False)
+
+        # Re-chunk with improved chunker
+        chunks = chunk_text(doc.content)
+        for i, chunk_content in enumerate(chunks):
+            db.add(KBChunk(
+                document_id=doc.id,
+                kb_type=KBType(kb_type),
+                chunk_index=i,
+                content=chunk_content,
+            ))
+
+        doc.chunk_count = len(chunks)
+        total_new_chunks += len(chunks)
+        reindexed += 1
+
+    db.commit()
+    invalidate_cache(kb_type)
+    return {
+        "total_docs": total_docs,
+        "reindexed": reindexed,
+        "skipped_empty": skipped_empty,
+        "total_new_chunks": total_new_chunks,
+        "avg_chunks_per_doc": round(total_new_chunks / max(reindexed, 1), 1),
+    }
 
 
 # ─── Bulk FSSAI PDF ingestion ────────────────────────────────────────────────

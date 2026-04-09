@@ -206,6 +206,25 @@
 {% endif %}
 {% endif %}
 
+{# ── KB Health Audit ────────────────────────────────────────────────────────── #}
+<div id="auditPanel" style="background:#fff;border:1px solid #EBEBEB;border-radius:10px;margin-bottom:1.25rem;overflow:hidden;">
+  <div style="padding:0.85rem 1.2rem;border-bottom:1px solid #F5F5F5;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+    <div>
+      <span style="font-size:0.85rem;font-weight:600;color:#262626;">🔍 KB Health Audit</span>
+      <span style="font-size:0.72rem;color:#A3A3A3;margin-left:0.5rem;" id="auditTimestamp"></span>
+    </div>
+    <div style="display:flex;gap:0.5rem;align-items:center;">
+      <button class="adm-btn" id="auditBtn" onclick="runAudit()" style="font-size:0.76rem;">Run Audit</button>
+      <button class="adm-btn adm-btn-primary" id="reindexBtn" onclick="startReindex()" style="font-size:0.76rem;display:none;">
+        ↻ Re-index All Docs
+      </button>
+    </div>
+  </div>
+  <div id="auditBody" style="padding:1rem 1.2rem;display:none;">
+    <!-- filled by JS -->
+  </div>
+</div>
+
 <div class="kb-page">
 
 {# ── Stats row + Test Chat ─────────────────────────────────────────────────── #}
@@ -600,6 +619,189 @@
 <script>
 const KB_TYPE       = "{{ kb_type }}";
 const UPLOAD_URL    = `/admin/llm/${KB_TYPE}/upload`;
+const AUDIT_URL   = `/admin/llm/${KB_TYPE}/audit`;
+const REINDEX_URL = `/admin/llm/${KB_TYPE}/reindex`;
+
+async function runAudit() {
+  const btn  = document.getElementById("auditBtn");
+  const body = document.getElementById("auditBody");
+  btn.disabled = true;
+  btn.textContent = "Auditing…";
+  body.style.display = "block";
+  body.innerHTML = `<div style="color:#A3A3A3;font-size:0.82rem;">Scanning ${KB_TYPE} KB…</div>`;
+
+  try {
+    const resp = await fetch(AUDIT_URL);
+    const d    = await resp.json();
+
+    if (d.error) {
+      body.innerHTML = `<div style="color:#DC2626;">Audit error: ${d.error}</div>`;
+      return;
+    }
+
+    const healthColor = d.health_score >= 80 ? "#16A34A" : d.health_score >= 50 ? "#D97706" : "#DC2626";
+    const healthIcon  = d.health_score >= 80 ? "✅" : d.health_score >= 50 ? "⚠️" : "🚨";
+
+    // Source breakdown rows
+    const srcRows = Object.entries(d.source_stats).map(([src, s]) =>
+      `<tr style="border-bottom:1px solid #F5F5F5;">
+        <td style="padding:5px 8px;font-size:0.78rem;">${src}</td>
+        <td style="padding:5px 8px;text-align:right;font-size:0.78rem;">${s.docs}</td>
+        <td style="padding:5px 8px;text-align:right;font-size:0.78rem;">${s.chunks}</td>
+        <td style="padding:5px 8px;text-align:right;font-size:0.78rem;">${s.docs > 0 ? Math.round(s.chunks/s.docs*10)/10 : 0}</td>
+      </tr>`
+    ).join("");
+
+    // Problem docs
+    const problemRows = d.problem_docs.length === 0
+      ? `<div style="color:#16A34A;font-size:0.78rem;padding:0.5rem 0;">✓ No problem documents found</div>`
+      : d.problem_docs.map(p =>
+          `<div style="padding:0.3rem 0;border-bottom:1px solid #F5F5F5;display:flex;gap:0.75rem;align-items:center;font-size:0.76rem;">
+            <span style="color:${p.chunks===0?'#DC2626':'#D97706'};font-weight:700;min-width:60px;">${p.chunks===0?'🚨 0 chunks':'⚠️ 1 chunk'}</span>
+            <span style="flex:1;color:#262626;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.title}">${p.title}</span>
+            <span style="color:#A3A3A3;min-width:70px;">${Math.round(p.content_len/1000*10)/10}K chars</span>
+          </div>`
+        ).join("");
+
+    body.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:0.75rem;margin-bottom:1rem;">
+        <div style="background:#F8F8F8;border-radius:8px;padding:0.7rem;text-align:center;">
+          <div style="font-size:1.5rem;font-weight:700;color:${healthColor};">${d.health_score}%</div>
+          <div style="font-size:0.65rem;color:#A3A3A3;margin-top:0.1rem;">Health Score</div>
+        </div>
+        <div style="background:#F8F8F8;border-radius:8px;padding:0.7rem;text-align:center;">
+          <div style="font-size:1.5rem;font-weight:700;color:#262626;">${d.total_docs}</div>
+          <div style="font-size:0.65rem;color:#A3A3A3;margin-top:0.1rem;">Total Docs</div>
+        </div>
+        <div style="background:#F8F8F8;border-radius:8px;padding:0.7rem;text-align:center;">
+          <div style="font-size:1.5rem;font-weight:700;color:#262626;">${d.total_chunks}</div>
+          <div style="font-size:0.65rem;color:#A3A3A3;margin-top:0.1rem;">Total Chunks</div>
+        </div>
+        <div style="background:#F8F8F8;border-radius:8px;padding:0.7rem;text-align:center;">
+          <div style="font-size:1.5rem;font-weight:700;color:#262626;">${d.avg_chunks}</div>
+          <div style="font-size:0.65rem;color:#A3A3A3;margin-top:0.1rem;">Avg Chunks/Doc</div>
+        </div>
+        <div style="background:${d.zero_chunk_count>0?'#FEF2F2':'#F8F8F8'};border-radius:8px;padding:0.7rem;text-align:center;">
+          <div style="font-size:1.5rem;font-weight:700;color:${d.zero_chunk_count>0?'#DC2626':'#16A34A'};">${d.zero_chunk_count}</div>
+          <div style="font-size:0.65rem;color:#A3A3A3;margin-top:0.1rem;">0-Chunk Docs</div>
+        </div>
+        <div style="background:${d.one_chunk_count>0?'#FFF7ED':'#F8F8F8'};border-radius:8px;padding:0.7rem;text-align:center;">
+          <div style="font-size:1.5rem;font-weight:700;color:${d.one_chunk_count>0?'#D97706':'#16A34A'};">${d.one_chunk_count}</div>
+          <div style="font-size:0.65rem;color:#A3A3A3;margin-top:0.1rem;">Thin Docs (1 chunk)</div>
+        </div>
+      </div>
+
+      ${d.zero_chunk_count > 0 || d.one_chunk_count > 0 ? `
+      <div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:6px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.8rem;color:#92400E;">
+        <strong>${healthIcon} Action needed:</strong>
+        ${d.zero_chunk_count} document${d.zero_chunk_count!==1?'s':''} with 0 chunks (invisible to search) and
+        ${d.one_chunk_count} large document${d.one_chunk_count!==1?'s':''} with only 1 chunk (under-indexed).
+        Click <strong>Re-index All Docs</strong> to fix — re-chunks every document with the improved chunker (no page reload needed).
+      </div>` : `
+      <div style="background:#EDFAF3;border:1px solid #BBF7D0;border-radius:6px;padding:0.6rem 1rem;margin-bottom:1rem;font-size:0.8rem;color:#3D7A50;">
+        ✅ All documents are adequately chunked. KB is ready for scanning.
+      </div>`}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div>
+          <div style="font-size:0.72rem;font-weight:600;color:#737373;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Chunk Distribution</div>
+          ${Object.entries(d.histogram).map(([k,v]) => `
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.3rem;font-size:0.76rem;">
+              <span style="min-width:35px;color:#737373;">${k}</span>
+              <div style="flex:1;background:#F0F0F0;border-radius:2px;height:12px;overflow:hidden;">
+                <div style="width:${d.total_docs>0?Math.round(v/d.total_docs*100):0}%;height:100%;background:${k==='0'?'#DC2626':k==='1'?'#D97706':'#5A9A98'};border-radius:2px;"></div>
+              </div>
+              <span style="min-width:25px;text-align:right;color:#262626;font-weight:600;">${v}</span>
+            </div>`).join("")}
+        </div>
+        <div>
+          <div style="font-size:0.72rem;font-weight:600;color:#737373;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">By Source Type</div>
+          <table style="width:100%;font-size:0.75rem;border-collapse:collapse;">
+            <thead><tr style="border-bottom:1px solid #EBEBEB;">
+              <th style="text-align:left;padding:3px 8px;color:#A3A3A3;font-weight:500;">Source</th>
+              <th style="text-align:right;padding:3px 8px;color:#A3A3A3;font-weight:500;">Docs</th>
+              <th style="text-align:right;padding:3px 8px;color:#A3A3A3;font-weight:500;">Chunks</th>
+              <th style="text-align:right;padding:3px 8px;color:#A3A3A3;font-weight:500;">Avg</th>
+            </tr></thead>
+            <tbody>${srcRows}</tbody>
+          </table>
+        </div>
+      </div>
+
+      ${d.problem_docs.length > 0 ? `
+      <div>
+        <div style="font-size:0.72rem;font-weight:600;color:#737373;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">
+          Problem Documents (${d.problem_docs.length}${d.problem_docs.length===50?' — showing first 50':''})
+        </div>
+        <div style="max-height:200px;overflow-y:auto;border:1px solid #EBEBEB;border-radius:6px;padding:0.5rem 0.75rem;">
+          ${problemRows}
+        </div>
+      </div>` : ""}
+    `;
+
+    document.getElementById("auditTimestamp").textContent = `Last checked: ${new Date().toLocaleTimeString()}`;
+    document.getElementById("reindexBtn").style.display =
+      (d.zero_chunk_count > 0 || d.one_chunk_count > 0) ? "inline-block" : "none";
+
+  } catch (e) {
+    body.innerHTML = `<div style="color:#DC2626;">Failed to load audit: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Run Audit";
+  }
+}
+
+async function startReindex() {
+  const btn = document.getElementById("reindexBtn");
+  btn.disabled = true;
+  btn.textContent = "⏳ Re-indexing…";
+
+  try {
+    const resp = await fetch(REINDEX_URL, { method: "POST" });
+    const data = await resp.json();
+    if (!data.job_id) {
+      alert("Re-index failed: " + (data.error || "Unknown error"));
+      btn.disabled = false;
+      btn.textContent = "↻ Re-index All Docs";
+      return;
+    }
+
+    // Poll for completion
+    const statusUrl = REINDEX_URL + "/status/" + data.job_id;
+    let attempts = 0;
+    while (attempts < 180) {  // max 6 min
+      await new Promise(r => setTimeout(r, 2000));
+      attempts++;
+      const s = await (await fetch(statusUrl)).json();
+      if (s.status === "done") {
+        btn.textContent = `✓ Done — ${s.total_new_chunks} chunks across ${s.reindexed} docs`;
+        btn.style.background = "#EDFAF3";
+        btn.style.color = "#3D7A50";
+        btn.style.borderColor = "#BBF7D0";
+        // Auto-run audit to show updated stats
+        setTimeout(runAudit, 1000);
+        return;
+      } else if (s.status === "error") {
+        alert("Re-index error: " + (s.error || "Unknown"));
+        btn.disabled = false;
+        btn.textContent = "↻ Re-index All Docs";
+        return;
+      }
+      btn.textContent = `⏳ Re-indexing… ${attempts * 2}s`;
+    }
+    btn.textContent = "↻ Re-index All Docs";
+    btn.disabled = false;
+  } catch (e) {
+    alert("Failed: " + e.message);
+    btn.disabled = false;
+    btn.textContent = "↻ Re-index All Docs";
+  }
+}
+
+// Auto-run audit on page load
+window.addEventListener("DOMContentLoaded", () => {
+  setTimeout(runAudit, 500);
+});
 
 /* ────────────────────────── Collapsible sections ─────────────────────────── */
 function toggleSection(id) {

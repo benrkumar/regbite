@@ -626,6 +626,134 @@ async def llm_doc_count(kb_type: str, request: Request, db: Session = Depends(ge
         return JSONResponse({"error": str(exc)[:200]}, status_code=500)
 
 
+@router.get("/llm/{kb_type}/audit")
+async def llm_audit(kb_type: str, request: Request, db: Session = Depends(get_db)):
+    """Return comprehensive KB quality audit stats as JSON."""
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+
+    from app.models import KBDocument, KBChunk, KBType
+    from sqlalchemy import func
+
+    try:
+        docs = (
+            db.query(KBDocument)
+            .filter(KBDocument.kb_type == KBType(kb_type),
+                    KBDocument.is_active == True)
+            .all()
+        )
+
+        total_docs   = len(docs)
+        total_chunks = db.query(func.count(KBChunk.id)).filter(
+            KBChunk.kb_type == KBType(kb_type)
+        ).scalar() or 0
+
+        zero_chunk  = [d for d in docs if d.chunk_count == 0]
+        one_chunk   = [d for d in docs if d.chunk_count == 1 and len(d.content or "") > 1000]
+        good        = [d for d in docs if d.chunk_count >= 2]
+
+        # Source breakdown
+        source_stats: dict = {}
+        for doc in docs:
+            src = (doc.source or "unknown").split(":")[0]
+            if src not in source_stats:
+                source_stats[src] = {"docs": 0, "chunks": 0}
+            source_stats[src]["docs"]   += 1
+            source_stats[src]["chunks"] += doc.chunk_count
+
+        # Chunk distribution histogram: 0,1,2-5,6-15,16+
+        hist = {"0": 0, "1": 0, "2-5": 0, "6-15": 0, "16+": 0}
+        for doc in docs:
+            c = doc.chunk_count
+            if   c == 0: hist["0"]    += 1
+            elif c == 1: hist["1"]    += 1
+            elif c <= 5: hist["2-5"]  += 1
+            elif c <= 15: hist["6-15"] += 1
+            else:         hist["16+"]  += 1
+
+        health_score = round((len(good) / max(total_docs, 1)) * 100, 1)
+        avg_chunks   = round(total_chunks / max(total_docs, 1), 1)
+
+        problem_docs = [
+            {"id": d.id, "title": d.title[:80], "source": d.source,
+             "chunks": d.chunk_count, "content_len": len(d.content or "")}
+            for d in (zero_chunk + one_chunk)[:50]  # cap at 50 for response size
+        ]
+
+        return JSONResponse({
+            "total_docs":       total_docs,
+            "total_chunks":     total_chunks,
+            "avg_chunks":       avg_chunks,
+            "health_score":     health_score,
+            "zero_chunk_count": len(zero_chunk),
+            "one_chunk_count":  len(one_chunk),
+            "good_count":       len(good),
+            "histogram":        hist,
+            "source_stats":     source_stats,
+            "problem_docs":     problem_docs,
+        })
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)[:300]}, status_code=500)
+
+
+# ── KB Re-index job store ─────────────────────────────────────────────────────
+_REINDEX_JOBS: dict = {}  # job_id → {status, progress, total, done, result}
+
+
+def _run_reindex_job(job_id: str, kb_type: str):
+    """Background thread: re-chunk all KB documents with improved chunker."""
+    from app.database import SessionLocal
+    from app.services.llm_service import reindex_kb
+    db2 = SessionLocal()
+    try:
+        _REINDEX_JOBS[job_id]["status"] = "running"
+        result = reindex_kb(db2, kb_type)
+        _REINDEX_JOBS[job_id] = {
+            "status": "done",
+            **result,
+        }
+    except Exception as exc:
+        _REINDEX_JOBS[job_id] = {
+            "status": "error",
+            "error": str(exc)[:300],
+        }
+    finally:
+        db2.close()
+
+
+@router.post("/llm/{kb_type}/reindex")
+async def llm_reindex(kb_type: str, request: Request, db: Session = Depends(get_db)):
+    """Start background re-chunking of all KB documents. Returns job_id for polling."""
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+    if kb_type not in _VALID_KB:
+        return JSONResponse({"error": "Invalid KB type"}, status_code=400)
+
+    import threading
+    job_id = str(uuid.uuid4())[:12]
+    _REINDEX_JOBS[job_id] = {"status": "starting"}
+    threading.Thread(
+        target=_run_reindex_job,
+        args=(job_id, kb_type),
+        daemon=True,
+    ).start()
+    return JSONResponse({"job_id": job_id, "status": "starting"})
+
+
+@router.get("/llm/{kb_type}/reindex/status/{job_id}")
+async def llm_reindex_status(kb_type: str, job_id: str, request: Request,
+                              db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+    job = _REINDEX_JOBS.get(job_id)
+    if not job:
+        return JSONResponse({"status": "not_found"})
+    return JSONResponse(job)
+
+
 @router.post("/llm/{kb_type}/documents/{doc_id}/delete")
 async def llm_delete_document(
     kb_type: str, doc_id: int,
