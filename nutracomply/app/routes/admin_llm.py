@@ -182,6 +182,78 @@ async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
     return JSONResponse(result)
 
 
+@router.get("/llm/api-key-stats")
+async def llm_api_key_stats(request: Request, db: Session = Depends(get_db)):
+    """Return API key stats for all providers — OpenRouter credits, rate limits, config status."""
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+
+    from app.config import get_settings
+    settings = get_settings()
+    import httpx as _httpx
+
+    out = {}
+
+    # ── OpenRouter ────────────────────────────────────────────────────────────
+    if settings.openrouter_api_key:
+        try:
+            resp = _httpx.get(
+                "https://openrouter.ai/api/v1/auth/key",
+                headers={
+                    "Authorization": f"Bearer {settings.openrouter_api_key}",
+                    "HTTP-Referer": "https://steadfast-courage-production-0f66.up.railway.app",
+                },
+                timeout=10.0,
+            )
+            if resp.status_code == 200:
+                d = resp.json().get("data", resp.json())
+                usage       = d.get("usage", 0)          # credits used
+                limit       = d.get("limit")              # None = unlimited
+                is_free     = d.get("is_free_tier", False)
+                label       = d.get("label", "")
+                rate_limit  = d.get("rate_limit", {})     # {"requests": n, "interval": "10s"}
+
+                remaining   = None if limit is None else max(0, round(limit - usage, 4))
+                pct_used    = None if limit is None else round(usage / limit * 100, 1) if limit > 0 else 0
+
+                out["openrouter"] = {
+                    "status":     "ok",
+                    "label":      label,
+                    "model":      settings.gemma_model_name,
+                    "usage":      round(usage, 4),
+                    "limit":      limit,
+                    "remaining":  remaining,
+                    "pct_used":   pct_used,
+                    "is_free":    is_free,
+                    "rate_limit": rate_limit,
+                    "enabled":    settings.gemma_enabled,
+                }
+            else:
+                out["openrouter"] = {"status": "error", "code": resp.status_code, "error": resp.text[:200]}
+        except Exception as exc:
+            out["openrouter"] = {"status": "error", "error": str(exc)[:200]}
+    else:
+        out["openrouter"] = {"status": "not_configured"}
+
+    # ── Claude (Anthropic) ────────────────────────────────────────────────────
+    from app.config import get_settings as _gs
+    out["claude"] = {
+        "status":    "configured" if settings.anthropic_api_key else "not_configured",
+        "model":     "claude-sonnet-4-6",
+        "key_hint":  ("sk-ant-..." + settings.anthropic_api_key[-4:]) if settings.anthropic_api_key else None,
+    }
+
+    # ── Gemini (Google) ───────────────────────────────────────────────────────
+    out["gemini"] = {
+        "status":    "configured" if settings.gemini_api_key else "not_configured",
+        "models":    "gemini-2.5-flash / gemini-2.5-pro",
+        "key_hint":  ("AIza..." + settings.gemini_api_key[-4:]) if settings.gemini_api_key else None,
+    }
+
+    return JSONResponse(out)
+
+
 @router.get("/llm/openrouter-models")
 async def llm_openrouter_models(request: Request, db: Session = Depends(get_db)):
     """

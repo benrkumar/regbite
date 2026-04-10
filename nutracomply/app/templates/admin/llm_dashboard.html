@@ -80,6 +80,61 @@
   </div>
 </div>
 
+{# ── API Keys & Credits ────────────────────────────────────────────────────── #}
+<div style="background:#fff;border:1px solid #EBEBEB;border-radius:12px;padding:1rem 1.4rem;margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.85rem;">
+    <div>
+      <div style="font-size:0.78rem;font-weight:700;color:#262626;">API Keys &amp; Credits</div>
+      <div style="font-size:0.72rem;color:#A3A3A3;">Live balance · rate limits · configuration status</div>
+    </div>
+    <button type="button" onclick="loadKeyStats()" id="keyStatsRefreshBtn"
+            class="adm-btn" style="font-size:0.75rem;">↻ Refresh</button>
+  </div>
+  <div id="keyStatsPanel">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;" id="keyStatsGrid">
+      {# OpenRouter card #}
+      <div style="border:1px solid #EBEBEB;border-radius:8px;padding:0.85rem 1rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+          <span style="font-size:1rem;">🤖</span>
+          <strong style="font-size:0.84rem;color:#262626;">OpenRouter</strong>
+          <span id="or-badge" class="adm-badge {% if gemma_configured %}badge-purple{% else %}badge-gray{% endif %}" style="margin-left:auto;">
+            {% if gemma_configured %}Configured{% else %}Not set{% endif %}
+          </span>
+        </div>
+        <div id="or-stats" style="font-size:0.75rem;color:#737373;">
+          <div style="color:#A3A3A3;font-size:0.72rem;">Loading credits…</div>
+        </div>
+      </div>
+      {# Claude card #}
+      <div style="border:1px solid #EBEBEB;border-radius:8px;padding:0.85rem 1rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+          <span style="font-size:1rem;">🧠</span>
+          <strong style="font-size:0.84rem;color:#262626;">Claude</strong>
+          <span id="claude-key-badge" class="adm-badge {% if claude_configured %}badge-green{% else %}badge-gray{% endif %}" style="margin-left:auto;">
+            {% if claude_configured %}Configured{% else %}Not set{% endif %}
+          </span>
+        </div>
+        <div id="claude-stats" style="font-size:0.75rem;color:#737373;">
+          <div style="color:#A3A3A3;font-size:0.72rem;">Loading…</div>
+        </div>
+      </div>
+      {# Gemini card #}
+      <div style="border:1px solid #EBEBEB;border-radius:8px;padding:0.85rem 1rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+          <span style="font-size:1rem;">✨</span>
+          <strong style="font-size:0.84rem;color:#262626;">Gemini</strong>
+          <span id="gemini-key-badge" class="adm-badge {% if gemini_configured %}badge-blue{% else %}badge-gray{% endif %}" style="margin-left:auto;">
+            {% if gemini_configured %}Configured{% else %}Not set{% endif %}
+          </span>
+        </div>
+        <div id="gemini-stats" style="font-size:0.75rem;color:#737373;">
+          <div style="color:#A3A3A3;font-size:0.72rem;">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {# ── KB cards ──────────────────────────────────────────────────────────────── #}
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.75rem;">
 
@@ -355,6 +410,111 @@ async function testProviders() {
   btn.disabled = false;
   btn.textContent = "⚡ Test Connections";
 }
+
+// ── API Key Stats ─────────────────────────────────────────────────────────────
+async function loadKeyStats() {
+  const refreshBtn = document.getElementById("keyStatsRefreshBtn");
+  if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = "Loading…"; }
+
+  try {
+    const resp = await fetch("/admin/llm/api-key-stats");
+    const data = await resp.json();
+
+    // ── OpenRouter ──────────────────────────────────────────────────────────
+    const or = data.openrouter || {};
+    const orEl = document.getElementById("or-stats");
+    const orBadge = document.getElementById("or-badge");
+    if (or.status === "ok") {
+      const remaining = or.remaining !== null ? `$${or.remaining}` : "Unlimited";
+      const usedPct   = or.pct_used  !== null ? or.pct_used : null;
+      const barColor  = usedPct === null ? "#5A9A98" : usedPct > 90 ? "#DC2626" : usedPct > 70 ? "#D97706" : "#16A34A";
+      const rateInfo  = or.rate_limit && or.rate_limit.requests
+        ? `${or.rate_limit.requests} req/${or.rate_limit.interval}`
+        : "No rate limit info";
+      orBadge.className = "adm-badge badge-purple";
+      orBadge.textContent = or.enabled ? "Active" : "Disabled";
+      orEl.innerHTML = `
+        <div style="margin-bottom:0.45rem;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
+            <span style="color:#525252;font-weight:600;">Credits remaining</span>
+            <span style="font-weight:700;color:${barColor};">${remaining}</span>
+          </div>
+          ${usedPct !== null ? `
+          <div style="background:#F0F0F0;border-radius:3px;height:5px;overflow:hidden;">
+            <div style="width:${usedPct}%;height:100%;background:${barColor};border-radius:3px;transition:width 0.4s;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:0.15rem;font-size:0.65rem;color:#A3A3A3;">
+            <span>$${or.usage} used</span><span>of $${or.limit}</span>
+          </div>` : '<div style="font-size:0.68rem;color:#A3A3A3;">Unlimited / pay-per-use plan</div>'}
+        </div>
+        <div style="border-top:1px solid #F5F5F5;padding-top:0.35rem;display:flex;flex-direction:column;gap:0.18rem;">
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:#A3A3A3;">Model</span>
+            <code style="font-size:0.68rem;color:#262626;">${or.model}</code>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="color:#A3A3A3;">Rate limit</span>
+            <span style="color:#525252;">${rateInfo}</span>
+          </div>
+          ${or.label ? `<div style="display:flex;justify-content:space-between;"><span style="color:#A3A3A3;">Key label</span><span style="color:#525252;">${or.label}</span></div>` : ""}
+          ${or.is_free ? `<div style="color:#D97706;font-size:0.68rem;font-weight:600;">Free tier — consider upgrading for higher rate limits</div>` : ""}
+        </div>`;
+    } else if (or.status === "not_configured") {
+      orBadge.className = "adm-badge badge-gray";
+      orBadge.textContent = "Not set";
+      orEl.innerHTML = `<div style="color:#A3A3A3;font-size:0.72rem;">Set OPENROUTER_API_KEY in Railway to enable Gemma 4.</div>`;
+    } else {
+      orBadge.className = "adm-badge badge-red";
+      orBadge.textContent = "Error";
+      orEl.innerHTML = `<div style="color:#DC2626;font-size:0.72rem;">${or.error || `HTTP ${or.code}`}</div>`;
+    }
+
+    // ── Claude ──────────────────────────────────────────────────────────────
+    const cl = data.claude || {};
+    const clEl = document.getElementById("claude-stats");
+    clEl.innerHTML = cl.status === "configured"
+      ? `<div style="display:flex;flex-direction:column;gap:0.18rem;">
+           <div style="display:flex;justify-content:space-between;">
+             <span style="color:#A3A3A3;">Model</span>
+             <code style="font-size:0.68rem;">${cl.model}</code>
+           </div>
+           <div style="display:flex;justify-content:space-between;">
+             <span style="color:#A3A3A3;">Key</span>
+             <code style="font-size:0.68rem;">${cl.key_hint || "set"}</code>
+           </div>
+           <div style="color:#16A34A;font-size:0.72rem;font-weight:600;margin-top:0.2rem;">✓ Configured — pay-per-token (Anthropic)</div>
+           <div style="color:#A3A3A3;font-size:0.68rem;">Fallback when Gemma is unavailable. ~$3/1M in tokens.</div>
+         </div>`
+      : `<div style="color:#A3A3A3;font-size:0.72rem;">Set ANTHROPIC_API_KEY in Railway for Claude fallback.</div>`;
+
+    // ── Gemini ──────────────────────────────────────────────────────────────
+    const gm = data.gemini || {};
+    const gmEl = document.getElementById("gemini-stats");
+    gmEl.innerHTML = gm.status === "configured"
+      ? `<div style="display:flex;flex-direction:column;gap:0.18rem;">
+           <div style="display:flex;justify-content:space-between;">
+             <span style="color:#A3A3A3;">Models</span>
+             <code style="font-size:0.68rem;">${gm.models}</code>
+           </div>
+           <div style="display:flex;justify-content:space-between;">
+             <span style="color:#A3A3A3;">Key</span>
+             <code style="font-size:0.68rem;">${gm.key_hint || "set"}</code>
+           </div>
+           <div style="color:#16A34A;font-size:0.72rem;font-weight:600;margin-top:0.2rem;">✓ Configured — Google AI Studio</div>
+           <div style="color:#A3A3A3;font-size:0.68rem;">Last-resort fallback. ~$0.075/1M in tokens.</div>
+         </div>`
+      : `<div style="color:#A3A3A3;font-size:0.72rem;">Set GEMINI_API_KEY in Railway for Gemini fallback.</div>`;
+
+  } catch (e) {
+    document.getElementById("or-stats").innerHTML =
+      `<div style="color:#DC2626;font-size:0.72rem;">Failed to load: ${e.message}</div>`;
+  }
+
+  if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = "↻ Refresh"; }
+}
+
+// Auto-load on page open
+loadKeyStats();
 </script>
 
 {% endblock %}
