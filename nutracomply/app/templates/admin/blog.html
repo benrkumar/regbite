@@ -49,7 +49,7 @@
 
   <div class="blog-filter">
     <form method="get" action="/admin/blog" id="filterForm">
-      <select name="category" onchange="document.getElementById('filterForm').submit()">
+      <select name="category" onchange="this.style.opacity='0.6';document.getElementById('filterForm').submit()">
         <option value="">All Categories</option>
         {% for cat in categories | default([]) %}
         <option value="{{ cat.id }}" {% if selected_category == cat.id|string %}selected{% endif %}>{{ cat.name }}</option>

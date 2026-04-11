@@ -247,6 +247,12 @@
 </div>{# close last group #}
 </div>{# #umList #}
 
+{# Dynamic empty state for search — hidden by default, shown via JS when no results #}
+<div id="umNoResults" style="display:none;text-align:center;padding:3rem;color:#A3A3A3;">
+  <div style="font-size:2rem;margin-bottom:0.5rem;">🔍</div>
+  <div style="font-size:0.9rem;color:#737373;">No users match your search</div>
+</div>
+
 {% if not user_stats %}
 <div style="text-align:center;padding:3rem;color:#A3A3A3;">
   <div style="font-size:2rem;margin-bottom:0.5rem;">👤</div>
@@ -262,18 +268,23 @@ function toggleAddPanel() {
 
 function filterUsers(q) {
   q = q.toLowerCase().trim();
+  var totalVisible = 0;
   document.querySelectorAll('.um-row').forEach(row => {
     const match = !q
       || row.dataset.name.includes(q)
       || row.dataset.email.includes(q)
       || row.dataset.company.includes(q);
     row.style.display = match ? '' : 'none';
+    if (match) totalVisible++;
   });
   // Show/hide group headers based on visible rows
   document.querySelectorAll('.um-company-group').forEach(group => {
-    const visible = group.querySelectorAll('.um-row:not([style*="none"])').length;
+    const visible = group.querySelectorAll('.um-row:not([style*="display: none"])').length;
     group.style.display = visible ? '' : 'none';
   });
+  // Show "no results" message when search returns nothing
+  var noResults = document.getElementById('umNoResults');
+  if (noResults) noResults.style.display = (q && totalVisible === 0) ? 'block' : 'none';
 }
 </script>
 {% endblock %}

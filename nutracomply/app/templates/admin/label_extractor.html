@@ -322,7 +322,7 @@
     font-size: 0.75rem;
     color: #525252;
   }
-  .plib-page-btn:disabled { opacity: 0.4; cursor: default; }
+  .plib-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .plib-page-btn:not(:disabled):hover { background: #5A9A98; color: #fff; border-color: #5A9A98; }
 </style>
 
@@ -770,6 +770,8 @@
   // ── Background job polling ─────────────────────────────────────────────
   var pollTimer = null;
   var currentJobId = null;
+  var pollAttempts = 0;
+  var MAX_POLL_ATTEMPTS = 150; // 150 × 1.2s ≈ 3 minutes max
 
   window.runExtraction = function () {
     if (!selectedFile) return;
@@ -789,6 +791,7 @@
     .then(function(data) {
       if (data.error) throw new Error(data.error);
       currentJobId = data.job_id;
+      pollAttempts = 0;
       runBtn.innerHTML = '<span class="spinner"></span> Extracting\u2026';
       pollJob(data.job_id);
     })
@@ -818,6 +821,14 @@
 
   function pollJob(jobId) {
     if (pollTimer) clearTimeout(pollTimer);
+    pollAttempts++;
+    if (pollAttempts > MAX_POLL_ATTEMPTS) {
+      runBtn.innerHTML = 'Run Extraction';
+      runBtn.disabled = false;
+      document.getElementById('errorMsg').textContent = 'Extraction timed out after 3 minutes. Please try again.';
+      document.getElementById('errorSection').classList.remove('result-hidden');
+      return;
+    }
     fetch('/admin/label-extractor/job/' + jobId, { credentials: 'same-origin' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
