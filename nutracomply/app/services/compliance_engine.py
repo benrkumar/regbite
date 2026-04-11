@@ -36,7 +36,7 @@ def run_compliance_check(label_version: LabelVersion, db: Session) -> list[Compl
     Saves and returns ComplianceCheck records.
     """
     extraction = label_version.extraction_json or {}
-    all_rules = db.query(ComplianceRule).filter(ComplianceRule.active == True).all()
+    all_rules = db.query(ComplianceRule).filter(ComplianceRule.active).all()
 
     # Filter rules by product category and framework
     product_category = (label_version.product.category or "").lower().strip()

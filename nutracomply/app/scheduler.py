@@ -161,7 +161,7 @@ def _run_recheck():
             db.query(LabelVersion)
             .filter(
                 LabelVersion.is_current == True,
-                LabelVersion.extraction_json != None,
+                LabelVersion.extraction_json is not None,
             )
             .all()
         )

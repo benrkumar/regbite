@@ -105,7 +105,7 @@ async def blog_listing(request: Request, db: Session = Depends(get_db)):
 
     featured = (
         db.query(BlogPost)
-        .filter(BlogPost.status == BlogPostStatus.PUBLISHED, BlogPost.is_featured == True)
+        .filter(BlogPost.status == BlogPostStatus.PUBLISHED, BlogPost.is_featured)
         .order_by(BlogPost.published_at.desc())
         .limit(3)
         .all()
@@ -249,6 +249,8 @@ async def admin_blog_new(request: Request, db: Session = Depends(get_db)):
         "post": None,
         "categories": categories,
         "unread_alerts": unread_alerts,
+        "flash_message": request.query_params.get("msg"),
+        "flash_type": request.query_params.get("type", "info"),
     })
 
 
@@ -271,6 +273,8 @@ async def admin_blog_edit(post_id: int, request: Request, db: Session = Depends(
         "post": post,
         "categories": categories,
         "unread_alerts": unread_alerts,
+        "flash_message": request.query_params.get("msg"),
+        "flash_type": request.query_params.get("type", "info"),
     })
 
 
@@ -282,6 +286,7 @@ async def admin_blog_create(
     excerpt: str = Form(""),
     content: str = Form(""),
     status: str = Form("draft"),
+    action: str = Form(""),  # "publish" from the Publish Now button overrides status
     category_id: str = Form(""),
     featured_image: str = Form(""),
     is_featured: str = Form(""),
@@ -301,6 +306,9 @@ async def admin_blog_create(
     if existing:
         final_slug = f"{final_slug}-{int(datetime.utcnow().timestamp())}"
 
+    # "Publish Now" button overrides the status radio selection
+    if action == "publish":
+        status = "published"
     post_status = BlogPostStatus(status) if status in [s.value for s in BlogPostStatus] else BlogPostStatus.DRAFT
 
     try:
@@ -344,6 +352,7 @@ async def admin_blog_update(
     excerpt: str = Form(""),
     content: str = Form(""),
     status: str = Form("draft"),
+    action: str = Form(""),  # "publish" from the Publish Now button overrides status
     category_id: str = Form(""),
     featured_image: str = Form(""),
     is_featured: str = Form(""),
@@ -377,6 +386,9 @@ async def admin_blog_update(
     post.meta_title = meta_title.strip()[:300] if meta_title.strip() else None
     post.meta_description = meta_description.strip()[:500] if meta_description.strip() else None
 
+    # "Publish Now" button overrides the status radio selection
+    if action == "publish":
+        status = "published"
     new_status = BlogPostStatus(status) if status in [s.value for s in BlogPostStatus] else post.status
     if new_status == BlogPostStatus.PUBLISHED and post.status != BlogPostStatus.PUBLISHED:
         post.published_at = datetime.utcnow()

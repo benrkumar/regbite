@@ -365,7 +365,7 @@ def reindex_kb(db, kb_type: str) -> dict:
     docs = (
         db.query(KBDocument)
         .filter(KBDocument.kb_type == KBType(kb_type),
-                KBDocument.is_active == True)
+                KBDocument.is_active)
         .all()
     )
 
@@ -450,7 +450,7 @@ def ingest_fssai_pdfs(db, folder_path: str = None) -> dict:
         d.source for d in
         db.query(KBDocument.source).filter(
             KBDocument.kb_type == KBType.REGULATIONS,
-            KBDocument.is_active == True,
+            KBDocument.is_active,
         ).all()
     }
 
@@ -570,14 +570,14 @@ def seed_regulations_kb(db, framework: str | None = None) -> dict:
         d.source for d in
         db.query(KBDocument.source).filter(
             KBDocument.kb_type == KBType.REGULATIONS,
-            KBDocument.is_active == True,
+            KBDocument.is_active,
         ).all()
     }
 
     count = 0
 
     # ── Compliance Rules ──────────────────────────────────────────────────────
-    rules_q = db.query(ComplianceRule).filter(ComplianceRule.active == True)
+    rules_q = db.query(ComplianceRule).filter(ComplianceRule.active)
     if framework and framework in _prefix:
         rules_q = rules_q.filter(ComplianceRule.rule_code.like(f"{_prefix[framework]}%"))
     for rule in rules_q.all():
@@ -671,13 +671,13 @@ def seed_products_kb(db, force_update_product_id: int | None = None) -> dict:
         d.source for d in
         db.query(KBDocument.source).filter(
             KBDocument.kb_type == KBType.PRODUCTS,
-            KBDocument.is_active == True,
+            KBDocument.is_active,
         ).all()
     }
 
     count = 0
 
-    for product in db.query(Product).filter(Product.is_active == True).all():
+    for product in db.query(Product).filter(Product.is_active).all():
         source = f"db:product:{product.id}"
 
         if force_update_product_id and product.id == force_update_product_id:
@@ -697,7 +697,7 @@ def seed_products_kb(db, force_update_product_id: int | None = None) -> dict:
         latest_lv = (
             db.query(LabelVersion)
             .filter(LabelVersion.product_id == product.id,
-                    LabelVersion.is_current == True)
+                    LabelVersion.is_current)
             .first()
         )
 
@@ -788,7 +788,7 @@ def retrieve_context(kb_type: str, query: str, db, top_k: int = 10) -> list[dict
             db.query(KBChunk)
             .join(KBDocument, KBChunk.document_id == KBDocument.id)
             .filter(KBChunk.kb_type == KBType(kb_type),
-                    KBDocument.is_active == True)
+                    KBDocument.is_active)
             .order_by(KBChunk.id.desc())
             .limit(top_k)
             .all()
@@ -832,7 +832,7 @@ def retrieve_context(kb_type: str, query: str, db, top_k: int = 10) -> list[dict
         .join(KBDocument, KBChunk.document_id == KBDocument.id)
         .filter(
             KBChunk.kb_type == KBType(kb_type),
-            KBDocument.is_active == True,
+            KBDocument.is_active,
             or_conditions,
         )
         .order_by(total_score.desc(), KBChunk.id)
@@ -1244,7 +1244,7 @@ def get_kb_stats(kb_type: str, db) -> dict:
 
     doc_count   = db.query(KBDocument).filter(
         KBDocument.kb_type == KBType(kb_type),
-        KBDocument.is_active == True,
+        KBDocument.is_active,
     ).count()
     chunk_count = db.query(KBChunk).filter(
         KBChunk.kb_type == KBType(kb_type),

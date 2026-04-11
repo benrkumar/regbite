@@ -66,7 +66,7 @@ def get_current_user_from_cookie(request: Request, db: Session) -> Optional[User
 
 def _seed_demo_products(user: User, db: Session):
     """Create 5 demo products with synthetic compliance data for new users."""
-    rules = {r.rule_code: r for r in db.query(ComplianceRule).filter(ComplianceRule.active == True).all()}
+    rules = {r.rule_code: r for r in db.query(ComplianceRule).filter(ComplianceRule.active).all()}
     if not rules:
         return
 
@@ -354,7 +354,7 @@ def _seed_demo_products(user: User, db: Session):
             # Use severity-weighted scoring for alert messages
             from app.services.compliance_engine import calculate_compliance_score as _calc
             demo_checks = db.query(ComplianceCheck).filter(
-                ComplianceCheck.label_version_id == lv.id
+                ComplianceCheck.label_version_id == label.id
             ).all()
             score = _calc(demo_checks) if demo_checks else round((passed / total) * 100) if total else 0
             critical_count = sum(1 for c in failing_set if rules.get(c) and rules[c].severity == Severity.CRITICAL)

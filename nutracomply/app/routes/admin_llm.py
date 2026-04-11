@@ -237,7 +237,6 @@ async def llm_api_key_stats(request: Request, db: Session = Depends(get_db)):
         out["openrouter"] = {"status": "not_configured"}
 
     # ── Claude (Anthropic) ────────────────────────────────────────────────────
-    from app.config import get_settings as _gs
     out["claude"] = {
         "status":    "configured" if settings.anthropic_api_key else "not_configured",
         "model":     "claude-sonnet-4-6",
@@ -322,7 +321,7 @@ async def llm_train(kb_type: str, request: Request, db: Session = Depends(get_db
     documents = (
         db.query(KBDocument)
         .filter(KBDocument.kb_type == KBType(kb_type),
-                KBDocument.is_active == True)
+                KBDocument.is_active)
         .order_by(KBDocument.uploaded_at.desc())
         .all()
     )
@@ -344,7 +343,7 @@ async def llm_train(kb_type: str, request: Request, db: Session = Depends(get_db
         from app.models import ComplianceRule, RegulationChange
         rules = (
             db.query(ComplianceRule)
-            .filter(ComplianceRule.active == True)
+            .filter(ComplianceRule.active)
             .order_by(ComplianceRule.rule_code)
             .all()
         )
@@ -512,7 +511,7 @@ async def llm_reset_kb(kb_type: str, request: Request, db: Session = Depends(get
 
         label = {"fssai": "FSSAI", "ayush": "AYUSH",
                  "legal_metrology": "Legal+Metrology", "all": "All"}.get(subset, subset)
-        msg = f"deleted:{label}:{deleted_docs}"
+        msg = f"deleted:{label}"
         typ = "success"
     except Exception as exc:
         msg = f"Reset+failed:+{str(exc)[:120].replace(' ', '+')}"
@@ -622,7 +621,8 @@ async def llm_upload(
         return JSONResponse({"status": "error", "error": "Invalid KB type"}, status_code=400)
 
     from app.models import KBDocument, KBType
-    import hashlib, threading
+    import hashlib
+    import threading
 
     try:
         filename = file.filename or "upload"
@@ -639,7 +639,7 @@ async def llm_upload(
         hash_dupe = db.query(KBDocument.id, KBDocument.title).filter(
             KBDocument.kb_type      == KBType(kb_type),
             KBDocument.content_hash == content_hash,
-            KBDocument.is_active    == True,
+            KBDocument.is_active,
         ).first()
         if hash_dupe:
             return JSONResponse({
@@ -651,7 +651,7 @@ async def llm_upload(
         name_dupe = db.query(KBDocument.id).filter(
             KBDocument.kb_type   == KBType(kb_type),
             KBDocument.source    == source_key,
-            KBDocument.is_active == True,
+            KBDocument.is_active,
         ).first()
         if name_dupe:
             return JSONResponse({
@@ -701,7 +701,7 @@ async def llm_doc_count(kb_type: str, request: Request, db: Session = Depends(ge
     from app.models import KBDocument, KBChunk, KBType
     try:
         docs   = db.query(KBDocument).filter(KBDocument.kb_type == KBType(kb_type),
-                                              KBDocument.is_active == True).count()
+                                              KBDocument.is_active).count()
         chunks = db.query(KBChunk).filter(KBChunk.kb_type == KBType(kb_type)).count()
         return JSONResponse({"docs": docs, "chunks": chunks})
     except Exception as exc:
@@ -728,7 +728,7 @@ async def llm_audit(kb_type: str, request: Request, db: Session = Depends(get_db
                 KBDocument.chunk_count,
             )
             .filter(KBDocument.kb_type == KBType(kb_type),
-                    KBDocument.is_active == True)
+                    KBDocument.is_active)
             .all()
         )
 
@@ -1033,7 +1033,9 @@ def _extract_pdf_content_for_kb(raw_bytes: bytes, filename: str) -> str:
 
     Returns extracted text (may be empty string if all fail).
     """
-    import io, tempfile, os
+    import io
+    import tempfile
+    import os
     from app.config import get_settings
     cfg = get_settings()
 
