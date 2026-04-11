@@ -293,6 +293,22 @@
       {% endif %}
     </div>
 
+    {# ── Re-read & Re-learn ── always-visible, prominent action ── #}
+    <div class="kb-action-section" style="background:#F0F9F8;border-left:3px solid #5A9A98;">
+      <div class="kb-action-section-lbl" style="color:#5A9A98;">Re-read & Re-learn</div>
+      <p style="font-size:0.72rem;color:#525252;margin:0 0 0.65rem;line-height:1.5;">
+        Re-reads all stored document content and re-chunks everything with the
+        improved <strong>600-char chunker</strong>. Fixes thin documents and improves
+        RAG answer quality. Uploaded PDFs and seeded rules are all re-processed.
+      </p>
+      <button type="button" id="relearnBtn" class="adm-btn adm-btn-primary" onclick="startRelearn()"
+              style="width:100%;font-size:0.78rem;">
+        🔄 Re-read & Re-learn from All Docs
+      </button>
+      <div id="relearnStatus" style="display:none;margin-top:0.55rem;font-size:0.75rem;color:#525252;"></div>
+      <div id="relearnResult" style="display:none;margin-top:0.55rem;font-size:0.75rem;color:#3D7A50;background:#D8F0DF;border-radius:6px;padding:0.4rem 0.6rem;"></div>
+    </div>
+
     <div class="kb-action-section" id="auditSection">
       <div class="kb-action-section-lbl" style="display:flex;align-items:center;justify-content:space-between;">
         <span>KB Health</span>
@@ -634,16 +650,77 @@
 </div>{# /.kb-page #}
 
 <script>
-const KB_TYPE       = "{{ kb_type }}";
-const UPLOAD_URL    = `/admin/llm/${KB_TYPE}/upload`;
-const AUDIT_URL   = `/admin/llm/${KB_TYPE}/audit`;
-const REINDEX_URL = `/admin/llm/${KB_TYPE}/reindex`;
+const KB_TYPE        = "{{ kb_type }}";
+const UPLOAD_URL     = `/admin/llm/${KB_TYPE}/upload`;
+const AUDIT_URL      = `/admin/llm/${KB_TYPE}/audit`;
+const REINDEX_URL    = `/admin/llm/${KB_TYPE}/reindex`;
+const RELEARN_URL    = `/admin/llm/${KB_TYPE}/force-relearn`;
 
 // Helper: read _csrf cookie for POST fetch() calls (CSRF middleware requires it)
 function _csrfHeaders() {
   const m = document.cookie.match('(^|;)\\s*_csrf=([^;]+)');
   const tok = m ? decodeURIComponent(m[2]) : "";
   return tok ? { "x-csrf-token": tok } : {};
+}
+
+// ── Re-read & Re-learn ───────────────────────────────────────────────────────
+async function startRelearn() {
+  const btn    = document.getElementById("relearnBtn");
+  const status = document.getElementById("relearnStatus");
+  const result = document.getElementById("relearnResult");
+
+  btn.disabled = true;
+  btn.textContent = "Re-reading… this may take a minute";
+  status.style.display = "block";
+  status.textContent = "Starting re-read job…";
+  result.style.display = "none";
+
+  try {
+    // Start the background re-learn job (same engine as Re-index)
+    const r = await fetch(RELEARN_URL, { method: "POST", headers: _csrfHeaders() });
+    const d = await r.json();
+    if (!r.ok || d.error) throw new Error(d.error || `HTTP ${r.status}`);
+
+    const jobId = d.job_id;
+    status.textContent = "Re-reading all documents… (0s)";
+
+    // Poll for completion
+    let elapsed = 0;
+    const poll = async () => {
+      elapsed += 2;
+      try {
+        const pr = await fetch(`/admin/llm/${KB_TYPE}/reindex/status/${jobId}`, { credentials: "same-origin" });
+        const pd = await pr.json();
+
+        if (pd.status === "done") {
+          status.style.display = "none";
+          result.style.display = "block";
+          result.innerHTML =
+            `✓ Done — re-read <strong>${pd.reindexed ?? pd.total_docs ?? "?"}</strong> documents, ` +
+            `created <strong>${pd.total_new_chunks ?? "?"}</strong> chunks ` +
+            `(avg ${pd.avg_chunks_per_doc ?? "?"} per doc). ` +
+            `Run Audit to see updated health score.`;
+          btn.disabled = false;
+          btn.textContent = "🔄 Re-read & Re-learn from All Docs";
+          return;
+        }
+        if (pd.status === "error") throw new Error(pd.error || "Re-learn job failed");
+
+        status.textContent = `Re-reading all documents… (${elapsed}s elapsed)`;
+        setTimeout(poll, 2000);
+      } catch (e) {
+        status.textContent = "⚠ Poll error: " + e.message;
+        btn.disabled = false;
+        btn.textContent = "🔄 Re-read & Re-learn from All Docs";
+      }
+    };
+    setTimeout(poll, 2000);
+
+  } catch (e) {
+    status.textContent = "⚠ " + e.message;
+    btn.disabled = false;
+    btn.textContent = "🔄 Re-read & Re-learn from All Docs";
+  }
 }
 
 function _auditSetScanning() {

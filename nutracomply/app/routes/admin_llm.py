@@ -842,6 +842,37 @@ async def llm_reindex_status(kb_type: str, job_id: str, request: Request,
     return JSONResponse(job)
 
 
+@router.post("/llm/{kb_type}/force-relearn")
+async def llm_force_relearn(kb_type: str, request: Request, db: Session = Depends(get_db)):
+    """
+    Force re-read and re-chunk ALL uploaded PDF documents for this KB with the
+    current (600-char) chunker. This is the same as Re-index but runs immediately
+    in the foreground and returns stats — designed for the 'Re-read PDFs' flow.
+
+    For each KBDocument:
+      1. Deletes existing KBChunk rows
+      2. Re-splits doc.content (stored extracted PDF text) with chunk_text(max_chars=600)
+      3. Inserts new KBChunk rows
+
+    Docs with < 20 chars of content are skipped (placeholder / empty records).
+    """
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+    if kb_type not in _VALID_KB:
+        return JSONResponse({"error": "Invalid kb_type"}, status_code=400)
+
+    import threading
+    job_id = str(uuid.uuid4())[:12]
+    _REINDEX_JOBS[job_id] = {"status": "starting"}
+    threading.Thread(
+        target=_run_reindex_job,
+        args=(job_id, kb_type),
+        daemon=True,
+    ).start()
+    return JSONResponse({"job_id": job_id, "status": "starting"})
+
+
 @router.post("/llm/{kb_type}/documents/{doc_id}/delete")
 async def llm_delete_document(
     kb_type: str, doc_id: int,
