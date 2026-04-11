@@ -16,6 +16,8 @@ v4 improvements:
   - Fixed Claude model name: claude-sonnet-4-6 (was invalid claude-sonnet-4-20250514)
   - STOPWORDS no longer strips "not", "is", "for", "about", "why" — critical regulatory terms
   - chunk_text max_chars: 800 → 1200 (avoids mid-sentence cuts in long rule descriptions)
+  - chunk_text max_chars: 1200 → 2000 (capture more regulatory context per chunk)
+  - chunk_text max_chars: 2000 → 600 (optimal RAG size; fixes 373 thin 1-chunk docs)
   - retrieve_context top_k: 10 → 15 (more context for multi-rule queries)
   - Anti-hallucination guardrails in both system prompts (no invented rule codes)
 
@@ -234,7 +236,7 @@ SYSTEM_PROMPTS: dict[str, str] = {
 
 # ─── Text chunking ────────────────────────────────────────────────────────────
 
-def chunk_text(text: str, max_chars: int = 2000) -> list[str]:
+def chunk_text(text: str, max_chars: int = 600) -> list[str]:
     """
     Split *text* into chunks of at most *max_chars* characters.
 
@@ -245,7 +247,10 @@ def chunk_text(text: str, max_chars: int = 2000) -> list[str]:
     3. Word-split any remaining paragraphs that exceed max_chars
     4. Add 10% overlap between consecutive large chunks to preserve context
 
-    max_chars increased from 1200 → 2000 to capture more regulatory context per chunk.
+    max_chars lowered from 2000 → 600 (~100 words) for better RAG precision:
+    - Shorter chunks = more focused retrieval context, less irrelevant noise
+    - Docs under 2000 chars were staying as 1 chunk (thin); 600 splits them properly
+    - Optimal RAG chunk size is 300-800 chars per published research
     Returns a list of non-empty, stripped strings.
     """
     def _word_split(text_block: str, limit: int) -> list[str]:
