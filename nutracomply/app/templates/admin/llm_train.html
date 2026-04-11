@@ -639,6 +639,13 @@ const UPLOAD_URL    = `/admin/llm/${KB_TYPE}/upload`;
 const AUDIT_URL   = `/admin/llm/${KB_TYPE}/audit`;
 const REINDEX_URL = `/admin/llm/${KB_TYPE}/reindex`;
 
+// Helper: read _csrf cookie for POST fetch() calls (CSRF middleware requires it)
+function _csrfHeaders() {
+  const m = document.cookie.match('(^|;)\\s*_csrf=([^;]+)');
+  const tok = m ? decodeURIComponent(m[2]) : "";
+  return tok ? { "x-csrf-token": tok } : {};
+}
+
 function _auditSetScanning() {
   document.getElementById("auditProgressWrap").style.display = "block";
   document.getElementById("auditSummary").style.display     = "none";
@@ -784,10 +791,10 @@ async function startReindex() {
   btn.textContent = "Re-indexing…";
 
   try {
-    const resp = await fetch(REINDEX_URL, { method: "POST" });
+    const resp = await fetch(REINDEX_URL, { method: "POST", headers: _csrfHeaders() });
     const data = await resp.json();
     if (!data.job_id) {
-      alert("Re-index failed: " + (data.error || "Unknown error"));
+      alert("Re-index failed: " + (data.error || data.detail || `HTTP ${resp.status}`));
       btn.disabled = false; btn.textContent = "↻ Re-index"; return;
     }
 
