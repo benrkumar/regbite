@@ -68,7 +68,7 @@
     {% set score = p.compliance_score %}
     {% set latest = p.latest_label %}
     <div class="prod-row">
-      <div class="prod-name">{{ p.name }}</div>
+      <div class="prod-name" title="{{ p.name }}">{{ p.name }}</div>
       <span class="prod-cat">{{ p.category or 'Uncategorized' }}</span>
       {% if score is not none %}
       <span class="prod-score" style="color:{% if score >= 80 %}#3D7A50{% elif score >= 50 %}#8B6914{% else %}#8B3A3A{% endif %};">{{ score }}%</span>

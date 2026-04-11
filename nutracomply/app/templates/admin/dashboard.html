@@ -100,7 +100,7 @@
           {% for a in recent_alerts %}
           <tr>
             <td>
-              <div style="font-weight:600;color:#5A9A98;font-size:0.83rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ a.title }}</div>
+              <div style="font-weight:600;color:#5A9A98;font-size:0.83rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ a.title }}">{{ a.title }}</div>
               <div style="font-size:0.72rem;color:#737373;">{{ a.created_at.strftime('%d %b %Y') }}</div>
             </td>
             <td>
@@ -132,10 +132,12 @@
   <h4 class="adm-section-title">Quick Actions</h4>
   <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
     <form method="post" action="/admin/trigger-scrape" style="margin:0;">
-      <button type="submit" class="adm-btn adm-btn-primary">&#x21BB; Run Regulation Scrape Now</button>
+      <button type="submit" class="adm-btn adm-btn-primary"
+              onclick="this.disabled=true;this.textContent='Running…';this.closest('form').submit();">&#x21BB; Run Regulation Scrape Now</button>
     </form>
     <form method="post" action="/admin/trigger-recheck" style="margin:0;">
-      <button type="submit" class="adm-btn adm-btn-success">&#x1F504; Re-check All Labels</button>
+      <button type="submit" class="adm-btn adm-btn-success"
+              onclick="this.disabled=true;this.textContent='Starting…';this.closest('form').submit();">&#x1F504; Re-check All Labels</button>
     </form>
     <a href="/admin/users" class="adm-btn">&#x1F465; Manage Users</a>
     <a href="/admin/rules" class="adm-btn">&#x1F4CB; View Compliance Rules</a>

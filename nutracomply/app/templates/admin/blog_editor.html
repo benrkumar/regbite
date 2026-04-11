@@ -225,7 +225,7 @@
   var slugManuallyEdited = {{ 'true' if post else 'false' }};
 
   slugInput.addEventListener('input', function() {
-    slugManuallyEdited = true;
+    slugManuallyEdited = true;  // stays in closure scope, no global leak
   });
 
   titleInput.addEventListener('input', function() {
@@ -252,7 +252,7 @@
     if (!fileInput.files.length) { status.textContent = 'Select an image first.'; return; }
     var fd = new FormData();
     fd.append('file', fileInput.files[0]);
-    btn.disabled = true; btn.style.opacity = '0.6';
+    btn.disabled = true; btn.style.opacity = '0.6'; btn.style.cursor = 'not-allowed';
     status.textContent = 'Uploading...';
     fetch('/admin/blog/upload-image', { method: 'POST', body: fd })
       .then(function(r) { return r.json(); })
@@ -267,7 +267,7 @@
         }
       })
       .catch(function() { status.textContent = 'Upload failed.'; status.style.color = '#8B3A3A'; })
-      .finally(function() { btn.disabled = false; btn.style.opacity = '1'; });
+      .finally(function() { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = ''; });
   };
 
   // ── AI SEO Generation ──

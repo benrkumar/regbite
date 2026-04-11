@@ -63,18 +63,18 @@
           <span style="font-weight:600;">{{ log.resource_type }}</span>
           {% if log.resource_id %}<span style="color:#A3A3A3;"> #{{ log.resource_id }}</span>{% endif %}
           {% else %}
-          <span style="color:#D4D4D4;">—</span>
+          <span style="color:#A3A3A3;">—</span>
           {% endif %}
         </td>
         <td style="font-size:0.82rem;color:#737373;max-width:260px;">
           {% if log.detail %}
           {{ log.detail }}
           {% else %}
-          <span style="color:#D4D4D4;">—</span>
+          <span style="color:#A3A3A3;">—</span>
           {% endif %}
         </td>
         <td style="font-size:0.78rem;color:#A3A3A3;white-space:nowrap;">
-          {% if log.ip_address %}{{ log.ip_address }}{% else %}<span style="color:#D4D4D4;">—</span>{% endif %}
+          {% if log.ip_address %}{{ log.ip_address }}{% else %}<span style="color:#A3A3A3;">—</span>{% endif %}
         </td>
       </tr>
       {% else %}
