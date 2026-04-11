@@ -956,14 +956,14 @@ function renderQueue() {
       </div>`;
   }).join("");
 
-  const pending = fileQueue.filter(q => q.status === "pending").length;
-  const done    = fileQueue.filter(q => q.status === "done").length;
-  const errors  = fileQueue.filter(q => q.status === "error").length;
-  const parts   = [];
-  if (pending)  parts.push(`${pending} pending`);
-  if (done)     parts.push(`${done} uploaded`);
-  if (errors)   parts.push(`${errors} failed`);
-  summary.textContent = parts.join(" · ");
+  const pendingCount = fileQueue.filter(q => q.status === "pending").length;
+  const doneCount2   = fileQueue.filter(q => q.status === "done").length;
+  const errorsCount  = fileQueue.filter(q => q.status === "error").length;
+  const summaryParts = [];
+  if (pendingCount) summaryParts.push(`${pendingCount} pending`);
+  if (doneCount2)   summaryParts.push(`${doneCount2} uploaded`);
+  if (errorsCount)  summaryParts.push(`${errorsCount} failed`);
+  summary.textContent = summaryParts.join(" · ");
 
   const uploadBtn = document.getElementById("uploadAllBtn");
   uploadBtn.disabled = (pending === 0);
