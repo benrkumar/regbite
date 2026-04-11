@@ -303,23 +303,30 @@ async def admin_blog_create(
 
     post_status = BlogPostStatus(status) if status in [s.value for s in BlogPostStatus] else BlogPostStatus.DRAFT
 
-    post = BlogPost(
-        title=title.strip()[:300],
-        slug=final_slug,
-        excerpt=(excerpt.strip() or None)[:500] if excerpt.strip() else None,
-        content=_sanitize_html(content),
-        status=post_status,
-        category_id=int(category_id) if category_id else None,
-        featured_image=featured_image.strip() or None,
-        is_featured=bool(is_featured),
-        tags=tags.strip() or None,
-        meta_title=meta_title.strip() or None,
-        meta_description=meta_description.strip() or None,
-        author_id=user.id,
-        published_at=datetime.utcnow() if post_status == BlogPostStatus.PUBLISHED else None,
-    )
-    db.add(post)
-    db.commit()
+    try:
+        post = BlogPost(
+            title=title.strip()[:300],
+            slug=final_slug,
+            excerpt=excerpt.strip()[:500] if excerpt.strip() else None,
+            content=_sanitize_html(content) if content.strip() else "",
+            status=post_status,
+            category_id=int(category_id) if category_id and category_id.isdigit() else None,
+            featured_image=featured_image.strip() or None,
+            is_featured=bool(is_featured),
+            tags=tags.strip() or None,
+            meta_title=meta_title.strip()[:300] if meta_title.strip() else None,
+            meta_description=meta_description.strip()[:500] if meta_description.strip() else None,
+            author_id=user.id,
+            published_at=datetime.utcnow() if post_status == BlogPostStatus.PUBLISHED else None,
+        )
+        db.add(post)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return RedirectResponse(
+            url=f"/admin/blog/new?msg=Error+creating+post:+{str(e)[:120]}&type=error",
+            status_code=302,
+        )
 
     action = "published" if post_status == BlogPostStatus.PUBLISHED else "saved as draft"
     return RedirectResponse(
@@ -361,21 +368,28 @@ async def admin_blog_update(
             new_slug = f"{new_slug}-{int(datetime.utcnow().timestamp())}"
         post.slug = new_slug
 
-    post.excerpt = (excerpt.strip() or None)[:500] if excerpt.strip() else None
-    post.content = _sanitize_html(content)
-    post.category_id = int(category_id) if category_id else None
+    post.excerpt = excerpt.strip()[:500] if excerpt.strip() else None
+    post.content = _sanitize_html(content) if content.strip() else ""
+    post.category_id = int(category_id) if category_id and category_id.isdigit() else None
     post.featured_image = featured_image.strip() or None
     post.is_featured = bool(is_featured)
     post.tags = tags.strip() or None
-    post.meta_title = meta_title.strip() or None
-    post.meta_description = meta_description.strip() or None
+    post.meta_title = meta_title.strip()[:300] if meta_title.strip() else None
+    post.meta_description = meta_description.strip()[:500] if meta_description.strip() else None
 
     new_status = BlogPostStatus(status) if status in [s.value for s in BlogPostStatus] else post.status
     if new_status == BlogPostStatus.PUBLISHED and post.status != BlogPostStatus.PUBLISHED:
         post.published_at = datetime.utcnow()
     post.status = new_status
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return RedirectResponse(
+            url=f"/admin/blog/{post_id}/edit?msg=Error+saving:+{str(e)[:120]}&type=error",
+            status_code=302,
+        )
 
     return RedirectResponse(
         url="/admin/blog?msg=Post+updated+successfully&type=success",

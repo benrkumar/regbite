@@ -543,7 +543,7 @@ def _call_gemini_vision(image_path: str) -> Optional[dict]:
     import PIL.Image
 
     genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel("gemini-2.5-pro-preview-06-05")
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
     img_path = Path(image_path)
     suffix = img_path.suffix.lower()
@@ -579,7 +579,7 @@ def _call_gemini_text(ocr_text: str) -> Optional[dict]:
     import google.generativeai as genai
 
     genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
     prompt = TEXT_PROMPT.replace("{label_text}", ocr_text[:12000])
 
@@ -611,23 +611,10 @@ def extract_label_data_from_image(image_path: str) -> tuple:
     _log(f"[extraction] Claude key (os.environ): {'SET len=' + str(len(key_from_env)) if key_from_env else 'EMPTY'}")
     _log(f"[extraction] Gemma enabled={settings.gemma_enabled}, key={'SET' if settings.openrouter_api_key else 'EMPTY'}")
 
-    # Try Gemma first (cheap primary)
-    if _is_gemma_available():
-        try:
-            result, inp, out = _call_gemma_vision(image_path)
-            if result:
-                result = _normalize_extraction(result)
-                confidence = _calculate_confidence(result, "vision")
-                warnings = _validate_extraction(result)
-                if warnings:
-                    result["_extraction_warnings"] = warnings
-                    _log(f"[extraction] Gemma Vision warnings: {warnings}")
-                _log(f"[extraction] Gemma Vision succeeded (confidence={confidence})")
-                return result, confidence, "gemma", inp, out
-        except Exception as e:
-            _log(f"[extraction] Gemma Vision failed: {e}")
+    # Gemma Vision skipped — too slow (40s+) and HTTP 400 errors from OpenRouter.
+    # Gemma is still used for LLM KB chat; just not for label extraction.
 
-    # Fallback: Claude Vision (paid fallback)
+    # Primary: Claude Vision
     if key_from_env or settings.anthropic_api_key:
         try:
             result, inp, out = _call_claude_vision(image_path)
@@ -675,24 +662,9 @@ def extract_label_data(ocr_text: str) -> tuple:
 
     import os
 
-    # Try Gemma first (cheap primary)
-    if _is_gemma_available():
-        try:
-            result, inp, out = _call_gemma_text(ocr_text)
-            if result:
-                result = _normalize_extraction(result)
-                result = _cross_check_with_ocr(result, ocr_text)
-                confidence = _calculate_confidence(result, "text")
-                warnings = _validate_extraction(result)
-                if warnings:
-                    result["_extraction_warnings"] = warnings
-                    _log(f"[extraction] Gemma text warnings: {warnings}")
-                _log(f"[extraction] Gemma text succeeded (confidence={confidence})")
-                return result, confidence, "gemma", inp, out
-        except Exception as e:
-            _log(f"[extraction] Gemma text failed: {e}")
+    # Gemma text skipped — same reasons as vision (slow + 400 errors).
 
-    # Fallback: Claude Text (paid fallback)
+    # Primary: Claude Text
     if settings.anthropic_api_key or os.environ.get("ANTHROPIC_API_KEY", ""):
         try:
             result, inp, out = _call_claude_text(ocr_text)
