@@ -1,4 +1,5 @@
 import io
+import time as _global_time
 import uuid
 from pathlib import Path
 
@@ -20,6 +21,10 @@ settings = get_settings()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".pdf", ".webp"}
+
+# In-memory job start times — used by status endpoint to detect stuck scans.
+# Keyed by label_version_id → float (time.time() when _process_label started).
+_SCAN_START: dict[int, float] = {}
 
 
 def require_user(request: Request, db: Session):
@@ -167,30 +172,29 @@ async def upload_label(
 
 
 def _process_label(label_version_id: int):
-    """Background task: Claude Vision → compliance check → create alerts.
-
-    Fast path (default, ~20-25s):
-      Claude Vision reads the image or PDF directly — no OCR needed.
-      Returns structured JSON in one API call.
-
-    Fallback path (~5-10s extra, only if Vision fails):
-      pytesseract OCR → local pattern library → Claude Text.
-      PaddleOCR removed (was causing 15-25s startup overhead every call).
-
-    Pattern learning runs in a daemon thread — does not block compliance check.
-    Token reuse: if previous extraction has confidence >= 0.85, skip extraction entirely.
-    """
+    """Background task: compress image → Claude Vision → compliance → alerts."""
     import os
+    import time as _time
     import threading
     from app.database import SessionLocal
+
+    t0 = _time.time()
+    _SCAN_START[label_version_id] = t0
+    print(f"[process_label] START label_id={label_version_id}", flush=True)
 
     db = SessionLocal()
     try:
         label_version = db.query(LabelVersion).filter(LabelVersion.id == label_version_id).first()
         if not label_version:
+            print(f"[process_label] label {label_version_id} not found — aborting", flush=True)
             return
 
-        # ── Cache reuse: re-run rules only on high-confidence previous extractions ──
+        # Eagerly load product so it's available after db.commit() without lazy-load errors
+        _ = label_version.product
+
+        print(f"[process_label] file={label_version.file_path}", flush=True)
+
+        # ── Cache reuse: skip extraction if high-confidence extraction already exists ──
         reuse_extraction = (
             label_version.extraction_json
             and label_version.extraction_confidence
@@ -199,111 +203,104 @@ def _process_label(label_version_id: int):
 
         if reuse_extraction:
             print(f"[process_label] Re-using cached extraction "
-                  f"(confidence={label_version.extraction_confidence:.2f}) — 0 API tokens", flush=True)
+                  f"confidence={label_version.extraction_confidence:.2f}", flush=True)
             extraction = label_version.extraction_json
         else:
             from app.config import get_settings as _get_settings
             _cfg = _get_settings()
 
-            # Ensure Anthropic key is reachable in subprocess/thread env
+            # Ensure Anthropic API key is in os.environ for the httpx call
             if _cfg.anthropic_api_key:
-                os.environ.setdefault("ANTHROPIC_API_KEY", _cfg.anthropic_api_key)
+                os.environ["ANTHROPIC_API_KEY"] = _cfg.anthropic_api_key
 
             extraction  = None
             confidence  = 0.0
             extr_source = "fallback"
             inp_tokens  = out_tokens = 0
-            raw_text    = None   # only populated if Vision fails
+            raw_text    = None
 
-            # ── FAST PATH: Claude Vision reads image/PDF directly ─────────────────
-            # No OCR step — Claude sees the pixels. Typical time: 15-25s.
+            # ── FAST PATH: Claude Vision (image compressed before sending) ────────
+            print("[process_label] Starting Claude Vision...", flush=True)
             try:
                 extraction, confidence, extr_source, inp_tokens, out_tokens = \
                     extract_label_data_from_image(label_version.file_path)
-                print(f"[process_label] Vision OK: source={extr_source} "
-                      f"confidence={confidence:.2f} tokens=in:{inp_tokens} out:{out_tokens}", flush=True)
+                print(f"[process_label] Vision done in {_time.time()-t0:.1f}s "
+                      f"source={extr_source} conf={confidence:.2f} "
+                      f"tokens=in:{inp_tokens} out:{out_tokens}", flush=True)
             except Exception as e:
-                print(f"[process_label] Vision extraction failed: {e}", flush=True)
+                print(f"[process_label] Vision FAILED ({_time.time()-t0:.1f}s): {e}", flush=True)
                 extraction = None
 
-            vision_ok = bool(extraction) and confidence >= 0.45
+            vision_ok = bool(extraction) and confidence >= 0.40
 
-            # ── FALLBACK: OCR (pytesseract) → local patterns → Claude Text ────────
+            # ── FALLBACK: OCR → Claude Text ───────────────────────────────────────
             if not vision_ok:
-                print("[process_label] Vision failed/low-confidence — running OCR fallback", flush=True)
-
+                print("[process_label] Vision failed/low-conf — trying OCR+Text fallback", flush=True)
+                raw_text = ""
                 try:
                     raw_text, _ = extract_text_from_file(label_version.file_path)
-                    label_version.ocr_raw_text = raw_text
-                    print(f"[process_label] OCR got {len(raw_text or '')} chars", flush=True)
+                    print(f"[process_label] OCR: {len(raw_text)} chars", flush=True)
                 except Exception as e:
                     print(f"[process_label] OCR failed: {e}", flush=True)
-                    raw_text = ""
 
-                # Local pattern library (zero API cost, fast regex)
-                used_local = False
                 if raw_text:
+                    used_local = False
                     try:
                         from app.services.local_extraction_service import extract_locally
                         local_result, local_conf = extract_locally(raw_text, db=db)
                         if _cfg.local_extraction_enabled and local_conf >= _cfg.local_extraction_min_confidence:
-                            print(f"[local-extract] confidence={local_conf:.3f} — using local", flush=True)
+                            print(f"[local-extract] conf={local_conf:.3f} — using local", flush=True)
                             extraction  = local_result
                             confidence  = local_conf
                             extr_source = "local"
                             used_local  = True
-                        else:
-                            print(f"[local-extract] confidence={local_conf:.3f} — falling back to Claude Text", flush=True)
                     except Exception as e:
                         print(f"[local-extract] Error: {e}", flush=True)
 
-                # Claude Text on OCR output
-                if not used_local and raw_text:
-                    try:
-                        extraction, confidence, extr_source, inp_tokens, out_tokens = \
-                            extract_label_data(raw_text)
-                        # Cross-check text extraction against raw OCR for missed fields
-                        if extraction and raw_text:
-                            extraction = _cross_check_with_ocr(extraction, raw_text)
-                        print(f"[process_label] Text extraction: source={extr_source} "
-                              f"confidence={confidence:.2f}", flush=True)
-                    except Exception as e:
-                        print(f"[process_label] Text extraction failed: {e}", flush=True)
+                    if not used_local:
+                        try:
+                            extraction, confidence, extr_source, inp_tokens, out_tokens = \
+                                extract_label_data(raw_text)
+                            if extraction and raw_text:
+                                extraction = _cross_check_with_ocr(extraction, raw_text)
+                            print(f"[process_label] Text done: source={extr_source} "
+                                  f"conf={confidence:.2f}", flush=True)
+                        except Exception as e:
+                            print(f"[process_label] Text extraction FAILED: {e}", flush=True)
 
             if not extraction:
                 extraction = {}
+                print("[process_label] All extraction paths failed — storing empty dict", flush=True)
 
-            # ── Persist extraction results ────────────────────────────────────────
+            # ── Commit extraction (makes status endpoint return ready once compliance runs) ──
             label_version.extraction_json       = extraction
             label_version.extraction_confidence = confidence
             label_version.extraction_source     = extr_source
             label_version.tokens_input          = inp_tokens
             label_version.tokens_output         = out_tokens
             db.commit()
+            print(f"[process_label] Extraction committed in {_time.time()-t0:.1f}s", flush=True)
 
-            # ── Pattern learning in daemon thread (non-blocking) ──────────────────
-            # Requires OCR text — skipped on Vision success path (no raw_text available).
-            # Uses own DB session so parent session can close safely.
+            # ── Pattern learning — daemon thread, non-blocking ─────────────────────
             if extraction and confidence >= 0.80 and raw_text and extr_source in ("claude", "gemini"):
-                _ext_snap  = dict(extraction)
-                _text_snap = raw_text
-                _lv_id     = label_version.id
-                _conf_snap = confidence
-
-                def _learn_async():
+                _ext_snap, _txt_snap, _lv_id, _conf_snap = (
+                    dict(extraction), raw_text, label_version.id, confidence
+                )
+                def _learn():
                     _db = SessionLocal()
                     try:
                         from app.services.pattern_library import learn_from_extraction
-                        learn_from_extraction(_ext_snap, _text_snap, _lv_id, _db, _conf_snap)
-                    except Exception as e:
-                        print(f"[pattern-library] Learn failed: {e}", flush=True)
+                        learn_from_extraction(_ext_snap, _txt_snap, _lv_id, _db, _conf_snap)
+                    except Exception as ex:
+                        print(f"[pattern-library] {ex}", flush=True)
                     finally:
                         _db.close()
+                threading.Thread(target=_learn, daemon=True).start()
 
-                threading.Thread(target=_learn_async, daemon=True).start()
-
-        # ── Compliance check ───────────────────────────────────────────────────────
+        # ── Compliance check (commits its own records — has_checks becomes True) ──
+        print("[process_label] Running compliance check...", flush=True)
         checks = run_compliance_check(label_version, db)
+        print(f"[process_label] Compliance done: {len(checks)} checks in {_time.time()-t0:.1f}s", flush=True)
 
         # Step 4: Create alerts for CRITICAL/HIGH failures
         violations = []
@@ -372,10 +369,21 @@ def _process_label(label_version_id: int):
         threading.Thread(target=_kb_update, daemon=True).start()
 
     except Exception as e:
-        print(f"[process_label] Error: {e}")
+        import traceback
+        print(f"[process_label] UNHANDLED ERROR: {e}\n{traceback.format_exc()}", flush=True)
+        # Still try to mark extraction as done so the page doesn't spin forever
+        try:
+            lv = db.query(LabelVersion).filter(LabelVersion.id == label_version_id).first()
+            if lv and lv.extraction_json is None:
+                lv.extraction_json = {}
+                db.commit()
+        except Exception:
+            pass
         db.rollback()
     finally:
+        _SCAN_START.pop(label_version_id, None)
         db.close()
+        print(f"[process_label] DONE label_id={label_version_id} total={_time.time()-t0:.1f}s", flush=True)
 
 
 @router.post("/labels/{label_id}/reanalyze")
@@ -414,11 +422,10 @@ async def reanalyze_label(
 @router.get("/labels/{label_id}/status")
 async def label_status(label_id: int, request: Request, db: Session = Depends(get_db)):
     """JSON polling endpoint — returns {ready: bool, failed: bool} for the progress bar."""
-    import datetime
     user = require_user(request, db)
     if not user:
         return JSONResponse({"ready": False, "failed": False})
-    # Single query with JOIN — avoids lazy-load round-trips on label.product / label.checks
+
     row = (
         db.query(LabelVersion, Product)
         .join(Product, Product.id == LabelVersion.product_id)
@@ -427,21 +434,29 @@ async def label_status(label_id: int, request: Request, db: Session = Depends(ge
     )
     if not row:
         return JSONResponse({"ready": False, "failed": True})
+
     label, _ = row
     has_checks = db.query(ComplianceCheck.id).filter(
         ComplianceCheck.label_version_id == label_id
     ).first() is not None
 
-    # BUG FIX: bool({}) == False — empty dict from failed extraction locked page forever.
-    # Use `is not None` so the page loads even when extraction returned no fields.
+    # Use `is not None` — bool({}) == False would lock the page when extraction returns {}
     extraction_done = label.extraction_json is not None
     ready = extraction_done and has_checks
 
-    # Detect stuck jobs: if still not ready after 3 minutes, surface a failure
+    # Detect stuck scans using in-memory start time (works for reanalysis too).
+    # Falls back to uploaded_at if start wasn't recorded (e.g. server restart).
     failed = False
-    if not ready and label.uploaded_at:
-        age_secs = (datetime.datetime.utcnow() - label.uploaded_at).total_seconds()
-        if age_secs > 180:  # 3 minutes (Haiku should finish in < 15s)
+    if not ready:
+        start_t = _SCAN_START.get(label_id)
+        if start_t is not None:
+            age_secs = _global_time.time() - start_t
+        elif label.uploaded_at:
+            import datetime
+            age_secs = (datetime.datetime.utcnow() - label.uploaded_at).total_seconds()
+        else:
+            age_secs = 0
+        if age_secs > 180:   # 3 min hard ceiling — Haiku Vision finishes in <15s normally
             failed = True
 
     return JSONResponse({"ready": ready, "failed": failed})
@@ -486,7 +501,7 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
         "failed_checks": sorted(failed, key=lambda c: c.rule.severity.value if c.rule else "zzz"),
         "warning_checks": warnings,
         "passed_checks": passed,
-        "processing": bool(processing) and not label.extraction_json,
+        "processing": bool(processing) and label.extraction_json is None,
         "CheckResult": CheckResult,
         "existing_report": existing_report,
     })

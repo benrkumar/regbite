@@ -301,7 +301,10 @@ def _claude_request(messages: list, max_tokens: int = 8192, extra_headers: dict 
     }
 
     _log(f"[claude-api] Sending request to Claude ({CLAUDE_MODEL})...")
-    resp = httpx.post(CLAUDE_API_URL, headers=headers, json=payload, timeout=180.0)
+    resp = httpx.post(
+        CLAUDE_API_URL, headers=headers, json=payload,
+        timeout=httpx.Timeout(connect=10.0, write=30.0, read=60.0, pool=5.0),
+    )
     if resp.status_code != 200:
         _log(f"[claude-api] HTTP {resp.status_code}: {resp.text[:500]}")
     resp.raise_for_status()
@@ -314,10 +317,58 @@ def _claude_request(messages: list, max_tokens: int = 8192, extra_headers: dict 
 
 
 def _parse_json_response(raw: str) -> dict:
-    """Strip markdown fences and parse JSON from LLM response."""
-    raw = re.sub(r"^```(?:json)?\s*", "", raw)
-    raw = re.sub(r"\s*```$", "", raw)
-    return json.loads(raw)
+    """Robustly extract and parse JSON from LLM response.
+
+    Handles:
+    - Bare JSON (ideal)
+    - ```json ... ``` fences
+    - JSON object embedded in prose ("Here is the JSON: {...}")
+    - Trailing text after the closing brace
+    """
+    # Strip common markdown fences first
+    text = re.sub(r"^```(?:json)?\s*", "", raw.strip(), flags=re.MULTILINE)
+    text = re.sub(r"\s*```\s*$", "", text, flags=re.MULTILINE).strip()
+
+    # Try direct parse first (fastest path)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Find the outermost JSON object/array using brace matching
+    for start_char, end_char in [('{', '}'), ('[', ']')]:
+        start = text.find(start_char)
+        if start == -1:
+            continue
+        depth = 0
+        in_string = False
+        escape_next = False
+        for i, ch in enumerate(text[start:], start):
+            if escape_next:
+                escape_next = False
+                continue
+            if ch == '\\' and in_string:
+                escape_next = True
+                continue
+            if ch == '"':
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == start_char:
+                depth += 1
+            elif ch == end_char:
+                depth -= 1
+                if depth == 0:
+                    candidate = text[start:i+1]
+                    try:
+                        return json.loads(candidate)
+                    except json.JSONDecodeError:
+                        break
+
+    # Last resort: re-raise with the raw text for debugging
+    _log(f"[parse-json] Could not extract JSON from response (first 300 chars): {raw[:300]}")
+    raise json.JSONDecodeError("No valid JSON found in response", raw, 0)
 
 
 def _call_claude_vision(image_path: str) -> tuple:
@@ -330,11 +381,10 @@ def _call_claude_vision(image_path: str) -> tuple:
     suffix = img_path.suffix.lower()
     _log(f"[extraction] Claude Vision starting for {suffix} file...")
 
-    # PDFs: render each page as a high-res image so Claude can read fine print
-    # (native PDF support misses small text like FSSAI numbers and batch codes)
+    # PDFs: render each page as a compressed JPEG — fast payloads
     if suffix == ".pdf":
-        _log("[extraction] Converting PDF to high-res images for Claude Vision...")
-        pages = _pdf_to_images(image_path, dpi=300)
+        _log("[extraction] Converting PDF pages to compressed JPEG for Claude Vision...")
+        pages = _pdf_to_images(image_path)   # uses default 150 DPI
         if not pages:
             _log("[extraction] PDF→image conversion returned no pages")
             return None, 0, 0
@@ -344,26 +394,40 @@ def _call_claude_vision(image_path: str) -> tuple:
             b64 = base64.b64encode(img_bytes).decode("utf-8")
             content.append({
                 "type": "image",
-                "source": {"type": "base64", "media_type": media_type, "data": b64},
+                "source": {"type": "base64", "media_type": "image/jpeg", "data": b64},
             })
         prompt_text = MULTI_PAGE_VISION_PROMPT if len(pages) > 1 else VISION_PROMPT
         content.append({"type": "text", "text": prompt_text})
 
-        _log(f"[extraction] Sending {len(pages)} PDF page(s) as images to Claude...")
+        payload_kb = sum(len(b) for b, _ in pages) // 1024
+        _log(f"[extraction] Sending {len(pages)} PDF page(s) to Claude (~{payload_kb} KB)...")
         messages = [{"role": "user", "content": content}]
         raw, inp, out = _claude_request(messages)
         return _parse_json_response(raw), inp, out
 
-    # Single image
-    image_data = img_path.read_bytes()
-    b64_image = base64.b64encode(image_data).decode("utf-8")
+    # Single image — ALWAYS compress before sending.
+    # Raw phone photos are 8-20 MB (base64 → 11-27 MB) which takes 40-90s to upload.
+    # Resizing to ≤1600 px + JPEG 72 gives ~150-400 KB payload → uploads in <2s.
+    import io as _io
+    from PIL import Image as _Image
 
-    media_types = {
-        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-        ".png": "image/png", ".webp": "image/webp",
-        ".gif": "image/gif", ".tiff": "image/tiff", ".tif": "image/tiff",
-    }
-    media_type = media_types.get(suffix, "image/jpeg")
+    image_data = img_path.read_bytes()
+    img = _Image.open(_io.BytesIO(image_data)).convert("RGB")
+
+    # Downscale if wider than 1600 px
+    if img.width > 1600:
+        ratio = 1600 / img.width
+        img = img.resize((1600, int(img.height * ratio)), _Image.LANCZOS)
+    elif img.height > 2400:   # very tall portrait labels
+        ratio = 2400 / img.height
+        img = img.resize((int(img.width * ratio), 2400), _Image.LANCZOS)
+
+    buf = _io.BytesIO()
+    img.save(buf, format="JPEG", quality=72, optimize=True)
+    compressed = buf.getvalue()
+    b64_image = base64.b64encode(compressed).decode("utf-8")
+    payload_kb = len(compressed) // 1024
+    _log(f"[extraction] Image compressed to {payload_kb} KB JPEG for Claude Vision...")
 
     messages = [{
         "role": "user",
@@ -372,7 +436,7 @@ def _call_claude_vision(image_path: str) -> tuple:
                 "type": "image",
                 "source": {
                     "type": "base64",
-                    "media_type": media_type,
+                    "media_type": "image/jpeg",
                     "data": b64_image,
                 },
             },
