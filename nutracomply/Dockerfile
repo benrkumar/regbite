@@ -2,9 +2,9 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system deps for OpenCV + Tesseract + PaddleOCR
+# System deps: Tesseract (OCR fallback) + poppler (PDF utils)
+# Note: libglib/libsm/opencv removed — PaddleOCR no longer used
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglib2.0-0 libsm6 libxext6 libxrender-dev libgomp1 \
     tesseract-ocr tesseract-ocr-eng tesseract-ocr-hin \
     poppler-utils \
     && rm -rf /var/lib/apt/lists/*
@@ -16,4 +16,5 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"]
+# 4 workers: 2 handle live requests, 2 available for background scan tasks
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 4"]

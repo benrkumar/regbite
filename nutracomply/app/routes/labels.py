@@ -348,21 +348,28 @@ def _process_label(label_version_id: int):
             except Exception as e:
                 print(f"[alert] Email failed: {e}")
 
-        # Step 5: Auto-refresh Products KB so LLM Studio always has current compliance data
-        try:
-            from app.services.llm_service import seed_products_kb, invalidate_cache
-            seed_products_kb(db, force_update_product_id=label_version.product_id)
-            invalidate_cache("products")
-            print(f"[llm-kb] Products KB refreshed for product {label_version.product_id}", flush=True)
-        except Exception as e:
-            print(f"[llm-kb] Products KB refresh failed (non-critical): {e}", flush=True)
+        # Step 5+6: KB updates — run in daemon thread (non-critical, can't block the scan result)
+        _pid = label_version.product_id
 
-        # Step 6: Feed product into LLM knowledge base (legacy hook)
-        try:
-            from app.routes.products import _feed_product_to_llm
-            _feed_product_to_llm(label_version.product_id, db)
-        except Exception as e:
-            print(f"[llm-feed] Error: {e}")
+        def _kb_update():
+            from app.database import SessionLocal as _SL
+            _db = _SL()
+            try:
+                from app.services.llm_service import seed_products_kb, invalidate_cache
+                seed_products_kb(_db, force_update_product_id=_pid)
+                invalidate_cache("products")
+                print(f"[llm-kb] Products KB refreshed for product {_pid}", flush=True)
+            except Exception as e:
+                print(f"[llm-kb] KB refresh failed (non-critical): {e}", flush=True)
+            try:
+                from app.routes.products import _feed_product_to_llm
+                _feed_product_to_llm(_pid, _db)
+            except Exception as e:
+                print(f"[llm-feed] Error: {e}", flush=True)
+            finally:
+                _db.close()
+
+        threading.Thread(target=_kb_update, daemon=True).start()
 
     except Exception as e:
         print(f"[process_label] Error: {e}")
@@ -424,13 +431,17 @@ async def label_status(label_id: int, request: Request, db: Session = Depends(ge
     has_checks = db.query(ComplianceCheck.id).filter(
         ComplianceCheck.label_version_id == label_id
     ).first() is not None
-    ready = bool(label.extraction_json) and has_checks
 
-    # Detect stuck jobs: if no extraction after 4 minutes, report as failed
+    # BUG FIX: bool({}) == False — empty dict from failed extraction locked page forever.
+    # Use `is not None` so the page loads even when extraction returned no fields.
+    extraction_done = label.extraction_json is not None
+    ready = extraction_done and has_checks
+
+    # Detect stuck jobs: if still not ready after 3 minutes, surface a failure
     failed = False
     if not ready and label.uploaded_at:
         age_secs = (datetime.datetime.utcnow() - label.uploaded_at).total_seconds()
-        if age_secs > 240:  # 4 minutes
+        if age_secs > 180:  # 3 minutes (Haiku should finish in < 15s)
             failed = True
 
     return JSONResponse({"ready": ready, "failed": failed})

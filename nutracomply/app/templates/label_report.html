@@ -141,14 +141,13 @@
 <script>
 (function(){
   var stages = [
-    { pct: 8,  label: "Running OCR on label...",              delay: 0     },
-    { pct: 22, label: "Extracting label fields...",           delay: 2800  },
-    { pct: 42, label: "Sending to Claude Vision...",          delay: 6000  },
-    { pct: 58, label: "AI analysing label content...",        delay: 14000 },
-    { pct: 72, label: "Checking compliance rules...",         delay: 28000 },
-    { pct: 84, label: "Scoring &amp; building report...",    delay: 45000 },
-    { pct: 93, label: "Finalising results...",                delay: 60000 },
-    { pct: 97, label: "Almost there...",                      delay: 80000 },
+    { pct: 12, label: "Reading label...",                     delay: 0     },
+    { pct: 35, label: "Extracting product information...",    delay: 2000  },
+    { pct: 62, label: "Running AI analysis...",               delay: 5000  },
+    { pct: 78, label: "Checking compliance rules...",         delay: 9000  },
+    { pct: 90, label: "Scoring &amp; building report...",    delay: 14000 },
+    { pct: 96, label: "Finalising...",                        delay: 20000 },
+    { pct: 98, label: "Almost done...",                       delay: 35000 },
   ];
   var bar     = document.getElementById('scan-bar');
   var pctEl   = document.getElementById('scan-pct');
@@ -168,7 +167,8 @@
   // Poll JSON status endpoint every 5s; stop & reload when ready
   var labelId    = window.location.pathname.split('/')[2];
   var pollCount  = 0;
-  var MAX_POLLS  = 36;   // 36 × 5s = 3 minutes max wait
+  var MAX_POLLS  = 75;   // 75 × 2s = 2.5 minutes max wait
+  var POLL_MS    = 2000; // poll every 2s — fast enough to catch 5s Haiku responses
   var pollTimer  = null;
 
   function showError() {
@@ -199,14 +199,14 @@
           showError();
           return;  // stop polling
         }
-        pollTimer = setTimeout(poll, 5000);
+        pollTimer = setTimeout(poll, POLL_MS);
       })
       .catch(function(){
         if(pollCount >= MAX_POLLS){ showError(); return; }
-        pollTimer = setTimeout(poll, 5000);
+        pollTimer = setTimeout(poll, POLL_MS);
       });
   }
-  pollTimer = setTimeout(poll, 5000);
+  pollTimer = setTimeout(poll, POLL_MS);
 })();
 </script>
 {% else %}

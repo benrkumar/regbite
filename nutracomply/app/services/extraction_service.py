@@ -236,13 +236,11 @@ def _validate_extraction(extraction: dict) -> list[str]:
 # ─── PDF to images ─────────────────────────────────────────────────────────
 
 def _pdf_to_images(pdf_path: str, dpi: int = 150) -> list[tuple[bytes, str]]:
-    """Convert PDF pages to JPEG images for Claude/Gemini Vision.
+    """Convert PDF pages to JPEG images for Claude Vision.
 
-    Uses JPEG (not PNG) for ~10× smaller payloads — a typical supplement label
-    page goes from ~5 MB PNG to ~300 KB JPEG, dramatically reducing API round-trip time.
-    Pages wider than 1800 px are downscaled to keep payload size predictable.
-    Capped at 3 pages: supplement labels rarely exceed 3 pages and sending more
-    pages just increases cost and latency without improving accuracy.
+    Uses JPEG at 150 DPI for fast, lean payloads (~80-150 KB/page) while keeping
+    text readable for AI. Pages wider than 1600 px are downscaled.
+    Capped at 2 pages — supplement labels never need more.
     """
     import fitz  # PyMuPDF
     import io
@@ -250,19 +248,19 @@ def _pdf_to_images(pdf_path: str, dpi: int = 150) -> list[tuple[bytes, str]]:
 
     images = []
     doc = fitz.open(pdf_path)
-    page_count = min(len(doc), 3)  # 3-page cap — supplement labels don't need more
+    page_count = min(len(doc), 2)  # 2-page cap — front + back is enough
     for page_num in range(page_count):
         page = doc[page_num]
         pix = page.get_pixmap(dpi=dpi)
         img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
 
-        # Resize if wider than 1800 px (keeps text sharp but limits payload)
-        if img.width > 1800:
-            ratio = 1800 / img.width
-            img = img.resize((1800, int(img.height * ratio)), Image.LANCZOS)
+        # Downscale if too wide — limits payload without hurting readability
+        if img.width > 1600:
+            ratio = 1600 / img.width
+            img = img.resize((1600, int(img.height * ratio)), Image.LANCZOS)
 
         buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=85, optimize=True)
+        img.save(buf, format="JPEG", quality=72, optimize=True)
         images.append((buf.getvalue(), "image/jpeg"))
 
     doc.close()
@@ -274,7 +272,7 @@ def _pdf_to_images(pdf_path: str, dpi: int = 150) -> list[tuple[bytes, str]]:
 # ─── Claude (Anthropic) via direct HTTP ───────────────────────────────────
 
 CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
-CLAUDE_MODEL = "claude-sonnet-4-6"
+CLAUDE_MODEL   = "claude-3-5-haiku-20241022"   # fastest Claude vision model (~2-5s)
 CLAUDE_VERSION = "2023-06-01"
 
 
