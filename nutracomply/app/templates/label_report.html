@@ -126,55 +126,87 @@
 </div>
 
 {% if processing %}
-<div class="card no-hover" style="text-align:center;padding:3rem 1.5rem;max-width:540px;margin:0 auto;">
-  <div style="font-size:2rem;margin-bottom:1rem;">&#128301;</div>
-  <h3 style="margin-bottom:0.3rem;font-size:1rem;">Analysing your label</h3>
+<div class="card no-hover" style="text-align:center;padding:3rem 1.5rem;max-width:540px;margin:0 auto;" id="scan-card">
+  <div style="font-size:2rem;margin-bottom:1rem;" id="scan-icon">&#128301;</div>
+  <h3 style="margin-bottom:0.3rem;font-size:1rem;" id="scan-title">Analysing your label</h3>
   <p id="scan-stage" style="color:#737373;font-size:0.82rem;margin-bottom:1.4rem;">Running OCR on label...</p>
 
-  <div style="background:#F0F0F0;border-radius:99px;height:6px;overflow:hidden;margin-bottom:0.6rem;">
+  <div id="scan-bar-wrap" style="background:#F0F0F0;border-radius:99px;height:6px;overflow:hidden;margin-bottom:0.6rem;">
     <div id="scan-bar"
          style="height:100%;background:linear-gradient(90deg,#5A9A98,#81C2C0);border-radius:99px;width:8%;transition:width 1.2s ease;"></div>
   </div>
   <div id="scan-pct" style="font-size:0.72rem;color:#A3A3A3;margin-bottom:0.25rem;">8%</div>
-  <div style="font-size:0.7rem;color:#C0C0C0;">Page reloads automatically when done</div>
+  <div id="scan-footer" style="font-size:0.7rem;color:#C0C0C0;">Page reloads automatically when done</div>
 </div>
 <script>
 (function(){
   var stages = [
-    { pct: 8,  label: "Running OCR on label...",           delay: 0    },
-    { pct: 22, label: "Extracting label fields...",        delay: 2800 },
-    { pct: 42, label: "Sending to AI for analysis...",     delay: 6000 },
-    { pct: 65, label: "Checking compliance rules...",      delay: 14000},
-    { pct: 80, label: "Scoring &amp; building report...", delay: 22000},
-    { pct: 92, label: "Finalising results...",             delay: 32000},
+    { pct: 8,  label: "Running OCR on label...",              delay: 0     },
+    { pct: 22, label: "Extracting label fields...",           delay: 2800  },
+    { pct: 42, label: "Sending to Claude Vision...",          delay: 6000  },
+    { pct: 58, label: "AI analysing label content...",        delay: 14000 },
+    { pct: 72, label: "Checking compliance rules...",         delay: 28000 },
+    { pct: 84, label: "Scoring &amp; building report...",    delay: 45000 },
+    { pct: 93, label: "Finalising results...",                delay: 60000 },
+    { pct: 97, label: "Almost there...",                      delay: 80000 },
   ];
-  var bar = document.getElementById('scan-bar');
-  var pct = document.getElementById('scan-pct');
-  var stage = document.getElementById('scan-stage');
+  var bar     = document.getElementById('scan-bar');
+  var pctEl   = document.getElementById('scan-pct');
+  var stageEl = document.getElementById('scan-stage');
+  var titleEl = document.getElementById('scan-title');
+  var iconEl  = document.getElementById('scan-icon');
+  var footer  = document.getElementById('scan-footer');
+
   stages.forEach(function(s){
     setTimeout(function(){
-      bar.style.width = s.pct + '%';
-      pct.textContent = s.pct + '%';
-      stage.innerHTML = s.label;
+      bar.style.width  = s.pct + '%';
+      pctEl.textContent = s.pct + '%';
+      stageEl.innerHTML = s.label;
     }, s.delay);
   });
-  // Poll JSON status endpoint every 5 s; reload when extraction is ready
-  var labelId = window.location.pathname.split('/')[2];
+
+  // Poll JSON status endpoint every 5s; stop & reload when ready
+  var labelId    = window.location.pathname.split('/')[2];
+  var pollCount  = 0;
+  var MAX_POLLS  = 36;   // 36 × 5s = 3 minutes max wait
+  var pollTimer  = null;
+
+  function showError() {
+    iconEl.textContent = '⚠️';
+    titleEl.textContent = 'Processing took longer than expected';
+    stageEl.innerHTML  = 'This can happen with large or complex labels.';
+    bar.style.background = '#E57373';
+    bar.style.width = '100%';
+    pctEl.style.display = 'none';
+    footer.innerHTML = '<a href="javascript:location.reload()" style="color:#5A9A98;font-weight:600;">Refresh page</a> &nbsp;·&nbsp; <a href="/products" style="color:#A3A3A3;">Back to Products</a>';
+  }
+
   function poll(){
+    pollCount++;
     fetch('/labels/' + labelId + '/status')
       .then(function(r){ return r.json(); })
       .then(function(d){
         if(d.ready){
-          bar.style.width = '100%';
-          pct.textContent = '100%';
-          stage.innerHTML = 'Done! Loading report...';
+          bar.style.width   = '100%';
+          pctEl.textContent = '100%';
+          stageEl.innerHTML = 'Done! Loading report...';
+          // Stop further polls and redirect
+          clearTimeout(pollTimer);
           setTimeout(function(){ window.location.href = '/labels/' + labelId; }, 600);
+          return;
         }
+        if(d.failed || pollCount >= MAX_POLLS){
+          showError();
+          return;  // stop polling
+        }
+        pollTimer = setTimeout(poll, 5000);
       })
-      .catch(function(){});
-    setTimeout(poll, 5000);
+      .catch(function(){
+        if(pollCount >= MAX_POLLS){ showError(); return; }
+        pollTimer = setTimeout(poll, 5000);
+      });
   }
-  setTimeout(poll, 5000);
+  pollTimer = setTimeout(poll, 5000);
 })();
 </script>
 {% else %}

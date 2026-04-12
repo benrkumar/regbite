@@ -236,7 +236,7 @@ def _process_label(label_version_id: int):
                 label_version.tokens_output = out_tokens
 
                 # Learn from AI extractions for future local extractions
-                if extraction and confidence >= 0.80 and raw_text and extr_source in ("claude", "gemma"):
+                if extraction and confidence >= 0.80 and raw_text and extr_source in ("claude", "gemini"):
                     try:
                         from app.services.pattern_library import learn_from_extraction
                         learn_from_extraction(extraction, raw_text, label_version.id, db, confidence)
@@ -353,10 +353,11 @@ async def reanalyze_label(
 
 @router.get("/labels/{label_id}/status")
 async def label_status(label_id: int, request: Request, db: Session = Depends(get_db)):
-    """JSON polling endpoint — returns {ready: bool} for the progress bar."""
+    """JSON polling endpoint — returns {ready: bool, failed: bool} for the progress bar."""
+    import datetime
     user = require_user(request, db)
     if not user:
-        return JSONResponse({"ready": False})
+        return JSONResponse({"ready": False, "failed": False})
     # Single query with JOIN — avoids lazy-load round-trips on label.product / label.checks
     row = (
         db.query(LabelVersion, Product)
@@ -365,13 +366,21 @@ async def label_status(label_id: int, request: Request, db: Session = Depends(ge
         .first()
     )
     if not row:
-        return JSONResponse({"ready": False})
+        return JSONResponse({"ready": False, "failed": True})
     label, _ = row
     has_checks = db.query(ComplianceCheck.id).filter(
         ComplianceCheck.label_version_id == label_id
     ).first() is not None
     ready = bool(label.extraction_json) and has_checks
-    return JSONResponse({"ready": ready})
+
+    # Detect stuck jobs: if no extraction after 4 minutes, report as failed
+    failed = False
+    if not ready and label.uploaded_at:
+        age_secs = (datetime.datetime.utcnow() - label.uploaded_at).total_seconds()
+        if age_secs > 240:  # 4 minutes
+            failed = True
+
+    return JSONResponse({"ready": ready, "failed": failed})
 
 
 @router.get("/labels/{label_id}")
