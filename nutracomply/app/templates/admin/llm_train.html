@@ -430,7 +430,7 @@
     <div class="kb-upload-panel">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
         <h4>Upload Documents</h4>
-        <span class="kb-upload-meta" style="margin:0;">PDF · TXT · CSV</span>
+        <span class="kb-upload-meta" style="margin:0;">PDF · TXT · CSV · MD</span>
       </div>
 
       {# Compact horizontal drop zone #}
@@ -441,7 +441,7 @@
           <div class="sub">Multiple files — each chunked &amp; indexed automatically</div>
         </div>
         <div class="kb-browse-btn">Browse</div>
-        <input type="file" id="fileInput" accept=".pdf,.txt,.csv" multiple>
+        <input type="file" id="fileInput" accept=".pdf,.txt,.csv,.md" multiple>
       </div>
 
       {# File queue #}
@@ -949,7 +949,7 @@ dropZone.addEventListener("drop",      e => {
 fileInput.addEventListener("change", e => addFiles(e.target.files));
 
 function addFiles(files) {
-  const allowed = [".pdf", ".txt", ".csv"];
+  const allowed = [".pdf", ".txt", ".csv", ".md"];
   Array.from(files).forEach(f => {
     const ext = f.name.slice(f.name.lastIndexOf(".")).toLowerCase();
     if (!allowed.includes(ext)) return;

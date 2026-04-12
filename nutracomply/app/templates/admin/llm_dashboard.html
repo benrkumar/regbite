@@ -18,7 +18,7 @@
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
     <div>
       <div style="font-size:0.78rem;font-weight:700;color:#262626;margin-bottom:0.1rem;">AI Provider Status</div>
-      <div style="font-size:0.72rem;color:#A3A3A3;">Primary → Gemma 4 · Fallback → Claude · Last resort → Gemini</div>
+      <div style="font-size:0.72rem;color:#A3A3A3;">Label Extraction: Claude → Gemini · LLM Chat: Gemma 4 → Claude → Gemini</div>
     </div>
     <div style="display:flex;gap:0.5rem;">
       <button onclick="testProviders()" id="testBtn"
@@ -152,7 +152,7 @@
       <div>
         <h3 style="margin:0;font-size:1rem;font-weight:800;color:#262626;">Regulations LLM</h3>
         <p style="margin:0;font-size:0.77rem;color:#737373;">
-          Primary: <strong>Gemma 4</strong>
+          Primary: <strong>Gemma 4 (chat)</strong>
           {% if claude_configured %} · Fallback: Claude{% endif %}
           {% if gemini_configured %} · Last resort: Gemini{% endif %}
         </p>
@@ -188,7 +188,7 @@
       <div>
         <h3 style="margin:0;font-size:1rem;font-weight:800;color:#262626;">Products LLM</h3>
         <p style="margin:0;font-size:0.77rem;color:#737373;">
-          Primary: <strong>Gemma 4</strong>
+          Primary: <strong>Gemma 4 (chat)</strong>
           {% if claude_configured %} · Fallback: Claude{% endif %}
           {% if gemini_configured %} · Last resort: Gemini{% endif %}
         </p>

@@ -400,141 +400,6 @@ def _call_claude_text(ocr_text: str) -> tuple:
     return _parse_json_response(raw), inp, out
 
 
-# ─── Gemma 4 via OpenRouter ──────────────────────────────────────────────────
-
-def _is_gemma_available() -> bool:
-    """Return True if Gemma via OpenRouter is configured and enabled."""
-    return bool(settings.gemma_enabled and settings.openrouter_api_key)
-
-
-def _gemma_request(messages: list, max_tokens: int = 8192) -> tuple:
-    """Call Gemma 4 via OpenRouter's OpenAI-compatible API.
-
-    Returns:
-        (text: str, input_tokens: int, output_tokens: int)
-    """
-    import httpx
-
-    url = settings.openrouter_api_url.rstrip("/") + "/chat/completions"
-    headers = {
-        "content-type": "application/json",
-        "Authorization": f"Bearer {settings.openrouter_api_key}",
-        "HTTP-Referer": "https://steadfast-courage-production-0f66.up.railway.app",
-        "X-Title": "RegBite",
-    }
-
-    payload = {
-        "model": settings.gemma_model_name,
-        "messages": messages,
-        "max_tokens": max_tokens,
-        "temperature": 0.1,
-    }
-
-    import time as _time
-    _log(f"[gemma-api] Sending request to {settings.gemma_model_name} via OpenRouter...")
-
-    # ── Up to 3 attempts with exponential backoff on 429 ─────────────────
-    for _attempt in range(3):
-        resp = httpx.post(url, headers=headers, json=payload, timeout=180.0)
-        if resp.status_code != 429:
-            break
-        wait = min(int(resp.headers.get("Retry-After", str(10 * 2 ** _attempt))), 60)
-        _log(f"[gemma-api] Rate limited (429) attempt {_attempt+1}/3 — waiting {wait}s…")
-        _time.sleep(wait)
-
-    if not resp.is_success:
-        try:
-            err_body = resp.json()
-            err_detail = (
-                err_body.get("error", {}).get("message")
-                or err_body.get("message")
-                or str(err_body)[:400]
-            )
-        except Exception:
-            err_detail = resp.text[:400]
-        _log(f"[gemma-api] HTTP {resp.status_code}: {err_detail}")
-        raise ValueError(f"OpenRouter HTTP {resp.status_code} — {err_detail}")
-
-    data = resp.json()
-    usage = data.get("usage", {})
-    input_tokens = usage.get("prompt_tokens", 0)
-    output_tokens = usage.get("completion_tokens", 0)
-    text = data["choices"][0]["message"]["content"].strip()
-    _log(f"[gemma-api] OK — tokens=in:{input_tokens} out:{output_tokens}")
-    return text, input_tokens, output_tokens
-
-
-def _call_gemma_vision(image_path: str) -> tuple:
-    """Use Gemma 4 Vision via OpenRouter to extract label data from an image or PDF.
-
-    Returns:
-        (extraction_dict, input_tokens, output_tokens)
-    """
-    img_path = Path(image_path)
-    suffix = img_path.suffix.lower()
-    _log(f"[extraction] Gemma Vision starting for {suffix} file...")
-
-    if suffix == ".pdf":
-        _log("[extraction] Converting PDF to images for Gemma Vision...")
-        pages = _pdf_to_images(image_path, dpi=300)
-        if not pages:
-            _log("[extraction] PDF→image conversion returned no pages")
-            return None, 0, 0
-
-        # OpenAI vision format: image_url with base64 data URIs
-        content = []
-        for img_bytes, media_type in pages:
-            b64 = base64.b64encode(img_bytes).decode("utf-8")
-            content.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:{media_type};base64,{b64}"},
-            })
-        prompt_text = MULTI_PAGE_VISION_PROMPT if len(pages) > 1 else VISION_PROMPT
-        content.append({"type": "text", "text": prompt_text})
-
-        _log(f"[extraction] Sending {len(pages)} PDF page(s) to Gemma...")
-        messages = [{"role": "user", "content": content}]
-        raw, inp, out = _gemma_request(messages)
-        return _parse_json_response(raw), inp, out
-
-    # Single image
-    image_data = img_path.read_bytes()
-    b64_image = base64.b64encode(image_data).decode("utf-8")
-
-    media_types = {
-        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-        ".png": "image/png", ".webp": "image/webp",
-        ".gif": "image/gif", ".tiff": "image/tiff", ".tif": "image/tiff",
-    }
-    media_type = media_types.get(suffix, "image/jpeg")
-
-    messages = [{
-        "role": "user",
-        "content": [
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:{media_type};base64,{b64_image}"},
-            },
-            {"type": "text", "text": VISION_PROMPT},
-        ],
-    }]
-
-    raw, inp, out = _gemma_request(messages)
-    return _parse_json_response(raw), inp, out
-
-
-def _call_gemma_text(ocr_text: str) -> tuple:
-    """Use Gemma 4 text via vLLM to extract label data from OCR text.
-
-    Returns:
-        (extraction_dict, input_tokens, output_tokens)
-    """
-    prompt = TEXT_PROMPT.replace("{label_text}", ocr_text[:16000])
-    messages = [{"role": "user", "content": prompt}]
-    raw, inp, out = _gemma_request(messages)
-    return _parse_json_response(raw), inp, out
-
-
 # ─── Gemini fallback ────────────────────────────────────────────────────────
 
 def _call_gemini_vision(image_path: str) -> Optional[dict]:
@@ -599,7 +464,7 @@ def _call_gemini_text(ocr_text: str) -> Optional[dict]:
 def extract_label_data_from_image(image_path: str) -> tuple:
     """
     Extract structured label data from an image file.
-    Priority: Gemma 4 Vision → Claude Vision → Gemini Vision
+    Priority: Claude Vision → Gemini Vision
 
     Returns:
         (extraction_dict, confidence, source, input_tokens, output_tokens)
@@ -609,11 +474,6 @@ def extract_label_data_from_image(image_path: str) -> tuple:
     key_from_env = os.environ.get("ANTHROPIC_API_KEY", "")
     _log(f"[extraction] Claude key (settings): {'SET len=' + str(len(key_from_settings)) if key_from_settings else 'EMPTY'}")
     _log(f"[extraction] Claude key (os.environ): {'SET len=' + str(len(key_from_env)) if key_from_env else 'EMPTY'}")
-    _log(f"[extraction] Gemma enabled={settings.gemma_enabled}, key={'SET' if settings.openrouter_api_key else 'EMPTY'}")
-
-    # Gemma Vision skipped — too slow (40s+) and HTTP 400 errors from OpenRouter.
-    # Gemma is still used for LLM KB chat; just not for label extraction.
-
     # Primary: Claude Vision
     if key_from_env or settings.anthropic_api_key:
         try:
@@ -652,7 +512,7 @@ def extract_label_data_from_image(image_path: str) -> tuple:
 def extract_label_data(ocr_text: str) -> tuple:
     """
     Extract structured label data from OCR text.
-    Priority: Gemma 4 Text → Claude Text → Gemini Text → Rule-based
+    Priority: Claude Text → Gemini Text → Rule-based
 
     Returns:
         (extraction_dict, confidence, source, input_tokens, output_tokens)
@@ -661,8 +521,6 @@ def extract_label_data(ocr_text: str) -> tuple:
         return {}, 0.0, "none", 0, 0
 
     import os
-
-    # Gemma text skipped — same reasons as vision (slow + 400 errors).
 
     # Primary: Claude Text
     if settings.anthropic_api_key or os.environ.get("ANTHROPIC_API_KEY", ""):

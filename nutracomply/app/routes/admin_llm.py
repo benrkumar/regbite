@@ -1039,10 +1039,8 @@ async def label_extractor_page(request: Request, db: Session = Depends(get_db)):
         "conf_stats":               conf_stats,
         "pattern_count":            pattern_count,
         "field_patterns":           field_patterns,
-        "gemma_model":              settings.gemma_model_name,
         "gemini_model":             "gemini-3.1-flash-lite-preview",
         "claude_model":             "claude-sonnet-4-6",
-        "gemma_available":          bool(settings.gemma_enabled and settings.openrouter_api_key),
         "gemini_available":         bool(settings.gemini_api_key),
         "claude_available":         bool(settings.anthropic_api_key),
         "local_enabled":            settings.local_extraction_enabled,
@@ -1122,8 +1120,8 @@ def _run_benchmark_job(job_id: str, tmp_path: str, filename: str, file_size_kb: 
     import os
     from app.config import get_settings
     from app.services.extraction_service import (
-        _is_gemma_available, _normalize_extraction, _calculate_confidence,
-        _call_gemma_vision, _call_claude_vision,
+        _normalize_extraction, _calculate_confidence,
+        _call_claude_vision,
     )
     import time as _t
 
@@ -1175,10 +1173,6 @@ def _run_benchmark_job(job_id: str, tmp_path: str, filename: str, file_size_kb: 
             })
 
     try:
-        if _is_gemma_available():
-            job["current"] = "Gemma 4 Vision…"
-            run_provider("Gemma 4 Vision", "gemma", _call_gemma_vision, tmp_path)
-
         if cfg.anthropic_api_key:
             import os as _os
             _os.environ.setdefault("ANTHROPIC_API_KEY", cfg.anthropic_api_key)
@@ -1221,8 +1215,7 @@ def _run_extraction_job(job_id: str, tmp_path: str, filename: str, file_size_kb:
     import os
     from app.config import get_settings
     from app.services.extraction_service import (
-        _is_gemma_available, _normalize_extraction,
-        _calculate_confidence, _call_gemma_vision, _call_gemma_text,
+        _normalize_extraction, _calculate_confidence,
         _call_claude_vision, _call_claude_text,
     )
 
@@ -1270,19 +1263,7 @@ def _run_extraction_job(job_id: str, tmp_path: str, filename: str, file_size_kb:
         step("local", "Checking local pattern library…")
         _time.sleep(0.1)
 
-        # Step 2 — Gemma 4 Vision
-        if _is_gemma_available():
-            step("gemma_vision", "Running Gemma 4 Vision (google/gemma-4-31b-it)…")
-            try:
-                result, inp, out = _call_gemma_vision(tmp_path)
-                if result:
-                    finish("gemma", "Gemma 4 Vision", result, inp, out)
-                    return
-            except Exception as e:
-                job["step_label"] = f"Gemma Vision failed: {str(e)[:80]} — trying Claude…"
-                _time.sleep(0.3)
-
-        # Step 3 — Claude Vision
+        # Step 2 — Claude Vision
         if cfg.anthropic_api_key:
             step("claude_vision", "Running Claude Vision (claude-sonnet-4-6)…")
             try:
@@ -1296,18 +1277,7 @@ def _run_extraction_job(job_id: str, tmp_path: str, filename: str, file_size_kb:
                 job["step_label"] = f"Claude Vision failed: {str(e)[:80]} — trying text…"
                 _time.sleep(0.3)
 
-        # Step 4 — Gemma Text
-        if _is_gemma_available() and ocr_text:
-            step("gemma_text", "Running Gemma 4 Text…")
-            try:
-                result, inp, out = _call_gemma_text(ocr_text)
-                if result:
-                    finish("gemma", "Gemma 4 Text", result, inp, out)
-                    return
-            except Exception:
-                pass
-
-        # Step 5 — Claude Text
+        # Step 3 — Claude Text
         if cfg.anthropic_api_key and ocr_text:
             step("claude_text", "Running Claude Text…")
             try:
@@ -1318,7 +1288,7 @@ def _run_extraction_job(job_id: str, tmp_path: str, filename: str, file_size_kb:
             except Exception:
                 pass
 
-        # Step 6 — Gemini
+        # Step 4 — Gemini
         if cfg.gemini_api_key:
             step("gemini", "Running Gemini (gemini-3.1-flash-lite-preview)…")
             try:
@@ -1330,7 +1300,7 @@ def _run_extraction_job(job_id: str, tmp_path: str, filename: str, file_size_kb:
             except Exception:
                 pass
 
-        # Step 7 — nothing worked
+        # Step 5 — nothing worked
         step("done", "Extraction complete (fallback)")
         job["done"] = True
         job["result"] = {

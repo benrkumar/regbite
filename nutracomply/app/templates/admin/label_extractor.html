@@ -369,22 +369,9 @@
           </span>
         </li>
 
-        <li class="pipeline-step" id="step-gemma_vision">
-          <div class="step-dot {% if gemma_available %}step-dot-active{% else %}step-dot-inactive{% endif %}"></div>
-          <span class="step-num">Step 2</span>
-          <div class="step-body">
-            <div class="step-label">Gemma 4 Vision</div>
-            <div class="step-desc">{{ gemma_model }} via OpenRouter</div>
-            <div class="step-status-label" id="step-label-gemma_vision"></div>
-          </div>
-          <span class="step-status {% if gemma_available %}step-status-ok{% else %}step-status-off{% endif %}">
-            {% if gemma_available %}&#10003; Active{% else %}&#10007; Not configured{% endif %}
-          </span>
-        </li>
-
         <li class="pipeline-step" id="step-claude_vision">
           <div class="step-dot {% if claude_available %}step-dot-active{% else %}step-dot-inactive{% endif %}"></div>
-          <span class="step-num">Step 3</span>
+          <span class="step-num">Step 2</span>
           <div class="step-body">
             <div class="step-label">Claude Vision</div>
             <div class="step-desc">{{ claude_model }} fallback</div>
@@ -395,22 +382,9 @@
           </span>
         </li>
 
-        <li class="pipeline-step" id="step-gemma_text">
-          <div class="step-dot {% if gemma_available %}step-dot-active{% else %}step-dot-inactive{% endif %}"></div>
-          <span class="step-num">Step 4</span>
-          <div class="step-body">
-            <div class="step-label">Gemma 4 Text</div>
-            <div class="step-desc">{{ gemma_model }}, text mode</div>
-            <div class="step-status-label" id="step-label-gemma_text"></div>
-          </div>
-          <span class="step-status {% if gemma_available %}step-status-ok{% else %}step-status-off{% endif %}">
-            {% if gemma_available %}&#10003; Active{% else %}&#10007; Not configured{% endif %}
-          </span>
-        </li>
-
         <li class="pipeline-step" id="step-claude_text">
           <div class="step-dot {% if claude_available %}step-dot-active{% else %}step-dot-inactive{% endif %}"></div>
-          <span class="step-num">Step 5</span>
+          <span class="step-num">Step 3</span>
           <div class="step-body">
             <div class="step-label">Claude Text</div>
             <div class="step-desc">{{ claude_model }} fallback</div>
@@ -423,7 +397,7 @@
 
         <li class="pipeline-step" id="step-gemini">
           <div class="step-dot {% if gemini_available %}step-dot-active{% else %}step-dot-inactive{% endif %}"></div>
-          <span class="step-num">Step 6</span>
+          <span class="step-num">Step 4</span>
           <div class="step-body">
             <div class="step-label">Gemini</div>
             <div class="step-desc">{{ gemini_model }}</div>
@@ -436,7 +410,7 @@
 
         <li class="pipeline-step" id="step-rule_based">
           <div class="step-dot step-dot-active"></div>
-          <span class="step-num">Step 7</span>
+          <span class="step-num">Step 5</span>
           <div class="step-body">
             <div class="step-label">Rule-based Regex</div>
             <div class="step-desc">Zero-cost last resort</div>
