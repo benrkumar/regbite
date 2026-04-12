@@ -1,10 +1,17 @@
 """
 OCR Service — extracts raw text from label images and PDFs.
 
+This is the FALLBACK path only. Claude Vision is the primary extraction method
+and reads images directly without needing OCR.
+
 Priority:
-1. PaddleOCR (images) — better accuracy for mixed English/Hindi labels
-2. pdfplumber (PDFs) — direct text extraction from PDF
-3. pytesseract fallback if PaddleOCR fails
+1. pdfplumber (PDFs) — fast direct text extraction from digital PDFs
+2. PyMuPDF + pytesseract (image-only PDFs) — convert pages then OCR
+3. pytesseract (images) — lightweight fallback, no model loading overhead
+
+Note: PaddleOCR removed. It loaded 3 neural-network models per call (~15–25s
+startup) which blocked the pipeline even when Claude Vision was used. Claude
+Vision reads the image directly and never needed OCR text.
 """
 
 import io
@@ -25,6 +32,7 @@ def extract_text_from_file(file_path: str) -> tuple[str, float]:
 
 
 def _extract_from_pdf(file_path: str) -> tuple[str, float]:
+    # pdfplumber — instant for digital PDFs (most regulation/supplement label PDFs)
     try:
         import pdfplumber
         text_parts = []
@@ -39,7 +47,7 @@ def _extract_from_pdf(file_path: str) -> tuple[str, float]:
     except Exception as e:
         print(f"[ocr] pdfplumber failed: {e}")
 
-    # Fallback: convert PDF pages to images and OCR
+    # Fallback: convert PDF pages to images and run pytesseract
     try:
         import fitz  # PyMuPDF
         doc = fitz.open(file_path)
@@ -48,8 +56,10 @@ def _extract_from_pdf(file_path: str) -> tuple[str, float]:
             pix = page.get_pixmap(dpi=200)
             img_bytes = pix.tobytes("png")
             page_text, _ = _ocr_image_bytes(img_bytes)
-            all_text.append(page_text)
-        return "\n".join(all_text).strip(), 0.80
+            if page_text:
+                all_text.append(page_text)
+        doc.close()
+        return "\n".join(all_text).strip(), 0.75
     except Exception as e:
         print(f"[ocr] PDF→image fallback failed: {e}")
         return "", 0.0
@@ -62,67 +72,18 @@ def _extract_from_image(file_path: str) -> tuple[str, float]:
 
 
 def _ocr_image_bytes(img_bytes: bytes) -> tuple[str, float]:
-    """Try PaddleOCR first, fall back to pytesseract."""
-    # --- PaddleOCR ---
-    try:
-        from paddleocr import PaddleOCR
-        import numpy as np
-        import cv2
+    """pytesseract OCR — lightweight fallback when Claude Vision is unavailable.
 
-        # Preprocess: deskew + contrast
-        nparr = np.frombuffer(img_bytes, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        img = _preprocess_image(img)
-
-        # Encode back to bytes for PaddleOCR
-        _, buf = cv2.imencode(".png", img)
-
-        ocr = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
-        result = ocr.ocr(buf.tobytes(), cls=True)
-
-        lines = []
-        confidences = []
-        if result and result[0]:
-            for line in result[0]:
-                if line and len(line) >= 2:
-                    text, conf = line[1][0], line[1][1]
-                    lines.append(text)
-                    confidences.append(conf)
-
-        text = "\n".join(lines).strip()
-        avg_conf = sum(confidences) / len(confidences) if confidences else 0.0
-        if text:
-            return text, round(avg_conf, 3)
-    except Exception as e:
-        print(f"[ocr] PaddleOCR failed: {e}")
-
-    # --- pytesseract fallback ---
+    No model initialization overhead (unlike PaddleOCR which took 15-25s to load).
+    Supports Hindi + English labels via 'eng+hin' language pack.
+    """
     try:
         import pytesseract
         from PIL import Image
-
         img_pil = Image.open(io.BytesIO(img_bytes))
         text = pytesseract.image_to_string(img_pil, lang="eng+hin")
         return text.strip(), 0.70
     except Exception as e:
-        print(f"[ocr] pytesseract fallback failed: {e}")
+        print(f"[ocr] pytesseract failed: {e}")
 
     return "", 0.0
-
-
-def _preprocess_image(img):
-    """Deskew and enhance contrast for better OCR accuracy."""
-    import cv2
-
-    # Convert to grayscale
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # Denoise
-    denoised = cv2.fastNlMeansDenoising(gray, h=10)
-
-    # Enhance contrast using CLAHE
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    enhanced = clahe.apply(denoised)
-
-    # Convert back to BGR
-    return cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)

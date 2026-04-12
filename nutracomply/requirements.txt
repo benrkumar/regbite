@@ -16,12 +16,11 @@ psycopg2-binary==2.9.9
 passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
 
-# OCR
-paddlepaddle==2.6.2
-paddleocr==2.8.1
+# OCR (Claude Vision is primary — pytesseract is fallback only)
 pytesseract==0.3.13
 Pillow==10.4.0
-opencv-python-headless==4.10.0.84
+# paddlepaddle and paddleocr removed — 15-25s startup overhead, not needed
+# opencv-python-headless removed — only used by PaddleOCR preprocessing
 
 # PDF parsing
 pdfplumber==0.11.4

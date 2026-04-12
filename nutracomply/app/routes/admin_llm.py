@@ -1251,7 +1251,7 @@ def _run_extraction_job(job_id: str, tmp_path: str, filename: str, file_size_kb:
         _time.sleep(0.2)
 
         # Step 1 — OCR
-        step("ocr", "Running OCR (PaddleOCR + Tesseract)…")
+        step("ocr", "Running OCR (Tesseract)…")
         ocr_text = ""
         try:
             from app.services.ocr_service import run_ocr

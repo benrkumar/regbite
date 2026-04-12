@@ -167,12 +167,21 @@ async def upload_label(
 
 
 def _process_label(label_version_id: int):
-    """Background task: OCR → extract → compliance check → create alerts.
+    """Background task: Claude Vision → compliance check → create alerts.
 
-    Token-saving: If a previous extraction with confidence >= 0.85 exists,
-    skip the Gemini API call and re-use the stored extraction data.
-    Only re-runs the compliance rules engine (zero API tokens).
+    Fast path (default, ~20-25s):
+      Claude Vision reads the image or PDF directly — no OCR needed.
+      Returns structured JSON in one API call.
+
+    Fallback path (~5-10s extra, only if Vision fails):
+      pytesseract OCR → local pattern library → Claude Text.
+      PaddleOCR removed (was causing 15-25s startup overhead every call).
+
+    Pattern learning runs in a daemon thread — does not block compliance check.
+    Token reuse: if previous extraction has confidence >= 0.85, skip extraction entirely.
     """
+    import os
+    import threading
     from app.database import SessionLocal
 
     db = SessionLocal()
@@ -181,7 +190,7 @@ def _process_label(label_version_id: int):
         if not label_version:
             return
 
-        # Check if we can re-use existing high-confidence extraction (saves tokens)
+        # ── Cache reuse: re-run rules only on high-confidence previous extractions ──
         reuse_extraction = (
             label_version.extraction_json
             and label_version.extraction_confidence
@@ -189,67 +198,111 @@ def _process_label(label_version_id: int):
         )
 
         if reuse_extraction:
-            print(f"[process_label] Re-using cached extraction (confidence={label_version.extraction_confidence}) — 0 API tokens")
+            print(f"[process_label] Re-using cached extraction "
+                  f"(confidence={label_version.extraction_confidence:.2f}) — 0 API tokens", flush=True)
             extraction = label_version.extraction_json
         else:
-            # Step 1: OCR
-            raw_text, _ = extract_text_from_file(label_version.file_path)
-            label_version.ocr_raw_text = raw_text
+            from app.config import get_settings as _get_settings
+            _cfg = _get_settings()
 
-            # Step 1.5: Try local extraction first (zero API cost)
-            extraction = None
-            confidence = 0.0
-            used_local = False
+            # Ensure Anthropic key is reachable in subprocess/thread env
+            if _cfg.anthropic_api_key:
+                os.environ.setdefault("ANTHROPIC_API_KEY", _cfg.anthropic_api_key)
+
+            extraction  = None
+            confidence  = 0.0
+            extr_source = "fallback"
+            inp_tokens  = out_tokens = 0
+            raw_text    = None   # only populated if Vision fails
+
+            # ── FAST PATH: Claude Vision reads image/PDF directly ─────────────────
+            # No OCR step — Claude sees the pixels. Typical time: 15-25s.
             try:
-                from app.services.local_extraction_service import extract_locally
-                from app.config import get_settings as _get_settings
-                _cfg = _get_settings()
-                local_result, local_conf = extract_locally(raw_text, db=db)
-                if _cfg.local_extraction_enabled and local_conf >= _cfg.local_extraction_min_confidence:
-                    print(f"[local-extract] confidence={local_conf:.3f} >= {_cfg.local_extraction_min_confidence} — skipping Claude", flush=True)
-                    extraction = local_result
-                    confidence = local_conf
-                    used_local = True
-                else:
-                    print(f"[local-extract] confidence={local_conf:.3f} < {_cfg.local_extraction_min_confidence} — falling back to Claude", flush=True)
+                extraction, confidence, extr_source, inp_tokens, out_tokens = \
+                    extract_label_data_from_image(label_version.file_path)
+                print(f"[process_label] Vision OK: source={extr_source} "
+                      f"confidence={confidence:.2f} tokens=in:{inp_tokens} out:{out_tokens}", flush=True)
             except Exception as e:
-                print(f"[local-extract] Error: {e}", flush=True)
+                print(f"[process_label] Vision extraction failed: {e}", flush=True)
+                extraction = None
 
-            if not used_local:
-                # Step 2: Structured extraction via Claude (Vision API)
-                inp_tokens = out_tokens = 0
-                extr_source = "fallback"
+            vision_ok = bool(extraction) and confidence >= 0.45
+
+            # ── FALLBACK: OCR (pytesseract) → local patterns → Claude Text ────────
+            if not vision_ok:
+                print("[process_label] Vision failed/low-confidence — running OCR fallback", flush=True)
+
                 try:
-                    extraction, confidence, extr_source, inp_tokens, out_tokens = extract_label_data_from_image(label_version.file_path)
+                    raw_text, _ = extract_text_from_file(label_version.file_path)
+                    label_version.ocr_raw_text = raw_text
+                    print(f"[process_label] OCR got {len(raw_text or '')} chars", flush=True)
                 except Exception as e:
-                    print(f"[extraction] Vision extraction failed: {e}")
+                    print(f"[process_label] OCR failed: {e}", flush=True)
+                    raw_text = ""
 
-                if not extraction or confidence < 0.5:
-                    extraction, confidence, extr_source, inp_tokens, out_tokens = extract_label_data(raw_text)
-
-                # Cross-check vision extraction against raw OCR text
-                if extraction and raw_text:
-                    extraction = _cross_check_with_ocr(extraction, raw_text)
-
-                label_version.extraction_source = extr_source
-                label_version.tokens_input = inp_tokens
-                label_version.tokens_output = out_tokens
-
-                # Learn from AI extractions for future local extractions
-                if extraction and confidence >= 0.80 and raw_text and extr_source in ("claude", "gemini"):
+                # Local pattern library (zero API cost, fast regex)
+                used_local = False
+                if raw_text:
                     try:
-                        from app.services.pattern_library import learn_from_extraction
-                        learn_from_extraction(extraction, raw_text, label_version.id, db, confidence)
+                        from app.services.local_extraction_service import extract_locally
+                        local_result, local_conf = extract_locally(raw_text, db=db)
+                        if _cfg.local_extraction_enabled and local_conf >= _cfg.local_extraction_min_confidence:
+                            print(f"[local-extract] confidence={local_conf:.3f} — using local", flush=True)
+                            extraction  = local_result
+                            confidence  = local_conf
+                            extr_source = "local"
+                            used_local  = True
+                        else:
+                            print(f"[local-extract] confidence={local_conf:.3f} — falling back to Claude Text", flush=True)
                     except Exception as e:
-                        print(f"[pattern-library] Learn failed: {e}", flush=True)
-            else:
-                label_version.extraction_source = "local"
+                        print(f"[local-extract] Error: {e}", flush=True)
 
-            label_version.extraction_json = extraction
+                # Claude Text on OCR output
+                if not used_local and raw_text:
+                    try:
+                        extraction, confidence, extr_source, inp_tokens, out_tokens = \
+                            extract_label_data(raw_text)
+                        # Cross-check text extraction against raw OCR for missed fields
+                        if extraction and raw_text:
+                            extraction = _cross_check_with_ocr(extraction, raw_text)
+                        print(f"[process_label] Text extraction: source={extr_source} "
+                              f"confidence={confidence:.2f}", flush=True)
+                    except Exception as e:
+                        print(f"[process_label] Text extraction failed: {e}", flush=True)
+
+            if not extraction:
+                extraction = {}
+
+            # ── Persist extraction results ────────────────────────────────────────
+            label_version.extraction_json       = extraction
             label_version.extraction_confidence = confidence
+            label_version.extraction_source     = extr_source
+            label_version.tokens_input          = inp_tokens
+            label_version.tokens_output         = out_tokens
             db.commit()
 
-        # Step 3: Compliance check
+            # ── Pattern learning in daemon thread (non-blocking) ──────────────────
+            # Requires OCR text — skipped on Vision success path (no raw_text available).
+            # Uses own DB session so parent session can close safely.
+            if extraction and confidence >= 0.80 and raw_text and extr_source in ("claude", "gemini"):
+                _ext_snap  = dict(extraction)
+                _text_snap = raw_text
+                _lv_id     = label_version.id
+                _conf_snap = confidence
+
+                def _learn_async():
+                    _db = SessionLocal()
+                    try:
+                        from app.services.pattern_library import learn_from_extraction
+                        learn_from_extraction(_ext_snap, _text_snap, _lv_id, _db, _conf_snap)
+                    except Exception as e:
+                        print(f"[pattern-library] Learn failed: {e}", flush=True)
+                    finally:
+                        _db.close()
+
+                threading.Thread(target=_learn_async, daemon=True).start()
+
+        # ── Compliance check ───────────────────────────────────────────────────────
         checks = run_compliance_check(label_version, db)
 
         # Step 4: Create alerts for CRITICAL/HIGH failures

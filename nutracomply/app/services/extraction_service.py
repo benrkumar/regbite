@@ -1,23 +1,21 @@
 """
-Extraction Service — sends label image or OCR text to an LLM
-and extracts a structured JSON representation of the label.
+Extraction Service — sends label image or OCR text to Claude and extracts
+a structured JSON representation of the label.
 
 Supports FSSAI, Legal Metrology, and AYUSH regulation fields.
 
-v4 improvements:
-  - Primary: Anthropic Claude (Sonnet) via direct HTTP — no SDK dependency
-  - Fallback: Google Gemini if Claude unavailable
-  - Dynamic confidence scoring based on field completeness
-  - Post-extraction OCR cross-check for accuracy
-  - Post-extraction validation with missing-field warnings
+Pipeline (fast path — no OCR needed):
+  1. Claude Vision — reads image/PDF directly, ~20-25s, highest accuracy
+  2. Gemini Vision — fallback if Claude unavailable
 
-v5 improvements:
-  - Gemma 4 31B Dense (self-hosted via vLLM) as first fallback after Claude
-  - Priority: Local regex → Claude Vision → Gemma 4 Vision → Gemini Vision
-  - OpenAI-compatible API format (vLLM) with structured JSON output
-  - Token tracking from vLLM usage stats
-  - Cached health check (60s) to avoid per-request overhead
-  - ~100× cost reduction: ~$0.001/label (Gemma) vs ~$0.12/label (Claude)
+Pipeline (text fallback — only if Vision fails):
+  1. Claude Text — sends OCR text to Claude
+  2. Gemini Text  — last resort
+
+Other features:
+  - Dynamic confidence scoring based on field completeness
+  - Post-extraction OCR cross-check for text-path accuracy
+  - Post-extraction validation with missing-field warnings
 """
 
 import base64
