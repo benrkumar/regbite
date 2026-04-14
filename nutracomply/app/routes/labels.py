@@ -1,5 +1,9 @@
+import datetime
 import io
+import os
+import threading
 import time as _time_mod
+import traceback
 import uuid
 from pathlib import Path
 
@@ -30,12 +34,20 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".pdf", ".webp"}
 
-# ── Scan job tracker ─────────────────────────────────────────────────────────
-# Same proven pattern as _EXTRACTION_JOBS in admin_llm.py.
-# Server runs with --workers 1 so this dict is shared by all requests.
-# Each entry: {"started": float, "done": bool, "ready": bool,
-#              "step": str, "error": str|None}
+SCAN_TIMEOUT_SECS   = 180   # 3 min: hard ceiling for active scan
+SCAN_STALE_SECS     = 600   # 10 min: prune completed entries from _SCAN_JOBS
+
+# In-memory job tracker — same pattern as _EXTRACTION_JOBS in admin_llm.py.
+# --workers 1 ensures this dict is shared by all requests.
 _SCAN_JOBS: dict[int, dict] = {}
+
+
+def _prune_scan_jobs() -> None:
+    """Remove completed job entries older than SCAN_STALE_SECS to prevent unbounded growth."""
+    cutoff = _time_mod.time() - SCAN_STALE_SECS
+    stale = [k for k, v in _SCAN_JOBS.items() if v.get("done") and v.get("started", 0) < cutoff]
+    for k in stale:
+        _SCAN_JOBS.pop(k, None)
 
 
 def require_user(request: Request, db: Session):
@@ -192,11 +204,9 @@ def _process_label(label_version_id: int):
     Every step is individually wrapped in try/except. The function
     ALWAYS reaches the end. job["done"] is ALWAYS set to True.
     """
-    import os
-    import traceback
-    import threading
     from app.database import SessionLocal
 
+    _prune_scan_jobs()
     t0 = _time_mod.time()
     job = {
         "started": t0,
@@ -472,9 +482,9 @@ async def label_status(label_id: int, request: Request, db: Session = Depends(ge
         if job["done"] and not job["ready"]:
             # Finished but never became ready → something failed
             return JSONResponse({"ready": False, "failed": True, "step": job.get("step", "error")})
-        # Still running — check for timeout (3 min hard ceiling)
+        # Still running — check for timeout
         age = _time_mod.time() - job["started"]
-        if age > 180:
+        if age > SCAN_TIMEOUT_SECS:
             return JSONResponse({"ready": False, "failed": True, "step": "timeout"})
         return JSONResponse({"ready": False, "failed": False, "step": job.get("step", "")})
 
@@ -500,12 +510,10 @@ async def label_status(label_id: int, request: Request, db: Session = Depends(ge
         return JSONResponse({"ready": True, "failed": False, "step": "done"})
 
     # Not ready and no in-memory job → scan may have been lost (server restart)
-    # Check age as fallback
     failed = False
     if label.uploaded_at:
-        import datetime
         age_secs = (datetime.datetime.utcnow() - label.uploaded_at).total_seconds()
-        if age_secs > 300:  # 5 min — generous for server restart case
+        if age_secs > SCAN_STALE_SECS:
             failed = True
 
     return JSONResponse({"ready": ready, "failed": failed, "step": ""})
@@ -517,13 +525,15 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
+    from sqlalchemy.orm import joinedload
+    label = (
+        db.query(LabelVersion)
+        .options(joinedload(LabelVersion.checks).joinedload(ComplianceCheck.rule))
+        .filter(LabelVersion.id == label_id)
+        .first()
+    )
     if not label or not label.product or label.product.user_id != user.id:
         return RedirectResponse(url="/products")
-
-    _ = label.checks
-    for check in label.checks:
-        _ = check.rule
 
     score = calculate_compliance_score(label.checks) if label.checks else None
     critical = calculate_critical_score(label.checks) if label.checks else {"critical_pass": True, "critical_score": 100, "critical_failures": 0}
