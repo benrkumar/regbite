@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Product, LabelVersion
 from app.routes.auth import get_current_user_from_cookie
+from app.routes.labels import _process_label  # single shared scan pipeline
 from app.config import get_settings
 
 router = APIRouter()
@@ -108,7 +109,7 @@ async def add_product(
         suffix = Path(file.filename).suffix.lower()
         if suffix in LABEL_EXTENSIONS:
             label_version = await _save_label_file(file, suffix, product.id, db)
-            background_tasks.add_task(_process_label_bg, label_version.id)
+            background_tasks.add_task(_process_label, label_version.id)
             try:
                 from app.services.activity_service import log_action
                 log_action(user.id, "label_uploaded", "label", label_version.id,
@@ -154,111 +155,9 @@ async def _save_label_file(file: UploadFile, suffix: str, product_id: int, db: S
     return label_version
 
 
-def _process_label_bg(label_version_id: int):
-    """Background: OCR → extract → compliance check → alerts → feed LLM.
-
-    Token-saving: Stores extraction results permanently. On re-analysis,
-    if confidence >= 0.85 the stored extraction is reused (zero API tokens).
-    """
-    from app.database import SessionLocal
-    from app.services.ocr_service import extract_text_from_file
-    from app.services.extraction_service import extract_label_data, extract_label_data_from_image
-    from app.services.compliance_engine import run_compliance_check, calculate_compliance_score
-    from app.models import Alert, AlertType, AlertStatus, CheckResult, Severity, Product
-
-    db = SessionLocal()
-    try:
-        label_version = db.query(LabelVersion).filter(LabelVersion.id == label_version_id).first()
-        if not label_version:
-            return
-
-        # Check if we can re-use existing high-confidence extraction (saves tokens)
-        reuse_extraction = (
-            label_version.extraction_json
-            and label_version.extraction_confidence
-            and label_version.extraction_confidence >= 0.85
-        )
-
-        if reuse_extraction:
-            print(f"[process_label] Re-using cached extraction (confidence={label_version.extraction_confidence}) — 0 API tokens")
-            extraction = label_version.extraction_json
-        else:
-            # Step 1: OCR
-            raw_text, _ = extract_text_from_file(label_version.file_path)
-            label_version.ocr_raw_text = raw_text
-
-            # Step 2: Structured extraction — try Vision API first for images
-            extraction = None
-            confidence = 0.0
-            if label_version.file_type == "image":
-                try:
-                    extraction, confidence = extract_label_data_from_image(label_version.file_path)
-                except Exception as e:
-                    print(f"[extraction] Vision fallback: {e}")
-
-            if not extraction or confidence < 0.5:
-                extraction, confidence = extract_label_data(raw_text)
-
-            label_version.extraction_json = extraction
-            label_version.extraction_confidence = confidence
-            db.commit()
-
-        # Step 3: Compliance check
-        checks = run_compliance_check(label_version, db)
-
-        # Step 4: Create alerts for CRITICAL/HIGH failures
-        violations = []
-        for check in checks:
-            if check.result == CheckResult.FAIL and check.rule:
-                violations.append({
-                    "rule_code": check.rule.rule_code,
-                    "field": check.rule.check_config.get("field", ""),
-                    "message": check.message,
-                    "remediation": check.remediation or check.rule.remediation_template,
-                    "severity": check.rule.severity.value,
-                })
-
-        critical_violations = [v for v in violations if v["severity"] == "CRITICAL"]
-        high_violations = [v for v in violations if v["severity"] == "HIGH"]
-
-        if critical_violations or high_violations:
-            score = calculate_compliance_score(checks)
-            alert = Alert(
-                product_id=label_version.product_id,
-                label_version_id=label_version.id,
-                alert_type=AlertType.LABEL_VIOLATION,
-                severity=Severity.CRITICAL if critical_violations else Severity.HIGH,
-                title=f"Label compliance issues detected — {len(violations)} violation(s)",
-                message=(
-                    f"Compliance score: {score}%. "
-                    f"{len(critical_violations)} critical, {len(high_violations)} high severity issues found."
-                ),
-                rule_violations=violations,
-                status=AlertStatus.UNREAD,
-            )
-            db.add(alert)
-            db.commit()
-
-            try:
-                from app.services.notification import send_alert_email
-                from app.models import User
-                product = db.query(Product).filter(Product.id == label_version.product_id).first()
-                owner = db.query(User).filter(User.id == product.user_id).first() if product else None
-                send_alert_email(alert, product, user=owner)
-            except Exception as e:
-                print(f"[alert] Email failed: {e}")
-
-        # Step 5: Feed product into LLM knowledge base
-        try:
-            _feed_product_to_llm(label_version.product_id, db)
-        except Exception as e:
-            print(f"[llm-feed] Error: {e}")
-
-    except Exception as e:
-        print(f"[process_label] Error: {e}")
-        db.rollback()
-    finally:
-        db.close()
+# _process_label_bg removed — now uses shared _process_label from labels.py
+# This ensures /products upload and /labels upload use the exact same pipeline
+# with _SCAN_JOBS tracking, proper error recovery, and correct API signatures.
 
 
 def _feed_product_to_llm(product_id: int, db):
@@ -546,7 +445,7 @@ async def bulk_upload_files(
             db.commit()
 
             label_version = await _save_label_file(f, suffix, product.id, db)
-            background_tasks.add_task(_process_label_bg, label_version.id)
+            background_tasks.add_task(_process_label, label_version.id)
             added.append(product_name)
         except Exception as e:
             errors.append(f"'{f.filename}' — {e}")
