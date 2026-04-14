@@ -307,14 +307,18 @@ function clearSelection(){
 }
 
 /* ── Bulk actions ── */
+function getCsrfToken(){
+  var m=document.cookie.match(/(?:^|;\s*)_csrf=([^;]+)/);
+  return m?decodeURIComponent(m[1]):'';
+}
 function bulkAction(action){
   var ids=Array.from(document.querySelectorAll('.row-check:checked')).map(function(c){return parseInt(c.getAttribute('data-id'));});
   if(!ids.length) return;
-  var label=action==='archive'?'archive':'permanently delete';
+  var label=action==='archive'?'archive':'delete';
   if(!confirm('Are you sure you want to '+label+' '+ids.length+' product(s)?')) return;
   fetch('/products/bulk-action',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','X-CSRF-Token':getCsrfToken()},
     body:JSON.stringify({action:action,ids:ids})
   }).then(function(r){return r.json();}).then(function(d){
     if(d.success) window.location.reload();
