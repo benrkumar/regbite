@@ -1040,7 +1040,7 @@ async def label_extractor_page(request: Request, db: Session = Depends(get_db)):
         "pattern_count":            pattern_count,
         "field_patterns":           field_patterns,
         "gemini_model":             "gemini-3.1-flash-lite-preview",
-        "claude_model":             "claude-3-5-haiku-20241022",
+        "claude_model":             "claude-haiku-4-5-20251001",
         "gemini_available":         bool(settings.gemini_api_key),
         "claude_available":         bool(settings.anthropic_api_key),
         "local_enabled":            settings.local_extraction_enabled,
@@ -1265,7 +1265,7 @@ def _run_extraction_job(job_id: str, tmp_path: str, filename: str, file_size_kb:
 
         # Step 2 — Claude Vision
         if cfg.anthropic_api_key:
-            step("claude_vision", "Running Claude Vision (claude-3-5-haiku-20241022)…")
+            step("claude_vision", "Running Claude Vision (claude-haiku-4-5)…")
             try:
                 import os
                 os.environ.setdefault("ANTHROPIC_API_KEY", cfg.anthropic_api_key)
