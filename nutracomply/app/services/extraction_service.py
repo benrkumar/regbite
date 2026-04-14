@@ -272,7 +272,7 @@ def _pdf_to_images(pdf_path: str, dpi: int = 150) -> list[tuple[bytes, str]]:
 # ─── Claude (Anthropic) via direct HTTP ───────────────────────────────────
 
 CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
-CLAUDE_MODEL   = "claude-haiku-4-5-20251001"   # fastest Claude vision model ($1/$5 MTok)
+CLAUDE_MODEL   = "claude-sonnet-4-6"            # best speed/intelligence balance ($3/$15 MTok)
 CLAUDE_VERSION = "2023-06-01"
 
 
