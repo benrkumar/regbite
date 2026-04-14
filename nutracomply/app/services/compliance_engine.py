@@ -197,10 +197,15 @@ def _check_presence(rule: ComplianceRule, config: dict, extraction: dict):
     if required_nutrient and field == "nutritional_table" and isinstance(value, list):
         if not value:
             return CheckResult.FAIL, None, f"Nutritional table is empty — '{required_nutrient}' not declared"
-        nutrient_names = " ".join(
-            str(row.get("nutrient", "")).lower() for row in value if isinstance(row, dict)
+        # Normalise: lowercase + replace underscores with spaces so
+        # "added_sugars" matches "Added Sugars", "total_fat" matches "Total Fat", etc.
+        def _norm(s: str) -> str:
+            return s.lower().replace("_", " ").replace("-", " ")
+        nutrient_names = " | ".join(
+            _norm(str(row.get("nutrient", ""))) for row in value if isinstance(row, dict)
         )
-        if required_nutrient.lower() in nutrient_names:
+        needle = _norm(required_nutrient)
+        if needle in nutrient_names:
             return CheckResult.PASS, required_nutrient, f"Required nutrient '{required_nutrient}' found in nutritional table"
         else:
             return CheckResult.FAIL, None, f"Required nutrient '{required_nutrient}' not found in nutritional table"
