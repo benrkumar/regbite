@@ -2,85 +2,145 @@
 {% block title %}Products{% endblock %}
 
 {% block content %}
-<div class="page-hdr">
+<style>
+  /* ── Add Product Panel ── */
+  .add-panel { background:#fff; border:1px solid #EBEBEB; border-radius:10px; margin-bottom:1.5rem; overflow:hidden; }
+  .add-panel-hdr { display:flex; align-items:center; gap:0.75rem; padding:1rem 1.25rem; cursor:pointer; user-select:none; }
+  .add-panel-hdr:hover { background:#FAFAFA; }
+  .add-panel-icon { width:32px; height:32px; border-radius:8px; background:#D4EDEC; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+  .add-panel-title { font-size:0.9rem; font-weight:700; color:#111; flex:1; }
+  .add-panel-chevron { font-size:0.7rem; color:#A3A3A3; transition:transform 0.2s; }
+  .add-panel[open] .add-panel-chevron { transform:rotate(90deg); }
+  .add-panel-body { padding:0 1.25rem 1.25rem; border-top:1px solid #F0F0F0; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem; }
+  .form-grid .field-full { grid-column:1/-1; }
+  @media(max-width:600px){ .form-grid { grid-template-columns:1fr; } }
+
+  /* ── Bulk action bar ── */
+  #bulk-bar { display:none; position:sticky; top:0; z-index:50; background:#111; color:#fff; padding:0.65rem 1rem; border-radius:8px; margin-bottom:0.75rem; align-items:center; gap:0.75rem; flex-wrap:wrap; }
+  #bulk-bar.visible { display:flex; }
+  #bulk-count { font-size:0.82rem; font-weight:600; flex:1; }
+  .bulk-btn { font-size:0.75rem; font-weight:600; padding:0.35rem 0.85rem; border-radius:5px; border:none; cursor:pointer; transition:opacity 0.15s; }
+  .bulk-btn:hover { opacity:0.85; }
+  .bulk-btn-archive { background:#FFD7AD; color:#7A4310; }
+  .bulk-btn-delete  { background:#F5D5D5; color:#8B3A3A; }
+  .bulk-btn-cancel  { background:transparent; color:#A3A3A3; border:1px solid #444; }
+
+  /* ── Table enhancements ── */
+  .tbl-check { width:16px; height:16px; cursor:pointer; accent-color:#5A9A98; }
+  .tbl tr.row-selected td { background:#F0F9F8; }
+  .tbl td.td-actions { white-space:nowrap; }
+  .btn-archive-row { font-size:0.72rem; padding:0.2rem 0.55rem; border-radius:4px; border:1px solid #E8E8E8; background:#fff; color:#737373; cursor:pointer; margin-left:0.25rem; transition:all 0.15s; }
+  .btn-archive-row:hover { background:#F5F5F5; color:#111; }
+
+  /* ── Tabs ── */
+  .prod-tabs { display:flex; gap:0.1rem; margin-bottom:1.25rem; border-bottom:2px solid #EBEBEB; }
+  .prod-tab { padding:0.55rem 1rem; font-size:0.82rem; font-weight:600; color:#737373; text-decoration:none; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all 0.15s; }
+  .prod-tab:hover { color:#111; }
+  .prod-tab.active { color:#111; border-bottom-color:#111; }
+  .prod-tab .tab-badge { display:inline-block; background:#E8E8E8; color:#737373; border-radius:99px; font-size:0.65rem; font-weight:700; padding:0.05rem 0.45rem; margin-left:0.3rem; }
+  .prod-tab.active .tab-badge { background:#111; color:#fff; }
+
+  /* ── Drop zone ── */
+  .drop-zone { border:1.5px dashed #D4D4D4; border-radius:8px; padding:1.5rem 1rem; text-align:center; cursor:pointer; transition:all 0.15s; background:#FAFAFA; }
+  .drop-zone:hover, .drop-zone.drag-over { border-color:#81C2C0; background:#D4EDEC; }
+  .drop-zone-icon { font-size:1.4rem; color:#A3A3A3; margin-bottom:0.3rem; }
+</style>
+
+{# ── Flash message ── #}
+{% if flash_message %}
+<div class="alert alert-{{ flash_type or 'info' }}" style="margin-bottom:1rem;">{{ flash_message }}</div>
+{% endif %}
+
+{# ── Page header ── #}
+<div class="page-hdr" style="margin-bottom:1rem;">
   <div>
     <h2>Products &amp; SKUs</h2>
-    <p>{{ products|length }} active product{{ 's' if products|length != 1 }}</p>
+    <p style="color:#737373;font-size:0.82rem;">{{ products|length }} active product{{ 's' if products|length != 1 }}</p>
   </div>
-  <a href="/products/bulk-upload" class="btn btn-outline btn-sm">&#x2B06; Bulk Upload</a>
+  <div style="display:flex;gap:0.5rem;align-items:center;">
+    <a href="/products/bulk-upload" class="btn btn-outline btn-sm">&#x2B06; Bulk Upload</a>
+  </div>
 </div>
 
-<div class="card card-flat no-hover" style="margin-bottom:1.5rem;">
-  <details id="add-form">
-    <summary style="font-size:0.95rem;font-weight:700;color:var(--gray-800);padding:0.2rem 0;">
-      + Add New Product
-    </summary>
-    <form method="post" action="/products/add" enctype="multipart/form-data" style="margin-top:1.2rem;">
-      <div class="two-col">
+{# ── Tabs: Active / Archived ── #}
+<div class="prod-tabs">
+  <a href="/products" class="prod-tab active">Active <span class="tab-badge">{{ products|length }}</span></a>
+  <a href="/products/archived" class="prod-tab">Archived{% if archived_count %} <span class="tab-badge">{{ archived_count }}</span>{% endif %}</a>
+</div>
+
+{# ── Add New Product panel ── #}
+<details class="add-panel" id="add-panel">
+  <summary class="add-panel-hdr">
+    <div class="add-panel-icon">&#x2795;</div>
+    <span class="add-panel-title">Add New Product</span>
+    <span class="add-panel-chevron">&#9654;</span>
+  </summary>
+  <div class="add-panel-body">
+    <form method="post" action="/products/add" enctype="multipart/form-data" id="add-product-form">
+      <div class="form-grid">
         <div class="field">
-          <label class="field-label">Product Name *</label>
-          <input class="input" type="text" name="name" placeholder="e.g. OmegaPlus Capsules" required />
+          <label class="field-label">Product Name <span style="color:#C06060;">*</span></label>
+          <input class="input" type="text" name="name" placeholder="e.g. OmegaPlus Capsules" required autocomplete="off" />
         </div>
         <div class="field">
           <label class="field-label">SKU / Product Code</label>
-          <input class="input" type="text" name="sku" placeholder="e.g. OP-60-CAP" />
+          <input class="input" type="text" name="sku" placeholder="e.g. OP-60-CAP" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label class="field-label">Category</label>
+          <select class="input" name="category">
+            <option>Health Supplement</option>
+            <option>Nutraceutical</option>
+            <option>Functional Food</option>
+            <option>Food for Special Dietary Use</option>
+            <option>Novel Food</option>
+            <option>Ayurvedic / ASU</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Description</label>
+          <input class="input" type="text" name="description" placeholder="Optional — e.g. 60 softgels, Vitamin D3+K2" autocomplete="off" />
+        </div>
+        <div class="field field-full">
+          <label class="field-label">Upload Label <span style="font-weight:400;color:#A3A3A3;">(optional — you can add later)</span></label>
+          <div class="drop-zone" id="drop-zone"
+               onclick="document.getElementById('product-file').click()"
+               ondragover="event.preventDefault();this.classList.add('drag-over');"
+               ondragleave="this.classList.remove('drag-over');"
+               ondrop="event.preventDefault();this.classList.remove('drag-over');document.getElementById('product-file').files=event.dataTransfer.files;showFileName();">
+            <div class="drop-zone-icon">&#128196;</div>
+            <div style="font-size:0.82rem;color:#737373;margin-bottom:0.2rem;">
+              Drag &amp; drop or <span style="color:#5A9A98;font-weight:600;">browse</span>
+            </div>
+            <div style="font-size:0.7rem;color:#A3A3A3;">JPG, PNG, WebP, PDF — max 50 MB</div>
+            <div id="file-name-display" style="margin-top:0.5rem;font-size:0.8rem;font-weight:600;color:#5A9A98;display:none;"></div>
+          </div>
+          <input type="file" id="product-file" name="file" accept=".jpg,.jpeg,.png,.webp,.tiff,.tif,.pdf,.csv,.xlsx,.xls" style="display:none;" onchange="showFileName()" />
         </div>
       </div>
-      <div class="field">
-        <label class="field-label">Category</label>
-        <select class="input" name="category">
-          <option>Health Supplement</option>
-          <option>Nutraceutical</option>
-          <option>Functional Food</option>
-          <option>Food for Special Dietary Use</option>
-          <option>Novel Food</option>
-          <option>Ayurvedic / ASU</option>
-        </select>
+      <div style="display:flex;gap:0.75rem;margin-top:1rem;align-items:center;">
+        <button type="submit" class="btn btn-primary" id="add-submit-btn">Add Product &rarr;</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('add-panel').removeAttribute('open')">Cancel</button>
       </div>
-      <div class="field">
-        <label class="field-label">Description</label>
-        <textarea class="input" name="description" placeholder="Optional product description" rows="2"></textarea>
-      </div>
-
-      {# ── File upload ── #}
-      <div class="field">
-        <label class="field-label">Upload Label / Product File</label>
-        <div id="drop-zone"
-             style="border:1.5px dashed #D4D4D4;border-radius:8px;padding:2rem 1.2rem;text-align:center;cursor:pointer;transition:all 0.15s;background:#FAFAFA;"
-             onclick="document.getElementById('product-file').click()"
-             ondragover="event.preventDefault();this.style.borderColor='#81C2C0';this.style.background='#D4EDEC';"
-             ondragleave="this.style.borderColor='#D4D4D4';this.style.background='#FAFAFA';"
-             ondrop="event.preventDefault();this.style.borderColor='#D4D4D4';this.style.background='#FAFAFA';document.getElementById('product-file').files=event.dataTransfer.files;showFileName();">
-          <div style="font-size:1.5rem;margin-bottom:0.4rem;color:#A3A3A3;">&#128196;</div>
-          <div style="font-size:0.82rem;color:#737373;margin-bottom:0.25rem;">
-            Drag &amp; drop or <span style="color:#5A9A98;font-weight:600;text-decoration:underline;">browse files</span>
-          </div>
-          <div style="font-size:0.7rem;color:#A3A3A3;">
-            JPG, PNG, WebP, PDF, CSV, Excel — max 50 MB
-          </div>
-          <div id="file-name-display" style="margin-top:0.6rem;font-size:0.8rem;font-weight:600;color:#5A9A98;display:none;"></div>
-        </div>
-        <input type="file" id="product-file" name="file" accept=".jpg,.jpeg,.png,.webp,.tiff,.tif,.pdf,.csv,.xlsx,.xls" style="display:none;" onchange="showFileName()" />
-      </div>
-
-      <button type="submit" class="btn btn-primary btn-full" style="margin-top:0.5rem;">Add Product &rarr;</button>
     </form>
-  </details>
+  </div>
+</details>
+
+{# ── Bulk action bar ── #}
+<div id="bulk-bar">
+  <span id="bulk-count">0 selected</span>
+  <button class="bulk-btn bulk-btn-archive" onclick="bulkAction('archive')">&#128190; Archive</button>
+  <button class="bulk-btn bulk-btn-delete" onclick="bulkAction('delete')">&#128465; Delete</button>
+  <button class="bulk-btn bulk-btn-cancel" onclick="clearSelection()">Cancel</button>
 </div>
-<script>
-function showFileName(){
-  var f=document.getElementById('product-file');
-  var d=document.getElementById('file-name-display');
-  if(f.files&&f.files.length>0){d.textContent=f.files[0].name;d.style.display='block';}
-  else{d.style.display='none';}
-}
-</script>
 
 {% if products %}
-<div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap;">
+{# ── Filters ── #}
+<div style="display:flex;gap:0.65rem;align-items:center;margin-bottom:0.85rem;flex-wrap:wrap;">
   <input class="input" type="text" id="product-search" placeholder="Search by name, SKU, or description..."
-         style="max-width:320px;font-size:0.82rem;" oninput="filterProducts()" />
-  <select class="input" id="category-filter" style="max-width:220px;font-size:0.82rem;" onchange="filterProducts()">
+         style="max-width:300px;font-size:0.82rem;" oninput="filterProducts()" />
+  <select class="input" id="category-filter" style="max-width:200px;font-size:0.82rem;" onchange="filterProducts()">
     <option value="">All Categories</option>
     <option>Health Supplement</option>
     <option>Nutraceutical</option>
@@ -94,12 +154,15 @@ function showFileName(){
 </div>
 
 <div class="table-wrap">
-  <table class="tbl">
+  <table class="tbl" id="products-table">
     <thead>
       <tr>
-        <th style="cursor:pointer;" onclick="sortTable(0,'text')">Product &#x21C5;</th>
+        <th style="width:36px;padding:0.5rem 0.5rem 0.5rem 0.75rem;">
+          <input type="checkbox" class="tbl-check" id="select-all" onchange="toggleSelectAll(this)" title="Select all" />
+        </th>
+        <th style="cursor:pointer;" onclick="sortTable(1,'text')">Product &#x21C5;</th>
         <th>Category</th>
-        <th style="cursor:pointer;" onclick="sortTable(2,'num')">Score &#x21C5;</th>
+        <th style="cursor:pointer;" onclick="sortTable(3,'num')">Score &#x21C5;</th>
         <th>Last Label</th>
         <th>Actions</th>
       </tr>
@@ -108,12 +171,16 @@ function showFileName(){
     {% for p in products %}
       {% set score = p.compliance_score %}
       {% set latest = p.latest_label %}
-      <tr data-name="{{ p.name|lower }}" data-sku="{{ (p.sku or '')|lower }}" data-desc="{{ (p.description or '')|lower }}" data-category="{{ p.category }}">
+      <tr data-id="{{ p.id }}" data-name="{{ p.name|lower }}" data-sku="{{ (p.sku or '')|lower }}" data-desc="{{ (p.description or '')|lower }}" data-category="{{ p.category }}">
+        <td style="padding:0.5rem 0.5rem 0.5rem 0.75rem;">
+          <input type="checkbox" class="tbl-check row-check" onchange="onRowCheck()" data-id="{{ p.id }}" />
+        </td>
         <td>
           <a href="/products/{{ p.id }}" style="font-weight:600;color:var(--gray-900);">{{ p.name }}</a>
-          {% if p.sku %}<br/><small>{{ p.sku }}</small>{% endif %}
+          {% if p.sku %}<br/><small style="color:#A3A3A3;">{{ p.sku }}</small>{% endif %}
+          {% if p.description %}<br/><small style="color:#C0C0C0;font-size:0.68rem;">{{ p.description[:60] }}{% if p.description|length > 60 %}…{% endif %}</small>{% endif %}
         </td>
-        <td><span class="pill pill-primary" style="font-size:0.72rem;">{{ p.category }}</span></td>
+        <td><span class="pill pill-primary" style="font-size:0.7rem;">{{ p.category }}</span></td>
         <td>
           {% if score is not none %}
             <span class="pill {% if score >= 80 %}pill-good{% elif score >= 50 %}pill-warn{% else %}pill-bad{% endif %}">{{ score }}%</span>
@@ -123,11 +190,16 @@ function showFileName(){
         </td>
         <td>
           {% if latest %}<small>{{ latest.uploaded_at.strftime('%d %b %Y') }}</small>
-          {% else %}<small style="color:var(--gray-300);">None</small>{% endif %}
+          {% else %}<small style="color:var(--gray-300);">No label</small>{% endif %}
         </td>
-        <td style="white-space:nowrap;">
+        <td class="td-actions">
           <a href="/products/{{ p.id }}/upload" class="btn btn-outline btn-sm">Upload</a>
-          {% if latest %}<a href="/labels/{{ latest.id }}" class="btn btn-primary btn-sm" style="margin-left:0.35rem;">Report</a>{% endif %}
+          {% if latest %}
+            <a href="/labels/{{ latest.id }}" class="btn btn-primary btn-sm" style="margin-left:0.3rem;">Report</a>
+          {% endif %}
+          <form method="post" action="/products/{{ p.id }}/archive" style="display:inline;" onsubmit="return confirm('Archive {{ p.name }}? You can restore it later.')">
+            <button type="submit" class="btn-archive-row" title="Archive product">&#128190;</button>
+          </form>
         </td>
       </tr>
     {% endfor %}
@@ -137,50 +209,7 @@ function showFileName(){
 <div id="no-filter-results" style="display:none;text-align:center;padding:2rem;color:#737373;font-size:0.88rem;">
   No products match your filters.
 </div>
-<script>
-function filterProducts(){
-  var q=document.getElementById('product-search').value.toLowerCase();
-  var cat=document.getElementById('category-filter').value;
-  var rows=document.querySelectorAll('table.tbl tbody tr');
-  var shown=0;
-  rows.forEach(function(row){
-    var name=row.getAttribute('data-name')||'';
-    var sku=row.getAttribute('data-sku')||'';
-    var desc=row.getAttribute('data-desc')||'';
-    var rowCat=row.getAttribute('data-category')||'';
-    var textMatch=!q||name.indexOf(q)!==-1||sku.indexOf(q)!==-1||desc.indexOf(q)!==-1;
-    var catMatch=!cat||rowCat===cat;
-    if(textMatch&&catMatch){row.style.display='';shown++;}
-    else{row.style.display='none';}
-  });
-  var countEl=document.getElementById('filter-count');
-  if(q||cat){countEl.textContent=shown+' of '+rows.length+' shown';}
-  else{countEl.textContent='';}
-  document.getElementById('no-filter-results').style.display=shown===0?'block':'none';
-  document.querySelector('.table-wrap').style.display=shown===0?'none':'';
-}
-function clearFilters(){
-  document.getElementById('product-search').value='';
-  document.getElementById('category-filter').value='';
-  filterProducts();
-}
-function sortTable(colIndex,type){
-  var tbody=document.querySelector('table.tbl tbody');
-  var rows=Array.from(tbody.querySelectorAll('tr'));
-  var asc=tbody.getAttribute('data-sort-asc')!==String(colIndex);
-  rows.sort(function(a,b){
-    var aVal=a.children[colIndex].textContent.trim();
-    var bVal=b.children[colIndex].textContent.trim();
-    if(type==='num'){aVal=parseFloat(aVal)||-1;bVal=parseFloat(bVal)||-1;}
-    else{aVal=aVal.toLowerCase();bVal=bVal.toLowerCase();}
-    if(aVal<bVal)return asc?-1:1;
-    if(aVal>bVal)return asc?1:-1;
-    return 0;
-  });
-  rows.forEach(function(r){tbody.appendChild(r);});
-  tbody.setAttribute('data-sort-asc',asc?colIndex:'');
-}
-</script>
+
 {% else %}
 <div class="card no-hover" style="padding:0;">
   <div class="empty-state">
@@ -190,4 +219,107 @@ function sortTable(colIndex,type){
   </div>
 </div>
 {% endif %}
+
+<script>
+/* ── File picker ── */
+function showFileName(){
+  var f=document.getElementById('product-file');
+  var d=document.getElementById('file-name-display');
+  if(f.files&&f.files.length>0){d.textContent='✓ '+f.files[0].name;d.style.display='block';}
+  else{d.style.display='none';}
+}
+
+/* ── Submit guard ── */
+document.getElementById('add-product-form').addEventListener('submit', function(){
+  var btn = document.getElementById('add-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Adding…';
+});
+
+/* ── Filter & sort ── */
+function filterProducts(){
+  var q=document.getElementById('product-search').value.toLowerCase();
+  var cat=document.getElementById('category-filter').value;
+  var rows=document.querySelectorAll('#products-table tbody tr');
+  var shown=0;
+  rows.forEach(function(row){
+    var name=row.getAttribute('data-name')||'';
+    var sku=row.getAttribute('data-sku')||'';
+    var desc=row.getAttribute('data-desc')||'';
+    var rowCat=row.getAttribute('data-category')||'';
+    var textMatch=!q||name.includes(q)||sku.includes(q)||desc.includes(q);
+    var catMatch=!cat||rowCat===cat;
+    row.style.display=(textMatch&&catMatch)?'':'none';
+    if(textMatch&&catMatch) shown++;
+  });
+  var countEl=document.getElementById('filter-count');
+  countEl.textContent=(q||cat)?shown+' of '+rows.length+' shown':'';
+  var nfr=document.getElementById('no-filter-results');
+  var tw=document.querySelector('.table-wrap');
+  if(nfr){nfr.style.display=shown===0?'block':'none';}
+  if(tw){tw.style.display=shown===0?'none':'';}
+}
+function clearFilters(){
+  document.getElementById('product-search').value='';
+  document.getElementById('category-filter').value='';
+  filterProducts();
+}
+function sortTable(colIndex,type){
+  var tbody=document.querySelector('#products-table tbody');
+  if(!tbody) return;
+  var rows=Array.from(tbody.querySelectorAll('tr'));
+  var asc=tbody.getAttribute('data-sort-asc')!==String(colIndex);
+  rows.sort(function(a,b){
+    var aVal=a.children[colIndex]?a.children[colIndex].textContent.trim():'';
+    var bVal=b.children[colIndex]?b.children[colIndex].textContent.trim():'';
+    if(type==='num'){aVal=parseFloat(aVal)||-1;bVal=parseFloat(bVal)||-1;}
+    else{aVal=aVal.toLowerCase();bVal=bVal.toLowerCase();}
+    return asc?(aVal<bVal?-1:aVal>bVal?1:0):(aVal>bVal?-1:aVal<bVal?1:0);
+  });
+  rows.forEach(function(r){tbody.appendChild(r);});
+  tbody.setAttribute('data-sort-asc',asc?colIndex:'');
+}
+
+/* ── Bulk selection ── */
+function onRowCheck(){
+  var checked=document.querySelectorAll('.row-check:checked');
+  var all=document.querySelectorAll('.row-check');
+  var bar=document.getElementById('bulk-bar');
+  var count=document.getElementById('bulk-count');
+  document.getElementById('select-all').checked=checked.length===all.length&&all.length>0;
+  document.getElementById('select-all').indeterminate=checked.length>0&&checked.length<all.length;
+  bar.classList.toggle('visible', checked.length>0);
+  count.textContent=checked.length+' selected';
+  document.querySelectorAll('#products-table tbody tr').forEach(function(r){
+    var cb=r.querySelector('.row-check');
+    r.classList.toggle('row-selected', cb&&cb.checked);
+  });
+}
+function toggleSelectAll(cb){
+  document.querySelectorAll('.row-check').forEach(function(c){c.checked=cb.checked;});
+  onRowCheck();
+}
+function clearSelection(){
+  document.querySelectorAll('.row-check').forEach(function(c){c.checked=false;});
+  document.getElementById('select-all').checked=false;
+  document.getElementById('select-all').indeterminate=false;
+  onRowCheck();
+}
+
+/* ── Bulk actions ── */
+function bulkAction(action){
+  var ids=Array.from(document.querySelectorAll('.row-check:checked')).map(function(c){return parseInt(c.getAttribute('data-id'));});
+  if(!ids.length) return;
+  var label=action==='archive'?'archive':'permanently delete';
+  if(!confirm('Are you sure you want to '+label+' '+ids.length+' product(s)?')) return;
+  fetch('/products/bulk-action',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:action,ids:ids})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.success) window.location.reload();
+    else alert('Error: '+(d.error||'Unknown error'));
+  }).catch(function(){ alert('Request failed — please try again.'); });
+}
+</script>
 {% endblock %}

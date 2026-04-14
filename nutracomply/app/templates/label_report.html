@@ -3,121 +3,125 @@
 
 {% block content %}
 <style>
-  /* ── Score Ring ── */
-  .rpt-score-ring { position:relative; width:120px; height:120px; flex-shrink:0; }
-  .rpt-score-ring svg { width:120px; height:120px; transform:rotate(-90deg); }
-  .rpt-score-ring .ring-bg { fill:none; stroke:#E8E8E8; stroke-width:8; }
-  .rpt-score-ring .ring-fg { fill:none; stroke-width:8; stroke-linecap:round; transition:stroke-dashoffset 1s ease; }
-  .rpt-score-ring .ring-fg.sc-good { stroke:#5A9A98; }
-  .rpt-score-ring .ring-fg.sc-warn { stroke:#FFD7AD; }
-  .rpt-score-ring .ring-fg.sc-bad  { stroke:#E8A0A0; }
-  .rpt-score-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-  .rpt-score-val { font-size:1.75rem; font-weight:700; line-height:1; }
-  .rpt-score-val.sc-good { color:#5A9A98; }
-  .rpt-score-val.sc-warn { color:#C49A3C; }
-  .rpt-score-val.sc-bad  { color:#C06060; }
-  .rpt-score-pct { font-size:0.65rem; color:#A3A3A3; margin-top:0.15rem; letter-spacing:0.05em; text-transform:uppercase; }
+/* ── Score Ring ── */
+.rpt-score-ring { position:relative; width:110px; height:110px; flex-shrink:0; }
+.rpt-score-ring svg { width:110px; height:110px; transform:rotate(-90deg); }
+.rpt-score-ring .ring-bg { fill:none; stroke:#E8E8E8; stroke-width:8; }
+.rpt-score-ring .ring-fg { fill:none; stroke-width:8; stroke-linecap:round; transition:stroke-dashoffset 1s ease; }
+.rpt-score-ring .ring-fg.sc-good { stroke:#5A9A98; }
+.rpt-score-ring .ring-fg.sc-warn { stroke:#D4B050; }
+.rpt-score-ring .ring-fg.sc-bad  { stroke:#C06060; }
+.rpt-score-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.rpt-score-val { font-size:1.55rem; font-weight:700; line-height:1; }
+.rpt-score-val.sc-good { color:#5A9A98; }
+.rpt-score-val.sc-warn { color:#C49A3C; }
+.rpt-score-val.sc-bad  { color:#C06060; }
+.rpt-score-pct { font-size:0.6rem; color:#A3A3A3; margin-top:0.1rem; letter-spacing:0.05em; text-transform:uppercase; }
 
-  /* ── Label Preview Card ── */
-  .rpt-preview-card { background:#fff; border:1px solid #CADCEE; border-radius:8px; padding:1rem; margin-bottom:1.5rem; }
-  .rpt-preview-inner { display:flex; gap:1.25rem; align-items:flex-start; flex-wrap:wrap; }
-  .rpt-preview-img-wrap { flex:0 0 auto; max-width:280px; }
-  .rpt-label-img { max-width:100%; border-radius:6px; border:1px solid #CADCEE; display:block; }
-  .rpt-preview-meta { flex:1; min-width:200px; }
-  .rpt-preview-meta h3 { margin:0 0 0.3rem; font-size:1rem; font-weight:600; color:#262626; }
-  .rpt-preview-meta .meta-row { font-size:0.78rem; color:#737373; margin-bottom:0.15rem; }
+/* ── Top bar (header + actions) ── */
+.rpt-topbar { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.75rem; margin-bottom:1.25rem; }
+.rpt-topbar-actions { display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; }
 
-  /* ── Stats Strip ── */
-  .rpt-stats-strip { display:flex; gap:0.75rem; margin-bottom:1.5rem; flex-wrap:wrap; }
-  .rpt-stat { flex:1; min-width:100px; background:#fff; border:1px solid #EBEBEB; border-radius:8px; padding:0.85rem 1rem; text-align:center; }
-  .rpt-stat-val { font-size:1.6rem; font-weight:700; line-height:1; }
-  .rpt-stat-lbl { font-size:0.65rem; color:#A3A3A3; margin-top:0.25rem; font-weight:500; letter-spacing:0.05em; text-transform:uppercase; }
-  .rpt-stat.stat-total { border-color:#CADCEE; }
-  .rpt-stat.stat-total .rpt-stat-val { color:#649CC4; }
-  .rpt-stat.stat-pass { border-color:#D8F0DF; }
-  .rpt-stat.stat-pass .rpt-stat-val { color:#5A9A98; }
-  .rpt-stat.stat-fail { border-color:#F5D5D5; }
-  .rpt-stat.stat-fail .rpt-stat-val { color:#C06060; }
-  .rpt-stat.stat-score { border-color:#D4EDEC; }
-  .rpt-stat.stat-score .rpt-stat-val { color:#5A9A98; }
+/* ── Summary card ── */
+.rpt-summary { display:flex; gap:1.25rem; align-items:center; background:#fff; border:1px solid #EBEBEB; border-radius:10px; padding:1.1rem 1.25rem; margin-bottom:1.25rem; flex-wrap:wrap; }
+.rpt-summary-info { flex:1; min-width:180px; }
+.rpt-summary-info h3 { margin:0 0 0.2rem; font-size:1rem; font-weight:700; color:#111; }
+.rpt-meta-row { font-size:0.75rem; color:#737373; margin-bottom:0.15rem; display:flex; align-items:center; gap:0.35rem; }
+.rpt-meta-row strong { color:#525252; }
 
-  /* ── Header ── */
-  .rpt-hdr { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1.5rem; }
+/* ── Stats strip ── */
+.rpt-stats { display:flex; gap:0.65rem; margin-bottom:1.25rem; flex-wrap:wrap; }
+.rpt-stat { flex:1; min-width:90px; background:#fff; border:1px solid #EBEBEB; border-radius:8px; padding:0.75rem 0.85rem; text-align:center; }
+.rpt-stat-val { font-size:1.5rem; font-weight:700; line-height:1; }
+.rpt-stat-lbl { font-size:0.62rem; color:#A3A3A3; margin-top:0.2rem; font-weight:500; letter-spacing:0.04em; text-transform:uppercase; }
+.stat-total  { border-color:#CADCEE; } .stat-total  .rpt-stat-val { color:#649CC4; }
+.stat-pass   { border-color:#D8F0DF; } .stat-pass   .rpt-stat-val { color:#5A9A98; }
+.stat-fail   { border-color:#F5D5D5; } .stat-fail   .rpt-stat-val { color:#C06060; }
+.stat-warn   { border-color:#FFF0E0; } .stat-warn   .rpt-stat-val { color:#C49A3C; }
+.stat-score  { border-color:#D4EDEC; } .stat-score  .rpt-stat-val { color:#5A9A98; }
+.stat-crit   { border-color:#F5D5D5; } .stat-crit   .rpt-stat-val { color:#C06060; }
 
-  /* ── Severity Sections (collapsible) ── */
-  .rpt-sev-group { margin-bottom:0.75rem; }
-  .rpt-sev-header { display:flex; align-items:center; gap:0.5rem; padding:0.65rem 1rem; background:#fff; border:1px solid #EBEBEB; border-radius:6px; cursor:pointer; user-select:none; }
-  .rpt-sev-header:hover { background:#FAFAFA; }
-  .rpt-sev-header .sev-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-  .rpt-sev-header .sev-dot.dot-CRITICAL { background:#C06060; }
-  .rpt-sev-header .sev-dot.dot-HIGH { background:#E8A060; }
-  .rpt-sev-header .sev-dot.dot-MEDIUM { background:#D4B050; }
-  .rpt-sev-header .sev-dot.dot-LOW { background:#A3A3A3; }
-  .rpt-sev-header .sev-title { font-size:0.82rem; font-weight:600; color:#262626; flex:1; }
-  .rpt-sev-header .sev-count { font-size:0.72rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:10px; }
-  .rpt-sev-header .cnt-CRITICAL { background:#F5D5D5; color:#8B3A3A; }
-  .rpt-sev-header .cnt-HIGH { background:#FFF0E0; color:#8B6914; }
-  .rpt-sev-header .cnt-MEDIUM { background:#FEF9C3; color:#854D0E; }
-  .rpt-sev-header .cnt-LOW { background:#F5F5F5; color:#737373; }
-  .rpt-sev-header .sev-arrow { font-size:0.7rem; color:#A3A3A3; transition:transform 0.2s; }
-  details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
-  .rpt-sev-body { padding:0.5rem 0 0; }
+/* ── Section title ── */
+.rpt-section-title { font-size:0.82rem; font-weight:700; color:#111; margin:1.25rem 0 0.5rem; letter-spacing:-0.01em; display:flex; align-items:center; gap:0.4rem; }
+.rpt-section-title .stitle-badge { font-size:0.65rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:99px; }
 
-  /* ── Check Card ── */
-  .rpt-check { background:#fff; border:1px solid #EBEBEB; border-radius:6px; padding:0.85rem 1rem; margin-bottom:0.5rem; border-left:3px solid #EBEBEB; }
-  .rpt-check.sev-CRITICAL { border-left-color:#C06060; background:#FFFAFA; }
-  .rpt-check.sev-HIGH     { border-left-color:#E8A060; background:#FFFCF5; }
-  .rpt-check.sev-MEDIUM   { border-left-color:#D4B050; }
-  .rpt-check.sev-LOW      { border-left-color:#A3A3A3; }
-  .rpt-check.sev-PASS     { border-left-color:#A0D7B1; }
+/* ── Severity groups ── */
+.rpt-sev-group { margin-bottom:0.6rem; border:1px solid #EBEBEB; border-radius:8px; overflow:hidden; }
+.rpt-sev-header { display:flex; align-items:center; gap:0.5rem; padding:0.6rem 0.9rem; background:#fff; cursor:pointer; user-select:none; }
+.rpt-sev-header:hover { background:#FAFAFA; }
+.sev-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.dot-CRITICAL { background:#C06060; } .dot-HIGH { background:#E8A060; }
+.dot-MEDIUM   { background:#D4B050; } .dot-LOW  { background:#C0C0C0; }
+.sev-title { font-size:0.8rem; font-weight:600; color:#262626; flex:1; }
+.sev-count { font-size:0.68rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:99px; }
+.cnt-CRITICAL { background:#F5D5D5; color:#8B3A3A; }
+.cnt-HIGH     { background:#FFF0E0; color:#8B6914; }
+.cnt-MEDIUM   { background:#FEF9C3; color:#854D0E; }
+.cnt-LOW      { background:#F5F5F5; color:#737373; }
+.sev-arrow { font-size:0.65rem; color:#C0C0C0; transition:transform 0.2s; }
+details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
+.rpt-sev-body { padding:0.5rem 0.75rem 0.75rem; background:#FAFAFA; border-top:1px solid #F0F0F0; }
 
-  .rpt-check-hdr { display:flex; justify-content:space-between; align-items:flex-start; gap:0.75rem; }
-  .rpt-check-desc { font-size:0.82rem; font-weight:600; color:#262626; flex:1; }
-  .rpt-sev-tag { font-size:0.6rem; font-weight:700; padding:0.12rem 0.45rem; border-radius:3px; letter-spacing:0.05em; white-space:nowrap; }
-  .tag-CRITICAL { background:#F5D5D5; color:#8B3A3A; }
-  .tag-HIGH     { background:#FFF0E0; color:#8B6914; }
-  .tag-MEDIUM   { background:#FEF9C3; color:#854D0E; }
-  .tag-LOW      { background:#F5F5F5; color:#737373; }
+/* ── Check card ── */
+.rpt-check { background:#fff; border:1px solid #EBEBEB; border-radius:6px; padding:0.75rem 0.9rem; margin-bottom:0.4rem; border-left:3px solid #EBEBEB; }
+.rpt-check.sev-CRITICAL { border-left-color:#C06060; background:#FFFAFA; }
+.rpt-check.sev-HIGH     { border-left-color:#E8A060; background:#FFFCF5; }
+.rpt-check.sev-MEDIUM   { border-left-color:#D4B050; }
+.rpt-check.sev-LOW      { border-left-color:#C0C0C0; }
+.rpt-check-hdr { display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; }
+.rpt-check-desc { font-size:0.8rem; font-weight:600; color:#262626; flex:1; }
+.rpt-sev-tag { font-size:0.58rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:3px; letter-spacing:0.04em; white-space:nowrap; flex-shrink:0; }
+.tag-CRITICAL { background:#F5D5D5; color:#8B3A3A; }
+.tag-HIGH     { background:#FFF0E0; color:#8B6914; }
+.tag-MEDIUM   { background:#FEF9C3; color:#854D0E; }
+.tag-LOW      { background:#F5F5F5; color:#737373; }
+.rpt-rule-ref { font-size:0.68rem; color:#B0B0B0; margin-top:0.15rem; }
+.rpt-check-msg { font-size:0.78rem; color:#525252; margin-top:0.3rem; line-height:1.5; }
+.rpt-actual { font-size:0.73rem; color:#737373; margin-top:0.2rem; }
+.rpt-fix { margin-top:0.35rem; }
+.rpt-fix summary { font-size:0.74rem; color:#5A9A98; font-weight:600; cursor:pointer; }
+.rpt-fix-body { font-size:0.76rem; color:#525252; margin-top:0.3rem; padding:0.6rem; background:#D4EDEC; border-radius:5px; border:1px solid #B8DDD9; line-height:1.5; }
 
-  .rpt-rule-ref { font-size:0.7rem; color:#A3A3A3; margin-top:0.2rem; }
-  .rpt-check-msg { font-size:0.8rem; color:#525252; margin-top:0.4rem; line-height:1.55; }
-  .rpt-actual { font-size:0.76rem; color:#737373; margin-top:0.25rem; }
-  .rpt-actual strong { color:#525252; }
-  .rpt-fix { margin-top:0.4rem; }
-  .rpt-fix summary { font-size:0.76rem; color:#5A9A98; font-weight:600; cursor:pointer; }
-  .rpt-fix-body { font-size:0.78rem; color:#525252; margin-top:0.35rem; padding:0.65rem; background:#D4EDEC; border-radius:5px; border:1px solid #B8DDD9; line-height:1.55; }
+/* ── Passed checks ── */
+.rpt-passed-list { list-style:none; padding:0; margin:0; }
+.rpt-passed-item { display:flex; align-items:flex-start; gap:0.4rem; padding:0.35rem 0; border-bottom:1px solid #F0F0F0; font-size:0.76rem; }
+.rpt-passed-item:last-child { border-bottom:none; }
+.rpt-passed-check { color:#5A9A98; font-weight:700; flex-shrink:0; font-size:0.8rem; }
+.rpt-passed-code  { font-size:0.62rem; color:#B0B0B0; font-family:monospace; flex-shrink:0; min-width:55px; }
+.rpt-passed-text  { color:#525252; flex:1; }
+.rpt-passed-val   { font-size:0.7rem; color:#5A9A98; font-weight:500; }
 
-  /* ── Passed Checks (compact) ── */
-  .rpt-passed-list { list-style:none; padding:0; margin:0; }
-  .rpt-passed-item { display:flex; align-items:flex-start; gap:0.5rem; padding:0.4rem 0; border-bottom:1px solid #F5F5F5; font-size:0.78rem; }
-  .rpt-passed-item:last-child { border-bottom:none; }
-  .rpt-passed-check { color:#5A9A98; font-weight:700; flex-shrink:0; font-size:0.85rem; line-height:1.2; }
-  .rpt-passed-text { color:#525252; flex:1; }
-  .rpt-passed-code { font-size:0.65rem; color:#A3A3A3; font-family:monospace; flex-shrink:0; min-width:60px; }
-  .rpt-passed-val { font-size:0.72rem; color:#5A9A98; font-weight:500; }
+/* ── Navigation ── */
+.rpt-nav { display:flex; gap:0.65rem; flex-wrap:wrap; margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid #EBEBEB; }
 
-  /* ── Navigation ── */
-  .rpt-nav { display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid #EBEBEB; }
+/* ── Label preview ── */
+.rpt-label-img { max-width:100%; border-radius:6px; border:1px solid #CADCEE; display:block; }
 
-  /* ── Warnings section ── */
-  .rpt-warn-section { margin-bottom:1rem; }
+/* ── Overall verdict banner ── */
+.rpt-verdict { padding:0.7rem 1rem; border-radius:8px; margin-bottom:1.25rem; font-size:0.82rem; font-weight:600; display:flex; align-items:center; gap:0.5rem; }
+.verdict-good { background:#D4EDEC; color:#1E6B65; border:1px solid #B8DDD9; }
+.verdict-warn { background:#FEF9C3; color:#854D0E; border:1px solid #F0E068; }
+.verdict-bad  { background:#F5D5D5; color:#8B3A3A; border:1px solid #F0B8B8; }
 
-  /* ── Extracted Data ── */
-  .rpt-extraction { margin-top:1.25rem; }
+/* ── Print / PDF styles ── */
+@media print {
+  .rpt-nav, .rpt-topbar-actions, nav, .sidebar, #sidebar, .no-print { display:none !important; }
+  .rpt-sev-group { break-inside:avoid; }
+  details { display:block !important; }
+  details > summary { display:none; }
+  .rpt-sev-body { display:block !important; }
+  body { font-size:11pt; }
+}
 
-  /* ── Section Title ── */
-  .rpt-section-title { font-size:0.88rem; font-weight:600; color:#262626; margin:1.25rem 0 0.6rem; letter-spacing:-0.01em; }
-
-  @media(max-width:600px) {
-    .rpt-preview-inner { flex-direction:column; }
-    .rpt-preview-img-wrap { max-width:100%; }
-    .rpt-stats-strip { flex-wrap:wrap; }
-    .rpt-stat { min-width:80px; }
-  }
+@media(max-width:600px){
+  .rpt-summary { flex-direction:column; }
+  .rpt-stats { flex-wrap:wrap; }
+  .rpt-stat { min-width:75px; }
+}
 </style>
 
-{# -- Breadcrumb -- #}
-<div style="font-size:0.78rem;color:#A3A3A3;margin-bottom:1.25rem;">
+{# ── Breadcrumb ── #}
+<div style="font-size:0.76rem;color:#A3A3A3;margin-bottom:1rem;">
   <a href="/products" style="color:#737373;">Products</a>
   <span style="margin:0 0.3rem;">&#8250;</span>
   <a href="/products/{{ product.id }}" style="color:#737373;">{{ product.name }}</a>
@@ -126,149 +130,133 @@
 </div>
 
 {% if processing %}
-<div class="card no-hover" style="text-align:center;padding:3rem 1.5rem;max-width:540px;margin:0 auto;" id="scan-card">
+{# ── Processing spinner ── #}
+<div class="card no-hover" style="text-align:center;padding:3rem 1.5rem;max-width:520px;margin:0 auto;" id="scan-card">
   <div style="font-size:2rem;margin-bottom:1rem;" id="scan-icon">&#128301;</div>
   <h3 style="margin-bottom:0.3rem;font-size:1rem;" id="scan-title">Analysing your label</h3>
-  <p id="scan-stage" style="color:#737373;font-size:0.82rem;margin-bottom:1.4rem;">Running OCR on label...</p>
-
+  <p id="scan-stage" style="color:#737373;font-size:0.82rem;margin-bottom:1.4rem;">Preparing analysis...</p>
   <div id="scan-bar-wrap" style="background:#F0F0F0;border-radius:99px;height:6px;overflow:hidden;margin-bottom:0.6rem;">
-    <div id="scan-bar"
-         style="height:100%;background:linear-gradient(90deg,#5A9A98,#81C2C0);border-radius:99px;width:8%;transition:width 1.2s ease;"></div>
+    <div id="scan-bar" style="height:100%;background:linear-gradient(90deg,#5A9A98,#81C2C0);border-radius:99px;width:8%;transition:width 1.2s ease;"></div>
   </div>
   <div id="scan-pct" style="font-size:0.72rem;color:#A3A3A3;margin-bottom:0.25rem;">8%</div>
   <div id="scan-footer" style="font-size:0.7rem;color:#C0C0C0;">Page reloads automatically when done</div>
 </div>
 <script>
 (function(){
-  var stages = [
-    { pct: 12, label: "Reading label...",                     delay: 0     },
-    { pct: 35, label: "Extracting product information...",    delay: 2000  },
-    { pct: 62, label: "Running AI analysis...",               delay: 5000  },
-    { pct: 78, label: "Checking compliance rules...",         delay: 9000  },
-    { pct: 90, label: "Scoring &amp; building report...",    delay: 14000 },
-    { pct: 96, label: "Finalising...",                        delay: 20000 },
-    { pct: 98, label: "Almost done...",                       delay: 35000 },
+  var stages=[
+    {pct:12, label:"Reading label...",                   delay:0},
+    {pct:35, label:"Extracting product information...",  delay:2000},
+    {pct:62, label:"Running AI analysis...",             delay:5000},
+    {pct:78, label:"Checking compliance rules...",       delay:9000},
+    {pct:90, label:"Scoring &amp; building report...",  delay:14000},
+    {pct:96, label:"Finalising...",                      delay:20000},
+    {pct:98, label:"Almost done...",                     delay:35000},
   ];
-  var bar     = document.getElementById('scan-bar');
-  var pctEl   = document.getElementById('scan-pct');
-  var stageEl = document.getElementById('scan-stage');
-  var titleEl = document.getElementById('scan-title');
-  var iconEl  = document.getElementById('scan-icon');
-  var footer  = document.getElementById('scan-footer');
-
-  stages.forEach(function(s){
-    setTimeout(function(){
-      bar.style.width  = s.pct + '%';
-      pctEl.textContent = s.pct + '%';
-      stageEl.innerHTML = s.label;
-    }, s.delay);
-  });
-
-  // Poll JSON status endpoint every 5s; stop & reload when ready
-  var labelId    = window.location.pathname.split('/')[2];
-  var pollCount  = 0;
-  var MAX_POLLS  = 75;   // 75 × 2s = 2.5 minutes max wait
-  var POLL_MS    = 2000; // poll every 2s — fast enough to catch 5s Haiku responses
-  var pollTimer  = null;
-
-  function showError() {
-    iconEl.textContent = '⚠️';
-    titleEl.textContent = 'Processing took longer than expected';
-    stageEl.innerHTML  = 'This can happen with large or complex labels.';
-    bar.style.background = '#E57373';
-    bar.style.width = '100%';
-    pctEl.style.display = 'none';
-    footer.innerHTML = '<a href="javascript:location.reload()" style="color:#5A9A98;font-weight:600;">Refresh page</a> &nbsp;·&nbsp; <a href="/products" style="color:#A3A3A3;">Back to Products</a>';
+  var bar=document.getElementById('scan-bar');
+  var pctEl=document.getElementById('scan-pct');
+  var stageEl=document.getElementById('scan-stage');
+  var titleEl=document.getElementById('scan-title');
+  var iconEl=document.getElementById('scan-icon');
+  var footer=document.getElementById('scan-footer');
+  stages.forEach(function(s){ setTimeout(function(){ bar.style.width=s.pct+'%'; pctEl.textContent=s.pct+'%'; stageEl.innerHTML=s.label; }, s.delay); });
+  var labelId=window.location.pathname.split('/')[2];
+  var pollCount=0, MAX_POLLS=75, POLL_MS=2000, pollTimer=null;
+  function showError(){
+    iconEl.textContent='⚠️'; titleEl.textContent='Processing took longer than expected';
+    stageEl.innerHTML='This can happen with large or complex labels.';
+    bar.style.background='#E57373'; bar.style.width='100%'; pctEl.style.display='none';
+    footer.innerHTML='<a href="javascript:location.reload()" style="color:#5A9A98;font-weight:600;">Refresh page</a> &nbsp;·&nbsp; <a href="/products" style="color:#A3A3A3;">Back to Products</a>';
   }
-
   function poll(){
     pollCount++;
-    fetch('/labels/' + labelId + '/status')
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if(d.ready){
-          bar.style.width   = '100%';
-          pctEl.textContent = '100%';
-          stageEl.innerHTML = 'Done! Loading report...';
-          // Stop further polls and redirect
-          clearTimeout(pollTimer);
-          setTimeout(function(){ window.location.href = '/labels/' + labelId; }, 600);
-          return;
-        }
-        if(d.failed || pollCount >= MAX_POLLS){
-          showError();
-          return;  // stop polling
-        }
-        pollTimer = setTimeout(poll, POLL_MS);
-      })
-      .catch(function(){
-        if(pollCount >= MAX_POLLS){ showError(); return; }
-        pollTimer = setTimeout(poll, POLL_MS);
-      });
+    fetch('/labels/'+labelId+'/status').then(function(r){return r.json();}).then(function(d){
+      if(d.ready){ bar.style.width='100%'; pctEl.textContent='100%'; stageEl.innerHTML='Done! Loading report...'; clearTimeout(pollTimer); setTimeout(function(){ window.location.href='/labels/'+labelId; },600); return; }
+      if(d.failed||pollCount>=MAX_POLLS){ showError(); return; }
+      pollTimer=setTimeout(poll, POLL_MS);
+    }).catch(function(){ if(pollCount>=MAX_POLLS){showError();return;} pollTimer=setTimeout(poll,POLL_MS); });
   }
-  pollTimer = setTimeout(poll, POLL_MS);
+  pollTimer=setTimeout(poll, POLL_MS);
 })();
 </script>
+
 {% else %}
 
-{# ================================================================= #}
-{# LABEL PREVIEW — top of page                                       #}
-{# ================================================================= #}
-<div class="rpt-preview-card">
-  <div class="rpt-preview-inner">
-    <div class="rpt-preview-img-wrap">
-      {% if label.file_path and label.file_type == 'image' %}
-        {% set img_parts = label.file_path.replace('\\', '/').split('/') %}
-        {% set product_dir = img_parts[-2] if img_parts|length >= 2 else '' %}
-        {% set file_name = img_parts[-1] if img_parts|length >= 1 else '' %}
-        <img src="/uploads/{{ product_dir }}/{{ file_name }}" alt="Label image for {{ product.name }}" class="rpt-label-img" />
-      {% elif label.file_path and label.file_type == 'pdf' %}
-        <img src="/labels/{{ label.id }}/preview-page/0" alt="Label preview" class="rpt-label-img" />
-      {% endif %}
-    </div>
-    <div class="rpt-preview-meta">
-      <h3>{{ product.name }}</h3>
-      <div class="meta-row">{{ label.file_name }}</div>
-      <div class="meta-row">Uploaded {{ label.uploaded_at.strftime('%d %b %Y, %H:%M') }}</div>
-      {% if label.extraction_confidence %}
-      <div class="meta-row">Extraction confidence: {{ (label.extraction_confidence * 100)|int }}%</div>
-      {% endif %}
-      {% if label.file_type == 'pdf' %}
-      <div class="meta-row" style="margin-top:0.4rem;">
-        <span style="display:inline-block;padding:0.15rem 0.5rem;background:#CADCEE;color:#3A6A94;border-radius:4px;font-size:0.68rem;font-weight:600;letter-spacing:0.04em;">PDF</span>
-      </div>
-      {% endif %}
-    </div>
-
-    {# Score Ring #}
-    {% if score is not none %}
-    <div class="rpt-score-ring" style="margin-left:auto;">
-      {% set circumference = 2 * 3.14159 * 48 %}
-      {% set offset = circumference - (circumference * score / 100) %}
-      {% set sc_class = 'sc-good' if score >= 80 else ('sc-warn' if score >= 50 else 'sc-bad') %}
-      <svg viewBox="0 0 120 120">
-        <circle class="ring-bg" cx="60" cy="60" r="48" />
-        <circle class="ring-fg {{ sc_class }}" cx="60" cy="60" r="48"
-                stroke-dasharray="{{ circumference }}"
-                stroke-dashoffset="{{ offset }}" />
-      </svg>
-      <div class="rpt-score-center">
-        <div class="rpt-score-val {{ sc_class }}">{{ score }}%</div>
-        <div class="rpt-score-pct">Score</div>
-      </div>
-    </div>
-    {% endif %}
+{# ── Top bar ── #}
+<div class="rpt-topbar">
+  <div>
+    <h2 style="margin:0 0 0.1rem;font-size:1.1rem;">{{ product.name }}</h2>
+    <div style="font-size:0.75rem;color:#737373;">{{ label.file_name }} &middot; {{ label.uploaded_at.strftime('%d %b %Y, %H:%M') }}</div>
+  </div>
+  <div class="rpt-topbar-actions no-print">
+    <button onclick="window.print()" class="btn btn-outline btn-sm" style="display:flex;align-items:center;gap:0.4rem;">
+      <span>&#128438;</span> Export PDF
+    </button>
+    <form method="post" action="/labels/{{ label.id }}/reanalyze" style="margin:0;">
+      <button type="submit" class="btn btn-outline btn-sm">Re-analyze</button>
+    </form>
+    <form method="post" action="/labels/{{ label.id }}/reanalyze?force_extract=1" style="margin:0;">
+      <button type="submit" class="btn btn-outline btn-sm">Re-extract</button>
+    </form>
   </div>
 </div>
 
-{# ================================================================= #}
-{# STATS STRIP                                                       #}
-{# ================================================================= #}
+{# ── Verdict banner ── #}
+{% if score is not none %}
+  {% if score >= 80 %}
+    <div class="rpt-verdict verdict-good">&#x2714; Good standing — score {{ score }}%. Label meets most FSSAI requirements.</div>
+  {% elif score >= 50 %}
+    <div class="rpt-verdict verdict-warn">&#9888; Partial compliance — score {{ score }}%. Several issues need attention before market.</div>
+  {% else %}
+    <div class="rpt-verdict verdict-bad">&#x2716; Non-compliant — score {{ score }}%. Critical issues must be resolved.</div>
+  {% endif %}
+{% endif %}
+
+{# ── Summary card ── #}
+<div class="rpt-summary">
+  {% if label.file_path and label.file_type == 'image' %}
+    {% set img_parts = label.file_path.replace('\\', '/').split('/') %}
+    {% set product_dir = img_parts[-2] if img_parts|length >= 2 else '' %}
+    {% set file_name = img_parts[-1] if img_parts|length >= 1 else '' %}
+    <img src="/uploads/{{ product_dir }}/{{ file_name }}" alt="{{ product.name }}" class="rpt-label-img" style="max-width:160px;" />
+  {% elif label.file_path and label.file_type == 'pdf' %}
+    <img src="/labels/{{ label.id }}/preview-page/0" alt="Label preview" class="rpt-label-img" style="max-width:160px;" />
+  {% endif %}
+  <div class="rpt-summary-info">
+    <h3>{{ product.name }}</h3>
+    <div class="rpt-meta-row"><strong>Category:</strong> {{ product.category }}</div>
+    <div class="rpt-meta-row"><strong>File:</strong> {{ label.file_name }}</div>
+    <div class="rpt-meta-row"><strong>Uploaded:</strong> {{ label.uploaded_at.strftime('%d %b %Y, %H:%M') }}</div>
+    {% if label.extraction_confidence %}
+    <div class="rpt-meta-row"><strong>AI confidence:</strong> {{ (label.extraction_confidence * 100)|int }}%</div>
+    {% endif %}
+    {% if label.file_type == 'pdf' %}
+    <div class="rpt-meta-row"><span style="padding:0.1rem 0.45rem;background:#CADCEE;color:#3A6A94;border-radius:4px;font-size:0.66rem;font-weight:600;">PDF</span></div>
+    {% endif %}
+  </div>
+  {% if score is not none %}
+  <div class="rpt-score-ring">
+    {% set circumference = 2 * 3.14159 * 46 %}
+    {% set offset = circumference - (circumference * score / 100) %}
+    {% set sc_class = 'sc-good' if score >= 80 else ('sc-warn' if score >= 50 else 'sc-bad') %}
+    <svg viewBox="0 0 110 110">
+      <circle class="ring-bg" cx="55" cy="55" r="46" />
+      <circle class="ring-fg {{ sc_class }}" cx="55" cy="55" r="46"
+              stroke-dasharray="{{ circumference }}" stroke-dashoffset="{{ offset }}" />
+    </svg>
+    <div class="rpt-score-center">
+      <div class="rpt-score-val {{ sc_class }}">{{ score }}%</div>
+      <div class="rpt-score-pct">Score</div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{# ── Stats strip ── #}
 {% set total_checks = (failed_checks|length) + (warning_checks|length) + (passed_checks|length) %}
-<div class="rpt-stats-strip">
+<div class="rpt-stats">
   <div class="rpt-stat stat-total">
     <div class="rpt-stat-val">{{ total_checks }}</div>
-    <div class="rpt-stat-lbl">Total Checks</div>
+    <div class="rpt-stat-lbl">Checks</div>
   </div>
   <div class="rpt-stat stat-pass">
     <div class="rpt-stat-val">{{ passed_checks|length }}</div>
@@ -278,6 +266,12 @@
     <div class="rpt-stat-val">{{ failed_checks|length }}</div>
     <div class="rpt-stat-lbl">Failed</div>
   </div>
+  {% if warning_checks %}
+  <div class="rpt-stat stat-warn">
+    <div class="rpt-stat-val">{{ warning_checks|length }}</div>
+    <div class="rpt-stat-lbl">Warnings</div>
+  </div>
+  {% endif %}
   {% if score is not none %}
   <div class="rpt-stat stat-score">
     <div class="rpt-stat-val">{{ score }}%</div>
@@ -285,18 +279,19 @@
   </div>
   {% endif %}
   {% if critical is defined and not critical.critical_pass %}
-  <div class="rpt-stat" style="border-color:#F5D5D5;">
-    <div class="rpt-stat-val" style="color:#C06060;">{{ critical.critical_failures }}</div>
-    <div class="rpt-stat-lbl" style="color:#C06060;">Critical Failures</div>
+  <div class="rpt-stat stat-crit">
+    <div class="rpt-stat-val">{{ critical.critical_failures }}</div>
+    <div class="rpt-stat-lbl">Critical</div>
   </div>
   {% endif %}
 </div>
 
-{# ================================================================= #}
-{# TABBED VIOLATIONS — grouped by severity                           #}
-{# ================================================================= #}
+{# ── Violations ── #}
 {% if failed_checks %}
-<div class="rpt-section-title">Violations ({{ failed_checks|length }})</div>
+<div class="rpt-section-title">
+  Violations
+  <span class="stitle-badge" style="background:#F5D5D5;color:#8B3A3A;">{{ failed_checks|length }}</span>
+</div>
 
 {% set severity_order = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] %}
 {% for sev_level in severity_order %}
@@ -306,9 +301,8 @@
       {% if sev_checks.append(check) %}{% endif %}
     {% endif %}
   {% endfor %}
-
   {% if sev_checks|length > 0 %}
-  <details class="rpt-sev-group" {% if sev_level == 'CRITICAL' %}open{% endif %}>
+  <details class="rpt-sev-group" {% if sev_level in ('CRITICAL','HIGH') %}open{% endif %}>
     <summary class="rpt-sev-header">
       <span class="sev-dot dot-{{ sev_level }}"></span>
       <span class="sev-title">{{ sev_level }}</span>
@@ -328,7 +322,7 @@
           {% endif %}
           <div class="rpt-check-msg">{{ check.message }}</div>
           {% if check.actual_value %}
-          <div class="rpt-actual"><strong>Found on label:</strong> {{ check.actual_value }}</div>
+          <div class="rpt-actual"><strong style="color:#525252;">Found:</strong> {{ check.actual_value }}</div>
           {% endif %}
           {% if check.remediation %}
           <details class="rpt-fix">
@@ -346,39 +340,36 @@
 
 {# ── Warnings ── #}
 {% if warning_checks %}
-<div class="rpt-warn-section">
-  <div class="rpt-section-title">Warnings ({{ warning_checks|length }})</div>
-  {% for check in warning_checks %}
-    <div class="rpt-check sev-MEDIUM">
-      <div class="rpt-check-desc">{{ check.rule.description if check.rule else 'Unknown Rule' }}</div>
-      <div class="rpt-check-msg">{{ check.message }}</div>
-      {% if check.remediation %}
-      <details class="rpt-fix">
-        <summary>Guidance &#8594;</summary>
-        <div class="rpt-fix-body">{{ check.remediation }}</div>
-      </details>
-      {% endif %}
-    </div>
-  {% endfor %}
+<div class="rpt-section-title">
+  Warnings
+  <span class="stitle-badge" style="background:#FEF9C3;color:#854D0E;">{{ warning_checks|length }}</span>
 </div>
+{% for check in warning_checks %}
+  <div class="rpt-check sev-MEDIUM" style="margin-bottom:0.4rem;">
+    <div class="rpt-check-desc">{{ check.rule.description if check.rule else 'Unknown Rule' }}</div>
+    <div class="rpt-check-msg">{{ check.message }}</div>
+    {% if check.remediation %}
+    <details class="rpt-fix"><summary>Guidance &#8594;</summary><div class="rpt-fix-body">{{ check.remediation }}</div></details>
+    {% endif %}
+  </div>
+{% endfor %}
 {% endif %}
 
-{# ================================================================= #}
-{# PASSED CHECKS — compact green list                                #}
-{# ================================================================= #}
+{# ── Passed checks ── #}
 {% if passed_checks %}
 <details style="margin-top:1rem;">
-  <summary class="rpt-section-title" style="cursor:pointer;margin:0;color:#5A9A98;">Passed Checks ({{ passed_checks|length }})</summary>
-  <div class="card no-hover" style="padding:0.65rem 0.85rem;margin-top:0.5rem;border-color:#D8F0DF;">
+  <summary class="rpt-section-title" style="cursor:pointer;margin:0;">
+    Passed Checks
+    <span class="stitle-badge" style="background:#D8F0DF;color:#2D7A3A;">{{ passed_checks|length }}</span>
+  </summary>
+  <div class="card no-hover" style="padding:0.6rem 0.85rem;margin-top:0.5rem;border-color:#D8F0DF;">
     <ul class="rpt-passed-list">
       {% for check in passed_checks %}
       <li class="rpt-passed-item">
         <span class="rpt-passed-check">&#10003;</span>
         <span class="rpt-passed-code">{{ check.rule.rule_code if check.rule else '' }}</span>
         <span class="rpt-passed-text">{{ check.rule.description if check.rule else check.message }}</span>
-        {% if check.actual_value %}
-        <span class="rpt-passed-val">{{ check.actual_value }}</span>
-        {% endif %}
+        {% if check.actual_value %}<span class="rpt-passed-val">{{ check.actual_value }}</span>{% endif %}
       </li>
       {% endfor %}
     </ul>
@@ -386,30 +377,23 @@
 </details>
 {% endif %}
 
-{# ── Extracted Data ── #}
+{# ── Extracted data ── #}
 {% if label.extraction_json %}
-<details class="rpt-extraction">
+<details style="margin-top:1rem;" class="no-print">
   <summary class="rpt-section-title" style="cursor:pointer;margin:0;">Extracted Data</summary>
   <div class="card no-hover" style="padding:0.75rem;margin-top:0.5rem;">
-    <div style="max-height:400px;overflow:auto;">
-      <pre style="font-size:0.7rem;margin:0;white-space:pre-wrap;word-break:break-word;color:#525252;">{{ label.extraction_json | tojson(indent=2) }}</pre>
+    <div style="max-height:380px;overflow:auto;">
+      <pre style="font-size:0.68rem;margin:0;white-space:pre-wrap;word-break:break-word;color:#525252;">{{ label.extraction_json | tojson(indent=2) }}</pre>
     </div>
   </div>
 </details>
 {% endif %}
 
-{# ================================================================= #}
-{# NAVIGATION                                                        #}
-{# ================================================================= #}
-<div class="rpt-nav">
-  <form method="post" action="/labels/{{ label.id }}/reanalyze" style="margin:0;">
-    <button type="submit" class="btn btn-primary btn-sm" onclick="this.disabled=true;this.textContent='Re-analyzing...';this.closest('form').submit();">Re-analyze Rules</button>
-  </form>
-  <form method="post" action="/labels/{{ label.id }}/reanalyze?force_extract=1" style="margin:0;">
-    <button type="submit" class="btn btn-outline btn-sm" onclick="this.disabled=true;this.textContent='Re-extracting...';this.closest('form').submit();">Re-extract &amp; Analyze</button>
-  </form>
+{# ── Nav ── #}
+<div class="rpt-nav no-print">
   <a href="/products/{{ product.id }}/upload" class="btn btn-outline btn-sm">Update Label</a>
   <a href="/products/{{ product.id }}" class="btn btn-outline btn-sm">Back to Product</a>
+  <button onclick="window.print()" class="btn btn-outline btn-sm" style="margin-left:auto;display:flex;align-items:center;gap:0.4rem;">&#128438; Export PDF</button>
 </div>
 
 {% endif %}

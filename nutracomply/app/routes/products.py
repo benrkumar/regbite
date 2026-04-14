@@ -47,10 +47,17 @@ async def products_list(request: Request, db: Session = Depends(get_db)):
         for lv in p.label_versions:
             _ = lv.checks
 
+    archived_count = (
+        db.query(Product)
+        .filter(Product.user_id == user.id, Product.is_active == False)
+        .count()
+    )
+
     return templates.TemplateResponse("products.html", {
         "request": request,
         "user": user,
         "products": products,
+        "archived_count": archived_count,
         "flash_message": request.query_params.get("msg"),
         "flash_type": request.query_params.get("type", "info"),
     })
@@ -462,6 +469,28 @@ async def bulk_upload_files(
     })
 
 
+@router.get("/products/archived")
+async def archived_products(request: Request, db: Session = Depends(get_db)):
+    user = require_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+    products = (
+        db.query(Product)
+        .filter(Product.user_id == user.id, Product.is_active == False)
+        .order_by(Product.updated_at.desc())
+        .all()
+    )
+    for p in products:
+        _ = p.label_versions
+    archived_count = len(products)
+    return templates.TemplateResponse("products_archived.html", {
+        "request": request,
+        "user": user,
+        "products": products,
+        "archived_count": archived_count,
+    })
+
+
 @router.get("/products/{product_id}")
 async def product_detail(product_id: int, request: Request, db: Session = Depends(get_db)):
     user = require_user(request, db)
@@ -500,3 +529,58 @@ async def delete_product(product_id: int, request: Request, db: Session = Depend
         product.is_active = False
         db.commit()
     return RedirectResponse(url="/products", status_code=302)
+
+
+@router.post("/products/{product_id}/archive")
+async def archive_product(product_id: int, request: Request, db: Session = Depends(get_db)):
+    user = require_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+    product = db.query(Product).filter(Product.id == product_id, Product.user_id == user.id).first()
+    if product:
+        product.is_active = False
+        db.commit()
+    return RedirectResponse(url="/products", status_code=302)
+
+
+@router.post("/products/{product_id}/restore")
+async def restore_product(product_id: int, request: Request, db: Session = Depends(get_db)):
+    user = require_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+    product = db.query(Product).filter(Product.id == product_id, Product.user_id == user.id).first()
+    if product:
+        product.is_active = True
+        db.commit()
+    return RedirectResponse(url="/products/archived", status_code=302)
+
+
+@router.post("/products/bulk-action")
+async def bulk_action(request: Request, db: Session = Depends(get_db)):
+    """Handle bulk archive or delete for multiple products."""
+    from fastapi.responses import JSONResponse as _JSONResponse
+    user = require_user(request, db)
+    if not user:
+        return _JSONResponse({"error": "Not authenticated"}, status_code=401)
+
+    data = await request.json()
+    action = data.get("action")  # "archive" | "delete"
+    ids = data.get("ids", [])
+
+    if not ids or action not in ("archive", "delete"):
+        return _JSONResponse({"error": "Invalid request"}, status_code=400)
+
+    products = db.query(Product).filter(
+        Product.id.in_(ids), Product.user_id == user.id
+    ).all()
+
+    count = 0
+    for p in products:
+        if action == "archive":
+            p.is_active = False
+        elif action == "delete":
+            p.is_active = False  # soft-delete only; protects label/check history
+        count += 1
+
+    db.commit()
+    return _JSONResponse({"success": True, "count": count})
