@@ -16,5 +16,6 @@ COPY . .
 
 EXPOSE 8000
 
-# 4 workers: 2 handle live requests, 2 available for background scan tasks
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 4"]
+# 1 worker: required for in-memory _SCAN_JOBS dict to be shared across all requests.
+# With multiple workers, status polls can hit a different process that has no job state.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]

@@ -355,23 +355,7 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
 
         raw = None
 
-        # Try Gemma first (free via OpenRouter)
-        if raw is None:
-            try:
-                from app.services.extraction_service import _is_gemma_available, _gemma_request
-                if _is_gemma_available():
-                    messages = [{"role": "user", "content": prompt}]
-                    raw, _inp, _out = _gemma_request(messages, max_tokens=256)
-                    if raw:
-                        try:
-                            from app.services.api_logger import log_api_call
-                            log_api_call("compliance_format", "gemma", "google/gemma-4-31b-it", _inp, _out)
-                        except Exception:
-                            pass
-            except Exception as ge:
-                logger.warning("[compliance] Gemma format check failed for %s: %s", rule.rule_code, ge)
-
-        # Fallback: Gemini
+        # Gemini
         if raw is None and settings.gemini_api_key:
             try:
                 import google.generativeai as genai

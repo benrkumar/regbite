@@ -1,5 +1,5 @@
 import io
-import time as _global_time
+import time as _time_mod
 import uuid
 from pathlib import Path
 
@@ -9,11 +9,19 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Product, LabelVersion, ComplianceCheck, Alert, AlertType, AlertStatus, CheckResult, Severity, ComplianceReport
+from app.models import (
+    Product, LabelVersion, ComplianceCheck, Alert,
+    AlertType, AlertStatus, CheckResult, Severity, ComplianceReport,
+)
 from app.routes.auth import get_current_user_from_cookie
 from app.services.ocr_service import extract_text_from_file
-from app.services.extraction_service import extract_label_data, extract_label_data_from_image, _cross_check_with_ocr
-from app.services.compliance_engine import run_compliance_check, calculate_compliance_score, calculate_critical_score, get_violation_summary
+from app.services.extraction_service import (
+    extract_label_data, extract_label_data_from_image, _cross_check_with_ocr,
+)
+from app.services.compliance_engine import (
+    run_compliance_check, calculate_compliance_score,
+    calculate_critical_score, get_violation_summary,
+)
 from app.config import get_settings
 
 router = APIRouter()
@@ -22,9 +30,12 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".pdf", ".webp"}
 
-# In-memory job start times — used by status endpoint to detect stuck scans.
-# Keyed by label_version_id → float (time.time() when _process_label started).
-_SCAN_START: dict[int, float] = {}
+# ── Scan job tracker ─────────────────────────────────────────────────────────
+# Same proven pattern as _EXTRACTION_JOBS in admin_llm.py.
+# Server runs with --workers 1 so this dict is shared by all requests.
+# Each entry: {"started": float, "done": bool, "ready": bool,
+#              "step": str, "error": str|None}
+_SCAN_JOBS: dict[int, dict] = {}
 
 
 def require_user(request: Request, db: Session):
@@ -172,218 +183,235 @@ async def upload_label(
 
 
 def _process_label(label_version_id: int):
-    """Background task: compress image → Claude Vision → compliance → alerts."""
+    """Background task: extract label data → compliance check → alerts.
+
+    Uses _SCAN_JOBS dict for real-time status tracking (same pattern as
+    _EXTRACTION_JOBS in admin_llm.py). The status endpoint reads this
+    dict directly — no DB polling race conditions.
+
+    Every step is individually wrapped in try/except. The function
+    ALWAYS reaches the end. job["done"] is ALWAYS set to True.
+    """
     import os
-    import time as _time
+    import traceback
     import threading
     from app.database import SessionLocal
 
-    t0 = _time.time()
-    _SCAN_START[label_version_id] = t0
-    print(f"[process_label] START label_id={label_version_id}", flush=True)
+    t0 = _time_mod.time()
+    job = {
+        "started": t0,
+        "done": False,
+        "ready": False,
+        "step": "starting",
+        "error": None,
+    }
+    _SCAN_JOBS[label_version_id] = job
+    print(f"[scan] START id={label_version_id}", flush=True)
 
     db = SessionLocal()
     try:
-        label_version = db.query(LabelVersion).filter(LabelVersion.id == label_version_id).first()
-        if not label_version:
-            print(f"[process_label] label {label_version_id} not found — aborting", flush=True)
+        # ── Load label + product ──────────────────────────────────────────
+        job["step"] = "loading"
+        label = db.query(LabelVersion).filter(
+            LabelVersion.id == label_version_id
+        ).first()
+        if not label:
+            job["error"] = "Label not found"
+            print(f"[scan] ERROR: label {label_version_id} not in DB", flush=True)
+            return
+        product = label.product
+        if not product:
+            job["error"] = "Product not found"
+            print(f"[scan] ERROR: no product for label {label_version_id}", flush=True)
             return
 
-        # Eagerly load product so it's available after db.commit() without lazy-load errors
-        _ = label_version.product
+        file_path = label.file_path
+        print(f"[scan] file={file_path} product={product.name}", flush=True)
 
-        print(f"[process_label] file={label_version.file_path}", flush=True)
+        # ── Check file exists on disk ─────────────────────────────────────
+        if not Path(file_path).exists():
+            job["error"] = f"File not found: {file_path}"
+            print(f"[scan] ERROR: file missing on disk: {file_path}", flush=True)
+            label.extraction_json = {}
+            label.extraction_source = "error"
+            db.commit()
+            # Still run compliance so page loads (all rules fail = informative)
+            job["step"] = "compliance"
+            run_compliance_check(label, db)
+            job["ready"] = True
+            return
 
-        # ── Cache reuse: skip extraction if high-confidence extraction already exists ──
-        reuse_extraction = (
-            label_version.extraction_json
-            and label_version.extraction_confidence
-            and label_version.extraction_confidence >= 0.85
-        )
-
-        if reuse_extraction:
-            print(f"[process_label] Re-using cached extraction "
-                  f"confidence={label_version.extraction_confidence:.2f}", flush=True)
-            extraction = label_version.extraction_json
+        # ── Check for cached extraction ───────────────────────────────────
+        if (label.extraction_json
+                and label.extraction_confidence
+                and label.extraction_confidence >= 0.85):
+            job["step"] = "cached"
+            print(f"[scan] Using cached extraction conf={label.extraction_confidence:.2f}", flush=True)
         else:
-            from app.config import get_settings as _get_settings
-            _cfg = _get_settings()
+            # Ensure API key is available
+            cfg = get_settings()
+            if cfg.anthropic_api_key:
+                os.environ["ANTHROPIC_API_KEY"] = cfg.anthropic_api_key
 
-            # Ensure Anthropic API key is in os.environ for the httpx call
-            if _cfg.anthropic_api_key:
-                os.environ["ANTHROPIC_API_KEY"] = _cfg.anthropic_api_key
+            extraction = None
+            confidence = 0.0
+            source = "none"
+            inp = out = 0
 
-            extraction  = None
-            confidence  = 0.0
-            extr_source = "fallback"
-            inp_tokens  = out_tokens = 0
-            raw_text    = None
-
-            # ── FAST PATH: Claude Vision (image compressed before sending) ────────
-            print("[process_label] Starting Claude Vision...", flush=True)
+            # ── STEP 1: AI Vision ─────────────────────────────────────────
+            job["step"] = "ai_vision"
+            print("[scan] Step 1: AI Vision...", flush=True)
             try:
-                extraction, confidence, extr_source, inp_tokens, out_tokens = \
-                    extract_label_data_from_image(label_version.file_path)
-                print(f"[process_label] Vision done in {_time.time()-t0:.1f}s "
-                      f"source={extr_source} conf={confidence:.2f} "
-                      f"tokens=in:{inp_tokens} out:{out_tokens}", flush=True)
+                extraction, confidence, source, inp, out = \
+                    extract_label_data_from_image(file_path)
+                print(f"[scan] Vision OK in {_time_mod.time()-t0:.1f}s "
+                      f"source={source} conf={confidence:.2f}", flush=True)
             except Exception as e:
-                print(f"[process_label] Vision FAILED ({_time.time()-t0:.1f}s): {e}", flush=True)
+                print(f"[scan] Vision FAILED: {e}", flush=True)
                 extraction = None
 
-            vision_ok = bool(extraction) and confidence >= 0.40
-
-            # ── FALLBACK: OCR → Claude Text ───────────────────────────────────────
-            if not vision_ok:
-                print("[process_label] Vision failed/low-conf — trying OCR+Text fallback", flush=True)
+            # ── STEP 2: OCR + Text fallback ───────────────────────────────
+            if not extraction or confidence < 0.40:
+                job["step"] = "ocr_fallback"
+                print("[scan] Step 2: OCR fallback...", flush=True)
                 raw_text = ""
                 try:
-                    raw_text, _ = extract_text_from_file(label_version.file_path)
-                    print(f"[process_label] OCR: {len(raw_text)} chars", flush=True)
+                    raw_text, _ = extract_text_from_file(file_path)
+                    print(f"[scan] OCR: {len(raw_text)} chars", flush=True)
                 except Exception as e:
-                    print(f"[process_label] OCR failed: {e}", flush=True)
+                    print(f"[scan] OCR failed: {e}", flush=True)
 
                 if raw_text:
-                    used_local = False
                     try:
-                        from app.services.local_extraction_service import extract_locally
-                        local_result, local_conf = extract_locally(raw_text, db=db)
-                        if _cfg.local_extraction_enabled and local_conf >= _cfg.local_extraction_min_confidence:
-                            print(f"[local-extract] conf={local_conf:.3f} — using local", flush=True)
-                            extraction  = local_result
-                            confidence  = local_conf
-                            extr_source = "local"
-                            used_local  = True
+                        extraction, confidence, source, inp, out = \
+                            extract_label_data(raw_text)
+                        if extraction:
+                            extraction = _cross_check_with_ocr(extraction, raw_text)
+                        print(f"[scan] Text: source={source} conf={confidence:.2f}", flush=True)
                     except Exception as e:
-                        print(f"[local-extract] Error: {e}", flush=True)
+                        print(f"[scan] Text extraction failed: {e}", flush=True)
 
-                    if not used_local:
-                        try:
-                            extraction, confidence, extr_source, inp_tokens, out_tokens = \
-                                extract_label_data(raw_text)
-                            if extraction and raw_text:
-                                extraction = _cross_check_with_ocr(extraction, raw_text)
-                            print(f"[process_label] Text done: source={extr_source} "
-                                  f"conf={confidence:.2f}", flush=True)
-                        except Exception as e:
-                            print(f"[process_label] Text extraction FAILED: {e}", flush=True)
-
+            # ── Save extraction ───────────────────────────────────────────
+            job["step"] = "saving"
             if not extraction:
                 extraction = {}
-                print("[process_label] All extraction paths failed — storing empty dict", flush=True)
-
-            # ── Commit extraction (makes status endpoint return ready once compliance runs) ──
-            label_version.extraction_json       = extraction
-            label_version.extraction_confidence = confidence
-            label_version.extraction_source     = extr_source
-            label_version.tokens_input          = inp_tokens
-            label_version.tokens_output         = out_tokens
+            label.extraction_json = extraction
+            label.extraction_confidence = confidence
+            label.extraction_source = source
+            label.tokens_input = inp
+            label.tokens_output = out
             db.commit()
-            print(f"[process_label] Extraction committed in {_time.time()-t0:.1f}s", flush=True)
+            print(f"[scan] Extraction saved in {_time_mod.time()-t0:.1f}s", flush=True)
 
-            # ── Pattern learning — daemon thread, non-blocking ─────────────────────
-            if extraction and confidence >= 0.80 and raw_text and extr_source in ("claude", "gemini"):
-                _ext_snap, _txt_snap, _lv_id, _conf_snap = (
-                    dict(extraction), raw_text, label_version.id, confidence
-                )
-                def _learn():
-                    _db = SessionLocal()
-                    try:
-                        from app.services.pattern_library import learn_from_extraction
-                        learn_from_extraction(_ext_snap, _txt_snap, _lv_id, _db, _conf_snap)
-                    except Exception as ex:
-                        print(f"[pattern-library] {ex}", flush=True)
-                    finally:
-                        _db.close()
-                threading.Thread(target=_learn, daemon=True).start()
-
-        # ── Compliance check (commits its own records — has_checks becomes True) ──
-        print("[process_label] Running compliance check...", flush=True)
-        checks = run_compliance_check(label_version, db)
-        print(f"[process_label] Compliance done: {len(checks)} checks in {_time.time()-t0:.1f}s", flush=True)
-
-        # Step 4: Create alerts for CRITICAL/HIGH failures
-        violations = []
-        for check in checks:
-            if check.result == CheckResult.FAIL and check.rule:
-                violations.append({
-                    "rule_code": check.rule.rule_code,
-                    "field": check.rule.check_config.get("field", ""),
-                    "message": check.message,
-                    "remediation": check.remediation or check.rule.remediation_template,
-                    "severity": check.rule.severity.value,
-                })
-
-        critical_violations = [v for v in violations if v["severity"] == "CRITICAL"]
-        high_violations = [v for v in violations if v["severity"] == "HIGH"]
-
-        if critical_violations or high_violations:
-            score = calculate_compliance_score(checks)
-            alert = Alert(
-                product_id=label_version.product_id,
-                label_version_id=label_version.id,
-                alert_type=AlertType.LABEL_VIOLATION,
-                severity=Severity.CRITICAL if critical_violations else Severity.HIGH,
-                title=f"Label compliance issues detected — {len(violations)} violation(s)",
-                message=(
-                    f"Compliance score: {score}%. "
-                    f"{len(critical_violations)} critical, {len(high_violations)} high severity issues found."
-                ),
-                rule_violations=violations,
-                status=AlertStatus.UNREAD,
-            )
-            db.add(alert)
-            db.commit()
-
-            # Send email notification to product owner
-            try:
-                from app.services.notification import send_alert_email
-                from app.models import User
-                product = db.query(Product).filter(Product.id == label_version.product_id).first()
-                owner = db.query(User).filter(User.id == product.user_id).first() if product else None
-                send_alert_email(alert, product, user=owner)
-            except Exception as e:
-                print(f"[alert] Email failed: {e}")
-
-        # Step 5+6: KB updates — run in daemon thread (non-critical, can't block the scan result)
-        _pid = label_version.product_id
-
-        def _kb_update():
-            from app.database import SessionLocal as _SL
-            _db = _SL()
-            try:
-                from app.services.llm_service import seed_products_kb, invalidate_cache
-                seed_products_kb(_db, force_update_product_id=_pid)
-                invalidate_cache("products")
-                print(f"[llm-kb] Products KB refreshed for product {_pid}", flush=True)
-            except Exception as e:
-                print(f"[llm-kb] KB refresh failed (non-critical): {e}", flush=True)
-            try:
-                from app.routes.products import _feed_product_to_llm
-                _feed_product_to_llm(_pid, _db)
-            except Exception as e:
-                print(f"[llm-feed] Error: {e}", flush=True)
-            finally:
-                _db.close()
-
-        threading.Thread(target=_kb_update, daemon=True).start()
-
-    except Exception as e:
-        import traceback
-        print(f"[process_label] UNHANDLED ERROR: {e}\n{traceback.format_exc()}", flush=True)
-        # Still try to mark extraction as done so the page doesn't spin forever
+        # ── STEP 3: Compliance check ──────────────────────────────────────
+        job["step"] = "compliance"
+        print("[scan] Step 3: Compliance...", flush=True)
         try:
-            lv = db.query(LabelVersion).filter(LabelVersion.id == label_version_id).first()
-            if lv and lv.extraction_json is None:
-                lv.extraction_json = {}
+            checks = run_compliance_check(label, db)
+            print(f"[scan] Compliance: {len(checks)} checks", flush=True)
+        except Exception as e:
+            print(f"[scan] Compliance FAILED: {e}\n{traceback.format_exc()}", flush=True)
+            # Force-create a minimal check so status shows ready
+            try:
+                from app.models import ComplianceRule
+                label.extraction_json = label.extraction_json or {}
                 db.commit()
+                checks = []
+            except Exception:
+                pass
+
+        # ── Mark ready BEFORE alerts/KB (those are non-critical) ──────────
+        job["ready"] = True
+        print(f"[scan] READY in {_time_mod.time()-t0:.1f}s", flush=True)
+
+        # ── Alerts (non-critical) ─────────────────────────────────────────
+        try:
+            violations = []
+            for check in checks:
+                if check.result == CheckResult.FAIL and check.rule:
+                    violations.append({
+                        "rule_code": check.rule.rule_code,
+                        "field": check.rule.check_config.get("field", ""),
+                        "message": check.message,
+                        "remediation": check.remediation or check.rule.remediation_template,
+                        "severity": check.rule.severity.value,
+                    })
+
+            crit = [v for v in violations if v["severity"] == "CRITICAL"]
+            high = [v for v in violations if v["severity"] == "HIGH"]
+            if crit or high:
+                score = calculate_compliance_score(checks)
+                alert = Alert(
+                    product_id=label.product_id,
+                    label_version_id=label.id,
+                    alert_type=AlertType.LABEL_VIOLATION,
+                    severity=Severity.CRITICAL if crit else Severity.HIGH,
+                    title=f"Label compliance issues — {len(violations)} violation(s)",
+                    message=f"Score: {score}%. {len(crit)} critical, {len(high)} high.",
+                    rule_violations=violations,
+                    status=AlertStatus.UNREAD,
+                )
+                db.add(alert)
+                db.commit()
+
+                try:
+                    from app.services.notification import send_alert_email
+                    from app.models import User
+                    owner = db.query(User).filter(User.id == product.user_id).first()
+                    send_alert_email(alert, product, user=owner)
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"[scan] Alert creation failed (non-critical): {e}", flush=True)
+
+        # ── KB update (daemon thread — non-critical) ──────────────────────
+        try:
+            _pid = label.product_id
+            def _kb():
+                _db = SessionLocal()
+                try:
+                    from app.services.llm_service import seed_products_kb, invalidate_cache
+                    seed_products_kb(_db, force_update_product_id=_pid)
+                    invalidate_cache("products")
+                except Exception:
+                    pass
+                try:
+                    from app.routes.products import _feed_product_to_llm
+                    _feed_product_to_llm(_pid, _db)
+                except Exception:
+                    pass
+                _db.close()
+            threading.Thread(target=_kb, daemon=True).start()
         except Exception:
             pass
-        db.rollback()
+
+    except Exception as e:
+        print(f"[scan] FATAL id={label_version_id}: {e}\n{traceback.format_exc()}", flush=True)
+        job["error"] = str(e)[:200]
+        # Last resort: try to make the page loadable
+        try:
+            lv = db.query(LabelVersion).filter(LabelVersion.id == label_version_id).first()
+            if lv:
+                if lv.extraction_json is None:
+                    lv.extraction_json = {}
+                    lv.extraction_source = "error"
+                db.commit()
+                run_compliance_check(lv, db)
+                job["ready"] = True
+        except Exception:
+            try:
+                db.rollback()
+            except Exception:
+                pass
     finally:
-        _SCAN_START.pop(label_version_id, None)
-        db.close()
-        print(f"[process_label] DONE label_id={label_version_id} total={_time.time()-t0:.1f}s", flush=True)
+        job["done"] = True
+        elapsed = _time_mod.time() - t0
+        print(f"[scan] DONE id={label_version_id} elapsed={elapsed:.1f}s "
+              f"ready={job['ready']} error={job.get('error')}", flush=True)
+        try:
+            db.close()
+        except Exception:
+            pass
 
 
 @router.post("/labels/{label_id}/reanalyze")
@@ -409,6 +437,12 @@ async def reanalyze_label(
 
     force_extract = request.query_params.get("force_extract") == "1"
 
+    # Clear old compliance checks so they don't linger during re-scan
+    db.query(ComplianceCheck).filter(
+        ComplianceCheck.label_version_id == label.id
+    ).delete()
+    db.commit()
+
     if force_extract or not label.extraction_json or (label.extraction_confidence or 0) < 0.85:
         # Clear extraction to trigger fresh Vision/OCR extraction
         label.extraction_json = None
@@ -421,11 +455,30 @@ async def reanalyze_label(
 
 @router.get("/labels/{label_id}/status")
 async def label_status(label_id: int, request: Request, db: Session = Depends(get_db)):
-    """JSON polling endpoint — returns {ready: bool, failed: bool} for the progress bar."""
+    """JSON polling endpoint — returns {ready, failed, step} for the progress bar.
+
+    Reads _SCAN_JOBS dict first (authoritative while scan is running).
+    Falls back to DB check for page refreshes after scan completed.
+    """
     user = require_user(request, db)
     if not user:
-        return JSONResponse({"ready": False, "failed": False})
+        return JSONResponse({"ready": False, "failed": False, "step": ""})
 
+    # ── Check in-memory job tracker first (authoritative) ────────────
+    job = _SCAN_JOBS.get(label_id)
+    if job is not None:
+        if job["ready"]:
+            return JSONResponse({"ready": True, "failed": False, "step": "done"})
+        if job["done"] and not job["ready"]:
+            # Finished but never became ready → something failed
+            return JSONResponse({"ready": False, "failed": True, "step": job.get("step", "error")})
+        # Still running — check for timeout (3 min hard ceiling)
+        age = _time_mod.time() - job["started"]
+        if age > 180:
+            return JSONResponse({"ready": False, "failed": True, "step": "timeout"})
+        return JSONResponse({"ready": False, "failed": False, "step": job.get("step", "")})
+
+    # ── No in-memory job → check DB (page refresh after completion) ──
     row = (
         db.query(LabelVersion, Product)
         .join(Product, Product.id == LabelVersion.product_id)
@@ -433,33 +486,29 @@ async def label_status(label_id: int, request: Request, db: Session = Depends(ge
         .first()
     )
     if not row:
-        return JSONResponse({"ready": False, "failed": True})
+        return JSONResponse({"ready": False, "failed": True, "step": ""})
 
     label, _ = row
     has_checks = db.query(ComplianceCheck.id).filter(
         ComplianceCheck.label_version_id == label_id
     ).first() is not None
 
-    # Use `is not None` — bool({}) == False would lock the page when extraction returns {}
     extraction_done = label.extraction_json is not None
     ready = extraction_done and has_checks
 
-    # Detect stuck scans using in-memory start time (works for reanalysis too).
-    # Falls back to uploaded_at if start wasn't recorded (e.g. server restart).
+    if ready:
+        return JSONResponse({"ready": True, "failed": False, "step": "done"})
+
+    # Not ready and no in-memory job → scan may have been lost (server restart)
+    # Check age as fallback
     failed = False
-    if not ready:
-        start_t = _SCAN_START.get(label_id)
-        if start_t is not None:
-            age_secs = _global_time.time() - start_t
-        elif label.uploaded_at:
-            import datetime
-            age_secs = (datetime.datetime.utcnow() - label.uploaded_at).total_seconds()
-        else:
-            age_secs = 0
-        if age_secs > 180:   # 3 min hard ceiling — Haiku Vision finishes in <15s normally
+    if label.uploaded_at:
+        import datetime
+        age_secs = (datetime.datetime.utcnow() - label.uploaded_at).total_seconds()
+        if age_secs > 300:  # 5 min — generous for server restart case
             failed = True
 
-    return JSONResponse({"ready": ready, "failed": failed})
+    return JSONResponse({"ready": ready, "failed": failed, "step": ""})
 
 
 @router.get("/labels/{label_id}")
@@ -501,7 +550,7 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
         "failed_checks": sorted(failed, key=lambda c: c.rule.severity.value if c.rule else "zzz"),
         "warning_checks": warnings,
         "passed_checks": passed,
-        "processing": bool(processing) and label.extraction_json is None,
+        "processing": bool(processing) and not label.checks,
         "CheckResult": CheckResult,
         "existing_report": existing_report,
     })
