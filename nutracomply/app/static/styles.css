@@ -108,14 +108,6 @@ body {
   border-bottom: 1px solid #EBEBEB;
   flex-shrink: 0;
 }
-.sidebar-brand-icon {
-  width: 24px; height: 24px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.6rem; color: var(--teal-dark);
-}
-.sidebar-brand-name {
-  font-size: 1rem; font-weight: 700; color: var(--teal-dark); letter-spacing: -0.02em;
-}
 
 .sidebar-nav {
   padding: 0.75rem 0;

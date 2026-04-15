@@ -36,9 +36,8 @@
 
     /* ── Navbar ── */
     .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 56px; display: flex; align-items: center; padding: 0 2rem; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--g200); }
-    .nav-brand { display: flex; align-items: center; gap: 0.4rem; margin-right: auto; }
-    .nav-dot { font-size: 0.5rem; color: var(--ink); }
-    .nav-name { font-size: 1rem; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
+    .nav-brand { display: flex; align-items: center; gap: 0.4rem; margin-right: auto; text-decoration: none; }
+    .nav-brand img { height: 26px; width: auto; display: block; }
     .nav-links { display: flex; align-items: center; gap: 1.5rem; }
     .nav-links a { font-size: 0.84rem; color: var(--g500); transition: color 0.12s; }
     .nav-links a:hover { color: var(--ink); }
@@ -259,8 +258,7 @@
 <!-- ═══ Navbar ═══ -->
 <nav class="nav">
   <div class="nav-brand">
-    <span class="nav-dot">●</span>
-    <span class="nav-name">RegBite</span>
+    <img src="/static/img/logo.svg" alt="RegBite" />
   </div>
   <div class="nav-links">
     <a href="#why-compliance">Why It Matters</a>
@@ -714,7 +712,7 @@
 <footer class="footer">
   <div class="footer-inner">
     <div class="footer-brand">
-      <div class="footer-brand-name">● RegBite</div>
+      <div class="footer-brand-name"><img src="/static/img/logo.svg" alt="RegBite" style="height:24px;width:auto;" /></div>
       <p>AI-powered label compliance platform for India's nutraceutical, health supplement, and Ayurvedic product industry.</p>
     </div>
     <div class="footer-col">
