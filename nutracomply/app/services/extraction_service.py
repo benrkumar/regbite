@@ -485,12 +485,14 @@ def _call_gemini_vision(image_path: str) -> Optional[dict]:
         response = model.generate_content(
             pil_images + [prompt],
             generation_config={"temperature": 0.1, "max_output_tokens": 8192},
+            request_options={"timeout": 120},
         )
     else:
         img = PIL.Image.open(image_path)
         response = model.generate_content(
             [VISION_PROMPT, img],
             generation_config={"temperature": 0.1, "max_output_tokens": 8192},
+            request_options={"timeout": 120},
         )
 
     raw = response.text.strip()
@@ -511,6 +513,7 @@ def _call_gemini_text(ocr_text: str) -> Optional[dict]:
     response = model.generate_content(
         prompt,
         generation_config={"temperature": 0.1, "max_output_tokens": 8192},
+        request_options={"timeout": 120},
     )
 
     raw = response.text.strip()

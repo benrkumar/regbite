@@ -34,8 +34,8 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".pdf", ".webp"}
 
-SCAN_TIMEOUT_SECS   = 180   # 3 min: hard ceiling for active scan
-SCAN_STALE_SECS     = 600   # 10 min: prune completed entries from _SCAN_JOBS
+SCAN_TIMEOUT_SECS   = 360   # 6 min: hard ceiling for active scan (matches MAX_POLLS×POLL_MS)
+SCAN_STALE_SECS     = 900   # 15 min: prune completed entries from _SCAN_JOBS
 
 # In-memory job tracker — same pattern as _EXTRACTION_JOBS in admin_llm.py.
 # --workers 1 ensures this dict is shared by all requests.

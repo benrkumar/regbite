@@ -365,10 +365,11 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
             try:
                 import google.generativeai as genai
                 genai.configure(api_key=settings.gemini_api_key)
-                model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
+                model = genai.GenerativeModel("gemini-2.0-flash-lite")
                 response = model.generate_content(
                     prompt,
                     generation_config={"temperature": 0.1, "max_output_tokens": 256},
+                    request_options={"timeout": 20},
                 )
                 raw = response.text.strip()
                 try:
@@ -376,7 +377,7 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
                     _usage = getattr(response, "usage_metadata", None)
                     _inp = getattr(_usage, "prompt_token_count", None) if _usage else None
                     _out = getattr(_usage, "candidates_token_count", None) if _usage else None
-                    log_api_call("compliance_format", "gemini", "gemini-3.1-flash-lite-preview", _inp, _out)
+                    log_api_call("compliance_format", "gemini", "gemini-2.0-flash-lite", _inp, _out)
                 except Exception:
                     pass
             except Exception as ge:
