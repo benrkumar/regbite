@@ -35,9 +35,10 @@
     img { max-width: 100%; display: block; }
 
     /* ── Navbar ── */
-    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 56px; display: flex; align-items: center; padding: 0 2rem; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--g200); }
-    .nav-brand { display: flex; align-items: center; gap: 0.4rem; margin-right: auto; text-decoration: none; }
-    .nav-brand img { height: 26px; width: auto; display: block; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 64px; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--g200); display: flex; align-items: center; padding: 0 2rem; }
+    .nav-inner { max-width: 1120px; margin: 0 auto; width: 100%; display: flex; align-items: center; }
+    .nav-brand { display: flex; align-items: center; margin-right: auto; text-decoration: none; }
+    .nav-brand img { height: 36px; width: auto; display: block; }
     .nav-links { display: flex; align-items: center; gap: 1.5rem; }
     .nav-links a { font-size: 0.84rem; color: var(--g500); transition: color 0.12s; }
     .nav-links a:hover { color: var(--ink); }
@@ -51,7 +52,7 @@
     .btn-xl { padding: 0.7rem 1.8rem; font-size: 0.95rem; }
 
     /* ── Hero ── */
-    .hero { padding: 56px 2rem 0; background: var(--white); }
+    .hero { padding: 64px 2rem 0; background: var(--white); }
     .hero-inner { max-width: 1120px; margin: 0 auto; padding: 4rem 0 3.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 3.5rem; align-items: center; }
     .hero-text { max-width: 520px; }
     .hero-pill { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.25rem 0.75rem; background: var(--g100); border: 1px solid var(--g200); border-radius: 999px; font-size: 0.72rem; font-weight: 500; color: var(--g600); margin-bottom: 1.5rem; letter-spacing: 0.03em; }
@@ -239,7 +240,7 @@
     @media (max-width: 640px) {
       .nav { padding: 0 1rem; }
       .nav-links { display: none; }
-      .hero { padding-top: 56px; }
+      .hero { padding-top: 64px; }
       .hero-inner { padding: 2.5rem 0 2rem; }
       .hero h1 { font-size: 1.9rem; }
       .sec { padding: 3.5rem 1.25rem; }
@@ -257,19 +258,21 @@
 
 <!-- ═══ Navbar ═══ -->
 <nav class="nav">
-  <div class="nav-brand">
-    <img src="/static/img/logo.png" alt="RegBite" />
-  </div>
-  <div class="nav-links">
-    <a href="#why-compliance">Why It Matters</a>
-    <a href="#features">Features</a>
-    <a href="#how-it-works">How It Works</a>
-    <a href="/pricing">Pricing</a>
-    <a href="/blog">Blog</a>
-  </div>
-  <div class="nav-ctas">
-    <a href="/login" class="btn btn-ghost">Sign In</a>
-    <a href="/register" class="btn btn-primary">Get Started Free</a>
+  <div class="nav-inner">
+    <div class="nav-brand">
+      <img src="/static/img/logo.png" alt="RegBite" />
+    </div>
+    <div class="nav-links">
+      <a href="#why-compliance">Why It Matters</a>
+      <a href="#features">Features</a>
+      <a href="#how-it-works">How It Works</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/blog">Blog</a>
+    </div>
+    <div class="nav-ctas">
+      <a href="/login" class="btn btn-ghost">Sign In</a>
+      <a href="/register" class="btn btn-primary">Get Started Free</a>
+    </div>
   </div>
 </nav>
 
