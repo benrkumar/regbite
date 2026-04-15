@@ -504,7 +504,17 @@ async def label_status(label_id: int, request: Request, db: Session = Depends(ge
     ).first() is not None
 
     extraction_done = label.extraction_json is not None
+
+    # Ready if both extraction and checks exist
     ready = extraction_done and has_checks
+
+    # ── Edge case: extraction completed but compliance check failed/missing ──
+    # If extraction_json is set AND it's been >60 s since upload, treat as ready
+    # so the report page loads (showing whatever checks exist, even 0).
+    if not ready and extraction_done and label.uploaded_at:
+        age_secs = (datetime.datetime.utcnow() - label.uploaded_at).total_seconds()
+        if age_secs > 60:
+            ready = True
 
     if ready:
         return JSONResponse({"ready": True, "failed": False, "step": "done"})
