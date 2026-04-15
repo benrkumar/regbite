@@ -11,7 +11,7 @@
     <div class="adm-stat-lbl">&#x1F465; Total Users</div>
   </div>
   <div class="adm-stat">
-    <div class="adm-stat-val" style="color:#3D7A50;">{{ stats.active_users }}</div>
+    <div class="adm-stat-val" style="color:#262626;">{{ stats.active_users }}</div>
     <div class="adm-stat-lbl">&#x2705; Active Users</div>
   </div>
   <div class="adm-stat">
@@ -23,11 +23,11 @@
     <div class="adm-stat-lbl">&#x1F3F7; Labels Analysed</div>
   </div>
   <div class="adm-stat">
-    <div class="adm-stat-val" style="color:{% if stats.compliance_rate >= 80 %}#3D7A50{% elif stats.compliance_rate >= 50 %}#8B6914{% else %}#8B3A3A{% endif %};">{{ stats.compliance_rate }}%</div>
+    <div class="adm-stat-val" style="color:{% if stats.compliance_rate >= 80 %}#262626{% elif stats.compliance_rate >= 50 %}#525252{% else %}#111111{% endif %};">{{ stats.compliance_rate }}%</div>
     <div class="adm-stat-lbl">&#x1F4C8; Compliance Rate</div>
   </div>
-  <div class="adm-stat" style="border-color:{% if stats.unread_alerts > 0 %}#E8BFBF{% else %}#EBEBEB{% endif %};">
-    <div class="adm-stat-val" style="color:{% if stats.unread_alerts > 0 %}#8B3A3A{% else %}#5A9A98{% endif %};">{{ stats.unread_alerts }}</div>
+  <div class="adm-stat" style="border-color:{% if stats.unread_alerts > 0 %}#D4D4D4{% else %}#EBEBEB{% endif %};">
+    <div class="adm-stat-val" style="color:{% if stats.unread_alerts > 0 %}#111111{% else %}#111111{% endif %};">{{ stats.unread_alerts }}</div>
     <div class="adm-stat-lbl">&#x1F514; Unread Alerts</div>
   </div>
   <div class="adm-stat">
@@ -61,7 +61,7 @@
           {% for u in recent_users %}
           <tr>
             <td>
-              <div style="font-weight:600;color:#5A9A98;font-size:0.86rem;">{{ u.name }}</div>
+              <div style="font-weight:600;color:#111111;font-size:0.86rem;">{{ u.name }}</div>
               <div style="font-size:0.75rem;color:#737373;">{{ u.email }}</div>
             </td>
             <td>
@@ -100,7 +100,7 @@
           {% for a in recent_alerts %}
           <tr>
             <td>
-              <div style="font-weight:600;color:#5A9A98;font-size:0.83rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ a.title }}">{{ a.title }}</div>
+              <div style="font-weight:600;color:#111111;font-size:0.83rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ a.title }}">{{ a.title }}</div>
               <div style="font-size:0.72rem;color:#737373;">{{ a.created_at.strftime('%d %b %Y') }}</div>
             </td>
             <td>
@@ -154,11 +154,11 @@
       <div class="adm-stat-lbl">&#x1F465; Total Users</div>
     </div>
     <div class="adm-stat">
-      <div class="adm-stat-val" style="color:#3D7A50;">{{ stats.active_users }}</div>
+      <div class="adm-stat-val" style="color:#262626;">{{ stats.active_users }}</div>
       <div class="adm-stat-lbl">&#x2705; Active Users</div>
     </div>
     <div class="adm-stat">
-      <div class="adm-stat-val" style="color:#649CC4;">{{ stats.growth_users }}</div>
+      <div class="adm-stat-val" style="color:#525252;">{{ stats.growth_users }}</div>
       <div class="adm-stat-lbl">&#x1F680; Growth Plan</div>
     </div>
     <div class="adm-stat">
@@ -173,8 +173,8 @@
       <div class="adm-stat-val">{{ stats.total_reports }}</div>
       <div class="adm-stat-lbl">&#x1F4C4; Total Reports</div>
     </div>
-    <div class="adm-stat" style="border-color:#D8F0DF;">
-      <div class="adm-stat-val" style="color:#3D7A50;">&#x20B9;{{ '{:,}'.format(stats.revenue_estimate) }}</div>
+    <div class="adm-stat" style="border-color:#F5F5F5;">
+      <div class="adm-stat-val" style="color:#262626;">&#x20B9;{{ '{:,}'.format(stats.revenue_estimate) }}</div>
       <div class="adm-stat-lbl">&#x1F4B0; Revenue Est./mo</div>
     </div>
   </div>
@@ -199,7 +199,7 @@
       <tbody>
         {% for u in recent_signups %}
         <tr>
-          <td style="font-weight:600;color:#5A9A98;font-size:0.86rem;">{{ u.name }}</td>
+          <td style="font-weight:600;color:#111111;font-size:0.86rem;">{{ u.name }}</td>
           <td style="font-size:0.8rem;color:#737373;">{{ u.email }}</td>
           <td>
             {% if u.is_admin %}

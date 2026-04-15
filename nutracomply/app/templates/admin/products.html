@@ -6,13 +6,13 @@
 <style>
   .acc-card { background:#FFFFFF; border:1px solid #EBEBEB; border-radius:6px; margin-bottom:1.25rem; overflow:hidden; }
   .acc-header { display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1.2rem; background:#FAFAFA; border-bottom:1px solid #EBEBEB; cursor:pointer; }
-  .acc-header:hover { background:#D4EDEC; }
+  .acc-header:hover { background:#F0F0F0; }
   .acc-user { display:flex; align-items:center; gap:0.7rem; }
-  .acc-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#81C2C0,#649CC4); display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.75rem; font-weight:600; flex-shrink:0; }
+  .acc-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#404040,#525252); display:flex; align-items:center; justify-content:center; color:#fff; font-size:0.75rem; font-weight:600; flex-shrink:0; }
   .acc-name { font-size:0.88rem; font-weight:600; color:#262626; }
   .acc-email { font-size:0.72rem; color:#737373; }
   .acc-meta { display:flex; align-items:center; gap:1rem; }
-  .acc-count { font-size:0.78rem; font-weight:600; color:#5A9A98; background:#D4EDEC; padding:0.15rem 0.6rem; border-radius:99px; }
+  .acc-count { font-size:0.78rem; font-weight:600; color:#111111; background:#F0F0F0; padding:0.15rem 0.6rem; border-radius:99px; }
   .acc-plan { font-size:0.68rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; }
   .acc-arrow { color:#A3A3A3; font-size:0.8rem; transition:transform 0.15s; }
   .acc-card.open .acc-arrow { transform:rotate(90deg); }
@@ -22,14 +22,14 @@
   .prod-row:last-child { border-bottom:none; }
   .prod-row:hover { background:#FAFAFA; }
   .prod-name { flex:1; font-weight:500; color:#262626; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .prod-cat { font-size:0.72rem; color:#5A9A98; background:#D4EDEC; padding:0.1rem 0.45rem; border-radius:3px; white-space:nowrap; }
+  .prod-cat { font-size:0.72rem; color:#111111; background:#F0F0F0; padding:0.1rem 0.45rem; border-radius:3px; white-space:nowrap; }
   .prod-score { font-size:0.78rem; font-weight:700; min-width:36px; text-align:center; }
   .prod-date { font-size:0.72rem; color:#A3A3A3; white-space:nowrap; }
-  .prod-link { font-size:0.72rem; color:#5A9A98; text-decoration:none; white-space:nowrap; }
+  .prod-link { font-size:0.72rem; color:#111111; text-decoration:none; white-space:nowrap; }
   .prod-link:hover { text-decoration:underline; }
   .summary-strip { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:1rem; margin-bottom:1.5rem; }
   .summary-stat { background:#FFFFFF; border:1px solid #EBEBEB; border-radius:6px; padding:1rem 1.2rem; }
-  .summary-val { font-size:1.5rem; font-weight:700; color:#5A9A98; line-height:1; }
+  .summary-val { font-size:1.5rem; font-weight:700; color:#111111; line-height:1; }
   .summary-lbl { font-size:0.72rem; color:#A3A3A3; margin-top:0.25rem; }
 </style>
 
@@ -52,12 +52,12 @@
       <div class="acc-avatar">{{ acc.user.name[:2]|upper }}</div>
       <div>
         <div class="acc-name">{{ acc.user.name }}</div>
-        <div class="acc-email">{{ acc.user.email }}{% if acc.user.is_admin %} &middot; <span style="color:#5A9A98;font-weight:600;">Admin</span>{% endif %}</div>
+        <div class="acc-email">{{ acc.user.email }}{% if acc.user.is_admin %} &middot; <span style="color:#111111;font-weight:600;">Admin</span>{% endif %}</div>
       </div>
     </div>
     <div class="acc-meta">
       <span class="acc-count">{{ acc.products|length }} product{{ 's' if acc.products|length != 1 }}</span>
-      <span class="acc-plan" style="color:{% if acc.user.plan and acc.user.plan.value == 'enterprise' %}#5A9A98{% elif acc.user.plan and acc.user.plan.value == 'growth' %}#649CC4{% else %}#A3A3A3{% endif %};">
+      <span class="acc-plan" style="color:{% if acc.user.plan and acc.user.plan.value == 'enterprise' %}#111111{% elif acc.user.plan and acc.user.plan.value == 'growth' %}#525252{% else %}#A3A3A3{% endif %};">
         {{ acc.user.plan.value|title if acc.user.plan else 'Free' }}
       </span>
       <span class="acc-arrow">&#9654;</span>
@@ -71,7 +71,7 @@
       <div class="prod-name" title="{{ p.name }}">{{ p.name }}</div>
       <span class="prod-cat">{{ p.category or 'Uncategorized' }}</span>
       {% if score is not none %}
-      <span class="prod-score" style="color:{% if score >= 80 %}#3D7A50{% elif score >= 50 %}#8B6914{% else %}#8B3A3A{% endif %};">{{ score }}%</span>
+      <span class="prod-score" style="color:{% if score >= 80 %}#262626{% elif score >= 50 %}#525252{% else %}#111111{% endif %};">{{ score }}%</span>
       {% else %}
       <span class="prod-score" style="color:#A3A3A3;">—</span>
       {% endif %}

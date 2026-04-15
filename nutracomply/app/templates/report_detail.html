@@ -7,7 +7,7 @@
 <!-- Breadcrumb -->
 <nav aria-label="breadcrumb" style="margin-bottom:1.2rem;">
   <ul style="list-style:none;margin:0;padding:0;display:flex;gap:0.5rem;align-items:center;font-size:0.85rem;color:#737373;">
-    <li><a href="/reports" style="color:#3D7A50;text-decoration:none;">Reports</a></li>
+    <li><a href="/reports" style="color:#262626;text-decoration:none;">Reports</a></li>
     <li style="color:#D4D4D4;">›</li>
     <li style="color:#525252;font-weight:600;">{{ report.report_ref }}</li>
   </ul>
@@ -15,14 +15,14 @@
 
 <!-- Share link flash -->
 {% if just_shared and share_url %}
-<div style="background:#D8F0DF;border:1px solid #D8F0DF;border-radius:10px;padding:14px 18px;margin-bottom:1.2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+<div style="background:#F5F5F5;border:1px solid #F5F5F5;border-radius:10px;padding:14px 18px;margin-bottom:1.2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
   <span style="font-size:1.1rem;">🔗</span>
   <div style="flex:1;min-width:200px;">
-    <strong style="color:#3D7A50;font-size:0.9rem;">Share link created!</strong>
+    <strong style="color:#262626;font-size:0.9rem;">Share link created!</strong>
     <div style="font-size:0.82rem;color:#525252;margin-top:3px;word-break:break-all;">{{ share_url }}</div>
   </div>
   <button onclick="navigator.clipboard.writeText('{{ share_url }}').then(()=>{this.textContent='Copied!';setTimeout(()=>{this.textContent='Copy'},2000)})"
-    style="background:#3D7A50;color:#fff;border:none;padding:7px 14px;border-radius:7px;cursor:pointer;font-size:0.82rem;font-weight:600;white-space:nowrap;">
+    style="background:#262626;color:#fff;border:none;padding:7px 14px;border-radius:7px;cursor:pointer;font-size:0.82rem;font-weight:600;white-space:nowrap;">
     Copy Link
   </button>
 </div>
@@ -56,19 +56,19 @@
 <!-- Score + Verdict -->
 {% set score = report.score or 0 %}
 {% if score >= 90 %}
-  {% set score_color = '#3D7A50' %}
-  {% set score_bg = '#D8F0DF' %}
+  {% set score_color = '#262626' %}
+  {% set score_bg = '#F5F5F5' %}
   {% set score_border = '#86efac' %}
   {% set verdict_desc = 'All critical FSSAI compliance requirements met.' %}
 {% elif score >= 60 %}
-  {% set score_color = '#8B6914' %}
-  {% set score_bg = '#FFF0E0' %}
-  {% set score_border = '#FFD7AD' %}
+  {% set score_color = '#525252' %}
+  {% set score_bg = '#F5F5F5' %}
+  {% set score_border = '#E5E5E5' %}
   {% set verdict_desc = 'Some requirements need attention before market release.' %}
 {% else %}
-  {% set score_color = '#8B3A3A' %}
-  {% set score_bg = '#F5D5D5' %}
-  {% set score_border = '#E8BFBF' %}
+  {% set score_color = '#111111' %}
+  {% set score_bg = '#EBEBEB' %}
+  {% set score_border = '#D4D4D4' %}
   {% set verdict_desc = 'Multiple critical violations require immediate correction.' %}
 {% endif %}
 
@@ -88,10 +88,10 @@
 
 <!-- Certificate (if compliant) -->
 {% if score >= 90 %}
-<div style="background:linear-gradient(135deg,#D8F0DF,#D8F0DF);border:2px solid #3D7A50;border-radius:14px;padding:24px;margin-bottom:1.4rem;text-align:center;">
+<div style="background:linear-gradient(135deg,#F5F5F5,#F5F5F5);border:2px solid #262626;border-radius:14px;padding:24px;margin-bottom:1.4rem;text-align:center;">
   <div style="font-size:2.2rem;margin-bottom:8px;">🏆</div>
-  <div style="font-size:1.15rem;font-weight:800;color:#3D7A50;margin-bottom:6px;">COMPLIANCE CERTIFICATE</div>
-  <div style="font-size:0.87rem;color:#3D7A50;max-width:480px;margin:0 auto;">This product has achieved a compliance score of {{ score }}% and meets all critical FSSAI requirements.</div>
+  <div style="font-size:1.15rem;font-weight:800;color:#262626;margin-bottom:6px;">COMPLIANCE CERTIFICATE</div>
+  <div style="font-size:0.87rem;color:#262626;max-width:480px;margin:0 auto;">This product has achieved a compliance score of {{ score }}% and meets all critical FSSAI requirements.</div>
   <div style="margin-top:12px;font-size:0.78rem;color:#525252;">Certificate valid for 90 days from generation date · Subject to regulatory amendments</div>
 </div>
 {% endif %}
@@ -134,16 +134,16 @@
         {% for cr in report.check_results %}
           {% set result = cr.get('result', '') %}
           {% if result == 'PASS' %}
-            {% set rc = '#3D7A50' %}
-            {% set rb = '#D8F0DF' %}
+            {% set rc = '#262626' %}
+            {% set rb = '#F5F5F5' %}
             {% set ri = '✓' %}
           {% elif result == 'FAIL' %}
-            {% set rc = '#8B3A3A' %}
-            {% set rb = '#F5D5D5' %}
+            {% set rc = '#111111' %}
+            {% set rb = '#EBEBEB' %}
             {% set ri = '✗' %}
           {% else %}
-            {% set rc = '#8B6914' %}
-            {% set rb = '#FFF0E0' %}
+            {% set rc = '#525252' %}
+            {% set rb = '#F5F5F5' %}
             {% set ri = '⚠' %}
           {% endif %}
           <tr style="border-bottom:1px solid #F8F8F8;" onmouseover="this.style.background='#F8F8F8'" onmouseout="this.style.background=''">

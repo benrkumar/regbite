@@ -65,7 +65,7 @@
   display:flex; align-items:center; gap:0.75rem;
 }
 .kb-drop-zone:hover, .kb-drop-zone.drag-over {
-  border-color:#5A9A98; background:#F0F9F8;
+  border-color:#111111; background:#F0F9F8;
 }
 .kb-drop-zone .icon { font-size:1.4rem; flex-shrink:0; }
 .kb-drop-zone .drop-text { flex:1; min-width:0; }
@@ -95,7 +95,7 @@
 }
 .kb-file-item .fi-remove:hover { color:#DC2626; }
 .fi-status.pending  { color:#A3A3A3; }
-.fi-status.uploading{ color:#649CC4; }
+.fi-status.uploading{ color:#525252; }
 .fi-status.done     { color:#16A34A; font-weight:600; }
 .fi-status.skipped  { color:#D97706; font-weight:600; }
 .fi-status.error    { color:#DC2626; font-weight:600; }
@@ -106,7 +106,7 @@
   display:none;
 }
 .fi-progress-bar {
-  height:100%; background:#649CC4; border-radius:2px;
+  height:100%; background:#525252; border-radius:2px;
   transition:width 0.3s ease; width:0%;
   animation:progressPulse 1.2s ease-in-out infinite;
 }
@@ -129,7 +129,7 @@
   height:5px; background:#E5E5E5; border-radius:3px; overflow:hidden;
 }
 .kb-overall-bar {
-  height:100%; background:#5A9A98; border-radius:3px;
+  height:100%; background:#111111; border-radius:3px;
   transition:width 0.4s ease;
 }
 
@@ -144,7 +144,7 @@
 .kb-upload-done {
   display:none; margin-top:0.75rem; padding:0.65rem 0.85rem;
   background:#EDFAF3; border:1px solid #BBF7D0; border-radius:6px;
-  font-size:0.8rem; color:#3D7A50; font-weight:600;
+  font-size:0.8rem; color:#262626; font-weight:600;
   animation:fiSlideIn 0.2s ease;
 }
 
@@ -182,9 +182,9 @@
 .fw-rule-desc { flex:1; color:#525252; line-height:1.5; }
 .fw-rule-src  { font-size:0.66rem; color:#A3A3A3; margin-top:0.1rem; }
 .fw-sev { font-size:0.58rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:3px; white-space:nowrap; flex-shrink:0; }
-.fw-sev-CRITICAL { background:#F5D5D5; color:#8B3A3A; }
-.fw-sev-HIGH     { background:#FFF0E0; color:#8B6914; }
-.fw-sev-MEDIUM   { background:#FFF0E0; color:#8B6914; }
+.fw-sev-CRITICAL { background:#EBEBEB; color:#111111; }
+.fw-sev-HIGH     { background:#F5F5F5; color:#525252; }
+.fw-sev-MEDIUM   { background:#F5F5F5; color:#525252; }
 .fw-sev-LOW      { background:#F5F5F5; color:#737373; }
 
 .rc-row { padding:0.65rem 1.2rem; border-bottom:1px solid #F5F5F5; }
@@ -302,8 +302,8 @@
     </div>
 
     {# ── Re-read & Re-learn ── always-visible, prominent action ── #}
-    <div class="kb-action-section" style="background:#F0F9F8;border-left:3px solid #5A9A98;">
-      <div class="kb-action-section-lbl" style="color:#5A9A98;">Re-read & Re-learn</div>
+    <div class="kb-action-section" style="background:#F0F9F8;border-left:3px solid #111111;">
+      <div class="kb-action-section-lbl" style="color:#111111;">Re-read & Re-learn</div>
       <p style="font-size:0.72rem;color:#525252;margin:0 0 0.65rem;line-height:1.5;">
         Re-reads all stored document content and re-chunks everything with the
         improved <strong>600-char chunker</strong>. Fixes thin documents and improves
@@ -314,7 +314,7 @@
         🔄 Re-read & Re-learn from All Docs
       </button>
       <div id="relearnStatus" style="display:none;margin-top:0.55rem;font-size:0.75rem;color:#525252;"></div>
-      <div id="relearnResult" style="display:none;margin-top:0.55rem;font-size:0.75rem;color:#3D7A50;background:#D8F0DF;border-radius:6px;padding:0.4rem 0.6rem;"></div>
+      <div id="relearnResult" style="display:none;margin-top:0.55rem;font-size:0.75rem;color:#262626;background:#F5F5F5;border-radius:6px;padding:0.4rem 0.6rem;"></div>
     </div>
 
     <div class="kb-action-section" id="auditSection">
@@ -324,7 +324,7 @@
       </div>
       {# Indeterminate progress bar — only visible while scanning #}
       <div id="auditProgressWrap" style="height:3px;background:#F0F0F0;border-radius:2px;margin-bottom:0.65rem;overflow:hidden;display:none;">
-        <div id="auditProgressBar" style="height:100%;width:40%;background:#5A9A98;border-radius:2px;animation:audit-slide 1.2s ease-in-out infinite;"></div>
+        <div id="auditProgressBar" style="height:100%;width:40%;background:#111111;border-radius:2px;animation:audit-slide 1.2s ease-in-out infinite;"></div>
       </div>
       {# Result card — prominent, hidden until audit completes #}
       <div id="auditSummary" style="display:none;margin-bottom:0.6rem;background:#F8F8F8;border:1px solid #EBEBEB;border-radius:8px;padding:0.75rem;">
@@ -334,7 +334,7 @@
         </div>
         <div id="auditProblemLine" style="font-size:0.78rem;font-weight:600;margin-bottom:0.4rem;"></div>
         <button type="button" id="auditDetailsToggle" onclick="toggleAuditDetails()"
-          style="font-size:0.68rem;color:#5A9A98;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;">
+          style="font-size:0.68rem;color:#111111;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;">
           Show details ↓
         </button>
       </div>
@@ -450,7 +450,7 @@
         <div class="kb-overall-progress" id="overallProgress">
           <div class="kb-overall-label">
             <span id="overallLabel">Uploading…</span>
-            <span id="overallPct" style="font-weight:700;color:#5A9A98;">0%</span>
+            <span id="overallPct" style="font-weight:700;color:#111111;">0%</span>
           </div>
           <div class="kb-overall-bar-wrap">
             <div class="kb-overall-bar" id="overallBar" style="width:0%"></div>
@@ -829,7 +829,7 @@ async function runAudit() {
       `<div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.25rem;font-size:0.7rem;">
         <span style="min-width:28px;color:#737373;">${k}</span>
         <div style="flex:1;background:#F0F0F0;border-radius:2px;height:8px;overflow:hidden;">
-          <div style="width:${d.total_docs>0?Math.round(v/d.total_docs*100):0}%;height:100%;background:${k==='0'?'#DC2626':k==='1'?'#D97706':'#5A9A98'};border-radius:2px;"></div>
+          <div style="width:${d.total_docs>0?Math.round(v/d.total_docs*100):0}%;height:100%;background:${k==='0'?'#DC2626':k==='1'?'#D97706':'#111111'};border-radius:2px;"></div>
         </div>
         <span style="min-width:20px;text-align:right;font-weight:600;color:#262626;">${v}</span>
       </div>`
@@ -867,7 +867,7 @@ async function runAudit() {
 
     if ($prog) $prog.style.display = "none";
     if ($sum)  { $sum.style.display = "block"; $sum.style.animation = "none"; void $sum.offsetWidth; $sum.style.animation = ""; }
-    if ($btn)  { $btn.disabled = false; $btn.textContent = `✓ ${d.health_score}% health`; $btn.style.cssText += ";background:#EDFAF3;color:#3D7A50;border-color:#BBF7D0;"; }
+    if ($btn)  { $btn.disabled = false; $btn.textContent = `✓ ${d.health_score}% health`; $btn.style.cssText += ";background:#EDFAF3;color:#262626;border-color:#BBF7D0;"; }
 
   } catch (e) {
     clearTimeout(tid);
@@ -898,7 +898,7 @@ async function startReindex() {
       const s = await (await fetch(statusUrl)).json();
       if (s.status === "done") {
         btn.textContent = `✓ ${s.total_new_chunks} chunks`;
-        btn.style.cssText += ";background:#EDFAF3;color:#3D7A50;border-color:#BBF7D0;";
+        btn.style.cssText += ";background:#EDFAF3;color:#262626;border-color:#BBF7D0;";
         setTimeout(runAudit, 800);
         return;
       } else if (s.status === "error") {
@@ -1025,7 +1025,7 @@ function renderQueue() {
     doneBanner.style.display = "block";
     doneBanner.style.background = errorCount > 0 ? "#FFF7ED" : "#EDFAF3";
     doneBanner.style.borderColor = errorCount > 0 ? "#FED7AA" : "#BBF7D0";
-    doneBanner.style.color = errorCount > 0 ? "#92400E" : "#3D7A50";
+    doneBanner.style.color = errorCount > 0 ? "#92400E" : "#262626";
     doneBanner.textContent = parts.join("  ·  ");
   } else {
     doneBanner.style.display = "none";
@@ -1179,7 +1179,7 @@ async function refreshDocCount() {
           const link = document.createElement("a");
           link.id = "reloadDocsLink";
           link.href = "#";
-          link.style.cssText = "margin-left:1rem;font-size:0.75rem;color:#4A7BA3;text-decoration:underline;";
+          link.style.cssText = "margin-left:1rem;font-size:0.75rem;color:#404040;text-decoration:underline;";
           link.textContent = "↻ Reload to see indexed docs";
           link.onclick = () => window.location.reload();
           banner.appendChild(link);

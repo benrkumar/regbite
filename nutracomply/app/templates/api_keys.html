@@ -18,11 +18,11 @@
 <div style="background:#fefce8;border:1.5px solid #fbbf24;border-radius:10px;padding:1.1rem 1.25rem;margin-bottom:1.5rem;">
   <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;">
     <span style="font-size:1.1rem;">&#x26A0;&#xFE0F;</span>
-    <strong style="color:#8B6914;">Copy your API key now. It will not be shown again.</strong>
+    <strong style="color:#525252;">Copy your API key now. It will not be shown again.</strong>
   </div>
   <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
     <code id="new-key-display" style="background:#fff;border:1px solid #fcd34d;border-radius:6px;padding:0.4rem 0.75rem;font-family:monospace;font-size:0.88rem;color:#262626;word-break:break-all;flex:1;min-width:200px;">{{ new_key }}</code>
-    <button onclick="copyKey()" style="background:#C9A07A;color:#fff;border:none;border-radius:7px;padding:0.4rem 0.9rem;cursor:pointer;font-weight:600;font-size:0.84rem;white-space:nowrap;">&#x1F4CB; Copy</button>
+    <button onclick="copyKey()" style="background:#737373;color:#fff;border:none;border-radius:7px;padding:0.4rem 0.9rem;cursor:pointer;font-weight:600;font-size:0.84rem;white-space:nowrap;">&#x1F4CB; Copy</button>
   </div>
 </div>
 <script>
@@ -96,7 +96,7 @@ function copyKey() {
           <td style="padding:0.7rem 1rem;">
             <form method="post" action="/settings/api-keys/{{ key.id }}/revoke" style="margin:0;">
               <button type="submit"
-                      style="background:#fff;border:1px solid #E8BFBF;color:#8B3A3A;border-radius:7px;padding:0.25rem 0.65rem;font-size:0.78rem;cursor:pointer;font-weight:500;"
+                      style="background:#fff;border:1px solid #D4D4D4;color:#111111;border-radius:7px;padding:0.25rem 0.65rem;font-size:0.78rem;cursor:pointer;font-weight:500;"
                       onclick="return confirm('Revoke API key \'{{ key.name }}\'? This cannot be undone.')">
                 Revoke
               </button>

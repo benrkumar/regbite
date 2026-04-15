@@ -53,7 +53,7 @@
     flex-shrink: 0;
     margin-top: 0.22rem;
   }
-  .step-dot-active { background: #5A9A98; }
+  .step-dot-active { background: #111111; }
   .step-dot-inactive { background: #D4D4D4; }
   .step-num {
     font-size: 0.67rem;
@@ -73,22 +73,22 @@
     border-radius: 3px;
     white-space: nowrap;
   }
-  .step-status-ok  { background: #D8F0DF; color: #3D7A50; }
+  .step-status-ok  { background: #F5F5F5; color: #262626; }
   .step-status-off { background: #F5F5F5; color: #A3A3A3; }
 
   /* Running step highlight */
   .pipeline-step.step-running {
     background: #F0F9F8;
-    border-left: 3px solid #5A9A98;
+    border-left: 3px solid #111111;
     border-radius: 0.25rem;
     padding-left: 0.75rem;
     margin-left: -0.75rem;
   }
-  .pipeline-step.step-running .step-dot { background: #5A9A98; animation: pulse 1s infinite; }
+  .pipeline-step.step-running .step-dot { background: #111111; animation: pulse 1s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
   .step-status-label {
     font-size: 0.7rem;
-    color: #5A9A98;
+    color: #111111;
     font-style: italic;
     display: none;
   }
@@ -106,7 +106,7 @@
   /* Tabs */
   .tab-bar { display:flex; gap:0.5rem; margin-bottom:1.25rem; }
   .tab-btn { padding:0.4rem 1rem; border:1px solid #EBEBEB; background:#F8F8F8; border-radius:0.4rem; cursor:pointer; font-size:0.82rem; color:#525252; }
-  .tab-btn.active { background:#5A9A98; color:#fff; border-color:#5A9A98; }
+  .tab-btn.active { background:#111111; color:#fff; border-color:#111111; }
   .tab-panel.hidden { display:none; }
 
   /* Drop zone */
@@ -121,13 +121,13 @@
     margin-bottom: 1rem;
   }
   .drop-zone:hover, .drop-zone.drag-over {
-    border-color: #5A9A98;
-    background: #D4EDEC;
+    border-color: #111111;
+    background: #F0F0F0;
   }
   .drop-zone-icon { font-size: 2rem; color: #A3A3A3; margin-bottom: 0.5rem; }
   .drop-zone-text { font-size: 0.82rem; color: #737373; }
   .drop-zone-sub  { font-size: 0.72rem; color: #A3A3A3; margin-top: 0.25rem; }
-  .drop-zone-file { font-size: 0.82rem; color: #5A9A98; font-weight: 500; margin-top: 0.4rem; }
+  .drop-zone-file { font-size: 0.82rem; color: #111111; font-weight: 500; margin-top: 0.4rem; }
 
   /* Results */
   .result-hidden { display: none; }
@@ -144,16 +144,16 @@
     font-size: 0.82rem;
     font-weight: 700;
   }
-  .conf-green  { background: #D8F0DF; color: #3D7A50; }
-  .conf-amber  { background: #FFF0E0; color: #8B6914; }
-  .conf-red    { background: #F5D5D5; color: #8B3A3A; }
+  .conf-green  { background: #F5F5F5; color: #262626; }
+  .conf-amber  { background: #F5F5F5; color: #525252; }
+  .conf-red    { background: #EBEBEB; color: #111111; }
   .source-badge {
     padding: 0.2rem 0.65rem;
     border-radius: 4px;
     font-size: 0.78rem;
     font-weight: 600;
-    background: #D4EDEC;
-    color: #5A9A98;
+    background: #F0F0F0;
+    color: #111111;
   }
   .meta-chip {
     font-size: 0.75rem;
@@ -196,7 +196,7 @@
   }
   .bar-label { min-width: 7rem; color: #525252; font-weight: 500; }
   .bar-track { flex: 1; height: 0.55rem; background: #F0F0F0; border-radius: 2px; overflow: hidden; }
-  .bar-fill  { height: 100%; background: #81C2C0; border-radius: 2px; transition: width 0.4s ease; }
+  .bar-fill  { height: 100%; background: #404040; border-radius: 2px; transition: width 0.4s ease; }
   .bar-val   { min-width: 3rem; text-align: right; color: #737373; }
 
   .stat-summary {
@@ -206,14 +206,14 @@
     flex-wrap: wrap;
   }
   .stat-chip { text-align: center; }
-  .stat-chip-val { font-size: 1.5rem; font-weight: 700; color: #5A9A98; line-height: 1; }
+  .stat-chip-val { font-size: 1.5rem; font-weight: 700; color: #111111; line-height: 1; }
   .stat-chip-lbl { font-size: 0.68rem; color: #A3A3A3; margin-top: 0.2rem; }
 
   .warnings-list { margin: 0.75rem 0 0; padding: 0; list-style: none; }
   .warnings-list li {
     font-size: 0.78rem;
-    color: #8B6914;
-    background: #FFF0E0;
+    color: #525252;
+    background: #F5F5F5;
     padding: 0.35rem 0.65rem;
     border-radius: 3px;
     margin-bottom: 0.3rem;
@@ -224,7 +224,7 @@
     display: inline-block;
     width: 1rem; height: 1rem;
     border: 2px solid #E5E5E5;
-    border-top-color: #5A9A98;
+    border-top-color: #111111;
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
     vertical-align: middle;
@@ -256,7 +256,7 @@
     flex-wrap: wrap;
   }
   .llm-stat-item { text-align: center; }
-  .llm-stat-val { font-size: 1.3rem; font-weight: 700; color: #5A9A98; line-height: 1; }
+  .llm-stat-val { font-size: 1.3rem; font-weight: 700; color: #111111; line-height: 1; }
   .llm-stat-lbl { font-size: 0.68rem; color: #A3A3A3; margin-top: 0.2rem; }
   .llm-how-it-works {
     background: #fff;
@@ -282,7 +282,7 @@
     margin-bottom: 0.85rem;
     box-sizing: border-box;
   }
-  .pattern-search:focus { outline: none; border-color: #5A9A98; background: #fff; }
+  .pattern-search:focus { outline: none; border-color: #111111; background: #fff; }
   .plib-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
   .plib-table th {
     text-align: left;
@@ -302,9 +302,9 @@
     vertical-align: middle;
   }
   .plib-table tr:last-child td { border-bottom: none; }
-  .plib-conf-green { color: #3D7A50; font-weight: 600; }
-  .plib-conf-amber { color: #8B6914; font-weight: 600; }
-  .plib-conf-red   { color: #8B3A3A; font-weight: 600; }
+  .plib-conf-green { color: #262626; font-weight: 600; }
+  .plib-conf-amber { color: #525252; font-weight: 600; }
+  .plib-conf-red   { color: #111111; font-weight: 600; }
   .plib-pagination {
     display: flex;
     align-items: center;
@@ -323,7 +323,7 @@
     color: #525252;
   }
   .plib-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .plib-page-btn:not(:disabled):hover { background: #5A9A98; color: #fff; border-color: #5A9A98; }
+  .plib-page-btn:not(:disabled):hover { background: #111111; color: #fff; border-color: #111111; }
 </style>
 
 <div class="lex-grid">
@@ -542,7 +542,7 @@
           <div class="bar-row">
             <span class="bar-label">{{ src | capitalize }}</span>
             <div class="bar-track">
-              <div class="bar-fill" style="width:{{ (conf * 100) | round(1) }}%;background:{% if conf >= 0.8 %}#81C2C0{% elif conf >= 0.6 %}#F0C070{% else %}#E89898{% endif %};"></div>
+              <div class="bar-fill" style="width:{{ (conf * 100) | round(1) }}%;background:{% if conf >= 0.8 %}#404040{% elif conf >= 0.6 %}#F0C070{% else %}#E89898{% endif %};"></div>
             </div>
             <span class="bar-val">{{ conf }}</span>
           </div>
@@ -674,16 +674,16 @@
         {# Upload zone #}
         <div id="bmDropZone" style="border:2px dashed #D4D4D4;border-radius:0.6rem;padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem;transition:border-color 0.2s;"
              onclick="document.getElementById('bmFileInput').click()"
-             ondragover="event.preventDefault();this.style.borderColor='#5A9A98'"
+             ondragover="event.preventDefault();this.style.borderColor='#111111'"
              ondragleave="this.style.borderColor='#D4D4D4'"
              ondrop="event.preventDefault();this.style.borderColor='#D4D4D4';handleBmFile(event.dataTransfer.files[0])">
           <div style="font-size:1.5rem;margin-bottom:0.5rem;">&#9889;</div>
           <div style="font-size:0.88rem;font-weight:600;color:#525252;">Drop file here or click to browse</div>
-          <div id="bmFileName" style="font-size:0.75rem;color:#5A9A98;margin-top:0.4rem;"></div>
+          <div id="bmFileName" style="font-size:0.75rem;color:#111111;margin-top:0.4rem;"></div>
           <input type="file" id="bmFileInput" accept=".jpg,.jpeg,.png,.webp,.pdf" style="display:none" onchange="handleBmFile(this.files[0])">
         </div>
         <button id="bmRunBtn" class="adm-btn adm-btn-primary" onclick="runBenchmark()" disabled style="width:100%;margin-bottom:1rem;">Run Benchmark</button>
-        <div id="bmStatus" style="display:none;font-size:0.82rem;color:#5A9A98;text-align:center;padding:0.5rem;"></div>
+        <div id="bmStatus" style="display:none;font-size:0.82rem;color:#111111;text-align:center;padding:0.5rem;"></div>
       </div>
 
       {# Results table #}
@@ -1032,7 +1032,7 @@ function renderBmResults(results, final) {
     var isBestCost  = isSuccess && r.cost_usd === bestCost && bestCost > 0;
     var isBestFields = isSuccess && r.field_count === bestFields && bestFields > 0;
 
-    var confColor = r.confidence >= 0.8 ? '#3D7A4A' : r.confidence >= 0.6 ? '#8B6A00' : '#8B3A3A';
+    var confColor = r.confidence >= 0.8 ? '#3D7A4A' : r.confidence >= 0.6 ? '#8B6A00' : '#111111';
     var statusBadge = isSuccess
       ? '<span style="background:#DCFCE7;color:#3D7A4A;border-radius:99px;padding:0.1rem 0.5rem;font-size:0.7rem;font-weight:600;">\u2713 OK</span>'
       : '<span style="background:#FEE2E2;color:#DC2626;border-radius:99px;padding:0.1rem 0.5rem;font-size:0.7rem;font-weight:600;">\u2717 Error</span>';
@@ -1057,7 +1057,7 @@ function renderBmResults(results, final) {
   // Winner summary if done
   if (final && successes.length > 0) {
     var winner = successes.reduce(function(a, b) { return b.confidence > a.confidence ? b : a; });
-    html += '<div style="margin-top:1rem;padding:0.75rem 1rem;background:#F0F9F8;border:1px solid #5A9A98;border-radius:0.5rem;font-size:0.82rem;">' +
+    html += '<div style="margin-top:1rem;padding:0.75rem 1rem;background:#F0F9F8;border:1px solid #111111;border-radius:0.5rem;font-size:0.82rem;">' +
       '\ud83c\udfc6 <strong>Recommended:</strong> <strong>' + winner.provider + '</strong> \u2014 highest confidence (' + Math.round(winner.confidence * 100) + '%)' +
       ' with ' + winner.field_count + ' fields extracted in ' + winner.elapsed + 's.' +
       '</div>';

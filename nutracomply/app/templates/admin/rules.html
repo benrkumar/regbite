@@ -41,13 +41,13 @@
 
   <tr style="{% if not rule.active %}opacity:0.55;{% endif %}">
     <td>
-      <code style="font-size:0.75rem;background:#F5F5F5;padding:0.15rem 0.4rem;border-radius:5px;color:#649CC4;">{{ rule.rule_code }}</code>
+      <code style="font-size:0.75rem;background:#F5F5F5;padding:0.15rem 0.4rem;border-radius:5px;color:#525252;">{{ rule.rule_code }}</code>
     </td>
     <td>
       <div style="font-size:0.85rem;font-weight:500;color:#262626;">{{ rule.description }}</div>
       {% if rule.remediation_template %}
       <details style="margin-top:0.3rem;">
-        <summary style="font-size:0.76rem;color:#649CC4;cursor:pointer;list-style:none;">Remediation &darr;</summary>
+        <summary style="font-size:0.76rem;color:#525252;cursor:pointer;list-style:none;">Remediation &darr;</summary>
         <p style="font-size:0.78rem;color:#737373;margin:0.3rem 0 0;line-height:1.5;">{{ rule.remediation_template }}</p>
       </details>
       {% endif %}

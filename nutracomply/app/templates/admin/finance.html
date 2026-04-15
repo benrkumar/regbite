@@ -15,14 +15,14 @@
     {% set periods = [('today','Today'),('7d','7 Days'),('30d','30 Days'),('90d','90 Days'),('all','All Time')] %}
     {% for val, label in periods %}
     <button type="submit" name="period" value="{{ val }}"
-      style="padding:0.4rem 0.85rem;border-radius:5px;border:1px solid {% if period == val %}#5A9A98{% else %}#EBEBEB{% endif %};background:{% if period == val %}#5A9A98{% else %}#fff{% endif %};color:{% if period == val %}#fff{% else %}#525252{% endif %};font-size:0.8rem;font-weight:{% if period == val %}600{% else %}400{% endif %};cursor:pointer;font-family:inherit;">
+      style="padding:0.4rem 0.85rem;border-radius:5px;border:1px solid {% if period == val %}#111111{% else %}#EBEBEB{% endif %};background:{% if period == val %}#111111{% else %}#fff{% endif %};color:{% if period == val %}#fff{% else %}#525252{% endif %};font-size:0.8rem;font-weight:{% if period == val %}600{% else %}400{% endif %};cursor:pointer;font-family:inherit;">
       {{ label }}
     </button>
     {% endfor %}
 
     <button type="button"
       onclick="document.getElementById('customRange').style.display=document.getElementById('customRange').style.display==='none'?'flex':'none'"
-      style="padding:0.4rem 0.85rem;border-radius:5px;border:1px solid {% if period == 'custom' %}#5A9A98{% else %}#EBEBEB{% endif %};background:{% if period == 'custom' %}#5A9A98{% else %}#fff{% endif %};color:{% if period == 'custom' %}#fff{% else %}#525252{% endif %};font-size:0.8rem;cursor:pointer;font-family:inherit;">
+      style="padding:0.4rem 0.85rem;border-radius:5px;border:1px solid {% if period == 'custom' %}#111111{% else %}#EBEBEB{% endif %};background:{% if period == 'custom' %}#111111{% else %}#fff{% endif %};color:{% if period == 'custom' %}#fff{% else %}#525252{% endif %};font-size:0.8rem;cursor:pointer;font-family:inherit;">
       Custom
     </button>
 
@@ -33,7 +33,7 @@
       <input type="date" name="date_to" value="{{ date_to }}"
         style="padding:0.35rem 0.6rem;border:1px solid #EBEBEB;border-radius:5px;font-size:0.8rem;font-family:inherit;color:#111;">
       <button type="submit" name="period" value="custom"
-        style="padding:0.35rem 0.75rem;border-radius:5px;border:1px solid #5A9A98;background:#5A9A98;color:#fff;font-size:0.8rem;cursor:pointer;font-family:inherit;">
+        style="padding:0.35rem 0.75rem;border-radius:5px;border:1px solid #111111;background:#111111;color:#fff;font-size:0.8rem;cursor:pointer;font-family:inherit;">
         Apply
       </button>
     </div>
@@ -52,7 +52,7 @@
 
   <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
     <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">New Signups</div>
-    <div style="font-size:1.6rem;font-weight:700;color:#5A9A98;">{{ new_users_period }}</div>
+    <div style="font-size:1.6rem;font-weight:700;color:#111111;">{{ new_users_period }}</div>
     <div style="font-size:0.72rem;color:#A3A3A3;">{{ date_from }} – {{ date_to }}</div>
   </div>
 
@@ -64,7 +64,7 @@
 
   <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
     <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Conversion Rate</div>
-    <div style="font-size:1.6rem;font-weight:700;color:{% if conv_rate >= 10 %}#3D7A4A{% elif conv_rate >= 3 %}#D4845A{% else %}#8B3A3A{% endif %};">{{ "%.1f"|format(conv_rate) }}%</div>
+    <div style="font-size:1.6rem;font-weight:700;color:{% if conv_rate >= 10 %}#3D7A4A{% elif conv_rate >= 3 %}#D4845A{% else %}#111111{% endif %};">{{ "%.1f"|format(conv_rate) }}%</div>
     <div style="font-size:0.72rem;color:#A3A3A3;">active / total users</div>
   </div>
 
@@ -129,7 +129,7 @@
         <span style="font-size:0.8rem;color:#737373;">{{ cnt }} &nbsp;<span style="color:#A3A3A3;">({{ pct }}%)</span></span>
       </div>
       <div style="background:#F4F4F4;border-radius:4px;height:8px;overflow:hidden;">
-        <div style="width:{{ pct }}%;height:100%;background:#5A9A98;border-radius:4px;"></div>
+        <div style="width:{{ pct }}%;height:100%;background:#111111;border-radius:4px;"></div>
       </div>
     </div>
     {% endfor %}
@@ -156,7 +156,7 @@
         {% for row in daily_list %}
         <tr style="background:{% if row.revenue_inr > 0 %}#F0FAF0{% else %}#fff{% endif %};">
           <td style="padding:0.45rem 0.75rem;border-bottom:1px solid #F4F4F4;color:#111;font-weight:{% if row.revenue_inr > 0 %}500{% else %}400{% endif %};">{{ row.day }}</td>
-          <td style="padding:0.45rem 0.75rem;border-bottom:1px solid #F4F4F4;text-align:right;color:{% if row.signups > 0 %}#5A9A98{% else %}#A3A3A3{% endif %};">{{ row.signups }}</td>
+          <td style="padding:0.45rem 0.75rem;border-bottom:1px solid #F4F4F4;text-align:right;color:{% if row.signups > 0 %}#111111{% else %}#A3A3A3{% endif %};">{{ row.signups }}</td>
           <td style="padding:0.45rem 0.75rem;border-bottom:1px solid #F4F4F4;text-align:right;color:{% if row.revenue_inr > 0 %}#D4845A{% else %}#A3A3A3{% endif %};">{% if row.revenue_inr > 0 %}₹{{ "{:,.2f}".format(row.revenue_inr) }}{% else %}—{% endif %}</td>
           <td style="padding:0.45rem 0.75rem;border-bottom:1px solid #F4F4F4;text-align:right;color:{% if row.payments > 0 %}#111{% else %}#A3A3A3{% endif %};">{{ row.payments if row.payments > 0 else '—' }}</td>
         </tr>
@@ -179,7 +179,7 @@ new Chart(document.getElementById('signupChart'), {
         datasets: [{
             label: 'Signups',
             data: daily.map(d => d.signups),
-            borderColor: '#5A9A98',
+            borderColor: '#111111',
             backgroundColor: 'rgba(90,154,152,0.12)',
             fill: true,
             tension: 0.3,

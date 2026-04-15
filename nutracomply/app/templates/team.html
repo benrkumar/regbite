@@ -70,8 +70,8 @@
   border-radius: 5px;
   font-size: 0.72rem;
   font-weight: 700;
-  background: #D4EDEC;
-  color: #5A9A98;
+  background: #F0F0F0;
+  color: #111111;
   white-space: nowrap;
 }
 
@@ -108,7 +108,7 @@
 
 .invite-link-box {
   background: var(--info-bg);
-  border: 1px solid #CADCEE;
+  border: 1px solid #F0F0F0;
   border-radius: var(--r-md);
   padding: 1rem 1.2rem;
   margin-bottom: 1.5rem;
@@ -261,7 +261,7 @@
           <form method="post" action="/team/members/{{ member.id }}/remove"
                 onsubmit="return confirm('Remove {{ member.name }} from your team?')">
             <button type="submit" class="btn btn-outline btn-sm"
-                    style="color:#8B3A3A;border-color:#E8BFBF;">Remove</button>
+                    style="color:#111111;border-color:#D4D4D4;">Remove</button>
           </form>
         </td>
       </tr>
@@ -307,7 +307,7 @@
           <form method="post" action="/team/invites/{{ inv.id }}/revoke"
                 onsubmit="return confirm('Revoke this invite for {{ inv.email }}?')">
             <button type="submit" class="btn btn-outline btn-sm"
-                    style="color:#8B3A3A;border-color:#E8BFBF;">Revoke</button>
+                    style="color:#111111;border-color:#D4D4D4;">Revoke</button>
           </form>
         </td>
       </tr>

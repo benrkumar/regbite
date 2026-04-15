@@ -22,18 +22,18 @@
         <h4 style="margin:0 0 12px;font-size:0.9rem;font-weight:700;color:#262626;text-transform:uppercase;letter-spacing:0.07em;padding-bottom:8px;border-bottom:1px solid #EBEBEB;">Product Information</h4>
 
         <div style="margin-bottom:1rem;">
-          <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Product Name <span style="color:#8B3A3A;">*</span></label>
+          <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Product Name <span style="color:#111111;">*</span></label>
           <input type="text" name="product_name" required placeholder="e.g. Ashwagandha KSM-66 500mg"
             style="width:100%;padding:9px 12px;border:1.5px solid #D4D4D4;border-radius:8px;font-size:0.9rem;outline:none;box-sizing:border-box;transition:border-color 0.2s;"
-            onfocus="this.style.borderColor='#81C2C0'" onblur="this.style.borderColor='#D4D4D4'" />
+            onfocus="this.style.borderColor='#404040'" onblur="this.style.borderColor='#D4D4D4'" />
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
           <div>
-            <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Product Category <span style="color:#8B3A3A;">*</span></label>
+            <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Product Category <span style="color:#111111;">*</span></label>
             <select name="category" required
               style="width:100%;padding:9px 12px;border:1.5px solid #D4D4D4;border-radius:8px;font-size:0.9rem;outline:none;background:#fff;cursor:pointer;box-sizing:border-box;"
-              onfocus="this.style.borderColor='#81C2C0'" onblur="this.style.borderColor='#D4D4D4'">
+              onfocus="this.style.borderColor='#404040'" onblur="this.style.borderColor='#D4D4D4'">
               {% for cat in categories %}
               <option value="{{ cat }}">{{ cat }}</option>
               {% endfor %}
@@ -43,7 +43,7 @@
             <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Target Consumer</label>
             <select name="target_consumer"
               style="width:100%;padding:9px 12px;border:1.5px solid #D4D4D4;border-radius:8px;font-size:0.9rem;outline:none;background:#fff;cursor:pointer;box-sizing:border-box;"
-              onfocus="this.style.borderColor='#81C2C0'" onblur="this.style.borderColor='#D4D4D4'">
+              onfocus="this.style.borderColor='#404040'" onblur="this.style.borderColor='#D4D4D4'">
               <option value="">-- Select --</option>
               {% for grp in target_groups %}
               <option value="{{ grp }}">{{ grp }}</option>
@@ -53,10 +53,10 @@
         </div>
 
         <div style="margin-bottom:1rem;">
-          <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Key Ingredients <span style="color:#8B3A3A;">*</span></label>
+          <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Key Ingredients <span style="color:#111111;">*</span></label>
           <textarea name="ingredients" required rows="3" placeholder="Ashwagandha Extract 500mg, Zinc 15mg, Vitamin D3 1000IU — comma separated"
             style="width:100%;padding:9px 12px;border:1.5px solid #D4D4D4;border-radius:8px;font-size:0.9rem;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit;"
-            onfocus="this.style.borderColor='#81C2C0'" onblur="this.style.borderColor='#D4D4D4'"></textarea>
+            onfocus="this.style.borderColor='#404040'" onblur="this.style.borderColor='#D4D4D4'"></textarea>
           <div style="font-size:0.73rem;color:#A3A3A3;margin-top:3px;">Separate each ingredient with a comma</div>
         </div>
 
@@ -64,7 +64,7 @@
           <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Label Claims</label>
           <textarea name="label_claims" rows="2" placeholder="Supports immunity, Helps reduce stress — comma separated"
             style="width:100%;padding:9px 12px;border:1.5px solid #D4D4D4;border-radius:8px;font-size:0.9rem;outline:none;resize:vertical;box-sizing:border-box;font-family:inherit;"
-            onfocus="this.style.borderColor='#81C2C0'" onblur="this.style.borderColor='#D4D4D4'"></textarea>
+            onfocus="this.style.borderColor='#404040'" onblur="this.style.borderColor='#D4D4D4'"></textarea>
         </div>
       </div>
 
@@ -77,13 +77,13 @@
             <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">FSSAI License Number</label>
             <input type="text" name="fssai_license" placeholder="e.g. 10019042000241"
               style="width:100%;padding:9px 12px;border:1.5px solid #D4D4D4;border-radius:8px;font-size:0.9rem;outline:none;box-sizing:border-box;"
-              onfocus="this.style.borderColor='#81C2C0'" onblur="this.style.borderColor='#D4D4D4'" />
+              onfocus="this.style.borderColor='#404040'" onblur="this.style.borderColor='#D4D4D4'" />
           </div>
           <div>
             <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Net Quantity</label>
             <input type="text" name="net_quantity" placeholder="e.g. 60 Capsules"
               style="width:100%;padding:9px 12px;border:1.5px solid #D4D4D4;border-radius:8px;font-size:0.9rem;outline:none;box-sizing:border-box;"
-              onfocus="this.style.borderColor='#81C2C0'" onblur="this.style.borderColor='#D4D4D4'" />
+              onfocus="this.style.borderColor='#404040'" onblur="this.style.borderColor='#D4D4D4'" />
           </div>
         </div>
 
@@ -92,13 +92,13 @@
             <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Manufacturing Date</label>
             <input type="date" name="manufacturing_date"
               style="width:100%;padding:9px 12px;border:1.5px solid #D4D4D4;border-radius:8px;font-size:0.9rem;outline:none;box-sizing:border-box;"
-              onfocus="this.style.borderColor='#81C2C0'" onblur="this.style.borderColor='#D4D4D4'" />
+              onfocus="this.style.borderColor='#404040'" onblur="this.style.borderColor='#D4D4D4'" />
           </div>
           <div>
             <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Expiry / Best Before</label>
             <input type="date" name="expiry_date"
               style="width:100%;padding:9px 12px;border:1.5px solid #D4D4D4;border-radius:8px;font-size:0.9rem;outline:none;box-sizing:border-box;"
-              onfocus="this.style.borderColor='#81C2C0'" onblur="this.style.borderColor='#D4D4D4'" />
+              onfocus="this.style.borderColor='#404040'" onblur="this.style.borderColor='#D4D4D4'" />
           </div>
         </div>
 
@@ -107,13 +107,13 @@
             <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Batch Number</label>
             <input type="text" name="batch_number" placeholder="e.g. ASH-B250301"
               style="width:100%;padding:9px 12px;border:1.5px solid #D4D4D4;border-radius:8px;font-size:0.9rem;outline:none;box-sizing:border-box;"
-              onfocus="this.style.borderColor='#81C2C0'" onblur="this.style.borderColor='#D4D4D4'" />
+              onfocus="this.style.borderColor='#404040'" onblur="this.style.borderColor='#D4D4D4'" />
           </div>
           <div>
             <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Manufacturing Origin</label>
             <select name="manufacturing_origin"
               style="width:100%;padding:9px 12px;border:1.5px solid #D4D4D4;border-radius:8px;font-size:0.9rem;outline:none;background:#fff;cursor:pointer;box-sizing:border-box;"
-              onfocus="this.style.borderColor='#81C2C0'" onblur="this.style.borderColor='#D4D4D4'">
+              onfocus="this.style.borderColor='#404040'" onblur="this.style.borderColor='#D4D4D4'">
               <option value="India" selected>India</option>
               <option value="Import">Import</option>
             </select>
@@ -127,26 +127,26 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;">
 
           <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid #D4D4D4;border-radius:8px;cursor:pointer;transition:border-color 0.2s;"
-            onmouseover="this.style.borderColor='#81C2C0'" onmouseout="this.style.borderColor='#D4D4D4'">
-            <input type="checkbox" name="has_nutritional_table" value="yes" style="width:16px;height:16px;accent-color:#3D7A50;" />
+            onmouseover="this.style.borderColor='#404040'" onmouseout="this.style.borderColor='#D4D4D4'">
+            <input type="checkbox" name="has_nutritional_table" value="yes" style="width:16px;height:16px;accent-color:#262626;" />
             <span style="font-size:0.85rem;color:#262626;font-weight:500;">Has nutritional table</span>
           </label>
 
           <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid #D4D4D4;border-radius:8px;cursor:pointer;transition:border-color 0.2s;"
-            onmouseover="this.style.borderColor='#81C2C0'" onmouseout="this.style.borderColor='#D4D4D4'">
-            <input type="checkbox" name="has_veg_mark" value="yes" style="width:16px;height:16px;accent-color:#3D7A50;" />
+            onmouseover="this.style.borderColor='#404040'" onmouseout="this.style.borderColor='#D4D4D4'">
+            <input type="checkbox" name="has_veg_mark" value="yes" style="width:16px;height:16px;accent-color:#262626;" />
             <span style="font-size:0.85rem;color:#262626;font-weight:500;">Has Veg / Non-Veg mark</span>
           </label>
 
           <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid #D4D4D4;border-radius:8px;cursor:pointer;transition:border-color 0.2s;"
-            onmouseover="this.style.borderColor='#81C2C0'" onmouseout="this.style.borderColor='#D4D4D4'">
-            <input type="checkbox" name="has_not_medicinal_use" value="yes" style="width:16px;height:16px;accent-color:#3D7A50;" />
+            onmouseover="this.style.borderColor='#404040'" onmouseout="this.style.borderColor='#D4D4D4'">
+            <input type="checkbox" name="has_not_medicinal_use" value="yes" style="width:16px;height:16px;accent-color:#262626;" />
             <span style="font-size:0.85rem;color:#262626;font-weight:500;">'NOT FOR MEDICINAL USE'</span>
           </label>
 
           <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid #D4D4D4;border-radius:8px;cursor:pointer;transition:border-color 0.2s;"
-            onmouseover="this.style.borderColor='#81C2C0'" onmouseout="this.style.borderColor='#D4D4D4'">
-            <input type="checkbox" name="has_consult_doctor" value="yes" style="width:16px;height:16px;accent-color:#3D7A50;" />
+            onmouseover="this.style.borderColor='#404040'" onmouseout="this.style.borderColor='#D4D4D4'">
+            <input type="checkbox" name="has_consult_doctor" value="yes" style="width:16px;height:16px;accent-color:#262626;" />
             <span style="font-size:0.85rem;color:#262626;font-weight:500;">'Consult Doctor' advisory</span>
           </label>
 
@@ -155,8 +155,8 @@
 
       <!-- Submit -->
       <button type="submit" id="submitBtn"
-        style="width:100%;padding:13px 20px;background:#81C2C0;color:#fff;border:none;border-radius:8px;font-size:0.95rem;font-weight:600;cursor:pointer;transition:opacity 0.2s;letter-spacing:0.01em;"
-        onmouseover="this.style.background='#5A9A98'" onmouseout="this.style.background='#81C2C0'"
+        style="width:100%;padding:13px 20px;background:#404040;color:#fff;border:none;border-radius:8px;font-size:0.95rem;font-weight:600;cursor:pointer;transition:opacity 0.2s;letter-spacing:0.01em;"
+        onmouseover="this.style.background='#111111'" onmouseout="this.style.background='#404040'"
         onclick="this.disabled=true;this.textContent='Running checks...';this.style.opacity='0.7';this.closest('form').submit();">
         Run Compliance Check →
       </button>
@@ -195,7 +195,7 @@
       <p style="font-size:0.82rem;color:#262626;margin:0;line-height:1.6;">
         You can also upload an actual label image from a product page for OCR-based extraction and a more thorough analysis.
       </p>
-      <a href="/products" style="display:inline-block;margin-top:10px;font-size:0.8rem;color:#5A9A98;font-weight:600;text-decoration:none;">Go to Products →</a>
+      <a href="/products" style="display:inline-block;margin-top:10px;font-size:0.8rem;color:#111111;font-weight:600;text-decoration:none;">Go to Products →</a>
     </div>
   </div>
 

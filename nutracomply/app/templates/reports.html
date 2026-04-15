@@ -10,7 +10,7 @@
     <h2 style="margin:0;font-size:1.6rem;font-weight:800;color:#0f172a;">Compliance Reports</h2>
     <p style="margin:0.2rem 0 0;color:#737373;font-size:0.95rem;">All generated compliance reports for your products</p>
   </hgroup>
-  <a href="/checker" style="background:linear-gradient(135deg,#3D7A50,#3D7A50);color:#fff;padding:9px 20px;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:700;">
+  <a href="/checker" style="background:linear-gradient(135deg,#262626,#262626);color:#fff;padding:9px 20px;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:700;">
     + New Check
   </a>
 </div>
@@ -25,17 +25,17 @@
     <div style="font-size:1.8rem;font-weight:900;color:#0f172a;">{{ reports | length }}</div>
     <div style="font-size:0.78rem;color:#737373;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Total Reports</div>
   </div>
-  <div style="background:#D8F0DF;border:1px solid #D8F0DF;border-radius:10px;padding:14px 18px;text-align:center;">
-    <div style="font-size:1.8rem;font-weight:900;color:#3D7A50;">{{ compliant_reports | length }}</div>
-    <div style="font-size:0.78rem;color:#3D7A50;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Compliant</div>
+  <div style="background:#F5F5F5;border:1px solid #F5F5F5;border-radius:10px;padding:14px 18px;text-align:center;">
+    <div style="font-size:1.8rem;font-weight:900;color:#262626;">{{ compliant_reports | length }}</div>
+    <div style="font-size:0.78rem;color:#262626;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Compliant</div>
   </div>
-  <div style="background:#fffbeb;border:1px solid #FFD7AD;border-radius:10px;padding:14px 18px;text-align:center;">
-    <div style="font-size:1.8rem;font-weight:900;color:#8B6914;">{{ partial_reports | length }}</div>
+  <div style="background:#fffbeb;border:1px solid #E5E5E5;border-radius:10px;padding:14px 18px;text-align:center;">
+    <div style="font-size:1.8rem;font-weight:900;color:#525252;">{{ partial_reports | length }}</div>
     <div style="font-size:0.78rem;color:#b45309;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Partial</div>
   </div>
-  <div style="background:#F5D5D5;border:1px solid #E8BFBF;border-radius:10px;padding:14px 18px;text-align:center;">
-    <div style="font-size:1.8rem;font-weight:900;color:#8B3A3A;">{{ non_compliant_reports | length }}</div>
-    <div style="font-size:0.78rem;color:#8B3A3A;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Non-Compliant</div>
+  <div style="background:#EBEBEB;border:1px solid #D4D4D4;border-radius:10px;padding:14px 18px;text-align:center;">
+    <div style="font-size:1.8rem;font-weight:900;color:#111111;">{{ non_compliant_reports | length }}</div>
+    <div style="font-size:0.78rem;color:#111111;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Non-Compliant</div>
   </div>
 </div>
 
@@ -61,23 +61,23 @@
         {% for report in reports %}
         {% set score = report.score or 0 %}
         {% if score >= 90 %}
-          {% set score_color = '#3D7A50' %}
-          {% set score_bg = '#D8F0DF' %}
+          {% set score_color = '#262626' %}
+          {% set score_bg = '#F5F5F5' %}
           {% set verdict_label = 'COMPLIANT' %}
-          {% set verdict_bg = '#D8F0DF' %}
-          {% set verdict_color = '#3D7A50' %}
+          {% set verdict_bg = '#F5F5F5' %}
+          {% set verdict_color = '#262626' %}
         {% elif score >= 60 %}
-          {% set score_color = '#8B6914' %}
-          {% set score_bg = '#FFF0E0' %}
+          {% set score_color = '#525252' %}
+          {% set score_bg = '#F5F5F5' %}
           {% set verdict_label = 'PARTIAL' %}
-          {% set verdict_bg = '#FFF0E0' %}
+          {% set verdict_bg = '#F5F5F5' %}
           {% set verdict_color = '#b45309' %}
         {% else %}
-          {% set score_color = '#8B3A3A' %}
-          {% set score_bg = '#F5D5D5' %}
+          {% set score_color = '#111111' %}
+          {% set score_bg = '#EBEBEB' %}
           {% set verdict_label = 'NON-COMPLIANT' %}
-          {% set verdict_bg = '#F5D5D5' %}
-          {% set verdict_color = '#8B3A3A' %}
+          {% set verdict_bg = '#EBEBEB' %}
+          {% set verdict_color = '#111111' %}
         {% endif %}
         <tr style="border-bottom:1px solid #F5F5F5;transition:background 0.15s;" onmouseover="this.style.background='#F8F8F8'" onmouseout="this.style.background=''">
           <td style="padding:12px 16px;">
@@ -118,7 +118,7 @@
   <h3 style="font-size:1.2rem;font-weight:700;color:#525252;margin:0 0 8px;">No reports yet</h3>
   <p style="color:#737373;font-size:0.9rem;max-width:400px;margin:0 auto 20px;">Generate your first compliance report by using the Compliance Checker or from a label upload result.</p>
   <div style="display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;">
-    <a href="/checker" style="background:linear-gradient(135deg,#3D7A50,#3D7A50);color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:700;">Use Compliance Checker</a>
+    <a href="/checker" style="background:linear-gradient(135deg,#262626,#262626);color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:700;">Use Compliance Checker</a>
     <a href="/products" style="background:#F5F5F5;color:#525252;padding:10px 22px;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:600;">View Products</a>
   </div>
 </div>

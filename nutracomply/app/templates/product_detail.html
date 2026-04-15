@@ -11,19 +11,19 @@
 .ext-table tr:hover td { background:var(--gray-50); }
 .ext-field-name { font-weight:600; color:var(--gray-700); font-size:0.82rem; min-width:160px; }
 .ext-field-tag { font-size:0.62rem; font-weight:700; padding:0.08rem 0.35rem; border-radius:3px; margin-left:0.4rem; vertical-align:middle; }
-.ext-tag-critical { background:#F5D5D5; color:#8B3A3A; }
-.ext-tag-important { background:#FFF0E0; color:#8B6914; }
-.ext-tag-info { background:#CADCEE; color:#4A7BA3; }
+.ext-tag-critical { background:#EBEBEB; color:#111111; }
+.ext-tag-important { background:#F5F5F5; color:#525252; }
+.ext-tag-info { background:#F0F0F0; color:#404040; }
 .ext-input { width:100%; padding:0.35rem 0.55rem; border:1px solid var(--gray-200); border-radius:5px;
   font-size:0.84rem; font-family:inherit; color:var(--gray-900); background:#fff; }
-.ext-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 2px rgba(129,194,192,0.15); }
+.ext-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 2px rgba(0,0,0,0.08); }
 .ext-textarea { min-height:60px; resize:vertical; }
 .ext-bool { display:flex; align-items:center; gap:0.5rem; }
 .ext-bool input[type="checkbox"] { width:16px; height:16px; accent-color:var(--primary); }
 .ext-list-item { display:flex; gap:0.3rem; align-items:center; margin-bottom:0.25rem; }
 .ext-list-item input { flex:1; }
-.ext-list-item .remove-item { cursor:pointer; color:#8B3A3A; font-size:0.75rem; padding:0.2rem 0.4rem;
-  border:1px solid #E8BFBF; border-radius:3px; background:#F5D5D5; }
+.ext-list-item .remove-item { cursor:pointer; color:#111111; font-size:0.75rem; padding:0.2rem 0.4rem;
+  border:1px solid #D4D4D4; border-radius:3px; background:#EBEBEB; }
 .ext-add-btn { font-size:0.75rem; color:var(--primary-dark); cursor:pointer; padding:0.2rem 0.5rem;
   border:1px dashed var(--primary); border-radius:4px; background:none; margin-top:0.2rem; }
 .ext-section-hdr { font-size:0.78rem; font-weight:700; color:var(--gray-500); padding:0.6rem 0.75rem;
@@ -392,18 +392,18 @@ function saveFields() {
   .then(function(d) {
     if (d.success) {
       status.textContent = 'Saved! Score: ' + d.score + '%. Reloading...';
-      status.style.color = '#3D7A50';
+      status.style.color = '#262626';
       setTimeout(function() { location.reload(); }, 1200);
     } else {
       status.textContent = 'Error: ' + (d.detail || 'Save failed');
-      status.style.color = '#8B3A3A';
+      status.style.color = '#111111';
       btn.disabled = false;
       btn.textContent = 'Save & Re-check';
     }
   })
   .catch(function(err) {
     status.textContent = 'Network error: ' + err.message;
-    status.style.color = '#8B3A3A';
+    status.style.color = '#111111';
     btn.disabled = false;
     btn.textContent = 'Save & Re-check';
   });
