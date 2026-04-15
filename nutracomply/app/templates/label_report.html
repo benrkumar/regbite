@@ -9,13 +9,13 @@
 .rpt-score-ring .ring-bg { fill:none; stroke:#E8E8E8; stroke-width:8; }
 .rpt-score-ring .ring-fg { fill:none; stroke-width:8; stroke-linecap:round; transition:stroke-dashoffset 1s ease; }
 .rpt-score-ring .ring-fg.sc-good { stroke:#111111; }
-.rpt-score-ring .ring-fg.sc-warn { stroke:#D4B050; }
-.rpt-score-ring .ring-fg.sc-bad  { stroke:#C06060; }
+.rpt-score-ring .ring-fg.sc-warn { stroke:#737373; }
+.rpt-score-ring .ring-fg.sc-bad  { stroke:#525252; }
 .rpt-score-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
 .rpt-score-val { font-size:1.55rem; font-weight:700; line-height:1; }
 .rpt-score-val.sc-good { color:#111111; }
-.rpt-score-val.sc-warn { color:#C49A3C; }
-.rpt-score-val.sc-bad  { color:#C06060; }
+.rpt-score-val.sc-warn { color:#737373; }
+.rpt-score-val.sc-bad  { color:#525252; }
 .rpt-score-pct { font-size:0.6rem; color:#A3A3A3; margin-top:0.1rem; letter-spacing:0.05em; text-transform:uppercase; }
 
 /* ── Top bar (header + actions) ── */
@@ -36,10 +36,10 @@
 .rpt-stat-lbl { font-size:0.62rem; color:#A3A3A3; margin-top:0.2rem; font-weight:500; letter-spacing:0.04em; text-transform:uppercase; }
 .stat-total  { border-color:#F0F0F0; } .stat-total  .rpt-stat-val { color:#525252; }
 .stat-pass   { border-color:#F5F5F5; } .stat-pass   .rpt-stat-val { color:#111111; }
-.stat-fail   { border-color:#EBEBEB; } .stat-fail   .rpt-stat-val { color:#C06060; }
-.stat-warn   { border-color:#F5F5F5; } .stat-warn   .rpt-stat-val { color:#C49A3C; }
+.stat-fail   { border-color:#EBEBEB; } .stat-fail   .rpt-stat-val { color:#525252; }
+.stat-warn   { border-color:#F5F5F5; } .stat-warn   .rpt-stat-val { color:#737373; }
 .stat-score  { border-color:#F0F0F0; } .stat-score  .rpt-stat-val { color:#111111; }
-.stat-crit   { border-color:#EBEBEB; } .stat-crit   .rpt-stat-val { color:#C06060; }
+.stat-crit   { border-color:#EBEBEB; } .stat-crit   .rpt-stat-val { color:#525252; }
 
 /* ── Section title ── */
 .rpt-section-title { font-size:0.82rem; font-weight:700; color:#111; margin:1.25rem 0 0.5rem; letter-spacing:-0.01em; display:flex; align-items:center; gap:0.4rem; }
@@ -50,13 +50,13 @@
 .rpt-sev-header { display:flex; align-items:center; gap:0.5rem; padding:0.6rem 0.9rem; background:#fff; cursor:pointer; user-select:none; }
 .rpt-sev-header:hover { background:#FAFAFA; }
 .sev-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-.dot-CRITICAL { background:#C06060; } .dot-HIGH { background:#E8A060; }
-.dot-MEDIUM   { background:#D4B050; } .dot-LOW  { background:#C0C0C0; }
+.dot-CRITICAL { background:#525252; } .dot-HIGH { background:#737373; }
+.dot-MEDIUM   { background:#737373; } .dot-LOW  { background:#A3A3A3; }
 .sev-title { font-size:0.8rem; font-weight:600; color:#262626; flex:1; }
 .sev-count { font-size:0.68rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:99px; }
 .cnt-CRITICAL { background:#EBEBEB; color:#111111; }
 .cnt-HIGH     { background:#F5F5F5; color:#525252; }
-.cnt-MEDIUM   { background:#FEF9C3; color:#854D0E; }
+.cnt-MEDIUM   { background:#F5F5F5; color:#525252; }
 .cnt-LOW      { background:#F5F5F5; color:#737373; }
 .sev-arrow { font-size:0.65rem; color:#C0C0C0; transition:transform 0.2s; }
 details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
@@ -64,23 +64,23 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
 
 /* ── Check card ── */
 .rpt-check { background:#fff; border:1px solid #EBEBEB; border-radius:6px; padding:0.75rem 0.9rem; margin-bottom:0.4rem; border-left:3px solid #EBEBEB; }
-.rpt-check.sev-CRITICAL { border-left-color:#C06060; background:#FFFAFA; }
-.rpt-check.sev-HIGH     { border-left-color:#E8A060; background:#FFFCF5; }
-.rpt-check.sev-MEDIUM   { border-left-color:#D4B050; }
-.rpt-check.sev-LOW      { border-left-color:#C0C0C0; }
+.rpt-check.sev-CRITICAL { border-left-color:#525252; background:#FFFAFA; }
+.rpt-check.sev-HIGH     { border-left-color:#737373; background:#FFFCF5; }
+.rpt-check.sev-MEDIUM   { border-left-color:#737373; }
+.rpt-check.sev-LOW      { border-left-color:#D4D4D4; }
 .rpt-check-hdr { display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem; }
 .rpt-check-desc { font-size:0.8rem; font-weight:600; color:#262626; flex:1; }
 .rpt-sev-tag { font-size:0.58rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:3px; letter-spacing:0.04em; white-space:nowrap; flex-shrink:0; }
 .tag-CRITICAL { background:#EBEBEB; color:#111111; }
 .tag-HIGH     { background:#F5F5F5; color:#525252; }
-.tag-MEDIUM   { background:#FEF9C3; color:#854D0E; }
+.tag-MEDIUM   { background:#F5F5F5; color:#525252; }
 .tag-LOW      { background:#F5F5F5; color:#737373; }
 .rpt-rule-ref { font-size:0.68rem; color:#B0B0B0; margin-top:0.15rem; }
 .rpt-check-msg { font-size:0.78rem; color:#525252; margin-top:0.3rem; line-height:1.5; }
 .rpt-actual { font-size:0.73rem; color:#737373; margin-top:0.2rem; }
 .rpt-fix { margin-top:0.35rem; }
 .rpt-fix summary { font-size:0.74rem; color:#111111; font-weight:600; cursor:pointer; }
-.rpt-fix-body { font-size:0.76rem; color:#525252; margin-top:0.3rem; padding:0.6rem; background:#F0F0F0; border-radius:5px; border:1px solid #B8DDD9; line-height:1.5; }
+.rpt-fix-body { font-size:0.76rem; color:#525252; margin-top:0.3rem; padding:0.6rem; background:#F0F0F0; border-radius:5px; border:1px solid #D4D4D4; line-height:1.5; }
 
 /* ── Passed checks ── */
 .rpt-passed-list { list-style:none; padding:0; margin:0; }
@@ -94,14 +94,37 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
 /* ── Navigation ── */
 .rpt-nav { display:flex; gap:0.65rem; flex-wrap:wrap; margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid #EBEBEB; }
 
-/* ── Label preview ── */
+/* ── Two-column report layout ── */
+.rpt-layout { display:grid; grid-template-columns:1fr 320px; gap:1.5rem; align-items:start; }
+.rpt-col-main { min-width:0; }
+.rpt-col-label { position:sticky; top:1rem; }
+.rpt-label-panel { background:#fff; border:1px solid #EBEBEB; border-radius:10px; overflow:hidden; }
+.rpt-label-panel-header { padding:0.6rem 0.9rem; border-bottom:1px solid #EBEBEB; display:flex; align-items:center; justify-content:space-between; }
+.rpt-label-panel-title { font-size:0.72rem; font-weight:700; color:#525252; letter-spacing:0.06em; text-transform:uppercase; }
+.rpt-label-panel-body { max-height:80vh; overflow-y:auto; padding:0.75rem; }
+.rpt-label-full { width:100%; height:auto; border-radius:6px; border:1px solid #F0F0F0; display:block; cursor:zoom-in; }
+.rpt-label-full:hover { opacity:0.95; }
+@media (max-width:1100px) {
+  .rpt-layout { grid-template-columns:1fr; }
+  .rpt-col-label { position:static; }
+  .rpt-label-panel-body { max-height:60vh; }
+}
+
+/* ── Label preview (small, in summary card) ── */
 .rpt-label-img { max-width:100%; border-radius:6px; border:1px solid #F0F0F0; display:block; }
+
+/* ── Lightbox ── */
+.rpt-lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:9000; align-items:center; justify-content:center; padding:1.5rem; }
+.rpt-lightbox.open { display:flex; }
+.rpt-lightbox img { max-width:100%; max-height:90vh; border-radius:6px; object-fit:contain; }
+.rpt-lightbox-close { position:absolute; top:1rem; right:1.25rem; color:#fff; font-size:1.6rem; cursor:pointer; line-height:1; background:none; border:none; opacity:0.75; }
+.rpt-lightbox-close:hover { opacity:1; }
 
 /* ── Overall verdict banner ── */
 .rpt-verdict { padding:0.7rem 1rem; border-radius:8px; margin-bottom:1.25rem; font-size:0.82rem; font-weight:600; display:flex; align-items:center; gap:0.5rem; }
-.verdict-good { background:#F0F0F0; color:#1E6B65; border:1px solid #B8DDD9; }
-.verdict-warn { background:#FEF9C3; color:#854D0E; border:1px solid #F0E068; }
-.verdict-bad  { background:#EBEBEB; color:#111111; border:1px solid #F0B8B8; }
+.verdict-good { background:#F5F5F5; color:#262626; border:1px solid #D4D4D4; }
+.verdict-warn { background:#F5F5F5; color:#525252; border:1px solid #D4D4D4; }
+.verdict-bad  { background:#EBEBEB; color:#111111; border:1px solid #D4D4D4; }
 
 /* ── Print / PDF styles ── */
 @media print {
@@ -181,6 +204,12 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
 
 {% else %}
 
+{# ── Two-column layout wrapper ── #}
+{% if label.file_path %}
+  {% set _lp = label.file_path.replace('\\', '/').split('/') %}
+  {% set _lsrc = '/labels/' ~ label.id ~ '/preview-page/0' if label.file_type == 'pdf' else '/uploads/' ~ _lp[-2] ~ '/' ~ _lp[-1] %}
+{% endif %}
+
 {# ── Top bar ── #}
 <div class="rpt-topbar">
   <div>
@@ -199,6 +228,10 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
     </form>
   </div>
 </div>
+
+{# ── Two-column grid ── #}
+<div class="rpt-layout">
+<div class="rpt-col-main">
 
 {# ── Verdict banner ── #}
 {% if score is not none %}
@@ -230,7 +263,7 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
     <div class="rpt-meta-row"><strong>AI confidence:</strong> {{ (label.extraction_confidence * 100)|int }}%</div>
     {% endif %}
     {% if label.file_type == 'pdf' %}
-    <div class="rpt-meta-row"><span style="padding:0.1rem 0.45rem;background:#F0F0F0;color:#3A6A94;border-radius:4px;font-size:0.66rem;font-weight:600;">PDF</span></div>
+    <div class="rpt-meta-row"><span style="padding:0.1rem 0.45rem;background:#F0F0F0;color:#525252;border-radius:4px;font-size:0.66rem;font-weight:600;">PDF</span></div>
     {% endif %}
   </div>
   {% if score is not none %}
@@ -342,7 +375,7 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
 {% if warning_checks %}
 <div class="rpt-section-title">
   Warnings
-  <span class="stitle-badge" style="background:#FEF9C3;color:#854D0E;">{{ warning_checks|length }}</span>
+  <span class="stitle-badge" style="background:#F5F5F5;color:#525252;">{{ warning_checks|length }}</span>
 </div>
 {% for check in warning_checks %}
   <div class="rpt-check sev-MEDIUM" style="margin-bottom:0.4rem;">
@@ -393,8 +426,54 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
 <div class="rpt-nav no-print">
   <a href="/products/{{ product.id }}/upload" class="btn btn-outline btn-sm">Update Label</a>
   <a href="/products/{{ product.id }}" class="btn btn-outline btn-sm">Back to Product</a>
-  <button onclick="window.print()" class="btn btn-outline btn-sm" style="margin-left:auto;display:flex;align-items:center;gap:0.4rem;">&#128438; Export PDF</button>
+  <button onclick="window.print()" class="btn btn-outline btn-sm" style="margin-left:auto;display:flex;align-items:center;gap:0.4rem;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    Export PDF
+  </button>
 </div>
+
+</div>{# /.rpt-col-main #}
+
+{# ── Right column: sticky label image ── #}
+<div class="rpt-col-label no-print">
+  <div class="rpt-label-panel">
+    <div class="rpt-label-panel-header">
+      <span class="rpt-label-panel-title">Label Preview</span>
+      {% if label.file_path %}
+      <button onclick="openLabelLightbox()" style="background:none;border:none;cursor:pointer;color:#737373;font-size:0.72rem;display:flex;align-items:center;gap:0.25rem;padding:0;" title="View full size">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        Expand
+      </button>
+      {% endif %}
+    </div>
+    <div class="rpt-label-panel-body">
+      {% if label.file_path %}
+        <img src="{{ _lsrc }}" alt="{{ product.name }} label" class="rpt-label-full"
+             onclick="openLabelLightbox()" title="Click to expand" />
+      {% else %}
+        <div style="padding:2rem;text-align:center;color:#A3A3A3;font-size:0.8rem;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" style="display:block;margin:0 auto 0.5rem;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          No label image
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+</div>{# /.rpt-layout #}
+
+{# ── Lightbox ── #}
+{% if label.file_path %}
+<div class="rpt-lightbox" id="rptLightbox" onclick="closeLabelLightbox()">
+  <button class="rpt-lightbox-close" onclick="closeLabelLightbox()" aria-label="Close">&times;</button>
+  <img src="{{ _lsrc }}" alt="{{ product.name }} label" onclick="event.stopPropagation()" />
+</div>
+<script>
+function openLabelLightbox() { document.getElementById('rptLightbox').classList.add('open'); document.body.style.overflow='hidden'; }
+function closeLabelLightbox() { document.getElementById('rptLightbox').classList.remove('open'); document.body.style.overflow=''; }
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeLabelLightbox(); });
+</script>
+{% endif %}
 
 {% endif %}
 {% endblock %}
