@@ -455,9 +455,9 @@
 
     {# Tab bar #}
     <div class="tab-bar">
-      <button class="tab-btn active" data-tab="tab-live-test">&#128302; Live Test</button>
-      <button class="tab-btn" data-tab="tab-llm-patterns">&#128218; Label LLM &amp; Patterns</button>
-      <button class="tab-btn" data-tab="tab-benchmark">&#127942; Benchmark</button>
+      <button class="tab-btn active" data-tab="tab-live-test"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M2 9h2M2 15h2M22 9h-2M22 15h-2M9 22v-2M15 22v-2"/></svg> Live Test</button>
+      <button class="tab-btn" data-tab="tab-llm-patterns"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> Label LLM &amp; Patterns</button>
+      <button class="tab-btn" data-tab="tab-benchmark"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg> Benchmark</button>
     </div>
 
     {# ── Tab 1: Live Test ── #}
@@ -563,7 +563,7 @@
         <div class="lex-card-title">Label LLM — Local Extraction Layer</div>
 
         <div class="llm-concept-card">
-          <h4>&#128202; How it works</h4>
+          <h4><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> How it works</h4>
           <div class="llm-how-it-works">
             <p>Every time an AI extraction succeeds with confidence &ge; 0.72, the field values + surrounding OCR text are stored as "patterns" in the database.</p>
             <p>On the next scan, these patterns are checked <strong>first</strong> (Step 1&frac12;). If a confident match is found, the AI step is skipped entirely &rarr; <strong>$0 cost</strong>.</p>
@@ -677,7 +677,7 @@
              ondragover="event.preventDefault();this.style.borderColor='#111111'"
              ondragleave="this.style.borderColor='#D4D4D4'"
              ondrop="event.preventDefault();this.style.borderColor='#D4D4D4';handleBmFile(event.dataTransfer.files[0])">
-          <div style="font-size:1.5rem;margin-bottom:0.5rem;">&#9889;</div>
+          <div style="display:flex;justify-content:center;margin-bottom:0.5rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
           <div style="font-size:0.88rem;font-weight:600;color:#525252;">Drop file here or click to browse</div>
           <div id="bmFileName" style="font-size:0.75rem;color:#111111;margin-top:0.4rem;"></div>
           <input type="file" id="bmFileInput" accept=".jpg,.jpeg,.png,.webp,.pdf" style="display:none" onchange="handleBmFile(this.files[0])">

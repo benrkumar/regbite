@@ -16,7 +16,7 @@
 <!-- Share link flash -->
 {% if just_shared and share_url %}
 <div style="background:#F5F5F5;border:1px solid #F5F5F5;border-radius:10px;padding:14px 18px;margin-bottom:1.2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-  <span style="font-size:1.1rem;">🔗</span>
+  <span style="display:inline-flex;align-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
   <div style="flex:1;min-width:200px;">
     <strong style="color:#262626;font-size:0.9rem;">Share link created!</strong>
     <div style="font-size:0.82rem;color:#525252;margin-top:3px;word-break:break-all;">{{ share_url }}</div>
@@ -89,7 +89,7 @@
 <!-- Certificate (if compliant) -->
 {% if score >= 90 %}
 <div style="background:linear-gradient(135deg,#F5F5F5,#F5F5F5);border:2px solid #262626;border-radius:14px;padding:24px;margin-bottom:1.4rem;text-align:center;">
-  <div style="font-size:2.2rem;margin-bottom:8px;">🏆</div>
+  <div style="display:flex;justify-content:center;margin-bottom:8px;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></div>
   <div style="font-size:1.15rem;font-weight:800;color:#262626;margin-bottom:6px;">COMPLIANCE CERTIFICATE</div>
   <div style="font-size:0.87rem;color:#262626;max-width:480px;margin:0 auto;">This product has achieved a compliance score of {{ score }}% and meets all critical FSSAI requirements.</div>
   <div style="margin-top:12px;font-size:0.78rem;color:#525252;">Certificate valid for 90 days from generation date · Subject to regulatory amendments</div>
@@ -99,7 +99,7 @@
 <!-- Share link display if exists -->
 {% if report.share_token and share_url %}
 <div style="background:#fff;border:1px solid #EBEBEB;border-radius:10px;padding:14px 18px;margin-bottom:1.2rem;">
-  <div style="font-size:0.82rem;font-weight:700;color:#525252;margin-bottom:6px;">🔗 Shareable Link</div>
+  <div style="font-size:0.82rem;font-weight:700;color:#525252;margin-bottom:6px;display:flex;align-items:center;gap:0.3rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Shareable Link</div>
   <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
     <code style="flex:1;font-size:0.8rem;background:#F5F5F5;padding:6px 10px;border-radius:6px;color:#525252;word-break:break-all;">{{ share_url }}</code>
     <button onclick="navigator.clipboard.writeText('{{ share_url }}').then(()=>{this.textContent='Copied!';setTimeout(()=>{this.textContent='Copy Link'},2000)})"

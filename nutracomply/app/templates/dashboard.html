@@ -12,7 +12,7 @@
 ">
   <div>
     <div style="font-size:1.1rem;font-weight:800;margin-bottom:0.2rem;">
-      🎉 Welcome to RegBite, {{ user.name.split()[0] }}!
+      Welcome to RegBite, {{ user.name.split()[0] }}!
     </div>
     <div style="font-size:0.875rem;opacity:0.9;">
       Your account is set up. Upload your first product label to run a compliance check.
@@ -78,7 +78,7 @@
 {# ── Alert toast ── #}
 {% if unread_alerts > 0 %}
 <div class="toast-alert" id="alert-toast">
-  <span style="font-size:1.2rem;">🔔</span>
+  <span style="display:inline-flex;align-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
   <div style="flex:1;min-width:0;">
     <div style="font-weight:700;font-size:0.83rem;color:#111111;">{{ unread_alerts }} Unread Alert{{ 's' if unread_alerts != 1 }}</div>
     <a href="/alerts" style="font-size:0.75rem;color:var(--danger);">View &amp; resolve →</a>
@@ -102,7 +102,7 @@
 {# ── Stat Strip ── #}
 <div class="stat-strip">
   <div class="stat-card">
-    <div class="stat-card-icon" style="background:#F0F0F0;">📦</div>
+    <div class="stat-card-icon" style="background:#F0F0F0;color:#525252;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
     <div class="stat-card-body">
       <div class="stat-card-val">{{ total_products }}</div>
       <div class="stat-card-lbl">Total Products</div>
@@ -110,7 +110,7 @@
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-card-icon" style="background:#F0F0F0;">✅</div>
+    <div class="stat-card-icon" style="background:#F0F0F0;color:#525252;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
     <div class="stat-card-body">
       <div class="stat-card-val" style="color:var(--success-fg);">{{ compliant_count }}</div>
       <div class="stat-card-lbl">Compliant</div>
@@ -118,7 +118,7 @@
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-card-icon" style="background:#EBEBEB;">🚩</div>
+    <div class="stat-card-icon" style="background:#EBEBEB;color:#525252;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></div>
     <div class="stat-card-body">
       <div class="stat-card-val" style="color:{% if flagged_count > 0 %}var(--danger-fg){% else %}var(--gray-400){% endif %};">{{ flagged_count }}</div>
       <div class="stat-card-lbl">Flagged</div>
@@ -127,7 +127,7 @@
   </div>
   {% if no_label_count > 0 %}
   <div class="stat-card">
-    <div class="stat-card-icon" style="background:var(--gray-100);">📎</div>
+    <div class="stat-card-icon" style="background:var(--gray-100);color:#525252;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></div>
     <div class="stat-card-body">
       <div class="stat-card-val" style="color:var(--gray-400);">{{ no_label_count }}</div>
       <div class="stat-card-lbl">No Label</div>
@@ -165,13 +165,13 @@
     <div class="filter-row">
       <button class="filter-btn active" onclick="filterCards('all',this)">All ({{ total_products }})</button>
       {% if flagged_count > 0 %}
-      <button class="filter-btn" onclick="filterCards('flagged',this)">🚩 Flagged ({{ flagged_count }})</button>
+      <button class="filter-btn" onclick="filterCards('flagged',this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg> Flagged ({{ flagged_count }})</button>
       {% endif %}
       {% if compliant_count > 0 %}
-      <button class="filter-btn" onclick="filterCards('compliant',this)">✅ Compliant ({{ compliant_count }})</button>
+      <button class="filter-btn" onclick="filterCards('compliant',this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Compliant ({{ compliant_count }})</button>
       {% endif %}
       {% if no_label_count > 0 %}
-      <button class="filter-btn" onclick="filterCards('no-label',this)">📎 No Label ({{ no_label_count }})</button>
+      <button class="filter-btn" onclick="filterCards('no-label',this)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg> No Label ({{ no_label_count }})</button>
       {% endif %}
     </div>
     {% endif %}
@@ -257,7 +257,7 @@
     <div id="no-filter-results" style="display:none;">
       <div class="card no-hover" style="padding:0;">
         <div class="empty-state">
-          <span class="empty-icon">🔍</span>
+          <span class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
           <h3>No products match this filter</h3>
           <p><button onclick="filterCards('all', document.querySelector('.filter-btn'))"
                style="background:none;border:none;color:var(--green-600);cursor:pointer;font-size:inherit;padding:0;font-weight:600;">Show all products</button></p>
@@ -268,7 +268,7 @@
     {% else %}
     <div class="card no-hover" style="padding:0;">
       <div class="empty-state">
-        <span class="empty-icon">📋</span>
+        <span class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></span>
         <h3>No products yet</h3>
         <p style="margin-bottom:1.2rem;">Add your first product SKU to start checking FSSAI compliance.</p>
         <div style="display:flex;gap:0.55rem;justify-content:center;flex-wrap:wrap;">
@@ -290,9 +290,9 @@
       <div class="profile-name">{{ user.name }}</div>
       <div class="profile-handle">@{{ user.email }}</div>
       <div class="profile-actions">
-        <a href="/settings" class="profile-action-btn" title="Settings">⚙️</a>
-        <a href="/alerts"   class="profile-action-btn" title="Alerts">🔔</a>
-        <a href="/logout"   class="profile-action-btn" title="Sign out">🚪</a>
+        <a href="/settings" class="profile-action-btn" title="Settings" style="display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+        <a href="/alerts"   class="profile-action-btn" title="Alerts" style="display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
+        <a href="/logout"   class="profile-action-btn" title="Sign out" style="display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></a>
       </div>
     </div>
 
@@ -301,7 +301,7 @@
       <div class="activity-header">Recent Activity</div>
       {% if unread_alerts > 0 %}
       <div class="activity-item">
-        <div class="activity-avatar" style="background:#EBEBEB;color:#111111;">🔔</div>
+        <div class="activity-avatar" style="background:#EBEBEB;color:#111111;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
         <div class="activity-text">
           <div class="activity-name">{{ unread_alerts }} unread alert{{ 's' if unread_alerts != 1 }}</div>
           <div class="activity-desc">Compliance notifications pending</div>
@@ -311,7 +311,7 @@
       {% endif %}
       {% if flagged_count > 0 %}
       <div class="activity-item">
-        <div class="activity-avatar" style="background:#EBEBEB;color:#111111;">🚩</div>
+        <div class="activity-avatar" style="background:#EBEBEB;color:#111111;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></div>
         <div class="activity-text">
           <div class="activity-name">{{ flagged_count }} product{{ 's' if flagged_count != 1 }} flagged</div>
           <div class="activity-desc">Compliance violations detected</div>
@@ -321,7 +321,7 @@
       {% endif %}
       {% if compliant_count > 0 %}
       <div class="activity-item">
-        <div class="activity-avatar" style="background:var(--success-bg);color:var(--success-fg);">✅</div>
+        <div class="activity-avatar" style="background:var(--success-bg);color:var(--success-fg);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
         <div class="activity-text">
           <div class="activity-name">{{ compliant_count }} product{{ 's' if compliant_count != 1 }} compliant</div>
           <div class="activity-desc">Score ≥ 80% — no action needed</div>
@@ -330,7 +330,7 @@
       {% endif %}
       {% if unread_alerts == 0 and flagged_count == 0 %}
       <div style="text-align:center;padding:1rem 0;font-size:0.82rem;color:var(--gray-400);">
-        🎉 All clear — no issues found
+        ✓ All clear — no issues found
       </div>
       {% endif %}
     </div>
@@ -348,7 +348,7 @@
         <div class="activity-avatar"
              style="background:{% if days < 0 %}#EBEBEB{% elif days <= 30 %}#F5F5F5{% elif days <= 60 %}#F5F5F5{% else %}#F5F5F5{% endif %};
                     color:{% if days < 0 %}#111111{% elif days <= 30 %}#525252{% elif days <= 60 %}#525252{% else %}#262626{% endif %};">
-          🗓️
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         </div>
         <div class="activity-text">
           <div class="activity-name" style="font-size:0.8rem;">{{ lic.license_name[:35] }}{% if lic.license_name|length > 35 %}…{% endif %}</div>
@@ -400,7 +400,7 @@
         <div class="activity-avatar"
              style="background:{% if sev == 'Urgent' %}#EBEBEB{% elif sev == 'Important' %}#F5F5F5{% else %}#F0F0F0{% endif %};
                     color:{% if sev == 'Urgent' %}#111111{% elif sev == 'Important' %}#525252{% else %}#404040{% endif %};">
-          📢
+          
         </div>
         <div class="activity-text">
           <div class="activity-name" style="font-size:0.8rem;">{{ ra.title[:40] }}{% if ra.title|length > 40 %}…{% endif %}</div>
@@ -419,27 +419,27 @@
     <div class="card no-hover">
       <div class="activity-header">Quick Links</div>
       <a href="/regulations" class="quick-link">
-        <span class="quick-link-icon">📋</span> Regulation Feed
+        <span class="quick-link-icon" style="display:inline-flex;align-items:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></span> Regulation Feed
         <span style="margin-left:auto;font-size:0.75rem;color:var(--gray-400);">→</span>
       </a>
       <a href="/reg-alerts" class="quick-link">
-        <span class="quick-link-icon">📢</span> Reg. Alerts
+        <span class="quick-link-icon" style="display:inline-flex;align-items:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span> Reg. Alerts
         <span style="margin-left:auto;font-size:0.75rem;color:var(--gray-400);">→</span>
       </a>
       <a href="/renewals" class="quick-link">
-        <span class="quick-link-icon">🗓️</span> License Renewals
+        <span class="quick-link-icon" style="display:inline-flex;align-items:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> License Renewals
         <span style="margin-left:auto;font-size:0.75rem;color:var(--gray-400);">→</span>
       </a>
       <a href="/products" class="quick-link">
-        <span class="quick-link-icon">📦</span> Manage Products
+        <span class="quick-link-icon" style="display:inline-flex;align-items:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span> Manage Products
         <span style="margin-left:auto;font-size:0.75rem;color:var(--gray-400);">→</span>
       </a>
       <a href="/products/bulk-upload" class="quick-link">
-        <span class="quick-link-icon">⬆️</span> Bulk Upload CSV
+        <span class="quick-link-icon" style="display:inline-flex;align-items:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span> Bulk Upload CSV
         <span style="margin-left:auto;font-size:0.75rem;color:var(--gray-400);">→</span>
       </a>
       <a href="/settings" class="quick-link">
-        <span class="quick-link-icon">🔔</span> Notification Settings
+        <span class="quick-link-icon" style="display:inline-flex;align-items:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> Notification Settings
         <span style="margin-left:auto;font-size:0.75rem;color:var(--gray-400);">→</span>
       </a>
     </div>

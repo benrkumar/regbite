@@ -320,7 +320,7 @@
                ondragover="event.preventDefault();this.classList.add('dragover')"
                ondragleave="this.classList.remove('dragover')"
                ondrop="event.preventDefault();this.classList.remove('dragover');handleCheckerDrop(event)">
-            <div class="hc-upload-icon">&#128196;</div>
+            <div class="hc-upload-icon" style="display:flex;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
             <div class="hc-upload-text">Drag &amp; drop your label here or <strong onclick="document.getElementById('hc-file-input').click()">browse files</strong></div>
             <div class="hc-upload-hint">Supports JPG, PNG, PDF, TIFF, WebP — max 50 MB</div>
             <input type="file" name="file" id="hc-file-input" accept=".jpg,.jpeg,.png,.pdf,.tiff,.tif,.webp" style="display:none" onchange="handleCheckerFile(this)" />

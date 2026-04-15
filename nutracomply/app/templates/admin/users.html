@@ -185,7 +185,7 @@
     </div>
     <div class="um-email">{{ u.email }}</div>
     {% if u.company_name %}
-    <span class="um-company-tag">🏢 {{ u.company_name }}</span>
+    <span class="um-company-tag" style="display:inline-flex;align-items:center;gap:0.25rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg> {{ u.company_name }}</span>
     {% endif %}
     <div style="font-size:0.68rem;color:#A3A3A3;margin-top:0.15rem;">
       Joined {{ u.created_at.strftime('%d %b %Y') }}
@@ -249,13 +249,13 @@
 
 {# Dynamic empty state for search — hidden by default, shown via JS when no results #}
 <div id="umNoResults" style="display:none;text-align:center;padding:3rem;color:#A3A3A3;">
-  <div style="font-size:2rem;margin-bottom:0.5rem;">🔍</div>
+  <div style="display:flex;justify-content:center;margin-bottom:0.5rem;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
   <div style="font-size:0.9rem;color:#737373;">No users match your search</div>
 </div>
 
 {% if not user_stats %}
 <div style="text-align:center;padding:3rem;color:#A3A3A3;">
-  <div style="font-size:2rem;margin-bottom:0.5rem;">👤</div>
+  <div style="display:flex;justify-content:center;margin-bottom:0.5rem;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
   No users found
 </div>
 {% endif %}

@@ -170,16 +170,16 @@
       <h4 style="margin:0 0 14px;font-size:0.9rem;font-weight:700;color:#262626;">What gets checked</h4>
       <ul style="list-style:none;margin:0;padding:0;">
         {% set check_items = [
-          ('📋', 'FSSAI license number validity'),
-          ('🏷️', 'Mandatory label declarations'),
-          ('⚖️', 'Net quantity requirements'),
-          ('🧪', 'Ingredient restrictions'),
-          ('📊', 'Nutritional table presence'),
-          ('💯', '%RDA declarations'),
-          ('📅', 'Expiry & manufacturing dates'),
-          ('🔢', 'Batch number presence'),
-          ('⚠️', 'Health claims compliance'),
-          ('🛡️', 'Prohibited claim detection')
+          ('', 'FSSAI license number validity'),
+          ('', 'Mandatory label declarations'),
+          ('', 'Net quantity requirements'),
+          ('', 'Ingredient restrictions'),
+          ('', 'Nutritional table presence'),
+          ('', '%RDA declarations'),
+          ('', 'Expiry & manufacturing dates'),
+          ('', 'Batch number presence'),
+          ('', 'Health claims compliance'),
+          ('', 'Prohibited claim detection')
         ] %}
         {% for icon, label in check_items %}
         <li style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #F5F5F5;font-size:0.85rem;color:#262626;">
@@ -191,7 +191,7 @@
     </div>
 
     <div style="background:#F8F8F8;border:1px solid #EBEBEB;border-radius:8px;padding:16px;">
-      <div style="font-size:0.85rem;font-weight:700;color:#262626;margin-bottom:6px;">💡 Pro tip</div>
+      <div style="font-size:0.85rem;font-weight:700;color:#262626;margin-bottom:6px;">Pro tip</div>
       <p style="font-size:0.82rem;color:#262626;margin:0;line-height:1.6;">
         You can also upload an actual label image from a product page for OCR-based extraction and a more thorough analysis.
       </p>

@@ -8,35 +8,35 @@
 <div class="adm-stat-grid">
   <div class="adm-stat">
     <div class="adm-stat-val">{{ stats.total_users }}</div>
-    <div class="adm-stat-lbl">&#x1F465; Total Users</div>
+    <div class="adm-stat-lbl">Total Users</div>
   </div>
   <div class="adm-stat">
     <div class="adm-stat-val" style="color:#262626;">{{ stats.active_users }}</div>
-    <div class="adm-stat-lbl">&#x2705; Active Users</div>
+    <div class="adm-stat-lbl">Active Users</div>
   </div>
   <div class="adm-stat">
     <div class="adm-stat-val">{{ stats.total_products }}</div>
-    <div class="adm-stat-lbl">&#x1F4E6; Products</div>
+    <div class="adm-stat-lbl">Products</div>
   </div>
   <div class="adm-stat">
     <div class="adm-stat-val">{{ stats.total_labels }}</div>
-    <div class="adm-stat-lbl">&#x1F3F7; Labels Analysed</div>
+    <div class="adm-stat-lbl">Labels Analysed</div>
   </div>
   <div class="adm-stat">
     <div class="adm-stat-val" style="color:{% if stats.compliance_rate >= 80 %}#262626{% elif stats.compliance_rate >= 50 %}#525252{% else %}#111111{% endif %};">{{ stats.compliance_rate }}%</div>
-    <div class="adm-stat-lbl">&#x1F4C8; Compliance Rate</div>
+    <div class="adm-stat-lbl">Compliance Rate</div>
   </div>
   <div class="adm-stat" style="border-color:{% if stats.unread_alerts > 0 %}#D4D4D4{% else %}#EBEBEB{% endif %};">
     <div class="adm-stat-val" style="color:{% if stats.unread_alerts > 0 %}#111111{% else %}#111111{% endif %};">{{ stats.unread_alerts }}</div>
-    <div class="adm-stat-lbl">&#x1F514; Unread Alerts</div>
+    <div class="adm-stat-lbl">Unread Alerts</div>
   </div>
   <div class="adm-stat">
     <div class="adm-stat-val">{{ stats.total_rules }}</div>
-    <div class="adm-stat-lbl">&#x1F4CB; Active Rules</div>
+    <div class="adm-stat-lbl">Active Rules</div>
   </div>
   <div class="adm-stat">
     <div class="adm-stat-val">{{ stats.total_reg_changes }}</div>
-    <div class="adm-stat-lbl">&#x1F4DC; Reg. Updates</div>
+    <div class="adm-stat-lbl">Reg. Updates</div>
   </div>
 </div>
 
@@ -133,15 +133,15 @@
   <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
     <form method="post" action="/admin/trigger-scrape" style="margin:0;">
       <button type="submit" class="adm-btn adm-btn-primary"
-              onclick="this.disabled=true;this.textContent='Running…';this.closest('form').submit();">&#x21BB; Run Regulation Scrape Now</button>
+              onclick="this.disabled=true;this.textContent='Running…';this.closest('form').submit();"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Run Regulation Scrape Now</button>
     </form>
     <form method="post" action="/admin/trigger-recheck" style="margin:0;">
       <button type="submit" class="adm-btn adm-btn-success"
-              onclick="this.disabled=true;this.textContent='Starting…';this.closest('form').submit();">&#x1F504; Re-check All Labels</button>
+              onclick="this.disabled=true;this.textContent='Starting…';this.closest('form').submit();"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Re-check All Labels</button>
     </form>
-    <a href="/admin/users" class="adm-btn">&#x1F465; Manage Users</a>
-    <a href="/admin/rules" class="adm-btn">&#x1F4CB; View Compliance Rules</a>
-    <a href="/admin/system" class="adm-btn">&#x2699; System Info</a>
+    <a href="/admin/users" class="adm-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Manage Users</a>
+    <a href="/admin/rules" class="adm-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> View Compliance Rules</a>
+    <a href="/admin/system" class="adm-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> System Info</a>
   </div>
 </div>
 
@@ -151,31 +151,31 @@
   <div class="adm-stat-grid">
     <div class="adm-stat">
       <div class="adm-stat-val">{{ stats.total_users }}</div>
-      <div class="adm-stat-lbl">&#x1F465; Total Users</div>
+      <div class="adm-stat-lbl">Total Users</div>
     </div>
     <div class="adm-stat">
       <div class="adm-stat-val" style="color:#262626;">{{ stats.active_users }}</div>
-      <div class="adm-stat-lbl">&#x2705; Active Users</div>
+      <div class="adm-stat-lbl">Active Users</div>
     </div>
     <div class="adm-stat">
       <div class="adm-stat-val" style="color:#525252;">{{ stats.growth_users }}</div>
-      <div class="adm-stat-lbl">&#x1F680; Growth Plan</div>
+      <div class="adm-stat-lbl">Growth Plan</div>
     </div>
     <div class="adm-stat">
       <div class="adm-stat-val">{{ stats.total_products }}</div>
-      <div class="adm-stat-lbl">&#x1F4E6; Total Products</div>
+      <div class="adm-stat-lbl">Total Products</div>
     </div>
     <div class="adm-stat">
       <div class="adm-stat-val">{{ stats.total_scans }}</div>
-      <div class="adm-stat-lbl">&#x1F3F7; Total Scans</div>
+      <div class="adm-stat-lbl">Total Scans</div>
     </div>
     <div class="adm-stat">
       <div class="adm-stat-val">{{ stats.total_reports }}</div>
-      <div class="adm-stat-lbl">&#x1F4C4; Total Reports</div>
+      <div class="adm-stat-lbl">Total Reports</div>
     </div>
     <div class="adm-stat" style="border-color:#F5F5F5;">
       <div class="adm-stat-val" style="color:#262626;">&#x20B9;{{ '{:,}'.format(stats.revenue_estimate) }}</div>
-      <div class="adm-stat-lbl">&#x1F4B0; Revenue Est./mo</div>
+      <div class="adm-stat-lbl">Revenue Est./mo</div>
     </div>
   </div>
 </div>

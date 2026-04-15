@@ -50,7 +50,7 @@
 
 <div class="page-hdr">
   <div>
-    <h2>&#x1F514; Notifications</h2>
+    <h2 style="display:flex;align-items:center;gap:0.45rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Notifications</h2>
     <p>{{ notifications | length }} notification{{ 's' if notifications | length != 1 }} total &mdash; all marked as read on this visit</p>
   </div>
   {% if notifications %}
@@ -72,8 +72,8 @@
     <div class="notif-icon">
       {% if ntype == 'success' %}&#x2705;
       {% elif ntype == 'warning' %}&#x26A0;&#xFE0F;
-      {% elif ntype == 'alert' %}&#x1F534;
-      {% else %}&#x1F535;
+      {% elif ntype == 'alert' %}<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#111111;"></span>
+      {% else %}<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D4D4D4;"></span>
       {% endif %}
     </div>
     <div class="notif-body">
@@ -97,7 +97,7 @@
 {% else %}
 <div class="card no-hover" style="padding:0;">
   <div class="empty-state">
-    <span class="empty-icon">&#x1F514;</span>
+    <span class="empty-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
     <h3>All caught up!</h3>
     <p>No notifications yet. We'll notify you here when important things happen.</p>
     <a href="/dashboard" class="btn btn-primary">Back to Dashboard</a>
