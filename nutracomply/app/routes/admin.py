@@ -164,6 +164,8 @@ async def toggle_user_admin(user_id: int, request: Request, db: Session = Depend
     target = db.query(User).filter(User.id == user_id).first()
     if target and target.id != user.id:
         target.is_admin = not target.is_admin
+        # Keep role in sync with is_admin flag
+        target.role = UserRole.SUPER_ADMIN if target.is_admin else UserRole.ACCOUNT_ADMIN
         db.commit()
         action = "granted" if target.is_admin else "revoked"
         return RedirectResponse(
@@ -241,9 +243,8 @@ async def change_user_role(
         return RedirectResponse(url="/admin/users?msg=Invalid+role&type=error", status_code=302)
 
     target.role = new_role
-    # Super admin role automatically gets admin flag
-    if new_role == UserRole.SUPER_ADMIN:
-        target.is_admin = True
+    # Always keep is_admin in sync with role — single source of truth
+    target.is_admin = (new_role == UserRole.SUPER_ADMIN)
     db.commit()
 
     role_label = new_role.value.replace("_", " ").title()
@@ -699,6 +700,8 @@ async def admin_toggle_admin(user_id: int, request: Request, db: Session = Depen
     target = db.query(User).filter(User.id == user_id).first()
     if target and target.id != user.id:  # can't demote yourself
         target.is_admin = not target.is_admin
+        # Keep role in sync with is_admin flag
+        target.role = UserRole.SUPER_ADMIN if target.is_admin else UserRole.ACCOUNT_ADMIN
         db.commit()
     return RedirectResponse(url=f"/admin/users/{user_id}?msg=Updated&type=success", status_code=302)
 

@@ -17,6 +17,48 @@ router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
 
 
+def _provision_subscription(user, plan: str, order_id: str, payment_id: str, db: Session) -> Subscription:
+    """Idempotently create/update a user's subscription and sync user.plan.
+
+    Safe to call from both the browser-callback verify endpoint AND the
+    Razorpay webhook so that payment capture always results in active access
+    regardless of which path fires first.
+    """
+    sub = db.query(Subscription).filter(Subscription.user_id == user.id).first()
+    now = datetime.utcnow()
+    if not sub:
+        sub = Subscription(user_id=user.id)
+        db.add(sub)
+    # Only update if not already ACTIVE for this exact order (idempotency guard)
+    if sub.status != SubscriptionStatus.ACTIVE or sub.razorpay_order_id != order_id:
+        sub.plan = PlanType(plan)
+        sub.status = SubscriptionStatus.ACTIVE
+        sub.razorpay_order_id = order_id
+        sub.razorpay_payment_id = payment_id
+        sub.current_period_start = now
+        sub.current_period_end = now + timedelta(days=30)
+        sub.cancelled_at = None
+        user.plan = PlanType(plan)
+        db.commit()
+
+        try:
+            from app.services.activity_service import log_action
+            log_action(user.id, "subscription_upgraded", "subscription", sub.id,
+                       detail=f"Upgraded to {plan}")
+        except Exception:
+            pass
+
+        try:
+            from app.services.notify_service import push
+            push(user.id, "Subscription activated!",
+                 "You're now on the Growth plan. Enjoy unlimited access.",
+                 ntype="success", link="/billing")
+        except Exception:
+            pass
+
+    return sub
+
+
 @router.get("/billing")
 async def billing_page(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
@@ -120,38 +162,10 @@ async def verify_payment(request: Request, db: Session = Depends(get_db)):
     if record:
         record.razorpay_payment_id = payment_id
         record.status = "paid"
+        db.commit()
 
-    # Create or update subscription
-    sub = db.query(Subscription).filter(Subscription.user_id == user.id).first()
-    now = datetime.utcnow()
-    if not sub:
-        sub = Subscription(user_id=user.id)
-        db.add(sub)
-    sub.plan = PlanType(plan)
-    sub.status = SubscriptionStatus.ACTIVE
-    sub.razorpay_order_id = order_id
-    sub.razorpay_payment_id = payment_id
-    sub.current_period_start = now
-    sub.current_period_end = now + timedelta(days=30)
-
-    # Update denormalized plan on user
-    user.plan = PlanType(plan)
-
-    db.commit()
-
-    try:
-        from app.services.activity_service import log_action
-        log_action(user.id, "subscription_upgraded", "subscription", sub.id, detail=f"Upgraded to {plan}")
-    except Exception:
-        pass
-
-    try:
-        from app.services.notify_service import push
-        push(user.id, "Subscription activated!",
-             "You're now on the Growth plan. Enjoy unlimited access.",
-             ntype="success", link="/billing")
-    except Exception:
-        pass
+    # Provision / activate subscription (idempotent)
+    sub = _provision_subscription(user, plan, order_id, payment_id, db)
 
     # Send payment confirmation email
     try:
@@ -183,7 +197,9 @@ async def cancel_subscription(request: Request, db: Session = Depends(get_db)):
         sub.status = SubscriptionStatus.CANCELLED
         sub.cancelled_at = datetime.utcnow()
         access_until = sub.current_period_end.strftime("%d %b %Y") if sub.current_period_end else "end of billing period"
-        user.plan = PlanType.FREE
+        # Do NOT touch user.plan here — the user retains paid access until
+        # current_period_end. quota_service.get_user_plan() checks the
+        # subscription period and enforces the downgrade lazily at that point.
         db.commit()
 
         try:
@@ -220,10 +236,20 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
                 record = db.query(PaymentRecord).filter(
                     PaymentRecord.razorpay_order_id == order_id
                 ).first()
-                if record and record.status != "paid":
-                    record.razorpay_payment_id = payment_id
-                    record.status = "paid"
-                    db.commit()
+                if record:
+                    # Mark payment as paid
+                    if record.status != "paid":
+                        record.razorpay_payment_id = payment_id
+                        record.status = "paid"
+                        db.commit()
+
+                    # Provision subscription — handles the case where the
+                    # browser callback never fired after payment capture
+                    from app.models import User as _User
+                    payer = db.query(_User).filter(_User.id == record.user_id).first()
+                    if payer:
+                        plan_str = record.plan.value if hasattr(record.plan, 'value') else str(record.plan)
+                        _provision_subscription(payer, plan_str, order_id, payment_id or "", db)
 
         return JSONResponse({"status": "ok"})
     except Exception as e:

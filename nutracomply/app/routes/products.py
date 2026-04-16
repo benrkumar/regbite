@@ -259,6 +259,12 @@ def _feed_product_to_llm(product_id: int, db):
 async def _handle_spreadsheet_upload(request: Request, user, file: UploadFile, suffix: str, db: Session):
     """Parse CSV or Excel file as bulk product import."""
     from urllib.parse import quote
+    from app.services.quota_service import check_product_limit, get_product_headroom
+
+    # Quota gate — check before any work
+    allowed, quota_msg = check_product_limit(user, db)
+    if not allowed:
+        return RedirectResponse(url=f"/products?msg={quote(quota_msg)}&type=error", status_code=302)
 
     content_bytes = await file.read()
     rows = []
@@ -294,6 +300,13 @@ async def _handle_spreadsheet_upload(request: Request, user, file: UploadFile, s
         msg = "No data rows found in file. Ensure headers include: name, sku, category, description"
         return RedirectResponse(url=f"/products?msg={quote(msg)}&type=error", status_code=302)
 
+    # Cap rows to remaining quota headroom
+    headroom = get_product_headroom(user, db)
+    truncated = False
+    if headroom is not None and len(rows) > headroom:
+        truncated = True
+        rows = rows[:headroom]
+
     VALID_CATS = {
         "health supplement", "nutraceutical", "functional food",
         "food for special dietary use", "novel food", "ayurvedic / asu",
@@ -325,7 +338,10 @@ async def _handle_spreadsheet_upload(request: Request, user, file: UploadFile, s
 
     db.commit()
     msg = f"Imported {added} product(s) from {file.filename}"
-    return RedirectResponse(url=f"/products?msg={quote(msg)}&type=success", status_code=302)
+    if truncated:
+        msg += " — some rows were skipped because you've reached your plan's product limit. Upgrade to import more."
+    msg_type = "success" if added > 0 else "info"
+    return RedirectResponse(url=f"/products?msg={quote(msg)}&type={msg_type}", status_code=302)
 
 
 @router.get("/products/bulk-upload")
@@ -355,12 +371,25 @@ async def bulk_upload_post(
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
+    # Quota gate
+    from app.services.quota_service import check_product_limit, get_product_headroom
+    from urllib.parse import quote as _quote
+    allowed, quota_msg = check_product_limit(user, db)
+    if not allowed:
+        return RedirectResponse(url=f"/products?msg={_quote(quota_msg)}&type=error", status_code=302)
+
     lines = [l.strip() for l in csv_data.strip().splitlines() if l.strip()]
     added, skipped, errors = [], [], []
 
     # Skip header if present
     if lines and lines[0].lower().startswith("name"):
         lines = lines[1:]
+
+    # Cap to remaining quota headroom
+    headroom = get_product_headroom(user, db)
+    if headroom is not None and len(lines) > headroom:
+        errors.append(f"Import capped at {headroom} row(s) — plan limit reached. Upgrade to import more.")
+        lines = lines[:headroom]
 
     VALID_CATS = {
         "health supplement", "nutraceutical", "functional food",
@@ -418,7 +447,23 @@ async def bulk_upload_files(
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
+    # Quota gate
+    from app.services.quota_service import check_product_limit, get_product_headroom
+    from urllib.parse import quote as _quote
+    allowed, quota_msg = check_product_limit(user, db)
+    if not allowed:
+        return RedirectResponse(url=f"/products?msg={_quote(quota_msg)}&type=error", status_code=302)
+
+    # Cap file list to remaining headroom
+    headroom = get_product_headroom(user, db)
+    cap_warning = None
+    if headroom is not None and len(files) > headroom:
+        cap_warning = f"Upload capped at {headroom} file(s) — plan limit reached. Upgrade to upload more."
+        files = files[:headroom]
+
     added, skipped, errors = [], [], []
+    if cap_warning:
+        errors.append(cap_warning)
 
     for f in files:
         if not f.filename:

@@ -236,9 +236,18 @@ async def create_api_key(request: Request, db: Session = Depends(get_db)):
     except Exception:
         pass
 
-    # Pass the raw key in the redirect query param (shown once only)
-    from urllib.parse import quote
-    return RedirectResponse(url=f"/settings/api-keys?new_key={quote(raw_key)}&msg=API+key+created+successfully&type=success", status_code=302)
+    # Return the template directly — NEVER put the raw secret in the URL
+    keys = db.query(APIKey).filter(APIKey.user_id == user.id, APIKey.is_active == True).order_by(APIKey.created_at.desc()).all()
+    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    return templates.TemplateResponse("api_keys.html", {
+        "request": request,
+        "user": user,
+        "keys": keys,
+        "new_key": raw_key,  # shown once in the one-time banner, never in the URL
+        "unread_alerts": unread_alerts,
+        "flash_message": "API key created — copy it now, it won't be shown again.",
+        "flash_type": "success",
+    })
 
 
 @router.post("/settings/api-keys/{key_id}/revoke")
