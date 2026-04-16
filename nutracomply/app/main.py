@@ -44,11 +44,12 @@ def _run_all_startup_tasks():
     step never prevents the remaining steps from running.
     """
     tasks = [
-        (_create_tables,     "create_tables"),
-        (_run_migrations,    "migrations"),
-        (_promote_admin,     "promote_admin"),
-        (_seed_initial_data, "seed_initial_data"),
-        (_seed_demo_users,   "seed_demo_users"),
+        (_create_tables,           "create_tables"),
+        (_run_migrations,          "migrations"),
+        (_promote_admin,           "promote_admin"),
+        (_seed_initial_data,       "seed_initial_data"),
+        (_seed_demo_users,         "seed_demo_users"),
+        (_auto_seed_kb_if_empty,   "auto_seed_kb"),
     ]
     for fn, name in tasks:
         try:
@@ -608,6 +609,37 @@ def _seed_demo_users():
                 db.close()
             except Exception:
                 pass
+
+
+def _auto_seed_kb_if_empty():
+    """
+    On every startup: if the Regulations KB has zero documents, auto-seed
+    from DB (compliance rules + ingredients + regulation changes).
+
+    This handles the 'clear KB → redeploy → fresh' workflow automatically
+    so admins don't have to click 'Auto-Seed from DB' manually.
+
+    Safe to run repeatedly — seed_regulations_kb is fully additive
+    (skips sources that already exist).
+    """
+    from app.models import KBDocument, KBType
+    from app.services.llm_service import seed_regulations_kb
+    db = SessionLocal()
+    try:
+        count = db.query(KBDocument).filter(
+            KBDocument.kb_type == KBType.REGULATIONS,
+            KBDocument.is_active,
+        ).count()
+        if count == 0:
+            result = seed_regulations_kb(db)
+            seeded = result.get("document_count", 0)
+            log.info("[startup] Regulations KB was empty — auto-seeded %d documents", seeded)
+        else:
+            log.info("[startup] Regulations KB already has %d documents — skipping auto-seed", count)
+    except Exception as exc:
+        log.error("[startup] auto_seed_kb error: %s", exc)
+    finally:
+        db.close()
 
 
 app = FastAPI(title="RegBite", lifespan=lifespan)
