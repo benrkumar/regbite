@@ -164,6 +164,9 @@ class Product(Base):
     category = Column(String(100))
     description = Column(Text)
     is_active = Column(Boolean, default=True)
+    # Ephemeral quick-check products: excluded from quota counts, product list,
+    # and LLM KB seeding. Set to True for all /checker flow products.
+    is_quick_check = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -53,6 +53,7 @@ def get_product_headroom(user, db) -> int | None:
     current_count = db.query(Product).filter(
         Product.user_id == user.id,
         Product.is_active == True,
+        Product.is_quick_check == False,  # ephemeral checker products don't count
     ).count()
     return max(0, max_products - current_count)
 
@@ -77,7 +78,8 @@ def check_product_limit(user, db) -> tuple:
     from app.models import Product
     current_count = db.query(Product).filter(
         Product.user_id == user.id,
-        Product.is_active == True
+        Product.is_active == True,
+        Product.is_quick_check == False,  # ephemeral checker products don't count
     ).count()
 
     if current_count >= max_products:

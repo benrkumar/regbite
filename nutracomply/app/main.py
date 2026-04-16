@@ -301,6 +301,8 @@ def _run_migrations():
         "CREATE INDEX IF NOT EXISTS ix_api_call_logs_created_at ON api_call_logs (created_at)",
         # v16: Store file bytes in DB so previews survive Railway container resets
         "ALTER TABLE label_versions ADD COLUMN IF NOT EXISTS file_data BYTEA",
+        # v17: Quick-check flag — ephemeral /checker products excluded from catalog, quotas, KB
+        "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_quick_check BOOLEAN NOT NULL DEFAULT FALSE",
     ]
     for sql in migrations:
         try:

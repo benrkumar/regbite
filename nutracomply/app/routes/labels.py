@@ -134,20 +134,9 @@ async def upload_label(
             "error": "File too large. Maximum size is 50 MB."
         })
 
-    # Validate MIME type via file magic bytes
-    MAGIC_SIGNATURES = {
-        b"\xff\xd8\xff": ".jpg",       # JPEG
-        b"\x89PNG\r\n\x1a\n": ".png",  # PNG
-        b"%PDF": ".pdf",               # PDF
-        b"II\x2a\x00": ".tiff",        # TIFF (little-endian)
-        b"MM\x00\x2a": ".tiff",        # TIFF (big-endian)
-        b"RIFF": ".webp",              # WebP (inside RIFF container)
-    }
-    detected_ext = None
-    for sig, ext in MAGIC_SIGNATURES.items():
-        if content[:len(sig)] == sig:
-            detected_ext = ext
-            break
+    # Validate MIME type via file magic bytes (shared utility)
+    from app.utils.file_validation import validate_file_magic
+    detected_ext = validate_file_magic(content)
     if detected_ext is None:
         return templates.TemplateResponse("label_upload.html", {
             "request": request,

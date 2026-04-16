@@ -140,11 +140,13 @@ async def run_check(
     }
 
     # Create Product + LabelVersion + run compliance
+    # is_quick_check=True keeps this out of the product catalog, quota counts, and KB
     product = Product(
         user_id=user.id,
         name=product_name,
         category=category,
         description=f"Checked via Compliance Checker on {datetime.utcnow().strftime('%d %b %Y')}",
+        is_quick_check=True,
     )
     db.add(product)
     db.flush()
@@ -234,7 +236,7 @@ async def upload_check(
     except Exception:
         pass
 
-    # Validate file
+    # Validate file extension
     suffix = Path(file.filename).suffix.lower()
     if suffix not in ALLOWED_EXTENSIONS:
         return RedirectResponse(url="/?error=Unsupported+file+type", status_code=302)
@@ -242,6 +244,16 @@ async def upload_check(
     content = await file.read()
     if len(content) > 50 * 1024 * 1024:
         return RedirectResponse(url="/?error=File+too+large", status_code=302)
+
+    # Validate file magic bytes (prevents disguised file uploads)
+    from app.utils.file_validation import validate_file_magic
+    detected_ext = validate_file_magic(content)
+    if detected_ext is None:
+        from urllib.parse import quote
+        return RedirectResponse(
+            url=f"/checker?msg={quote('File type not recognised. Please upload a valid image or PDF.')}&type=error",
+            status_code=302,
+        )
 
     # Save file
     settings = get_settings()
@@ -253,12 +265,13 @@ async def upload_check(
     with open(file_path, "wb") as f:
         f.write(content)
 
-    # Create product + label version
+    # Create product + label version (is_quick_check=True keeps it ephemeral)
     product = Product(
         user_id=user.id,
         name=file.filename.rsplit(".", 1)[0][:80] or "Uploaded Label",
         category=category,
         description=f"Label uploaded via Quick Check on {datetime.utcnow().strftime('%d %b %Y')}",
+        is_quick_check=True,
     )
     db.add(product)
     db.flush()

@@ -167,12 +167,21 @@ async def create_share_link(report_id: int, request: Request, db: Session = Depe
     # Send report shared notification email
     try:
         from app.services.notification import send_report_shared_email
-        from app.models import Product, LabelVersion
-        label = db.query(LabelVersion).filter(LabelVersion.id == report.label_version_id).first() if report.label_version_id else None
-        product = db.query(Product).filter(Product.id == label.product_id).first() if label else None
+        import logging as _logging
+        _log = _logging.getLogger(__name__)
+        from app.models import Product as _Product, LabelVersion as _LV
+        label = db.query(_LV).filter(_LV.id == report.label_version_id).first() if report.label_version_id else None
+        product = db.query(_Product).filter(_Product.id == label.product_id).first() if label else None
         share_url = f"{str(request.base_url).rstrip('/')}/r/{token}"
-        send_report_shared_email(user, product, share_url)
-    except Exception:
-        pass
+        expires_str = report.expires_at.strftime("%d %b %Y") if report.expires_at else "30 days"
+        send_report_shared_email(
+            user,
+            product.name if product else "Unknown Product",
+            share_url,
+            expires_str,
+        )
+    except Exception as e:
+        import logging as _logging
+        _logging.getLogger(__name__).warning("share email failed: %s", e)
 
     return RedirectResponse(url=f"/reports/{report_id}?shared=1&token={token}", status_code=302)

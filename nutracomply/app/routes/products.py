@@ -38,7 +38,11 @@ async def products_list(request: Request, db: Session = Depends(get_db)):
 
     products = (
         db.query(Product)
-        .filter(Product.user_id == user.id, Product.is_active == True)
+        .filter(
+            Product.user_id == user.id,
+            Product.is_active == True,
+            Product.is_quick_check == False,  # hide ephemeral checker products
+        )
         .order_by(Product.created_at.desc())
         .all()
     )
@@ -181,6 +185,9 @@ def _feed_product_to_llm(product_id: int, db):
 
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
+        return
+    # Don't pollute the product KB with ephemeral quick-check runs
+    if getattr(product, 'is_quick_check', False):
         return
 
     # Remove any existing KB document for this product
