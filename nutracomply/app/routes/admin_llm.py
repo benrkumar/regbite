@@ -1275,7 +1275,7 @@ async def label_extractor_page(request: Request, db: Session = Depends(get_db)):
 
     try:
         avg_conf = (
-            db.query(LabelVersion.extraction_source, func.avg(LabelVersion.confidence))
+            db.query(LabelVersion.extraction_source, func.avg(LabelVersion.extraction_confidence))
             .filter(LabelVersion.extraction_source.isnot(None))
             .group_by(LabelVersion.extraction_source)
             .all()

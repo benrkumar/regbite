@@ -22,6 +22,9 @@ from app.config import get_settings
 
 settings = get_settings()
 
+# Public base URL for links in emails — configurable via APP_BASE_URL env var
+_BASE = settings.app_base_url.rstrip("/")
+
 # ── Shared email wrapper ─────────────────────────────────────────────────────
 
 _FOOTER = (
@@ -29,7 +32,7 @@ _FOOTER = (
     "<p style='color:#9ca3af;font-size:0.8em;line-height:1.5;'>"
     "RegBite — AI-Powered FSSAI Compliance<br/>"
     "Not legal advice. For regulatory compliance assistance only.<br/>"
-    "<a href='https://steadfast-courage-production-0f66.up.railway.app/settings' "
+    f"<a href='{_BASE}/settings' "
     "style='color:#6b7280;'>Manage notification preferences</a>"
     "</p>"
 )
@@ -148,7 +151,7 @@ def send_alert_email(alert, product=None, user=None):
     </table>
 
     <p style='margin:20px 0 0;'>
-        <a href='https://steadfast-courage-production-0f66.up.railway.app/alerts'
+        <a href='{_BASE}/alerts'
            style='display:inline-block;padding:10px 20px;background:#111;color:#fff;
                   text-decoration:none;border-radius:4px;font-weight:500;'>
             View in RegBite
@@ -201,7 +204,7 @@ def send_regulation_change_email(change, users=None):
     <p>{change.summary_text or 'See full details in RegBite.'}</p>
 
     <p style='margin:20px 0 0;'>
-        <a href='https://steadfast-courage-production-0f66.up.railway.app/regulations'
+        <a href='{_BASE}/regulations'
            style='display:inline-block;padding:10px 20px;background:#111;color:#fff;
                   text-decoration:none;border-radius:4px;font-weight:500;'>
             View Regulation Feed
@@ -238,7 +241,7 @@ def send_welcome_email(user):
     <p>We've added 5 demo products to your account so you can explore the platform right away.</p>
 
     <p style='margin:20px 0 0;'>
-        <a href='https://steadfast-courage-production-0f66.up.railway.app/dashboard'
+        <a href='{_BASE}/dashboard'
            style='display:inline-block;padding:10px 20px;background:#111;color:#fff;
                   text-decoration:none;border-radius:4px;font-weight:500;'>
             Go to Dashboard
@@ -298,7 +301,7 @@ def send_invite_accepted_email(inviter, new_member_name: str, new_member_email: 
        and joined your team as a <strong>{role.replace('_', ' ').title()}</strong>.</p>
 
     <p style='margin:20px 0 0;'>
-        <a href='https://steadfast-courage-production-0f66.up.railway.app/team'
+        <a href='{_BASE}/team'
            style='display:inline-block;padding:10px 20px;background:#111;color:#fff;
                   text-decoration:none;border-radius:4px;font-weight:500;'>
             View Team
@@ -332,7 +335,7 @@ def send_payment_confirmation_email(user, plan: str, amount_display: str, period
     </div>
 
     <p style='margin:20px 0 0;'>
-        <a href='https://steadfast-courage-production-0f66.up.railway.app/billing'
+        <a href='{_BASE}/billing'
            style='display:inline-block;padding:10px 20px;background:#111;color:#fff;
                   text-decoration:none;border-radius:4px;font-weight:500;'>
             View Billing
@@ -363,7 +366,7 @@ def send_subscription_cancelled_email(user, access_until: str):
        Your data will be preserved.</p>
 
     <p style='margin:20px 0 0;'>
-        <a href='https://steadfast-courage-production-0f66.up.railway.app/billing'
+        <a href='{_BASE}/billing'
            style='display:inline-block;padding:10px 20px;background:#111;color:#fff;
                   text-decoration:none;border-radius:4px;font-weight:500;'>
             View Billing
@@ -388,7 +391,7 @@ def send_password_changed_email(user):
 
     <div style='background:#fef2f2;border-left:4px solid #DC2626;padding:12px 16px;margin:20px 0;border-radius:4px;'>
         <p style='margin:0;'>If you did not make this change, please
-           <a href='https://steadfast-courage-production-0f66.up.railway.app/login'
+           <a href='{_BASE}/login'
               style='color:#DC2626;font-weight:600;'>sign in immediately</a>
            and reset your password, or contact support.</p>
     </div>
@@ -451,7 +454,7 @@ def send_license_expiry_email(user, licenses: list):
     </table>
 
     <p style='margin:20px 0 0;'>
-        <a href='https://steadfast-courage-production-0f66.up.railway.app/renewals'
+        <a href='{_BASE}/renewals'
            style='display:inline-block;padding:10px 20px;background:#111;color:#fff;
                   text-decoration:none;border-radius:4px;font-weight:500;'>
             Manage Licenses

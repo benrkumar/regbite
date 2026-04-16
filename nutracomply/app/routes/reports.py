@@ -12,6 +12,7 @@ from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
 from app.models import ComplianceReport, Product, LabelVersion, Alert, AlertStatus
 from app.services.report_service import get_or_create_report, generate_share_token, generate_pdf_html
+from app.utils.alerts import get_unread_alert_count
 
 router = APIRouter(prefix="/reports")
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -34,7 +35,7 @@ async def reports_list(request: Request, db: Session = Depends(get_db)):
     for r in reports:
         _ = r.product
 
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
 
     return templates.TemplateResponse("reports.html", {
         "request": request,
@@ -86,7 +87,7 @@ async def view_report(report_id: int, request: Request, db: Session = Depends(ge
         return RedirectResponse(url="/reports")
 
     product = report.product
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
 
     shared = request.query_params.get("shared", "")
 

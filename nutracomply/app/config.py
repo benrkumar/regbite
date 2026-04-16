@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     # Admin
     admin_email: str = ""
 
+    # Public base URL — used in notification emails so links resolve correctly.
+    # Override with APP_BASE_URL env var in staging/production environments.
+    app_base_url: str = "https://steadfast-courage-production-0f66.up.railway.app"
+
     # Database pool — sized for parallel KB uploads (4 concurrent) + web requests
     db_pool_size: int = 10
     db_max_overflow: int = 20

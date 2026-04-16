@@ -11,6 +11,7 @@ from pathlib import Path
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
 from app.models import LicenseRenewal, LicenseType, Alert, AlertStatus
+from app.utils.alerts import get_unread_alert_count
 
 router = APIRouter(prefix="/renewals")
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -37,7 +38,7 @@ async def renewals_list(request: Request, db: Session = Depends(get_db)):
     expiring_60 = [l for l in non_perpetual if 30 < l.days_until_expiry <= 60]
     active = [l for l in non_perpetual if l.days_until_expiry > 60] + perpetual
 
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
 
     return templates.TemplateResponse("renewals.html", {
         "request": request,

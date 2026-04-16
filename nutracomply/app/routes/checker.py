@@ -18,6 +18,7 @@ from app.models import (
     Alert, AlertStatus
 )
 from app.config import get_settings
+from app.utils.alerts import get_unread_alert_count
 
 router = APIRouter(prefix="/checker")
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -53,7 +54,7 @@ async def checker_form(request: Request, db: Session = Depends(get_db)):
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
 
     return templates.TemplateResponse("checker.html", {
         "request": request,

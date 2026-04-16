@@ -14,6 +14,7 @@ from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie, hash_password, create_access_token
 from app.models import User, UserRole, TeamInvite, Alert, AlertStatus
 from app.config import get_settings
+from app.utils.alerts import get_unread_alert_count
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -71,7 +72,7 @@ async def team_page(request: Request, db: Session = Depends(get_db)):
         .all()
     )
 
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
 
     return templates.TemplateResponse("team.html", {
         "request": request,
@@ -357,8 +358,10 @@ async def process_invite_accept(
     if len(name) < 2:
         return _error("Name must be at least 2 characters.")
 
-    if len(password) < 8:
-        return _error("Password must be at least 8 characters.")
+    from app.utils.password import validate_password
+    pw_error = validate_password(password)
+    if pw_error:
+        return _error(pw_error)
 
     if password != confirm_password:
         return _error("Passwords do not match.")

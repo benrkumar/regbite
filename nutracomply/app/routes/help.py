@@ -10,6 +10,7 @@ from pathlib import Path
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
 from app.models import Alert, AlertStatus
+from app.utils.alerts import get_unread_alert_count
 
 router = APIRouter(prefix="/help")
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -90,7 +91,7 @@ async def help_hub(request: Request, db: Session = Depends(get_db)):
 
     role = user.role.value if user.role else "account_admin"
     sections = _get_user_sections(role)
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
 
     return templates.TemplateResponse("help/hub.html", {
         "request": request,
@@ -110,7 +111,7 @@ async def help_faq(request: Request, db: Session = Depends(get_db)):
     role = user.role.value if user.role else "account_admin"
     sections = _get_user_sections(role)
     faq_categories = _get_user_faq_categories(role)
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
 
     return templates.TemplateResponse("help/faq.html", {
         "request": request,
@@ -136,7 +137,7 @@ async def help_section(section: str, request: Request, db: Session = Depends(get
         return RedirectResponse(url="/help")
 
     sections = _get_user_sections(role)
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
 
     # Map slug to template filename (hyphens → underscores)
     template_name = f"help/{section.replace('-', '_')}.html"

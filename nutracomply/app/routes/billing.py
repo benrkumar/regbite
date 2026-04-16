@@ -12,6 +12,7 @@ from pathlib import Path
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
 from app.models import Alert, AlertStatus, Subscription, PaymentRecord, PlanType, SubscriptionStatus
+from app.utils.alerts import get_unread_alert_count
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -73,7 +74,7 @@ async def billing_page(request: Request, db: Session = Depends(get_db)):
         .limit(10)
         .all()
     )
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
 
     from app.services.billing_service import PLANS
     settings_obj = None

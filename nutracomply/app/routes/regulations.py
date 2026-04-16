@@ -9,6 +9,7 @@ from typing import Optional
 from app.database import get_db
 from app.models import RegulationChange, ComplianceRule, RuleCategory
 from app.routes.auth import get_current_user_from_cookie
+from app.utils.alerts import get_unread_alert_count
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -51,8 +52,7 @@ async def regulations_feed(
 
     rule_categories = [c.value for c in RuleCategory]
 
-    from app.models import Alert, AlertStatus
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
 
     return templates.TemplateResponse("regulations.html", {
         "request": request,

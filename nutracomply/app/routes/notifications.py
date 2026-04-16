@@ -28,8 +28,8 @@ async def notifications_page(request: Request, db: Session = Depends(get_db)):
     ).update({"is_read": True})
     db.commit()
 
-    from app.models import Alert, AlertStatus
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    from app.utils.alerts import get_unread_alert_count
+    unread_alerts = get_unread_alert_count(user, db)
 
     from fastapi.templating import Jinja2Templates
     from pathlib import Path

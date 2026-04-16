@@ -13,6 +13,7 @@ from app.models import Product, LabelVersion
 from app.routes.auth import get_current_user_from_cookie
 from app.routes.labels import _process_label  # single shared scan pipeline
 from app.config import get_settings
+from app.utils.alerts import get_unread_alert_count
 
 router = APIRouter()
 settings = get_settings()
@@ -358,7 +359,7 @@ async def bulk_upload_page(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url="/login", status_code=302)
 
     from app.models import Alert, AlertStatus
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
 
     return templates.TemplateResponse("bulk_upload.html", {
         "request": request,
@@ -432,7 +433,7 @@ async def bulk_upload_post(
     db.commit()
 
     from app.models import Alert, AlertStatus
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
 
     return templates.TemplateResponse("bulk_upload.html", {
         "request": request,
@@ -511,7 +512,7 @@ async def bulk_upload_files(
             errors.append(f"'{f.filename}' — {e}")
 
     from app.models import Alert, AlertStatus
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
 
     return templates.TemplateResponse("bulk_upload.html", {
         "request": request,

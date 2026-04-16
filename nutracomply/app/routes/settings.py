@@ -13,6 +13,7 @@ from pathlib import Path
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie, hash_password, verify_password
 from app.models import Alert, AlertStatus, APIKey
+from app.utils.alerts import get_unread_alert_count
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -26,7 +27,7 @@ async def settings_page(request: Request, db: Session = Depends(get_db)):
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
 
     return templates.TemplateResponse("settings.html", {
         "request": request,
@@ -130,9 +131,12 @@ async def change_password(
             status_code=302,
         )
 
-    if len(new_password) < 8:
+    from app.utils.password import validate_password
+    pw_error = validate_password(new_password)
+    if pw_error:
+        from urllib.parse import quote
         return RedirectResponse(
-            url="/settings?msg=New+password+must+be+at+least+8+characters&type=error",
+            url=f"/settings?msg={quote(pw_error)}&type=error",
             status_code=302,
         )
 
@@ -184,7 +188,7 @@ async def api_keys_page(request: Request, db: Session = Depends(get_db)):
     if not user:
         return RedirectResponse(url="/login", status_code=302)
     keys = db.query(APIKey).filter(APIKey.user_id == user.id, APIKey.is_active == True).order_by(APIKey.created_at.desc()).all()
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
     new_key = request.query_params.get("new_key")  # shown once after creation
     return templates.TemplateResponse("api_keys.html", {
         "request": request,
@@ -238,7 +242,7 @@ async def create_api_key(request: Request, db: Session = Depends(get_db)):
 
     # Return the template directly — NEVER put the raw secret in the URL
     keys = db.query(APIKey).filter(APIKey.user_id == user.id, APIKey.is_active == True).order_by(APIKey.created_at.desc()).all()
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    unread_alerts = get_unread_alert_count(user, db)
     return templates.TemplateResponse("api_keys.html", {
         "request": request,
         "user": user,

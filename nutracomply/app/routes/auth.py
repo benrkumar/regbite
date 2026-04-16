@@ -30,16 +30,10 @@ def hash_password(password: str) -> str:
 
 
 def _validate_password(password: str) -> str | None:
-    """Return error message if password is too weak, else None."""
-    if len(password) < 10:
-        return "Password must be at least 10 characters."
-    if not any(c.isupper() for c in password):
-        return "Password must contain at least one uppercase letter."
-    if not any(c.islower() for c in password):
-        return "Password must contain at least one lowercase letter."
-    if not any(c.isdigit() for c in password):
-        return "Password must contain at least one digit."
-    return None
+    """Return error message if password is too weak, else None.
+    Delegates to the shared policy in utils/password.py."""
+    from app.utils.password import validate_password
+    return validate_password(password)
 
 
 def create_access_token(data: dict) -> str:
