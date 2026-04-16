@@ -950,15 +950,19 @@ fileInput.addEventListener("change", e => addFiles(e.target.files));
 
 function addFiles(files) {
   const allowed = [".pdf", ".txt", ".csv", ".md"];
+  let added = 0;
   Array.from(files).forEach(f => {
     const ext = f.name.slice(f.name.lastIndexOf(".")).toLowerCase();
     if (!allowed.includes(ext)) return;
     // Deduplicate by name
     if (fileQueue.some(q => q.file.name === f.name)) return;
     fileQueue.push({ file: f, status: "pending", msg: "" });
+    added++;
   });
   fileInput.value = "";  // allow re-selecting same file
   renderQueue();
+  // Auto-start upload immediately — no manual "Upload All" click needed
+  if (added > 0) setTimeout(uploadAll, 150);
 }
 
 function removeFile(idx) {
@@ -1065,8 +1069,8 @@ function renderQueue() {
   summary.textContent = summaryParts.join(" · ");
 
   const uploadBtn = document.getElementById("uploadAllBtn");
-  uploadBtn.disabled = (pending === 0);
-  uploadBtn.textContent = pending > 0 ? `Upload ${pending} File${pending > 1 ? "s" : ""}` : "Upload All";
+  uploadBtn.disabled = (pendingCount === 0);
+  uploadBtn.textContent = pendingCount > 0 ? `Upload ${pendingCount} File${pendingCount > 1 ? "s" : ""}` : "Upload All";
 }
 
 const UPLOAD_CONCURRENCY = 4;  // process this many files simultaneously

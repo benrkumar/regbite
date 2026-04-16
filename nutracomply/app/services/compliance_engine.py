@@ -336,11 +336,35 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
         relevant_keys = [k for k in extraction if extraction[k] and k != "_extraction_warnings"]
         context_data = "\n".join(f"  {k}: {str(extraction[k])[:200]}" for k in relevant_keys[:15])
 
+    # ── Pull relevant regulation context from the KB (uploaded .md / PDF docs) ──
+    kb_context = ""
+    try:
+        from app.database import SessionLocal as _SL
+        from app.services.llm_service import retrieve_context as _rc
+        _query = f"{rule.rule_code} {description[:200]}"
+        _db = _SL()
+        try:
+            _chunks = _rc("regulations", _query, _db, top_k=4)
+            if _chunks:
+                kb_context = "\n\n".join(
+                    f"[{c['document_title']}]\n{c['content']}" for c in _chunks
+                )
+        finally:
+            _db.close()
+    except Exception:
+        pass
+
+    kb_section = (
+        f"\nKNOWLEDGE BASE (uploaded regulation documents):\n{kb_context}\n"
+        if kb_context else ""
+    )
+
     prompt = (
         "You are an FSSAI/Legal Metrology compliance auditor for Indian product labels.\n\n"
         f"RULE: {rule.rule_code} — {description}\n"
-        f"REGULATION: {rule.regulation_source or 'N/A'}\n\n"
-        f"EXTRACTED LABEL DATA:\n{context_data}\n\n"
+        f"REGULATION: {rule.regulation_source or 'N/A'}\n"
+        f"{kb_section}"
+        f"\nEXTRACTED LABEL DATA:\n{context_data}\n\n"
         "Based on the extracted data, can you determine if this format/layout requirement "
         "is likely met? Consider that you're working from extracted text — you cannot verify "
         "visual elements like font size or color, but you CAN verify:\n"
