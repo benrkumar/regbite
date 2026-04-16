@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean, DateTime,
-    Float, ForeignKey, JSON, Enum as _SAEnumType, Index
+    Float, ForeignKey, JSON, Enum as _SAEnumType, Index, LargeBinary
 )
 from sqlalchemy.orm import relationship
 import enum
@@ -225,6 +225,7 @@ class LabelVersion(Base):
     tokens_input = Column(Integer, nullable=True)
     tokens_output = Column(Integer, nullable=True)
     is_current = Column(Boolean, default=True)
+    file_data = Column(LargeBinary, nullable=True)
 
     __table_args__ = (
         Index("ix_labels_product_current", "product_id", "is_current"),

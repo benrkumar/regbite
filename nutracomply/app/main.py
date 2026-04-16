@@ -298,6 +298,8 @@ def _run_migrations():
         )""",
         "CREATE INDEX IF NOT EXISTS ix_api_call_logs_call_type ON api_call_logs (call_type)",
         "CREATE INDEX IF NOT EXISTS ix_api_call_logs_created_at ON api_call_logs (created_at)",
+        # v16: Store file bytes in DB so previews survive Railway container resets
+        "ALTER TABLE label_versions ADD COLUMN IF NOT EXISTS file_data BYTEA",
     ]
     for sql in migrations:
         try:

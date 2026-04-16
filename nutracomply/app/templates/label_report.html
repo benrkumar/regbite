@@ -226,10 +226,7 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
 {% else %}
 
 {# ── Two-column layout wrapper ── #}
-{% if label.file_path %}
-  {% set _lp = label.file_path.replace('\\', '/').split('/') %}
-  {% set _lsrc = '/labels/' ~ label.id ~ '/preview-page/0' if label.file_type == 'pdf' else '/uploads/' ~ _lp[-2] ~ '/' ~ _lp[-1] %}
-{% endif %}
+{% set _lsrc = '/labels/' ~ label.id ~ '/image' %}
 
 {# ── Top bar ── #}
 <div class="rpt-topbar">
@@ -267,13 +264,8 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
 
 {# ── Summary card ── #}
 <div class="rpt-summary">
-  {% if label.file_path and label.file_type == 'image' %}
-    {% set img_parts = label.file_path.replace('\\', '/').split('/') %}
-    {% set product_dir = img_parts[-2] if img_parts|length >= 2 else '' %}
-    {% set file_name = img_parts[-1] if img_parts|length >= 1 else '' %}
-    <img src="/uploads/{{ product_dir }}/{{ file_name }}" alt="{{ product.name }}" class="rpt-label-img" style="max-width:160px;" onerror="this.style.display='none'" />
-  {% elif label.file_path and label.file_type == 'pdf' %}
-    <img src="/labels/{{ label.id }}/preview-page/0" alt="Label preview" class="rpt-label-img" style="max-width:160px;" onerror="this.style.display='none'" />
+  {% if label.file_path %}
+    <img src="/labels/{{ label.id }}/image" alt="{{ product.name }}" class="rpt-label-img" style="max-width:160px;" onerror="this.style.display='none'" />
   {% endif %}
   <div class="rpt-summary-info">
     <h3>{{ product.name }}</h3>

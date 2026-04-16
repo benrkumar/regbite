@@ -177,6 +177,7 @@ async def upload_label(
         file_name=file.filename,
         file_type="pdf" if suffix == ".pdf" else "image",
         is_current=True,
+        file_data=content,
     )
     db.add(label_version)
     db.commit()
@@ -576,9 +577,9 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
     })
 
 
-@router.get("/labels/{label_id}/preview-page/{page_num}")
-async def label_preview_page(label_id: int, page_num: int = 0, request: Request = None, db: Session = Depends(get_db)):
-    """Serve a PDF page as a PNG image for preview."""
+@router.get("/labels/{label_id}/image")
+async def label_image(label_id: int, request: Request = None, db: Session = Depends(get_db)):
+    """Serve the label image/first PDF page. DB bytes first, disk fallback."""
     from fastapi.responses import StreamingResponse
     import fitz  # PyMuPDF
 
@@ -590,12 +591,68 @@ async def label_preview_page(label_id: int, page_num: int = 0, request: Request 
     if not label or not label.product or label.product.user_id != user.id:
         return JSONResponse({"detail": "Label not found"}, status_code=404)
 
-    file_path = label.file_path
-    if not file_path or not Path(file_path).exists():
+    # Resolve bytes: prefer DB, fall back to disk
+    raw: bytes | None = label.file_data
+    if not raw and label.file_path and Path(label.file_path).exists():
+        raw = Path(label.file_path).read_bytes()
+
+    if not raw:
+        return JSONResponse({"detail": "File not available"}, status_code=404)
+
+    try:
+        if label.file_type == "pdf":
+            doc = fitz.open(stream=raw, filetype="pdf")
+            page = doc[0]
+            pix = page.get_pixmap(dpi=150)
+            img_bytes = pix.tobytes("png")
+            doc.close()
+            return StreamingResponse(
+                io.BytesIO(img_bytes),
+                media_type="image/png",
+                headers={"Cache-Control": "public, max-age=3600"},
+            )
+        else:
+            # image — detect mime type from magic bytes
+            mime = "image/jpeg"
+            if raw[:4] == b"\x89PNG":
+                mime = "image/png"
+            elif raw[:4] == b"GIF8":
+                mime = "image/gif"
+            elif raw[:4] == b"RIFF":
+                mime = "image/webp"
+            return StreamingResponse(
+                io.BytesIO(raw),
+                media_type=mime,
+                headers={"Cache-Control": "public, max-age=3600"},
+            )
+    except Exception as e:
+        return JSONResponse({"detail": f"Error serving file: {e}"}, status_code=500)
+
+
+@router.get("/labels/{label_id}/preview-page/{page_num}")
+async def label_preview_page(label_id: int, page_num: int = 0, request: Request = None, db: Session = Depends(get_db)):
+    """Serve a PDF page as a PNG image for preview. DB bytes first, disk fallback."""
+    from fastapi.responses import StreamingResponse
+    import fitz  # PyMuPDF
+
+    user = require_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+
+    label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
+    if not label or not label.product or label.product.user_id != user.id:
+        return JSONResponse({"detail": "Label not found"}, status_code=404)
+
+    # Resolve bytes: prefer DB, fall back to disk
+    raw: bytes | None = label.file_data
+    if not raw and label.file_path and Path(label.file_path).exists():
+        raw = Path(label.file_path).read_bytes()
+
+    if not raw:
         return JSONResponse({"detail": "File not found"}, status_code=404)
 
     try:
-        doc = fitz.open(file_path)
+        doc = fitz.open(stream=raw, filetype="pdf")
         if page_num < 0 or page_num >= len(doc):
             doc.close()
             return JSONResponse({"detail": "Page not found"}, status_code=404)

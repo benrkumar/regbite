@@ -155,6 +155,7 @@ async def _save_label_file(file: UploadFile, suffix: str, product_id: int, db: S
         file_name=file.filename,
         file_type="pdf" if suffix == ".pdf" else "image",
         is_current=True,
+        file_data=content,
     )
     db.add(label_version)
     db.commit()
