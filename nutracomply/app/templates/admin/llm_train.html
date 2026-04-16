@@ -473,6 +473,18 @@
       </div>
     </div>
 
+    {% if kb_type == "regulations" %}
+    {# ── Two-system explainer ── #}
+    <div style="background:#F8F8F8;border:1px solid #EBEBEB;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.8rem;color:#525252;line-height:1.6;">
+      <strong style="color:#262626;display:block;margin-bottom:0.3rem;">📋 How the KB and Rules work together</strong>
+      <span style="display:inline-block;background:#EBF0FF;color:#3772FF;border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:600;margin-right:0.3rem;">KB Documents</span>
+      Uploaded regulation text adds context used by the AI for <strong>format/layout checks only</strong> (3–4 checks). It does <em>not</em> create new compliance rules.
+      <br>
+      <span style="display:inline-block;background:#EAF2F0;color:#357266;border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:600;margin-right:0.3rem;">Compliance Rules</span>
+      The {{ total_rules }} rules below run against every scan. To turn your uploaded documents into new compliance rules, use <strong>↓ Extract Rules</strong> at the bottom of this page.
+    </div>
+    {% endif %}
+
     {# Indexed Documents table — lives in right column #}
     <div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem;flex-wrap:wrap;gap:0.5rem;">
@@ -658,6 +670,68 @@
     </div>
   </div>
   {% endif %}
+
+{# ── Extract Rules from Documents ─────────────────────────────────────────── #}
+<div id="extractRulesSection" style="margin-top:2rem;">
+  <h4 class="adm-section-title" style="margin-bottom:0.75rem;">Extract Rules from Uploaded Documents</h4>
+  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:10px;padding:1.25rem 1.4rem;">
+    <p style="font-size:0.82rem;color:#525252;margin:0 0 1rem;line-height:1.6;">
+      Select an uploaded document and click <strong>Extract Rules</strong>. Gemini will read the regulation text
+      and suggest structured compliance rules. Review each suggestion and approve the ones you want added to the engine.
+    </p>
+
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem;">
+      <div style="flex:1;min-width:200px;">
+        <label style="font-size:0.72rem;font-weight:600;color:#737373;display:block;margin-bottom:0.3rem;letter-spacing:0.04em;text-transform:uppercase;">Document</label>
+        <select id="extractDocSelect" style="width:100%;padding:0.5rem 0.75rem;border:1px solid #EBEBEB;border-radius:6px;font-size:0.84rem;color:#262626;background:#fff;">
+          <option value="">— Select an uploaded document —</option>
+          {% for doc in documents %}
+            {% if doc.source and (doc.source.startswith('upload:') or doc.source.startswith('fssai:')) %}
+            <option value="{{ doc.id }}">{{ doc.title[:80] }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <button id="extractBtn" class="adm-btn adm-btn-primary" onclick="startExtraction()" style="padding:0.5rem 1.25rem;white-space:nowrap;">
+        ✦ Extract Rules
+      </button>
+    </div>
+
+    <div id="extractStatus" style="display:none;font-size:0.82rem;color:#525252;padding:0.5rem 0;margin-bottom:0.75rem;"></div>
+
+    {# Extracted rules review table #}
+    <div id="extractedRulesWrap" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
+        <div style="font-size:0.82rem;font-weight:600;color:#262626;">
+          Extracted Rules — review and approve
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="adm-btn" onclick="toggleAllApprove(true)" style="font-size:0.75rem;">Select All</button>
+          <button class="adm-btn" onclick="toggleAllApprove(false)" style="font-size:0.75rem;">Deselect All</button>
+          <button id="approveBtn" class="adm-btn adm-btn-primary" onclick="approveSelected()" style="font-size:0.78rem;padding:0.4rem 1rem;">
+            Save Approved Rules
+          </button>
+        </div>
+      </div>
+      <div class="adm-table-wrap">
+        <table class="adm-table" id="extractedTable">
+          <thead>
+            <tr>
+              <th style="width:36px;text-align:center;">✓</th>
+              <th style="width:150px;">Rule Code</th>
+              <th>Description</th>
+              <th style="width:80px;">Severity</th>
+              <th style="width:80px;">Check Type</th>
+              <th style="width:110px;">Source</th>
+            </tr>
+          </thead>
+          <tbody id="extractedBody"></tbody>
+        </table>
+      </div>
+      <div id="approveStatus" style="margin-top:0.75rem;font-size:0.82rem;display:none;"></div>
+    </div>
+  </div>
+</div>
 
 </div>
 {% endif %}{# end regulations #}
@@ -1163,34 +1237,200 @@ async function uploadAll() {
 
 async function refreshDocCount() {
   try {
-    const resp = await fetch(`/admin/llm/${KB_TYPE}/doc-count`);
-    const data = await resp.json();
-    if (data.docs !== undefined) {
-      // Update stat chips without page reload
+    // Update stat chips (fast path)
+    const cr = await fetch(`/admin/llm/${KB_TYPE}/doc-count`);
+    const cd = await cr.json();
+    if (cd.docs !== undefined) {
       document.querySelectorAll(".kb-stat-chip").forEach(chip => {
         const lbl = chip.querySelector(".lbl");
-        if (lbl && lbl.textContent.trim() === "KB Documents") {
-          chip.querySelector(".val").textContent = data.docs;
-        }
-        if (lbl && lbl.textContent.trim() === "Indexed Chunks") {
-          chip.querySelector(".val").textContent = data.chunks;
-        }
+        if (lbl && lbl.textContent.trim() === "KB Documents")
+          chip.querySelector(".val").textContent = cd.docs;
+        if (lbl && lbl.textContent.trim() === "Indexed Chunks")
+          chip.querySelector(".val").textContent = cd.chunks;
       });
-      // Show refresh link for docs table
-      const banner = document.getElementById("uploadDoneBanner");
-      if (banner && banner.style.display !== "none") {
-        if (!document.getElementById("reloadDocsLink")) {
-          const link = document.createElement("a");
-          link.id = "reloadDocsLink";
-          link.href = "#";
-          link.style.cssText = "margin-left:1rem;font-size:0.75rem;color:#404040;text-decoration:underline;";
-          link.textContent = "↻ Reload to see indexed docs";
-          link.onclick = () => window.location.reload();
-          banner.appendChild(link);
-        }
-      }
     }
   } catch (_) {}
+
+  try {
+    // Live-refresh the documents table
+    const dr = await fetch(`/admin/llm/${KB_TYPE}/docs-partial`);
+    const dd = await dr.json();
+    if (!dd.docs) return;
+
+    // Update count label
+    const countSpan = document.querySelector(".adm-section-title span");
+    if (countSpan) countSpan.textContent = `(${dd.total})`;
+
+    // Rebuild tbody
+    const tbody = document.getElementById("docsBody");
+    if (!tbody) return;
+    tbody.innerHTML = dd.docs.map(d => {
+      const srcType = d.source.startsWith("db:")     ? '<span class="adm-badge badge-blue">DB Import</span>'
+                    : d.source.startsWith("fssai:")  ? '<span class="adm-badge badge-green">FSSAI PDF</span>'
+                    : d.source.startsWith("upload:") ? '<span class="adm-badge badge-purple">Uploaded</span>'
+                    : '<span class="adm-badge badge-gray">Manual</span>';
+      const escapedTitle = d.title.replace(/'/g,"&#39;").replace(/</g,"&lt;");
+      return `<tr data-title="${d.title.toLowerCase()}" data-source="${d.source.toLowerCase()}">
+        <td>
+          <div style="font-weight:600;color:#262626;font-size:0.84rem;margin-bottom:0.15rem;">${d.title}</div>
+          <div style="font-size:0.7rem;color:#A3A3A3;word-break:break-all;">${d.source || "—"}</div>
+        </td>
+        <td>${srcType}</td>
+        <td style="font-weight:700;color:#262626;text-align:center;">${d.chunk_count}</td>
+        <td style="font-size:0.77rem;color:#737373;">${d.uploaded_at}</td>
+        <td>
+          <form method="post" action="/admin/llm/${KB_TYPE}/documents/${d.id}/delete" style="margin:0;"
+                onsubmit="return confirm('Delete \'${escapedTitle.slice(0,40)}\'? Removes ${d.chunk_count} chunk(s).')">
+            <button type="submit" class="adm-btn adm-btn-danger" style="font-size:0.72rem;padding:0.25rem 0.6rem;">Delete</button>
+          </form>
+        </td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="5" style="text-align:center;color:#A3A3A3;padding:2.5rem 1rem;">No documents indexed yet.</td></tr>`;
+
+    // Also refresh extract-rules dropdown if it exists
+    _refreshExtractDropdown(dd.docs.filter(d => d.source.startsWith("upload:") || d.source.startsWith("fssai:")));
+  } catch (_) {}
+}
+
+/* ──────────────────────────── Extract Rules ─────────────────────────────── */
+let _extractedRules = [];
+
+function _refreshExtractDropdown(uploadedDocs) {
+  const sel = document.getElementById("extractDocSelect");
+  if (!sel) return;
+  const cur = sel.value;
+  // Keep existing options that are still present; add new ones
+  const existing = new Set(Array.from(sel.options).map(o => o.value));
+  uploadedDocs.forEach(d => {
+    if (!existing.has(String(d.id))) {
+      const opt = document.createElement("option");
+      opt.value = d.id;
+      opt.textContent = d.title.slice(0, 80);
+      sel.appendChild(opt);
+    }
+  });
+  if (cur) sel.value = cur;
+}
+
+async function startExtraction() {
+  const sel = document.getElementById("extractDocSelect");
+  const docId = sel && sel.value;
+  if (!docId) { alert("Please select a document first."); return; }
+
+  const btn = document.getElementById("extractBtn");
+  const status = document.getElementById("extractStatus");
+  const wrap = document.getElementById("extractedRulesWrap");
+
+  btn.disabled = true;
+  btn.textContent = "Extracting…";
+  status.style.display = "block";
+  status.textContent = "⏳ Calling Gemini — this takes 10–30 seconds…";
+  wrap.style.display = "none";
+  document.getElementById("approveStatus").style.display = "none";
+
+  try {
+    const r = await fetch("/admin/llm/regulations/extract-rules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ..._csrfHeaders() },
+      body: JSON.stringify({ doc_id: parseInt(docId) }),
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+
+    const jobId = d.job_id;
+    let attempts = 0;
+    while (attempts < 60) {
+      await new Promise(res => setTimeout(res, 2000));
+      attempts++;
+      const sr = await fetch(`/admin/llm/regulations/extract-rules/status/${jobId}`);
+      const sd = await sr.json();
+      if (sd.status === "done") {
+        _extractedRules = sd.rules || [];
+        renderExtractedRules(_extractedRules);
+        status.textContent = `✓ Found ${_extractedRules.length} candidate rule(s) from "${sd.doc_title}". Review and approve below.`;
+        wrap.style.display = _extractedRules.length > 0 ? "block" : "none";
+        if (_extractedRules.length === 0) status.textContent += " — No new rules found (document may already be fully covered).";
+        break;
+      } else if (sd.status === "error") {
+        throw new Error(sd.error || "Extraction failed");
+      } else {
+        status.textContent = `⏳ ${sd.note || "Processing…"} (${attempts * 2}s)`;
+      }
+    }
+    if (attempts >= 60) throw new Error("Extraction timed out after 2 minutes");
+  } catch (e) {
+    status.textContent = `✗ Error: ${e.message}`;
+    status.style.color = "#DC2626";
+  }
+  btn.disabled = false;
+  btn.textContent = "✦ Extract Rules";
+}
+
+const SEV_COLORS = { CRITICAL: "#DF2935", HIGH: "#C27B1A", MEDIUM: "#3772FF", LOW: "#A3A3A3" };
+
+function renderExtractedRules(rules) {
+  const tbody = document.getElementById("extractedBody");
+  tbody.innerHTML = rules.map((r, i) => {
+    const sevColor = SEV_COLORS[r.severity] || "#737373";
+    return `<tr id="rule-row-${i}">
+      <td style="text-align:center;"><input type="checkbox" id="approve-${i}" checked style="accent-color:#3772FF;width:15px;height:15px;"></td>
+      <td>
+        <input type="text" id="code-${i}" value="${(r.rule_code||"").replace(/"/g,"&quot;")}"
+               style="font-family:monospace;font-size:0.72rem;padding:0.2rem 0.4rem;border:1px solid #EBEBEB;border-radius:4px;width:100%;color:#262626;">
+      </td>
+      <td>
+        <div style="font-size:0.82rem;color:#262626;line-height:1.5;">${r.description || ""}</div>
+        <div style="font-size:0.7rem;color:#A3A3A3;margin-top:0.2rem;">${r.regulation_source || ""}</div>
+      </td>
+      <td><span style="font-size:0.68rem;font-weight:700;color:${sevColor};padding:0.15rem 0.4rem;border-radius:3px;border:1px solid ${sevColor}33;">${r.severity||"?"}</span></td>
+      <td style="font-size:0.75rem;color:#525252;">${r.check_type||""}</td>
+      <td style="font-size:0.7rem;color:#A3A3A3;word-break:break-word;">${(r.regulation_source||"").slice(0,60)}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="6" style="text-align:center;color:#A3A3A3;padding:1.5rem;">No rules extracted.</td></tr>`;
+}
+
+function toggleAllApprove(state) {
+  document.querySelectorAll("[id^='approve-']").forEach(cb => cb.checked = state);
+}
+
+async function approveSelected() {
+  const approved = _extractedRules
+    .map((r, i) => {
+      const cb = document.getElementById(`approve-${i}`);
+      const codeInput = document.getElementById(`code-${i}`);
+      if (!cb || !cb.checked) return null;
+      return { ...r, rule_code: codeInput ? codeInput.value.trim() : r.rule_code };
+    })
+    .filter(Boolean);
+
+  if (!approved.length) { alert("No rules selected."); return; }
+
+  const btn = document.getElementById("approveBtn");
+  const apStatus = document.getElementById("approveStatus");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  apStatus.style.display = "block";
+  apStatus.style.color = "#525252";
+  apStatus.textContent = "Saving rules…";
+
+  try {
+    const r = await fetch("/admin/llm/regulations/approve-rules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ..._csrfHeaders() },
+      body: JSON.stringify({ rules: approved }),
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    apStatus.style.color = "#357266";
+    apStatus.textContent = `✓ ${d.message}${d.errors && d.errors.length ? " (some errors: " + d.errors.join(", ") + ")" : ""}`;
+    // Refresh the page stats after adding rules
+    setTimeout(() => window.location.reload(), 1500);
+  } catch (e) {
+    apStatus.style.color = "#DC2626";
+    apStatus.textContent = `✗ ${e.message}`;
+    btn.disabled = false;
+    btn.textContent = "Save Approved Rules";
+  }
 }
 </script>
 

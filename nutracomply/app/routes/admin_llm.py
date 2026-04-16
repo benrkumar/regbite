@@ -785,6 +785,237 @@ async def llm_audit(kb_type: str, request: Request, db: Session = Depends(get_db
         return JSONResponse({"error": str(exc)[:300]}, status_code=500)
 
 
+@router.get("/llm/{kb_type}/docs-partial")
+async def llm_docs_partial(kb_type: str, request: Request, db: Session = Depends(get_db)):
+    """Return latest doc list as JSON for live table refresh after upload."""
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+    if kb_type not in _VALID_KB:
+        return JSONResponse({"error": "Invalid KB type"}, status_code=400)
+    from app.models import KBDocument, KBType
+    docs = (
+        db.query(KBDocument)
+        .filter(KBDocument.kb_type == KBType(kb_type), KBDocument.is_active)
+        .order_by(KBDocument.uploaded_at.desc())
+        .all()
+    )
+    return JSONResponse({
+        "total": len(docs),
+        "docs": [
+            {
+                "id":          d.id,
+                "title":       d.title or "",
+                "source":      d.source or "",
+                "chunk_count": d.chunk_count,
+                "uploaded_at": d.uploaded_at.strftime("%d %b %Y") if d.uploaded_at else "—",
+            }
+            for d in docs
+        ],
+    })
+
+
+# ── KB Rule Extraction job store ─────────────────────────────────────────────
+_EXTRACT_JOBS: dict = {}   # job_id → {status, rules, error, note}
+
+
+def _run_extract_job(job_id: str, content: str, doc_title: str, existing_codes: set):
+    """Background thread: call Gemini to extract compliance rules from regulation text."""
+    import json as _json
+    import google.generativeai as genai
+    from app.config import get_settings
+    settings = get_settings()
+    try:
+        _EXTRACT_JOBS[job_id]["note"] = "Calling Gemini…"
+        if not settings.gemini_api_key:
+            _EXTRACT_JOBS[job_id] = {"status": "error", "error": "Gemini API key not configured"}
+            return
+
+        prompt = (
+            "You are an FSSAI compliance expert analyzing Indian nutraceutical/health supplement regulations.\n\n"
+            f"DOCUMENT: {doc_title}\n\n"
+            "REGULATION TEXT:\n"
+            f"{content[:9000]}\n\n"
+            "Extract ALL specific, objectively verifiable compliance requirements from this text that apply "
+            "to product labels for nutraceuticals or health supplements.\n\n"
+            "For each requirement output a JSON object with these exact fields:\n"
+            "- rule_code: unique code — use prefix FSSAI-NUTRA-, FSSAI-HEALTH-, LM-PKG-, AYUSH-ASU- based on content, "
+            "followed by category abbreviation and a 3-digit number (e.g. FSSAI-NUTRA-LBL-101)\n"
+            "- category: one of MANDATORY_FIELD | PROHIBITED_CLAIM | INGREDIENT_RESTRICTION | "
+            "FORMAT_REQUIREMENT | QUANTITY_REQUIREMENT | WARNING | LICENSING\n"
+            "- severity: CRITICAL | HIGH | MEDIUM | LOW\n"
+            "- check_type: PRESENCE | ABSENCE | FORMAT | PATTERN_MATCH | VALUE_IN_LIST | NOT_IN_LIST\n"
+            "- description: specific, checkable statement of the requirement (1-2 sentences)\n"
+            "- regulation_source: exact section/clause citation\n"
+            "- remediation_template: 1-sentence fix guidance\n"
+            "- check_config: JSON object — for FORMAT: {\"description\": \"...\"}, "
+            "for PRESENCE: {\"field\": \"field_name\"}, for PATTERN_MATCH: {\"field\": \"f\", \"pattern\": \"regex\"}\n"
+            "- framework: FSSAI | LEGAL_METROLOGY | AYUSH | BIS | DGFT\n\n"
+            "Only include requirements that are:\n"
+            "1. Label-specific (appear on or relate to product packaging/labeling)\n"
+            "2. Objectively testable (not subjective quality assessments)\n\n"
+            "Return ONLY valid JSON, no markdown, no extra text:\n"
+            "{\"rules\": [...]}"
+        )
+
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        response = model.generate_content(prompt)
+
+        raw = response.text.strip()
+        # Strip markdown code fences if present
+        if "```" in raw:
+            parts = raw.split("```")
+            for part in parts:
+                stripped = part.strip()
+                if stripped.startswith("json"):
+                    stripped = stripped[4:].strip()
+                if stripped.startswith("{"):
+                    raw = stripped
+                    break
+
+        data = _json.loads(raw)
+        rules = data.get("rules", [])
+
+        # Remove codes that already exist in the DB
+        rules = [r for r in rules if r.get("rule_code") not in existing_codes]
+
+        _EXTRACT_JOBS[job_id] = {
+            "status": "done",
+            "rules":  rules,
+            "doc_title": doc_title,
+        }
+    except Exception as exc:
+        _EXTRACT_JOBS[job_id] = {"status": "error", "error": str(exc)[:300]}
+
+
+@router.post("/llm/regulations/extract-rules")
+async def llm_extract_rules(request: Request, db: Session = Depends(get_db)):
+    """Extract compliance rules from an indexed KB document using Gemini."""
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+    import threading
+    from app.models import KBDocument, KBType, ComplianceRule
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid request body"}, status_code=400)
+
+    doc_id = body.get("doc_id")
+    if not doc_id:
+        return JSONResponse({"error": "doc_id required"}, status_code=400)
+
+    doc = db.query(KBDocument).filter(
+        KBDocument.id == int(doc_id),
+        KBDocument.kb_type == KBType.REGULATIONS,
+        KBDocument.is_active,
+    ).first()
+    if not doc:
+        return JSONResponse({"error": "Document not found"}, status_code=404)
+    if not doc.content:
+        return JSONResponse({"error": "Document has no content to analyze"}, status_code=400)
+
+    existing_codes = {r.rule_code for r in db.query(ComplianceRule.rule_code).all()}
+
+    job_id = str(uuid.uuid4())[:12]
+    _EXTRACT_JOBS[job_id] = {"status": "processing", "note": "Starting…"}
+    threading.Thread(
+        target=_run_extract_job,
+        args=(job_id, doc.content, doc.title or "Document", existing_codes),
+        daemon=True,
+    ).start()
+
+    return JSONResponse({"job_id": job_id})
+
+
+@router.get("/llm/regulations/extract-rules/status/{job_id}")
+async def llm_extract_rules_status(job_id: str, request: Request, db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+    job = _EXTRACT_JOBS.get(job_id)
+    if not job:
+        return JSONResponse({"status": "not_found"}, status_code=404)
+    return JSONResponse(job)
+
+
+@router.post("/llm/regulations/approve-rules")
+async def llm_approve_rules(request: Request, db: Session = Depends(get_db)):
+    """Save admin-reviewed extracted rules into the compliance_rules table."""
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+    import json as _json
+    from app.models import ComplianceRule, RuleCategory, CheckType, Severity, RuleFramework
+    from app.services.llm_service import invalidate_cache
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid request body"}, status_code=400)
+
+    rules = body.get("rules", [])
+    if not rules:
+        return JSONResponse({"error": "No rules provided"}, status_code=400)
+
+    existing_codes = {r.rule_code for r in db.query(ComplianceRule.rule_code).all()}
+    added, errors = 0, []
+
+    for r in rules:
+        try:
+            code = (r.get("rule_code") or "").strip()
+            if not code or code in existing_codes:
+                continue
+
+            try:
+                category = RuleCategory(r.get("category", "MANDATORY_FIELD"))
+            except ValueError:
+                category = RuleCategory.MANDATORY_FIELD
+            try:
+                severity = Severity(r.get("severity", "MEDIUM"))
+            except ValueError:
+                severity = Severity.MEDIUM
+            try:
+                check_type = CheckType(r.get("check_type", "FORMAT"))
+            except ValueError:
+                check_type = CheckType.FORMAT
+            try:
+                framework = RuleFramework(r.get("framework", "FSSAI"))
+            except ValueError:
+                framework = RuleFramework.FSSAI
+
+            cfg = r.get("check_config", {})
+            if isinstance(cfg, str):
+                try:
+                    cfg = _json.loads(cfg)
+                except Exception:
+                    cfg = {}
+            if not cfg:
+                cfg = {"description": r.get("description", "")}
+
+            db.add(ComplianceRule(
+                rule_code=code,
+                category=category,
+                severity=severity,
+                check_type=check_type,
+                framework=framework,
+                description=r.get("description", ""),
+                regulation_source=r.get("regulation_source", ""),
+                remediation_template=r.get("remediation_template", ""),
+                check_config=cfg,
+                active=True,
+            ))
+            existing_codes.add(code)
+            added += 1
+        except Exception as exc:
+            errors.append(f"{r.get('rule_code', '?')}: {str(exc)[:80]}")
+
+    db.commit()
+    invalidate_cache("regulations")
+    return JSONResponse({"added": added, "errors": errors, "message": f"Saved {added} new rule(s)."})
+
+
 # ── KB Re-index job store ─────────────────────────────────────────────────────
 _REINDEX_JOBS: dict = {}  # job_id → {status, progress, total, done, result}
 
