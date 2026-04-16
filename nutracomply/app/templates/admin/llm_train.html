@@ -301,6 +301,24 @@
       {% endif %}
     </div>
 
+    {% if kb_type == "regulations" %}
+    {# ── Fresh Start ── #}
+    <div class="kb-action-section" style="background:#FFFAF5;border-left:3px solid #C27B1A;">
+      <div class="kb-action-section-lbl" style="color:#C27B1A;">Fresh Start</div>
+      <p style="font-size:0.72rem;color:#525252;margin:0 0 0.65rem;line-height:1.5;">
+        Wipes all {{ stats.documents }} KB documents, then immediately re-seeds
+        the base rule context from DB. Clears all duplicate locks so you can
+        upload your <code>.md</code> files fresh.
+      </p>
+      <button type="button" id="clearRebuildBtn" class="adm-btn"
+              style="width:100%;font-size:0.78rem;border-color:#C27B1A;color:#C27B1A;"
+              onclick="clearAndRebuild()">
+        ⟳ Clear KB &amp; Rebuild from DB
+      </button>
+      <div id="clearRebuildStatus" style="display:none;margin-top:0.55rem;font-size:0.74rem;color:#525252;line-height:1.5;"></div>
+    </div>
+    {% endif %}
+
     {# ── Re-read & Re-learn ── always-visible, prominent action ── #}
     <div class="kb-action-section" style="background:#F0F9F8;border-left:3px solid #111111;">
       <div class="kb-action-section-lbl" style="color:#111111;">Re-read & Re-learn</div>
@@ -1290,6 +1308,53 @@ async function refreshDocCount() {
     // Also refresh extract-rules dropdown if it exists
     _refreshExtractDropdown(dd.docs.filter(d => d.source.startsWith("upload:") || d.source.startsWith("fssai:")));
   } catch (_) {}
+}
+
+/* ──────────────────────────── Clear & Rebuild ──────────────────────────── */
+async function clearAndRebuild() {
+  const docCount = document.querySelector('.kb-stat-chip .val')?.textContent || "all";
+  const confirmed = confirm(
+    `⚠️ CLEAR & REBUILD\n\n` +
+    `This will:\n` +
+    `  1. Delete ALL ${docCount} KB documents + chunks\n` +
+    `  2. Re-seed base rule context from DB (~87 docs)\n\n` +
+    `Uploaded .md files will be removed. ` +
+    `You can re-upload them fresh after this.\n\n` +
+    `Continue?`
+  );
+  if (!confirmed) return;
+
+  const btn    = document.getElementById("clearRebuildBtn");
+  const status = document.getElementById("clearRebuildStatus");
+  btn.disabled = true;
+  btn.textContent = "⏳ Clearing…";
+  status.style.display = "block";
+  status.style.color = "#525252";
+  status.textContent = "Deleting documents and chunks…";
+
+  try {
+    const r = await fetch("/admin/llm/regulations/clear-and-rebuild", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", ..._csrfHeaders() },
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+
+    status.style.color = "#357266";
+    status.innerHTML =
+      `✓ <strong>${d.docs_deleted}</strong> docs deleted · ` +
+      `<strong>${d.reseeded}</strong> base docs re-seeded<br>` +
+      `<span style="color:#525252;">KB is clean — upload your .md files now.</span>`;
+    btn.textContent = "✓ Done";
+
+    // Refresh the document list and stat chips live
+    await refreshDocCount();
+  } catch (e) {
+    status.style.color = "#DC2626";
+    status.textContent = `✗ ${e.message}`;
+    btn.disabled = false;
+    btn.textContent = "⟳ Clear KB & Rebuild from DB";
+  }
 }
 
 /* ──────────────────────────── Extract Rules ─────────────────────────────── */

@@ -785,6 +785,54 @@ async def llm_audit(kb_type: str, request: Request, db: Session = Depends(get_db
         return JSONResponse({"error": str(exc)[:300]}, status_code=500)
 
 
+@router.post("/llm/regulations/clear-and-rebuild")
+async def llm_clear_and_rebuild(request: Request, db: Session = Depends(get_db)):
+    """
+    Nuclear reset for the regulations KB:
+    1. Delete ALL KBChunk + KBDocument rows for regulations
+    2. Immediately re-seed from DB (compliance rules, ingredients, regulation changes)
+    Returns JSON stats so the UI can refresh without a page reload.
+    """
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return JSONResponse({"error": "Not authorised"}, status_code=401)
+
+    from app.models import KBDocument, KBChunk, KBType
+    from app.services.llm_service import seed_regulations_kb, invalidate_cache
+
+    try:
+        # ── Step 1: wipe everything ───────────────────────────────────────────
+        chunks_deleted = db.query(KBChunk).filter(
+            KBChunk.kb_type == KBType.REGULATIONS
+        ).delete(synchronize_session=False)
+
+        docs_deleted = db.query(KBDocument).filter(
+            KBDocument.kb_type == KBType.REGULATIONS
+        ).delete(synchronize_session=False)
+
+        db.commit()
+        invalidate_cache("regulations")
+
+        # ── Step 2: re-seed base context from DB ─────────────────────────────
+        seed_result = seed_regulations_kb(db)
+        reseeded = seed_result.get("document_count", 0)
+
+        return JSONResponse({
+            "status":        "ok",
+            "docs_deleted":  docs_deleted,
+            "chunks_deleted": chunks_deleted,
+            "reseeded":      reseeded,
+            "message":       (
+                f"Cleared {docs_deleted} documents ({chunks_deleted} chunks). "
+                f"Re-seeded {reseeded} base documents from DB. "
+                "Ready to upload your .md files."
+            ),
+        })
+    except Exception as exc:
+        db.rollback()
+        return JSONResponse({"error": str(exc)[:300]}, status_code=500)
+
+
 @router.get("/llm/{kb_type}/docs-partial")
 async def llm_docs_partial(kb_type: str, request: Request, db: Session = Depends(get_db)):
     """Return latest doc list as JSON for live table refresh after upload."""
