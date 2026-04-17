@@ -30,7 +30,7 @@ async def regulations_feed(
 
     changes_q = db.query(RegulationChange).order_by(RegulationChange.detected_at.desc())
     if source:
-        changes_q = changes_q.filter(RegulationChange.source.ilike(f"%{source}%"))
+        changes_q = changes_q.filter(RegulationChange.source_url.ilike(f"%{source}%"))
     changes = changes_q.all()
 
     # Group changes by Month Year (ordered, newest first)

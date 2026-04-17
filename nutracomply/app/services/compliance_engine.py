@@ -97,7 +97,7 @@ def _evaluate_rule(rule: ComplianceRule, extraction: dict, label_version_id: int
         elif rule.check_type == CheckType.VALUE_IN_LIST:
             result, actual_value, message = _check_value_in_list(rule, config, extraction)
 
-        elif rule.check_type == CheckType.FORMAT:
+        elif rule.check_type in (CheckType.FORMAT, CheckType.FORMAT_LLM):
             result, actual_value, message = _check_format_llm(rule, config, extraction)
 
     except Exception as e:

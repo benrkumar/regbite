@@ -58,6 +58,7 @@ class CheckType(str, enum.Enum):
     VALUE_IN_LIST = "VALUE_IN_LIST"
     NOT_IN_LIST = "NOT_IN_LIST"
     FORMAT = "FORMAT"
+    FORMAT_LLM = "FORMAT_LLM"   # LLM-assisted format/content validation (added batch 2)
 
 
 class Severity(str, enum.Enum):
