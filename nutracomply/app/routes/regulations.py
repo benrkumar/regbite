@@ -7,7 +7,10 @@ from pathlib import Path
 from typing import Optional
 
 from app.database import get_db
-from app.models import RegulationChange, ComplianceRule, RuleCategory
+from app.models import (
+    RegulationChange, ComplianceRule, RuleCategory,
+    PublishedAlert, PublishedAlertStatus, PublishedAlertSeverity,
+)
 from app.routes.auth import get_current_user_from_cookie
 from app.utils.alerts import get_unread_alert_count
 
@@ -23,6 +26,7 @@ async def regulations_feed(
     category: Optional[str] = None,
     severity: Optional[str] = None,
     source: Optional[str] = None,
+    notice_severity: Optional[str] = None,
 ):
     user = get_current_user_from_cookie(request, db)
     if not user:
@@ -52,6 +56,19 @@ async def regulations_feed(
 
     rule_categories = [c.value for c in RuleCategory]
 
+    # Published regulation notices (tab 3)
+    notices_q = db.query(PublishedAlert).filter(
+        PublishedAlert.status == PublishedAlertStatus.PUBLISHED,
+    )
+    if notice_severity:
+        try:
+            notices_q = notices_q.filter(
+                PublishedAlert.severity == PublishedAlertSeverity(notice_severity),
+            )
+        except ValueError:
+            pass
+    published_notices = notices_q.order_by(PublishedAlert.published_at.desc()).all()
+
     unread_alerts = get_unread_alert_count(user, db)
 
     return templates.TemplateResponse("regulations.html", {
@@ -65,5 +82,7 @@ async def regulations_feed(
         "filter_category": category or "",
         "filter_severity": severity or "",
         "filter_source": source or "",
+        "published_notices": published_notices,
+        "notice_severity": notice_severity or "",
         "unread_alerts": unread_alerts,
     })

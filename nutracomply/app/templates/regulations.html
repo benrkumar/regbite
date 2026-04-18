@@ -37,6 +37,11 @@
     Rules Database
     <span class="tab-badge">{{ rules | length }}</span>
   </a>
+  <a href="/regulations?tab=notices"
+     class="tab{% if active_tab == 'notices' %} active{% endif %}">
+    Notices
+    {% if published_notices is defined and published_notices | length > 0 %}<span class="tab-badge">{{ published_notices | length }}</span>{% endif %}
+  </a>
 </div>
 
 
@@ -250,6 +255,107 @@
     <span class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
     <h3>No rules match</h3>
     <p>Try different filters or <a href="/regulations?tab=rules">clear all filters</a>.</p>
+  </div>
+</div>
+{% endif %}
+
+{# ══════════════════════════════════════════════════════════
+   TAB 3 — NOTICES (Published Regulation Alerts)
+   ══════════════════════════════════════════════════════════ #}
+{% elif active_tab == 'notices' %}
+
+<style>
+.notice-card {
+  background:#fff; border:1px solid var(--border); border-radius:var(--r-lg);
+  padding:1.25rem 1.4rem; margin-bottom:1rem;
+  border-left:4px solid var(--border);
+  transition:box-shadow var(--t);
+}
+.notice-card:hover { box-shadow:0 4px 18px rgba(0,0,0,0.07); }
+.notice-card.sev-urgent    { border-left-color:#111111; }
+.notice-card.sev-important { border-left-color:#525252; }
+.notice-card.sev-info      { border-left-color:#A3A3A3; }
+.notice-pill {
+  display:inline-block; padding:0.18rem 0.65rem; border-radius:var(--r-full);
+  font-size:0.72rem; font-weight:700; white-space:nowrap;
+}
+.np-urgent    { background:#EBEBEB; color:#111111; }
+.np-important { background:#F5F5F5; color:#525252; }
+.np-info      { background:#F0F0F0; color:#404040; }
+.notice-filter { display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1.4rem; }
+.nf-chip {
+  padding:0.3rem 0.85rem; border-radius:var(--r-full); font-size:0.8rem; font-weight:600;
+  border:1.5px solid var(--border); background:#fff; color:var(--gray-500);
+  cursor:pointer; transition:all var(--t); text-decoration:none;
+}
+.nf-chip:hover { border-color:var(--green-500); color:var(--green-600); text-decoration:none; }
+.nf-chip.active { background:#262626; border-color:transparent; color:#fff; }
+.notice-cat {
+  display:inline-block; padding:0.12rem 0.48rem; border-radius:5px;
+  font-size:0.68rem; font-weight:600; background:#F0F0F0; color:#111111;
+  white-space:nowrap;
+}
+</style>
+
+{# Severity filter #}
+<div class="notice-filter">
+  <a href="/regulations?tab=notices" class="nf-chip {% if not notice_severity %}active{% endif %}">All</a>
+  <a href="/regulations?tab=notices&notice_severity=Urgent" class="nf-chip {% if notice_severity == 'Urgent' %}active{% endif %}">Urgent</a>
+  <a href="/regulations?tab=notices&notice_severity=Important" class="nf-chip {% if notice_severity == 'Important' %}active{% endif %}">Important</a>
+  <a href="/regulations?tab=notices&notice_severity=Informational" class="nf-chip {% if notice_severity == 'Informational' %}active{% endif %}">Informational</a>
+</div>
+
+{% if published_notices %}
+{% for n in published_notices %}
+{% set sev = n.severity.value %}
+<div class="notice-card {% if sev == 'Urgent' %}sev-urgent{% elif sev == 'Important' %}sev-important{% else %}sev-info{% endif %}">
+  <div style="display:flex;align-items:flex-start;gap:0.75rem;justify-content:space-between;flex-wrap:wrap;">
+    <div style="flex:1;min-width:0;">
+      <div style="display:flex;align-items:center;gap:0.55rem;flex-wrap:wrap;margin-bottom:0.45rem;">
+        {% if sev == 'Urgent' %}
+        <span class="notice-pill np-urgent">Urgent</span>
+        {% elif sev == 'Important' %}
+        <span class="notice-pill np-important">Important</span>
+        {% else %}
+        <span class="notice-pill np-info">Informational</span>
+        {% endif %}
+        {% if n.affected_categories %}
+          {% for cat in n.affected_categories[:3] %}
+          <span class="notice-cat">{{ cat }}</span>
+          {% endfor %}
+          {% if n.affected_categories|length > 3 %}
+          <span style="font-size:0.68rem;color:var(--gray-400);">+{{ n.affected_categories|length - 3 }} more</span>
+          {% endif %}
+        {% endif %}
+      </div>
+      <h3 style="font-size:0.98rem;font-weight:700;color:var(--gray-900);margin:0 0 0.1rem;">{{ n.title }}</h3>
+    </div>
+    <div style="font-size:0.75rem;color:var(--gray-400);white-space:nowrap;flex-shrink:0;">
+      {% if n.published_at %}{{ n.published_at.strftime('%d %b %Y') }}{% else %}{{ n.created_at.strftime('%d %b %Y') }}{% endif %}
+    </div>
+  </div>
+
+  <p style="font-size:0.87rem;color:var(--gray-600);line-height:1.55;margin:0.6rem 0 0.8rem;">{{ n.summary }}</p>
+
+  {% if n.source_title or n.source_url %}
+  <div style="font-size:0.75rem;color:var(--gray-400);display:flex;gap:0.8rem;flex-wrap:wrap;align-items:center;">
+    <span>
+      {% if n.source_title %}{{ n.source_title }}{% endif %}
+      {% if n.source_url %}
+      — <a href="{{ n.source_url }}" target="_blank" rel="noopener" style="color:var(--green-600);font-weight:600;">Read source ↗</a>
+      {% endif %}
+    </span>
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% else %}
+<div class="card no-hover">
+  <div class="empty-state">
+    <span class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
+    <h3>No regulation notices published yet</h3>
+    <p>Check back here for FSSAI and other regulatory notices published by your compliance team.</p>
   </div>
 </div>
 {% endif %}

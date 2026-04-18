@@ -178,7 +178,7 @@
       "field": "storage_conditions"
     },
     "severity": "MEDIUM",
-    "remediation_template": "Add storage instructions (e.g., 'Store in a cool, dry place', 'Keep away from direct sunlight', 'Store below 25°C'). Also add: 'Keep out of reach of children'."
+    "remediation_template": "Add storage instructions (e.g., 'Store in a cool, dry place', 'Keep away from direct sunlight', 'Store below 25Â°C'). Also add: 'Keep out of reach of children'."
   },
   {
     "rule_code": "FSSAI-NUTRA-LBL-015",
@@ -328,7 +328,7 @@
       "note": "Flag for manual review of dosage compliance"
     },
     "severity": "HIGH",
-    "remediation_template": "Ensure silica / silicon dioxide is used only as a permitted anti-caking agent at ≤ 1.5% of the total product weight. Verify usage levels comply with Schedule IV limits."
+    "remediation_template": "Ensure silica / silicon dioxide is used only as a permitted anti-caking agent at â‰¤ 1.5% of the total product weight. Verify usage levels comply with Schedule IV limits."
   },
   {
     "rule_code": "FSSAI-NUTRA-ING-004",
@@ -664,7 +664,8 @@
       "field": "manufacturer_details"
     },
     "severity": "CRITICAL",
-    "remediation_template": "Declare the complete name and address (including PIN code) of the manufacturer, packer, or importer on the package as per Legal Metrology (Packaged Commodities) Rules 2011."
+    "remediation_template": "Declare the complete name and address (including PIN code) of the manufacturer, packer, or importer on the package as per Legal Metrology (Packaged Commodities) Rules 2011.",
+    "active": false
   },
   {
     "rule_code": "LM-PKG-002",
@@ -677,7 +678,8 @@
       "description": "Must be in standard metric units per Legal Metrology rules"
     },
     "severity": "CRITICAL",
-    "remediation_template": "Declare net quantity on the principal display panel in standard metric units (g/kg for solids, mL/L for liquids). Font size must meet Legal Metrology height requirements based on package area."
+    "remediation_template": "Declare net quantity on the principal display panel in standard metric units (g/kg for solids, mL/L for liquids). Font size must meet Legal Metrology height requirements based on package area.",
+    "active": false
   },
   {
     "rule_code": "LM-PKG-003",
@@ -690,7 +692,7 @@
       "description": "MRP inclusive of all taxes"
     },
     "severity": "CRITICAL",
-    "remediation_template": "Declare the Maximum Retail Price (MRP) inclusive of all taxes on the package. Format: 'MRP ₹XXX (incl. all taxes)'. This is mandatory under Legal Metrology rules for all pre-packaged commodities sold in India."
+    "remediation_template": "Declare the Maximum Retail Price (MRP) inclusive of all taxes on the package. Format: 'MRP â‚¹XXX (incl. all taxes)'. This is mandatory under Legal Metrology rules for all pre-packaged commodities sold in India."
   },
   {
     "rule_code": "LM-PKG-004",
@@ -702,7 +704,8 @@
       "field": "manufacturing_date"
     },
     "severity": "HIGH",
-    "remediation_template": "Declare the month and year of manufacture (or packing/import). Format: 'Mfg.: MM/YYYY' or 'Pkg.: MM/YYYY'. Required under Legal Metrology rules."
+    "remediation_template": "Declare the month and year of manufacture (or packing/import). Format: 'Mfg.: MM/YYYY' or 'Pkg.: MM/YYYY'. Required under Legal Metrology rules.",
+    "active": false
   },
   {
     "rule_code": "LM-PKG-005",
@@ -714,7 +717,8 @@
       "field": "expiry_date"
     },
     "severity": "HIGH",
-    "remediation_template": "Declare 'Best Before' or 'Use By' date. For products with shelf life > 3 months, month/year is acceptable. For products with shelf life ≤ 3 months, declare day/month/year."
+    "remediation_template": "Declare 'Best Before' or 'Use By' date. For products with shelf life > 3 months, month/year is acceptable. For products with shelf life â‰¤ 3 months, declare day/month/year.",
+    "active": false
   },
   {
     "rule_code": "LM-PKG-006",
@@ -726,7 +730,8 @@
       "field": "product_name"
     },
     "severity": "CRITICAL",
-    "remediation_template": "Declare the common or generic name of the commodity on the package. This should clearly identify what the product is, distinct from brand/trade name."
+    "remediation_template": "Declare the common or generic name of the commodity on the package. This should clearly identify what the product is, distinct from brand/trade name.",
+    "active": false
   },
   {
     "rule_code": "LM-PKG-007",
@@ -769,7 +774,7 @@
   {
     "rule_code": "AYUSH-ASU-LBL-001",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "Drugs and Cosmetics Act 1940, Rule 161(2) — Ayurvedic, Siddha and Unani Drugs",
+    "regulation_source": "Drugs and Cosmetics Act 1940, Rule 161(2) â€” Ayurvedic, Siddha and Unani Drugs",
     "description": "ASU drug label must declare the name of the drug in the language of the authoritative text and English",
     "check_type": "PRESENCE",
     "check_config": {
@@ -867,7 +872,7 @@
   {
     "rule_code": "AYUSH-ASU-WARN-001",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "Drugs and Cosmetics Act 1940, Rule 161-B — Schedule E(1) drugs",
+    "regulation_source": "Drugs and Cosmetics Act 1940, Rule 161-B â€” Schedule E(1) drugs",
     "description": "ASU drugs containing Schedule E(1) ingredients must carry the caution: 'To be taken under medical supervision'",
     "check_type": "PRESENCE",
     "check_config": {
@@ -927,7 +932,7 @@
   {
     "rule_code": "AYUSH-ASU-METAL-001",
     "category": "INGREDIENT_RESTRICTION",
-    "regulation_source": "Drugs and Cosmetics Rules — ASU Drug Quality Standards",
+    "regulation_source": "Drugs and Cosmetics Rules â€” ASU Drug Quality Standards",
     "description": "Bhasma/Rasa preparations containing heavy metals must meet prescribed quality standards and declare metal content",
     "check_type": "PRESENCE",
     "check_config": {
@@ -971,18 +976,18 @@
     "version": "VIII",
     "framework": "FSSAI",
     "regulation_status": "EFFECTIVE",
-    "remediation_template": "Add 'of which Added Sugars — Xg' as a sub-line under Total Sugars in the nutritional information table. Applies to gummies, chewables, syrups, and flavoured powders."
+    "remediation_template": "Add 'of which Added Sugars â€” Xg' as a sub-line under Total Sugars in the nutritional information table. Applies to gummies, chewables, syrups, and flavoured powders."
   },
   {
     "rule_code": "FSSAI-NUTRA-LBL-019",
     "category": "MANDATORY_FIELD",
     "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII, Sept 2025), Reg 4A",
-    "description": "Front-of-Pack Nutrition Labelling (FOPNL) — Health Star Rating or warning symbols required for products exceeding sugar/sodium/fat thresholds",
+    "description": "Front-of-Pack Nutrition Labelling (FOPNL) â€” Health Star Rating or warning symbols required for products exceeding sugar/sodium/fat thresholds",
     "check_type": "FORMAT",
     "check_config": {
       "description": "Verify front-of-pack nutrition label (Health Star Rating or warning triangle) is present for products exceeding FSSAI threshold limits for sugar, sodium, saturated fat, or trans fat per serving."
     },
-    "severity": "HIGH",
+    "severity": "MEDIUM",
     "version": "VIII",
     "framework": "FSSAI",
     "regulation_status": "EFFECTIVE",
@@ -1021,7 +1026,7 @@
         "ponceau 4R",
         "quinoline yellow"
       ],
-      "note": "Synthetic food colours — check if present and within permitted limits for the product category"
+      "note": "Synthetic food colours â€” check if present and within permitted limits for the product category"
     },
     "severity": "CRITICAL",
     "version": "2025-Amendment-1",
@@ -1046,7 +1051,7 @@
         "benzoic acid",
         "sorbic acid"
       ],
-      "note": "Preservatives — check against maximum permitted levels in Schedule B"
+      "note": "Preservatives â€” check against maximum permitted levels in Schedule B"
     },
     "severity": "HIGH",
     "version": "2025-Amendment-1",
@@ -1072,7 +1077,7 @@
         "neotame",
         "monk fruit"
       ],
-      "note": "Artificial sweeteners — verify limit compliance and mandatory declaration"
+      "note": "Artificial sweeteners â€” verify limit compliance and mandatory declaration"
     },
     "severity": "HIGH",
     "version": "2025-Amendment-1",
@@ -1214,8 +1219,8 @@
   {
     "rule_code": "FSSAI-NUTRA-ING-016",
     "category": "INGREDIENT_RESTRICTION",
-    "regulation_source": "FSSAI Notification S.O. 2847(E), June 2024 — Phenylephrine restriction",
-    "description": "Phenylephrine and pseudoephedrine are restricted — not permitted in food/supplement category",
+    "regulation_source": "FSSAI Notification S.O. 2847(E), June 2024 â€” Phenylephrine restriction",
+    "description": "Phenylephrine and pseudoephedrine are restricted â€” not permitted in food/supplement category",
     "check_type": "NOT_IN_LIST",
     "check_config": {
       "field": "ingredient_list",
@@ -1235,21 +1240,21 @@
     "rule_code": "FSSAI-LIC-001",
     "category": "LICENSING",
     "regulation_source": "FSSAI Licensing & Registration Amendment Regulations 2026, S.O. March 2026",
-    "description": "FSSAI Registration (up to ₹1.5 Cr turnover), State License (up to ₹50 Cr), Central License (above ₹50 Cr) — updated thresholds effective March 2026",
+    "description": "FSSAI Registration (up to â‚¹1.5 Cr turnover), State License (up to â‚¹50 Cr), Central License (above â‚¹50 Cr) â€” updated thresholds effective March 2026",
     "check_type": "FORMAT",
     "check_config": {
-      "description": "Verify the FSSAI license type matches the manufacturer's annual turnover: Registration (up to ₹1.5 Cr), State License (up to ₹50 Cr), Central License (above ₹50 Cr). Post March 2026, licenses are perpetual (no renewal cycles)."
+      "description": "Verify the FSSAI license type matches the manufacturer's annual turnover: Registration (up to â‚¹1.5 Cr), State License (up to â‚¹50 Cr), Central License (above â‚¹50 Cr). Post March 2026, licenses are perpetual (no renewal cycles)."
     },
-    "severity": "HIGH",
+    "severity": "MEDIUM",
     "version": "2026-Amendment",
     "framework": "FSSAI",
     "regulation_status": "EFFECTIVE",
-    "remediation_template": "Verify your FSSAI license tier matches your annual turnover under the March 2026 amendment: Registration (up to ₹1.5 Cr), State License (up to ₹50 Cr), Central License (above ₹50 Cr). Note: licenses issued after March 2026 have perpetual validity — no renewal required."
+    "remediation_template": "Verify your FSSAI license tier matches your annual turnover under the March 2026 amendment: Registration (up to â‚¹1.5 Cr), State License (up to â‚¹50 Cr), Central License (above â‚¹50 Cr). Note: licenses issued after March 2026 have perpetual validity â€” no renewal required."
   },
   {
     "rule_code": "FSSAI-LIC-002",
     "category": "LICENSING",
-    "regulation_source": "FSSAI Licensing & Registration Amendment Regulations 2026 — Street Vendors",
+    "regulation_source": "FSSAI Licensing & Registration Amendment Regulations 2026 â€” Street Vendors",
     "description": "Street food vendors selling supplements under Street Vendors Act 2014 qualify for deemed registration",
     "check_type": "FORMAT",
     "check_config": {
@@ -1264,7 +1269,7 @@
   {
     "rule_code": "BIS-NUTRA-001",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "BIS IS 4926:2023 — Labelling of Pre-Packaged Foods (Revised)",
+    "regulation_source": "BIS IS 4926:2023 â€” Labelling of Pre-Packaged Foods (Revised)",
     "description": "Products claiming BIS certification must display the ISI mark with valid license number",
     "check_type": "FORMAT",
     "check_config": {
@@ -1279,13 +1284,13 @@
   {
     "rule_code": "BIS-NUTRA-002",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "BIS IS 7022:2023 — Labelling of Dietary Supplements",
+    "regulation_source": "BIS IS 7022:2023 â€” Labelling of Dietary Supplements",
     "description": "Dietary supplements claiming protein content must meet BIS IS 7022 protein quality standards",
     "check_type": "FORMAT",
     "check_config": {
       "description": "Protein supplements claiming BIS certification must meet IS 7022:2023 quality parameters: minimum protein content as labelled (within -10% tolerance), amino acid profile matching PDCAAS/DIAAS requirements, and heavy metal limits."
     },
-    "severity": "HIGH",
+    "severity": "MEDIUM",
     "version": "2023",
     "framework": "BIS",
     "regulation_status": "EFFECTIVE",
@@ -1294,7 +1299,7 @@
   {
     "rule_code": "DGFT-IMP-001",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "DGFT Foreign Trade Policy 2023, Chapter 2 — Import Policy for Food Supplements",
+    "regulation_source": "DGFT Foreign Trade Policy 2023, Chapter 2 â€” Import Policy for Food Supplements",
     "description": "Imported health supplements must have valid IEC (Import Export Code) and comply with FSSAI import clearance",
     "check_type": "FORMAT",
     "check_config": {
@@ -1311,7 +1316,7 @@
   {
     "rule_code": "DGFT-IMP-002",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "DGFT Notification No. 44/2023 — Restriction on Import of Supplements Containing Restricted Herbs",
+    "regulation_source": "DGFT Notification No. 44/2023 â€” Restriction on Import of Supplements Containing Restricted Herbs",
     "description": "Import of supplements containing CITES-listed or India-restricted botanicals requires additional DGFT clearance",
     "check_type": "FORMAT",
     "check_config": {
@@ -1328,7 +1333,7 @@
   {
     "rule_code": "FSSAI-NUTRA-NUT-001",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII), Reg 5 — Nutritional Information",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020 (Version VIII), Reg 5 â€” Nutritional Information",
     "description": "Nutritional information table must be present with at least energy (kcal) and protein values",
     "check_type": "PRESENCE",
     "check_config": {
@@ -1402,7 +1407,7 @@
     "version": "2025",
     "framework": "LEGAL_METROLOGY",
     "regulation_status": "EFFECTIVE",
-    "remediation_template": "MRP declaration must state 'inclusive of all taxes'. Format: 'MRP ₹XXX (inclusive of all taxes)'. This is a Legal Metrology requirement."
+    "remediation_template": "MRP declaration must state 'inclusive of all taxes'. Format: 'MRP â‚¹XXX (inclusive of all taxes)'. This is a Legal Metrology requirement."
   },
   {
     "rule_code": "FSSAI-NUTRA-SRV-001",
@@ -1458,7 +1463,7 @@
     "check_config": {
       "description": "If the product contains aspartame (also listed as INS 951, E951, or aspartame-acesulfame salt), verify the label carries: 'Not recommended for phenylketonurics' AND warning for children with seizure disorders / pregnant / lactating mothers. Search ingredients list and warnings section."
     },
-    "severity": "HIGH",
+    "severity": "MEDIUM",
     "remediation_template": "Add aspartame-specific health warning: 'Not recommended for phenylketonurics; for children suffering from seizure disorders; pregnant and lactating mothers.'"
   },
   {
@@ -1470,7 +1475,7 @@
     "check_config": {
       "description": "If the ingredients list contains any artificial/non-caloric sweetener (stevia, sucralose, aspartame, acesulfame-K, saccharin, neotame, advantame, monk fruit extract, or INS codes 950-960), verify the label carries the declaration 'CONTAINS NON-CALORIC SWEETENER' or 'CONTAIN NON-CALORIC SWEETENER'."
     },
-    "severity": "HIGH",
+    "severity": "MEDIUM",
     "remediation_template": "Add the declaration 'CONTAINS NON-CALORIC SWEETENER' prominently on the label whenever artificial or non-caloric sweeteners are used."
   },
   {
@@ -1494,7 +1499,7 @@
     "check_config": {
       "description": "If the product contains added caffeine (including caffeine from green tea extract, guarana, coffee extract, or any other source listed explicitly as caffeine), verify: (1) the label carries 'CONTAINS CAFFEINE', and (2) the caffeine quantity in ppm or mg is declared in the ingredients list or nutritional panel."
     },
-    "severity": "HIGH",
+    "severity": "MEDIUM",
     "remediation_template": "Add 'CONTAINS CAFFEINE' declaration and specify caffeine quantity (mg per serving) in the ingredients list or nutritional information."
   },
   {
@@ -1506,7 +1511,7 @@
     "check_config": {
       "description": "If the product makes a 'Gluten Free' claim, verify: (1) the term 'Gluten Free' appears near the product name on the principal display panel, (2) if label also states the product is made in a facility that handles gluten-containing products, the cross-contamination statement 'Processed in a plant where gluten-containing products are manufactured' is present. Check if product contains wheat, barley, rye or oats."
     },
-    "severity": "HIGH",
+    "severity": "MEDIUM",
     "remediation_template": "Place 'Gluten Free' declaration in proximity to the product name. If manufactured alongside gluten products, add: 'Processed in a plant where gluten-containing products are manufactured.'"
   },
   {
@@ -1518,7 +1523,7 @@
     "check_config": {
       "description": "If the product contains any common allergens (milk, eggs, fish, crustaceans, tree nuts, peanuts, wheat/gluten, soybeans, sesame), verify that allergen information is declared separately using the format 'Contains: [allergen]' and not buried within the ingredients list. Cross-contamination risks should use 'May Contain: [allergen]'."
     },
-    "severity": "HIGH",
+    "severity": "MEDIUM",
     "remediation_template": "Add a separate allergen declaration using the format 'Contains: [allergen name(s)]'. Do not rely solely on the ingredients list. For cross-contamination risks add 'May Contain: [allergen]'."
   },
   {
@@ -1528,7 +1533,7 @@
     "description": "When a specific ingredient is highlighted or emphasized on the label (via words, pictures, or graphics), its percentage by weight/volume (QUID) must be declared",
     "check_type": "FORMAT_LLM",
     "check_config": {
-      "description": "If the label prominently features or emphasizes a specific ingredient through: (1) the product name (e.g., 'Mango Vitamin C Supplement'), (2) pictures/graphics of the ingredient, or (3) marketing claims about that specific ingredient — verify the percentage by weight or volume of that ingredient is declared either in the product name or adjacent to it. Example: 'Ashwagandha Extract (500mg per serving)'."
+      "description": "If the label prominently features or emphasizes a specific ingredient through: (1) the product name (e.g., 'Mango Vitamin C Supplement'), (2) pictures/graphics of the ingredient, or (3) marketing claims about that specific ingredient â€” verify the percentage by weight or volume of that ingredient is declared either in the product name or adjacent to it. Example: 'Ashwagandha Extract (500mg per serving)'."
     },
     "severity": "MEDIUM",
     "remediation_template": "Declare the percentage or quantity of any prominently featured ingredient. Example: If 'Ashwagandha' is featured on the front panel, add '(X% / Xmg per serving)' adjacent to the ingredient name or claim."
@@ -1540,9 +1545,9 @@
     "description": "If brand name or trademark uses adjectives like 'Natural', 'Fresh', 'Pure', 'Original', 'Traditional', 'Authentic', 'Genuine', or 'Real', a disclaimer must be printed on the front of pack",
     "check_type": "FORMAT_LLM",
     "check_config": {
-      "description": "Check the brand name and trademark for adjectives like: Natural, Fresh, Pure, Original, Traditional, Authentic, Genuine, Real. If any such word is part of the brand/trademark name, verify a disclaimer is present near the brand name: '*This is only a brand name or trademark, or fancy name and does not represent its true nature'. The disclaimer font must be at least 1.5mm for packs up to 100cm², 2mm for 100-200cm², and 3mm for larger packs."
+      "description": "Check the brand name and trademark for adjectives like: Natural, Fresh, Pure, Original, Traditional, Authentic, Genuine, Real. If any such word is part of the brand/trademark name, verify a disclaimer is present near the brand name: '*This is only a brand name or trademark, or fancy name and does not represent its true nature'. The disclaimer font must be at least 1.5mm for packs up to 100cmÂ², 2mm for 100-200cmÂ², and 3mm for larger packs."
     },
-    "severity": "HIGH",
+    "severity": "MEDIUM",
     "remediation_template": "Add disclaimer: '*This is only a brand name or trademark, or fancy name and does not represent its true nature' in prescribed font size adjacent to the brand name that uses words like Natural, Pure, Fresh, Original, etc."
   },
   {
@@ -1554,7 +1559,7 @@
     "check_config": {
       "description": "Scan the entire label for any of the following prohibited claims: 'recommended by doctors/physicians/nutritionists/dieticians', 'doctor-approved', 'clinically recommended', 'prescribed by', 'approved for medical use', 'endorsed by healthcare professionals', 'as recommended by your doctor', or any similar language suggesting medical professional endorsement or approval. These are all prohibited under FSSAI advertising regulations."
     },
-    "severity": "HIGH",
+    "severity": "MEDIUM",
     "remediation_template": "Remove any claim of medical or healthcare professional recommendation, approval, or endorsement. Phrases like 'Doctor recommended' or 'Nutritionist approved' are prohibited on food/supplement labels."
   },
   {
@@ -1681,7 +1686,7 @@
   {
     "rule_code": "FSSAI-BOT-LBL-001",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 12.3(a) — Botanicals & Plant Ingredients",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 12.3(a) â€” Botanicals & Plant Ingredients",
     "description": "For products containing botanical or plant-derived ingredients, the scientific (botanical) name of each plant ingredient must be declared on the label",
     "check_type": "FORMAT_LLM",
     "check_config": {
@@ -1693,7 +1698,7 @@
   {
     "rule_code": "FSSAI-BOT-LBL-002",
     "category": "FORMAT_REQUIREMENT",
-    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 12.2(ii) — Botanical Extracts",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 12.2(ii) â€” Botanical Extracts",
     "description": "When botanical extracts are used (not whole plant), the extract ratio to original plant material must be declared on the label",
     "check_type": "FORMAT_LLM",
     "check_config": {
@@ -1705,7 +1710,7 @@
   {
     "rule_code": "FSSAI-BOT-WARN-001",
     "category": "WARNING",
-    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV — Botanical ingredient contraindications",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV â€” Botanical ingredient contraindications",
     "description": "For botanical ingredients with known pregnancy contraindications (per FSSAI Schedule IV), label must carry 'Not recommended during pregnancy' or specific contraindication warning",
     "check_type": "FORMAT_LLM",
     "check_config": {
@@ -1733,10 +1738,10 @@
     "description": "Probiotic products must specify storage conditions required to maintain viable cultures and the shelf-life under those conditions",
     "check_type": "FORMAT_LLM",
     "check_config": {
-      "description": "For products containing live probiotic cultures, verify the label specifies: (1) The storage temperature required to maintain viable cultures (e.g., 'Store below 25°C' or 'Refrigerate at 2-8°C'), (2) That the best-before date on the label is based on viable CFU maintenance under those stated storage conditions. Generic storage instructions without probiotic-specific temperature requirements are insufficient."
+      "description": "For products containing live probiotic cultures, verify the label specifies: (1) The storage temperature required to maintain viable cultures (e.g., 'Store below 25Â°C' or 'Refrigerate at 2-8Â°C'), (2) That the best-before date on the label is based on viable CFU maintenance under those stated storage conditions. Generic storage instructions without probiotic-specific temperature requirements are insufficient."
     },
     "severity": "MEDIUM",
-    "remediation_template": "Add specific probiotic storage instructions: 'Store at [X°C] to maintain live cultures' and ensure the best-before date reflects the viable culture shelf life under stated conditions."
+    "remediation_template": "Add specific probiotic storage instructions: 'Store at [XÂ°C] to maintain live cultures' and ensure the best-before date reflects the viable culture shelf life under stated conditions."
   },
   {
     "rule_code": "FSSAI-FRT-LBL-001",
@@ -1777,7 +1782,7 @@
   {
     "rule_code": "FSSAI-CHN-LBL-001",
     "category": "MANDATORY_FIELD",
-    "regulation_source": "FSS Standards — Formulated Supplements for Children (FSC), Schedule 2.4.11(4)(9)",
+    "regulation_source": "FSS Standards â€” Formulated Supplements for Children (FSC), Schedule 2.4.11(4)(9)",
     "description": "Formulated supplements for children must be labeled as 'Formulated supplement for children' and must specify the age group 'Above 24 months till 36 months' (or applicable range)",
     "check_type": "FORMAT_LLM",
     "check_config": {
@@ -1789,7 +1794,7 @@
   {
     "rule_code": "FSSAI-CHN-LBL-002",
     "category": "FORMAT_REQUIREMENT",
-    "regulation_source": "FSS Standards — Formulated Supplements for Children, Schedule 2.4.11(4)(9)(vi)",
+    "regulation_source": "FSS Standards â€” Formulated Supplements for Children, Schedule 2.4.11(4)(9)(vi)",
     "description": "Children's supplement labels must include detailed preparation and serving instructions, with statement that only sufficient amount for one feeding should be prepared at a time",
     "check_type": "FORMAT_LLM",
     "check_config": {
@@ -1801,7 +1806,7 @@
   {
     "rule_code": "FSSAI-CHN-CLM-001",
     "category": "PROHIBITED_CLAIM",
-    "regulation_source": "FSS Standards — Formulated Supplements for Children, Schedule 2.4.11(4)(9)(ii)",
+    "regulation_source": "FSS Standards â€” Formulated Supplements for Children, Schedule 2.4.11(4)(9)(ii)",
     "description": "Children's formulated supplements must not be labeled as 'Energy food', 'Health food', 'Growth food', or contain pictures/references to malnourished children on the label",
     "check_type": "FORMAT_LLM",
     "check_config": {
@@ -1813,7 +1818,7 @@
   {
     "rule_code": "FSSAI-SDU-WGT-001",
     "category": "FORMAT_REQUIREMENT",
-    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 8.3(c) — Food for Special Dietary Use: Weight Management",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 8.3(c) â€” Food for Special Dietary Use: Weight Management",
     "description": "Products formulated for weight management must state 'For weight control and management' in close proximity to the product name, and must state it is not for use by pregnant/nursing women, infants, children, or adolescents except under medical advice",
     "check_type": "FORMAT_LLM",
     "check_config": {
@@ -1829,7 +1834,7 @@
     "description": "Medical advisory warnings on nutraceutical labels must appear in bold letters in a clearly separated area, distinct from other written, printed, or graphic elements",
     "check_type": "FORMAT_LLM",
     "check_config": {
-      "description": "Verify that the primary medical advisory warning (e.g., 'Consult a doctor', 'Not for medicinal use', 'Keep out of reach of children') is printed in BOLD text and placed in a visually distinct, bordered, or separated area of the label — not embedded within the general ingredients or nutritional text. The advisory should be clearly visible and not run-on with surrounding label copy."
+      "description": "Verify that the primary medical advisory warning (e.g., 'Consult a doctor', 'Not for medicinal use', 'Keep out of reach of children') is printed in BOLD text and placed in a visually distinct, bordered, or separated area of the label â€” not embedded within the general ingredients or nutritional text. The advisory should be clearly visible and not run-on with surrounding label copy."
     },
     "severity": "MEDIUM",
     "remediation_template": "Place medical advisory warnings in bold text within a visually distinct, separated section of the label (e.g., boxed area, separate panel). Do not embed warnings within ingredient lists or product descriptions."
@@ -1843,7 +1848,7 @@
     "check_config": {
       "description": "Verify the product category designation (HEALTH SUPPLEMENT, NUTRACEUTICAL, FOOD FOR SPECIAL DIETARY USE, FOOD FOR SPECIAL MEDICAL PURPOSE, FUNCTIONAL FOOD, or NOVEL FOOD) is placed directly adjacent to or immediately below the product name/brand name on the principal display panel. It should not appear only on the back panel or be separated from the product name by large distances."
     },
-    "severity": "HIGH",
+    "severity": "MEDIUM",
     "remediation_template": "Move the category designation (e.g., 'HEALTH SUPPLEMENT') to appear directly adjacent to or immediately below the product name on the front of the pack principal display panel."
   },
   {
@@ -1857,5 +1862,82 @@
     },
     "severity": "MEDIUM",
     "remediation_template": "Remove unsubstantiated heavy metal claims. Only make heavy metal claims (e.g., 'tested to be free from heavy metals') when backed by test certificates from NABL-accredited laboratories. Include certificate reference number if space permits."
+  },
+  {
+    "rule_code": "FSSAI-LBL-DATE-001",
+    "framework": "FSSAI",
+    "category": "MANDATORY_FIELD",
+    "severity": "CRITICAL",
+    "description": "Date of manufacturing (Mfg. Date) must be declared on the label — FSS Act 2006, Schedule 2",
+    "active": true,
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "manufacturing_date"
+    },
+    "remediation": "Add the date of manufacturing in MM/YYYY format near the net quantity or batch number on the label.",
+    "regulation_reference": "FSS (Labelling and Display) Regulations 2020, Schedule 2, Clause 2.2"
+  },
+  {
+    "rule_code": "LM-PKG-MRP-001",
+    "framework": "LEGAL_METROLOGY",
+    "category": "MANDATORY_FIELD",
+    "severity": "CRITICAL",
+    "description": "Maximum Retail Price (MRP) must be declared on the label inclusive of all taxes — Legal Metrology (Packaged Commodities) Rules 2011, Rule 6(1)",
+    "active": true,
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "mrp"
+    },
+    "remediation": "Declare MRP as \"MRP ₹XX (Inclusive of all taxes)\" on the principal display panel.",
+    "regulation_reference": "Legal Metrology (Packaged Commodities) Rules 2011, Rule 6(1)(f)"
+  },
+  {
+    "rule_code": "FSSAI-LBL-CONS-001",
+    "framework": "FSSAI",
+    "category": "MANDATORY_FIELD",
+    "severity": "HIGH",
+    "description": "Consumer grievance / customer care contact details (phone number or email) must be present on the label",
+    "active": true,
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "customer_care_details"
+    },
+    "remediation": "Add a consumer care phone number or email address. Example: \"Consumer Care: care@brand.com | 1800-XXX-XXXX\".",
+    "regulation_reference": "FSS (Labelling and Display) Regulations 2020, Regulation 4(1)(k)"
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-LBL-TC-001",
+    "framework": "FSSAI",
+    "category": "MANDATORY_FIELD",
+    "severity": "MEDIUM",
+    "description": "Target consumer group must be declared on the label for nutraceutical and health supplement products — FSSAI Nutraceuticals Regulations 2022",
+    "active": true,
+    "check_type": "PRESENCE",
+    "check_config": {
+      "field": "target_consumer"
+    },
+    "remediation": "Declare the intended consumer group, e.g., \"For Adults 18 years and above\", \"For use under medical supervision for children\".",
+    "regulation_reference": "FSSAI Nutraceuticals Regulations 2022, Clause 5(e)"
+  },
+  {
+    "rule_code": "FSSAI-LBL-VEG-001",
+    "framework": "FSSAI",
+    "category": "FORMAT_REQUIREMENT",
+    "severity": "HIGH",
+    "description": "Veg/Non-Veg/Vegan mark must use one of the FSSAI-approved declarations",
+    "active": true,
+    "check_type": "VALUE_IN_LIST",
+    "check_config": {
+      "field": "veg_nonveg_mark",
+      "allowed_values": [
+        "VEG",
+        "NON-VEG",
+        "NON VEG",
+        "VEGAN"
+      ],
+      "case_insensitive": true
+    },
+    "remediation": "Use the FSSAI-mandated green dot (VEG) or brown dot (NON-VEG) symbol with the text \"VEG\" or \"NON-VEG\". Vegan products may use \"VEGAN\".",
+    "regulation_reference": "FSS (Labelling and Display) Regulations 2020, Regulation 9 — Veg/Non-Veg declaration"
   }
 ]

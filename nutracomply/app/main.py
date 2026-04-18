@@ -831,8 +831,23 @@ async def dashboard(request: Request):
         .count()
     )
 
-    # Licenses expiring in the next 90 days
+    # Scan usage this month
     from datetime import timedelta
+    from app.services.quota_service import get_user_plan
+    from app.services.billing_service import PLANS
+    now_dt = datetime.utcnow()
+    month_start = now_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    scans_this_month = (
+        db.query(LabelVersion)
+        .join(Product, LabelVersion.product_id == Product.id)
+        .filter(Product.user_id == user.id, LabelVersion.uploaded_at >= month_start)
+        .count()
+    )
+    plan_key = get_user_plan(user, db)
+    plan_limits = PLANS.get(plan_key, PLANS["free"])
+    scan_limit = plan_limits.get("scan_limit_monthly")
+
+    # Licenses expiring in the next 90 days
     cutoff = datetime.utcnow() + timedelta(days=90)
     expiring_licenses = (
         db.query(LicenseRenewal)
@@ -842,6 +857,7 @@ async def dashboard(request: Request):
             LicenseRenewal.expiry_date <= cutoff,
         )
         .order_by(LicenseRenewal.expiry_date.asc())
+        .limit(2)
         .all()
     )
 
@@ -867,43 +883,21 @@ async def dashboard(request: Request):
         "categories": dict(categories),
         "expiring_licenses": expiring_licenses,
         "recent_reg_alerts": recent_reg_alerts,
+        "now": datetime.utcnow(),
+        "scans_this_month": scans_this_month,
+        "scan_limit": scan_limit,
+        "plan_name": plan_limits.get("name", "Starter"),
     })
 
 
 @app.get("/reg-alerts")
 async def reg_alerts(request: Request):
-    from app.routes.auth import get_current_user_from_cookie
-    from app.database import get_db
-    from app.models import Alert, AlertStatus, PublishedAlert, PublishedAlertStatus, PublishedAlertSeverity
-
-    db = next(get_db())
-    user = get_current_user_from_cookie(request, db)
-    if not user:
-        return RedirectResponse(url="/login")
-
-    severity_filter = request.query_params.get("severity", "")
-    q = db.query(PublishedAlert).filter(PublishedAlert.status == PublishedAlertStatus.PUBLISHED)
-    if severity_filter:
-        try:
-            q = q.filter(PublishedAlert.severity == PublishedAlertSeverity(severity_filter))
-        except ValueError:
-            pass
-
-    alerts_list = q.order_by(PublishedAlert.published_at.desc()).all()
-
-    unread_alerts = (
-        db.query(Alert)
-        .filter(Alert.status == AlertStatus.UNREAD)
-        .count()
-    )
-
-    return templates.TemplateResponse("reg_alerts.html", {
-        "request": request,
-        "user": user,
-        "alerts": alerts_list,
-        "unread_alerts": unread_alerts,
-        "current_severity": severity_filter,
-    })
+    """Redirect legacy /reg-alerts to /regulations?tab=notices."""
+    severity = request.query_params.get("severity", "")
+    url = "/regulations?tab=notices"
+    if severity:
+        url += f"&notice_severity={severity}"
+    return RedirectResponse(url=url, status_code=301)
 
 
 @app.get("/pricing")

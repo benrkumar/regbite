@@ -75,6 +75,7 @@
   </div>
   <div style="display:flex;gap:0.5rem;align-items:center;">
     <a href="/products/bulk-upload" class="btn btn-outline btn-sm"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Bulk Upload</a>
+    <a href="/checker" class="btn btn-ghost btn-sm" style="color:#737373;" title="Check compliance without creating a product">Manual Check</a>
   </div>
 </div>
 
@@ -357,5 +358,15 @@ function bulkAction(action){
     else alert('Error: '+(d.error||'Unknown error'));
   }).catch(function(){ alert('Request failed — please try again.'); });
 }
+/* Keyboard shortcut: press / to focus search */
+document.addEventListener('keydown',function(e){
+  if(e.key==='/' && !e.ctrlKey && !e.metaKey && !e.altKey){
+    var el=document.activeElement;
+    if(el && (el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT')) return;
+    e.preventDefault();
+    var s=document.getElementById('product-search');
+    if(s){s.focus();s.select();}
+  }
+});
 </script>
 {% endblock %}

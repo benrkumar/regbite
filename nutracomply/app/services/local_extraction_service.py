@@ -14,6 +14,50 @@ import re
 from typing import Optional
 
 
+# ─── Prohibited health claim phrases (for ABSENCE-check rules) ───────────────
+# These phrases are explicitly banned by FSSAI / DSHEA-equivalent guidelines
+# for nutraceuticals and health supplements.  Detection runs in Tier 1 so that
+# even fully local (no-API) extractions can flag violations.
+
+PROHIBITED_CLAIM_PHRASES = [
+    # Disease-cure / treatment claims
+    "cures", "cures diabetes", "cures cancer", "cures hypertension",
+    "cures arthritis", "treats", "heals", "prevents disease",
+    "prevents cancer", "prevents diabetes", "reverses diabetes",
+    "reverses", "reversal of",
+    # Clinical / medical authority claims
+    "clinically proven to cure", "clinically proven to treat",
+    "medically proven", "doctor recommended for cure",
+    "FDA approved", "USFDA approved",
+    "prescribed by doctors",
+    # Absolute efficacy claims
+    "guaranteed to", "permanently cures", "100% cure",
+    "definite cure", "complete cure",
+    # Misleading therapeutic equivalence
+    "works like medicine", "replaces medicine", "no need for medicine",
+    "substitute for medication",
+]
+
+
+def _detect_prohibited_health_claims(text: str) -> list[str]:
+    """
+    Scan OCR text for FSSAI-prohibited health claim phrases.
+
+    Returns a deduplicated list of matched phrases (lowercased) so that
+    ABSENCE-type compliance rules can fire even when no LLM is available.
+    The list is empty when no prohibited phrases are detected.
+    """
+    text_lower = text.lower()
+    found = []
+    seen: set[str] = set()
+    for phrase in PROHIBITED_CLAIM_PHRASES:
+        p_lower = phrase.lower()
+        if p_lower not in seen and p_lower in text_lower:
+            found.append(p_lower)
+            seen.add(p_lower)
+    return found
+
+
 # ─── Field weights for confidence scoring ────────────────────────────────────
 # CRITICAL (3): essential for FSSAI compliance — missing = definitely non-compliant
 # HIGH (2): important but not always present on all product types
@@ -244,6 +288,16 @@ def _extract_tier1(text: str) -> dict:
     rda = (has("%rda") or has("% rda") or
            has("recommended daily allowance") or has("% daily value") or has("%dv"))
 
+    # ── Prohibited health claim detection (EX-3) ─────────────────────────────
+    # Runs heuristically so ABSENCE-type compliance rules can fire without LLM.
+    # Detected phrases are stored in both `health_claims` (the field the
+    # compliance engine reads) and `detected_prohibited_claims` (a separate
+    # key that makes the source of the value explicit to downstream callers).
+    prohibited_found = _detect_prohibited_health_claims(text)
+    # health_claims is a list; fill it so the ABSENCE check engine can
+    # evaluate whether any prohibited claim phrase is present.
+    health_claims_local = prohibited_found  # list of lowercased phrase strings
+
     # ── Warnings list ─────────────────────────────────────────────────────────
     warnings_list = []
     if not_med:
@@ -280,7 +334,8 @@ def _extract_tier1(text: str) -> dict:
         "ingredient_list": [],
         "nutritional_table": [],
         "rda_percentages": rda,
-        "health_claims": [],
+        "health_claims": health_claims_local,
+        "detected_prohibited_claims": prohibited_found,  # explicit heuristic result
         "warnings": warnings_list,
         "allergen_declarations": allergens,
         "not_for_medicinal_use": not_med,

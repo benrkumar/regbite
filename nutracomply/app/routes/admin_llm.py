@@ -412,14 +412,20 @@ async def llm_seed(kb_type: str, request: Request, db: Session = Depends(get_db)
 @router.post("/llm/regulations/sync-rules")
 async def llm_sync_rules(request: Request, db: Session = Depends(get_db)):
     """Force-sync all compliance rules from the seed JSON file into the database.
-    Inserts any new rules that don't already exist. Never deletes existing data."""
+    Inserts new rules and updates severity/active status for existing rules.
+    After sync, auto-resolves stale UNREAD alerts whose violations no longer
+    have any CRITICAL/HIGH severity rules."""
     user, redirect = _require_admin(request, db)
     if redirect:
         return redirect
 
     import json
+    from datetime import datetime
     from pathlib import Path as _Path
-    from app.models import ComplianceRule as _ComplianceRule
+    from app.models import (
+        ComplianceRule as _ComplianceRule,
+        Alert, AlertType, AlertStatus, Severity as _Severity,
+    )
     from app.services.llm_service import invalidate_cache
 
     rules_path = _Path(__file__).parent.parent / "data" / "fssai_rules_seed.json"
@@ -427,17 +433,88 @@ async def llm_sync_rules(request: Request, db: Session = Depends(get_db)):
         with open(rules_path, encoding="utf-8") as f:
             rules_data = json.load(f)
 
-        existing_codes = {r.rule_code for r in db.query(_ComplianceRule.rule_code).all()}
-        new_rules = [r for r in rules_data if r["rule_code"] not in existing_codes]
+        # Build map of existing rules for upsert
+        existing_map = {
+            r.rule_code: r
+            for r in db.query(_ComplianceRule).all()
+        }
+        new_count = 0
+        updated_count = 0
 
-        if new_rules:
-            for r in new_rules:
-                db.add(_ComplianceRule(**r))
-            db.commit()
+        for r_data in rules_data:
+            code = r_data["rule_code"]
+            if code not in existing_map:
+                db.add(_ComplianceRule(**r_data))
+                new_count += 1
+            else:
+                existing = existing_map[code]
+                changed = False
+                # Sync severity
+                seed_sev = r_data.get("severity", "")
+                db_sev = existing.severity.value if existing.severity else ""
+                if seed_sev and seed_sev != db_sev:
+                    existing.severity = seed_sev
+                    changed = True
+                # Sync active status
+                seed_active = r_data.get("active")
+                if seed_active is not None and seed_active != existing.active:
+                    existing.active = seed_active
+                    changed = True
+                if changed:
+                    updated_count += 1
+
+        db.commit()
+
+        # Auto-resolve stale UNREAD alerts where all remaining violations are
+        # MEDIUM or lower (no longer alert-worthy after severity downgrades)
+        resolved_count = 0
+        deactivated_codes = {
+            r["rule_code"] for r in rules_data if r.get("active") is False
+        }
+        downgraded_codes = set()
+        for r_data in rules_data:
+            db_rule = existing_map.get(r_data["rule_code"])
+            if (
+                db_rule
+                and db_rule.severity
+                and db_rule.severity.value in ("CRITICAL", "HIGH")
+                and r_data.get("severity") in ("MEDIUM", "LOW")
+            ):
+                downgraded_codes.add(r_data["rule_code"])
+
+        stale_codes = deactivated_codes | downgraded_codes
+        if stale_codes:
+            unread_alerts = (
+                db.query(Alert)
+                .filter(
+                    Alert.status == AlertStatus.UNREAD,
+                    Alert.alert_type == AlertType.LABEL_VIOLATION,
+                )
+                .all()
+            )
+            for alert in unread_alerts:
+                violations = alert.rule_violations or []
+                crit_high_remaining = [
+                    v for v in violations
+                    if v.get("rule_code") not in stale_codes
+                    and v.get("severity") in ("CRITICAL", "HIGH")
+                ]
+                if not crit_high_remaining:
+                    alert.status = AlertStatus.RESOLVED
+                    alert.resolved_at = datetime.utcnow()
+                    resolved_count += 1
+            if resolved_count:
+                db.commit()
 
         invalidate_cache("regulations")
 
-        msg = f"Synced+{len(new_rules)}+new+rules.+Total:+{len(existing_codes)+len(new_rules)}+rules+in+database."
+        total = len(existing_map) + new_count
+        parts = [f"{new_count}+new"]
+        if updated_count:
+            parts.append(f"{updated_count}+updated")
+        if resolved_count:
+            parts.append(f"{resolved_count}+stale+alerts+resolved")
+        msg = f"Synced+{',+'.join(parts)}.+Total:+{total}+rules."
         typ = "success"
     except Exception as exc:
         msg = f"Sync+failed:+{str(exc)[:120].replace(' ', '+')}"
@@ -1725,3 +1802,218 @@ async def llm_chat_clear(kb_type: str, request: Request, db: Session = Depends(g
     db.commit()
 
     return JSONResponse({"status": "cleared"})
+
+
+# ── Compliance Coverage Dashboard ─────────────────────────────────────────────
+
+@router.get("/compliance/coverage")
+async def compliance_coverage(request: Request, db: Session = Depends(get_db)):
+    """
+    Live compliance audit dashboard — shows rule health, extraction coverage,
+    regulation sync status, product scan coverage and KB health in one page.
+    """
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    from datetime import datetime, timedelta
+    from collections import defaultdict
+
+    from app.models import (
+        ComplianceRule, CheckType, RuleFramework, Severity,
+        RegulationChange, Product, LabelVersion, ComplianceCheck, CheckResult,
+        KBDocument, KBChunk, KBType,
+    )
+    from app.config import get_settings as _cfg
+    from app.services.extraction_service import ALL_EXPECTED_FIELDS
+
+    cfg = _cfg()
+
+    # ── 1. Rule summary ───────────────────────────────────────────────────────
+    all_rules  = db.query(ComplianceRule).all()
+    active     = [r for r in all_rules if r.active]
+
+    by_framework: dict[str, int] = defaultdict(int)
+    by_check_type: dict[str, int] = defaultdict(int)
+    by_severity: dict[str, int] = defaultdict(int)
+    format_llm_rules: list[ComplianceRule] = []
+
+    for r in active:
+        fw  = r.framework.value if r.framework else "UNKNOWN"
+        ct  = r.check_type.value if r.check_type else "UNKNOWN"
+        sev = r.severity.value if r.severity else "UNKNOWN"
+        by_framework[fw]  += 1
+        by_check_type[ct] += 1
+        by_severity[sev]  += 1
+        if ct == "FORMAT_LLM":
+            format_llm_rules.append(r)
+
+    rule_summary = {
+        "total":        len(all_rules),
+        "active":       len(active),
+        "inactive":     len(all_rules) - len(active),
+        "by_framework": dict(by_framework),
+        "by_check_type": dict(by_check_type),
+        "by_severity":  dict(by_severity),
+    }
+
+    # ── 2. FORMAT_LLM health ─────────────────────────────────────────────────
+    gemini_available = bool(cfg.gemini_api_key)
+    claude_available = bool(cfg.anthropic_api_key)
+    format_llm_health = {
+        "rules_at_risk":    len(format_llm_rules),
+        "gemini_available": gemini_available,
+        "claude_available": claude_available,
+        "any_llm_available": gemini_available or claude_available,
+        "rule_codes":       [r.rule_code for r in format_llm_rules[:20]],
+    }
+
+    # ── 3. Extraction coverage ────────────────────────────────────────────────
+    # Collect all fields that at least one active rule actually checks
+    fields_with_rules: set[str] = set()
+    for r in active:
+        cfg_field = (r.check_config or {}).get("field")
+        if cfg_field:
+            fields_with_rules.add(cfg_field)
+
+    all_extracted = set(ALL_EXPECTED_FIELDS)
+    fields_no_rules = sorted(all_extracted - fields_with_rules)
+
+    extraction_coverage = {
+        "total_extracted_fields":    len(all_extracted),
+        "fields_with_rules":         len(fields_with_rules),
+        "fields_extracted_no_rules": fields_no_rules,
+        "rules_with_no_extractor":   [],  # could cross-check if needed
+    }
+
+    # ── 4. Regulation sync status ─────────────────────────────────────────────
+    total_changes = db.query(RegulationChange).count()
+    empty_affected = db.query(RegulationChange).filter(
+        # JSON column: empty list or null
+        (RegulationChange.affected_rule_codes == None)  # noqa: E711
+        | (RegulationChange.affected_rule_codes == [])
+    ).count()
+
+    last_change = (
+        db.query(RegulationChange)
+        .order_by(RegulationChange.detected_at.desc())
+        .first()
+    )
+
+    regulation_sync = {
+        "total_regulation_changes":         total_changes,
+        "changes_with_empty_affected_codes": empty_affected,
+        "pct_with_affected_codes":          (
+            round(100 * (total_changes - empty_affected) / total_changes, 1)
+            if total_changes else 0
+        ),
+        "last_scrape": last_change.detected_at.isoformat() if last_change else None,
+    }
+
+    # ── 5. Product scan coverage ──────────────────────────────────────────────
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+
+    active_products = (
+        db.query(Product)
+        .filter(Product.is_active == True, Product.is_quick_check == False)
+        .all()
+    )
+    total_products = len(active_products)
+
+    # Products with at least one compliance check in the last 30 days
+    scanned_ids = {
+        row[0]
+        for row in (
+            db.query(LabelVersion.product_id)
+            .join(ComplianceCheck, LabelVersion.id == ComplianceCheck.label_version_id)
+            .filter(
+                LabelVersion.is_current == True,
+                ComplianceCheck.checked_at >= thirty_days_ago,
+            )
+            .distinct()
+            .all()
+        )
+    }
+    never_scanned_ids = {
+        p.id for p in active_products
+        if not db.query(ComplianceCheck)
+               .join(LabelVersion, ComplianceCheck.label_version_id == LabelVersion.id)
+               .filter(LabelVersion.product_id == p.id)
+               .first()
+    }
+
+    # Average compliance score across current labels
+    scores: list[float] = []
+    failing_critical = 0
+    for product in active_products:
+        current = (
+            db.query(LabelVersion)
+            .filter(LabelVersion.product_id == product.id, LabelVersion.is_current == True)
+            .first()
+        )
+        if current and current.compliance_score is not None:
+            scores.append(current.compliance_score)
+        # Count products with at least one CRITICAL FAIL
+        has_critical_fail = (
+            db.query(ComplianceCheck)
+            .join(ComplianceRule, ComplianceCheck.rule_id == ComplianceRule.id)
+            .join(LabelVersion, ComplianceCheck.label_version_id == LabelVersion.id)
+            .filter(
+                LabelVersion.product_id == product.id,
+                LabelVersion.is_current == True,
+                ComplianceCheck.result == CheckResult.FAIL,
+                ComplianceRule.severity == Severity.CRITICAL,
+            )
+            .first()
+        )
+        if has_critical_fail:
+            failing_critical += 1
+
+    product_scan = {
+        "total_active_products":  total_products,
+        "scanned_last_30_days":   len(scanned_ids),
+        "never_scanned":          len(never_scanned_ids),
+        "never_scanned_pct":      round(100 * len(never_scanned_ids) / total_products, 1) if total_products else 0,
+        "avg_score":              round(sum(scores) / len(scores), 1) if scores else None,
+        "failing_critical":       failing_critical,
+    }
+
+    # ── 6. KB health ─────────────────────────────────────────────────────────
+    def _kb_stats(kb_type_val: KBType) -> dict:
+        docs = (
+            db.query(KBDocument)
+            .filter(KBDocument.kb_type == kb_type_val, KBDocument.is_active == True)
+            .all()
+        )
+        chunks = db.query(KBChunk).join(
+            KBDocument, KBChunk.document_id == KBDocument.id
+        ).filter(KBDocument.kb_type == kb_type_val, KBDocument.is_active == True).count()
+
+        oldest_days = None
+        if docs:
+            oldest = min(d.uploaded_at for d in docs)
+            oldest_days = (datetime.utcnow() - oldest).days
+
+        return {
+            "doc_count":   len(docs),
+            "chunk_count": chunks,
+            "oldest_days": oldest_days,
+        }
+
+    kb_health = {
+        "regulations": _kb_stats(KBType.REGULATIONS),
+        "products":    _kb_stats(KBType.PRODUCTS),
+    }
+
+    return templates.TemplateResponse("admin/compliance_coverage.html", {
+        "request":            request,
+        "user":               user,
+        "unread_alerts":      _unread_alerts(db),
+        "rule_summary":       rule_summary,
+        "format_llm_health":  format_llm_health,
+        "extraction_coverage": extraction_coverage,
+        "regulation_sync":    regulation_sync,
+        "product_scan":       product_scan,
+        "kb_health":          kb_health,
+        "generated_at":       datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
+    })

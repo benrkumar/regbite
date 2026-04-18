@@ -3,6 +3,18 @@
 {% block page_subtitle %}Check any product's FSSAI compliance instantly{% endblock %}
 
 {% block content %}
+<style>
+.ckr-layout { display:grid; grid-template-columns:1fr 320px; gap:1.5rem; align-items:start; }
+.ckr-form-2col { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; }
+.ckr-decl-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.7rem; }
+@media (max-width:900px) {
+  .ckr-layout { grid-template-columns:1fr; }
+}
+@media (max-width:560px) {
+  .ckr-form-2col { grid-template-columns:1fr; }
+  .ckr-decl-grid { grid-template-columns:1fr; }
+}
+</style>
 
 <!-- Page header -->
 <div style="margin-bottom:1.5rem;">
@@ -10,7 +22,7 @@
   <p style="margin:0;color:#737373;font-size:0.95rem;">Fill in your product details to get an instant FSSAI compliance report — no label upload needed.</p>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;">
+<div class="ckr-layout">
 
   <!-- LEFT: Form -->
   <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:24px;">
@@ -28,7 +40,7 @@
             onfocus="this.style.borderColor='#404040'" onblur="this.style.borderColor='#D4D4D4'" />
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div class="ckr-form-2col">
           <div>
             <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Product Category <span style="color:#111111;">*</span></label>
             <select name="category" required
@@ -72,7 +84,7 @@
       <div style="margin-bottom:1.4rem;">
         <h4 style="margin:0 0 12px;font-size:0.9rem;font-weight:700;color:#262626;text-transform:uppercase;letter-spacing:0.07em;padding-bottom:8px;border-bottom:1px solid #EBEBEB;">Label Details</h4>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div class="ckr-form-2col">
           <div>
             <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">FSSAI License Number</label>
             <input type="text" name="fssai_license" placeholder="e.g. 10019042000241"
@@ -87,7 +99,7 @@
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div class="ckr-form-2col">
           <div>
             <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Manufacturing Date</label>
             <input type="date" name="manufacturing_date"
@@ -102,7 +114,7 @@
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div class="ckr-form-2col">
           <div>
             <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Batch Number</label>
             <input type="text" name="batch_number" placeholder="e.g. ASH-B250301"
@@ -124,7 +136,7 @@
       <!-- Mandatory declarations -->
       <div style="margin-bottom:1.6rem;">
         <h4 style="margin:0 0 12px;font-size:0.9rem;font-weight:700;color:#262626;text-transform:uppercase;letter-spacing:0.07em;padding-bottom:8px;border-bottom:1px solid #EBEBEB;">Mandatory Declarations</h4>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;">
+        <div class="ckr-decl-grid">
 
           <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid #D4D4D4;border-radius:8px;cursor:pointer;transition:border-color 0.2s;"
             onmouseover="this.style.borderColor='#404040'" onmouseout="this.style.borderColor='#D4D4D4'">
@@ -170,15 +182,10 @@
       <h4 style="margin:0 0 14px;font-size:0.9rem;font-weight:700;color:#262626;">What gets checked</h4>
       <ul style="list-style:none;margin:0;padding:0;">
         {% set check_items = [
-          ('', 'FSSAI license number validity'),
-          ('', 'Mandatory label declarations'),
-          ('', 'Net quantity requirements'),
-          ('', 'Ingredient restrictions'),
-          ('', 'Nutritional table presence'),
-          ('', '%RDA declarations'),
-          ('', 'Expiry & manufacturing dates'),
-          ('', 'Batch number presence'),
-          ('', 'Health claims compliance'),
+          ('', 'FSSAI license & mandatory declarations'),
+          ('', 'Net quantity & nutritional info'),
+          ('', 'Ingredient restrictions & health claims'),
+          ('', 'Dates, batch numbers & packaging'),
           ('', 'Prohibited claim detection')
         ] %}
         {% for icon, label in check_items %}
@@ -188,6 +195,7 @@
         </li>
         {% endfor %}
       </ul>
+      <a href="/regulations?tab=rules" style="display:block;margin-top:0.75rem;font-size:0.78rem;color:var(--green-600);font-weight:600;text-decoration:none;">View all rules in database →</a>
     </div>
 
     <div style="background:#F8F8F8;border:1px solid #EBEBEB;border-radius:8px;padding:16px;">

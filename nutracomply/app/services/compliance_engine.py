@@ -40,23 +40,51 @@ def run_compliance_check(label_version: LabelVersion, db: Session) -> list[Compl
 
     # Filter rules by product category and framework
     product_category = (label_version.product.category or "").lower().strip()
-    is_ayurvedic = "ayurvedic" in product_category or "asu" in product_category
+    # All products under the Ministry of AYUSH — Ayurvedic, Siddha, Unani, and
+    # Ayurveda Aahara food categories — must pass AYUSH-prefixed rules.
+    _AYUSH_KEYWORDS = {"ayurvedic", "ayurveda", "asu", "siddha", "unani", "ayush"}
+    is_ayurvedic = any(kw in product_category for kw in _AYUSH_KEYWORDS)
     is_imported = bool(
         extraction.get("country_of_origin")
         and "india" not in str(extraction.get("country_of_origin", "")).lower()
     )
 
+    # Sub-category rules only apply when the product matches the sub-category.
+    # Combines product.category and extraction product_type_declaration for matching.
+    _SUBCATEGORY_PREFIXES = {
+        "FSSAI-SPT-":  {"sports", "sportsperson", "sport nutrition"},
+        "FSSAI-FSMP-": {"fsmp", "food for special medical purpose", "special medical"},
+        "FSSAI-PROB-": {"probiotic"},
+        "FSSAI-BOT-":  {"botanical", "herbal extract", "plant extract"},
+        "FSSAI-FRT-":  {"fortified"},
+        "FSSAI-VGN-":  {"vegan"},
+        "FSSAI-CHN-":  {"children", "child", "infant", "paediatric", "pediatric"},
+        "FSSAI-SDU-":  {"weight management", "slimming", "dietary use"},
+        "AYUSH-AA-":   {"ayurveda aahara", "ayush aahara"},
+    }
+    _ptd = (extraction.get("product_type_declaration") or "").lower()
+    _combined_cat = f"{product_category} {_ptd}"
+
     rules = []
     for rule in all_rules:
         code = rule.rule_code or ""
-        # AYUSH rules only apply to Ayurvedic/ASU products
+        # AYUSH-ASU rules only apply to Ayurvedic/ASU products
         if code.startswith("AYUSH-") and not is_ayurvedic:
-            continue
+            # Allow AYUSH-AA- rules through if they match sub-category keywords
+            if not code.startswith("AYUSH-AA-"):
+                continue
         # DGFT import rules only apply to imported products
         if code.startswith("DGFT-") and not is_imported:
             continue
-        # Licensing rules are FORMAT checks — always include for awareness
-        # BIS rules always apply (voluntary but checked)
+        # Sub-category rules only apply to matching product types
+        skip = False
+        for prefix, keywords in _SUBCATEGORY_PREFIXES.items():
+            if code.startswith(prefix):
+                if not any(kw in _combined_cat for kw in keywords):
+                    skip = True
+                break
+        if skip:
+            continue
         rules.append(rule)
 
     # Delete previous checks for this label version
@@ -424,10 +452,17 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
         else:
             return CheckResult.WARNING, str(value)[:200] if field else None, f"Format check inconclusive: {reason}"
 
+    except ValueError:
+        # No LLM provider configured at all — SKIP rather than inflate the score.
+        # The product is not penalised; the admin dashboard will show this rule as
+        # unverified so the user knows to do a manual check.
+        logger.debug("[compliance] No LLM provider for FORMAT_LLM rule %s — skipping", rule.rule_code)
+        return CheckResult.SKIPPED, None, "No LLM provider configured — manual verification required"
     except Exception as e:
+        # Transient API error — flag as WARNING so the user knows the check is
+        # unconfirmed but the score is not silently inflated to a full pass.
         logger.warning("[compliance] LLM format check failed for %s: %s", rule.rule_code, e)
-        # Graceful fallback to WARNING
-        return CheckResult.WARNING, None, f"Manual verification required: {description}"
+        return CheckResult.WARNING, None, f"LLM check unavailable — manual verification required: {description}"
 
 
 # ─── Compliance Score ─────────────────────────────────────────────────────────

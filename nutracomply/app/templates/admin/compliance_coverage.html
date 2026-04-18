@@ -1,0 +1,460 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Coverage Audit{% endblock %}
+
+{% block content %}
+<style>
+  /* ── Coverage page styles ── */
+  .cov-header { margin-bottom:1.5rem; }
+  .cov-header h1 { font-size:1.1rem; font-weight:600; color:#111; margin:0 0 0.25rem; }
+  .cov-header p  { font-size:0.8rem; color:#A3A3A3; margin:0; }
+
+  .cov-section { margin-bottom:1.75rem; }
+  .cov-section-title {
+    font-size:0.72rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;
+    color:#A3A3A3; margin:0 0 0.75rem; padding-bottom:0.4rem; border-bottom:1px solid #EBEBEB;
+  }
+
+  /* Status pill */
+  .cov-pill {
+    display:inline-flex; align-items:center; gap:0.3rem;
+    padding:0.15rem 0.55rem; border-radius:99px; font-size:0.7rem; font-weight:600;
+  }
+  .pill-green  { background:#EAF2F0; color:#357266; }
+  .pill-red    { background:#FDEBEC; color:#DF2935; }
+  .pill-yellow { background:#FEF9EC; color:#8F6314; }
+  .pill-gray   { background:#F5F5F5; color:#737373; }
+  .pill-blue   { background:#EBF0FF; color:#3772FF; }
+
+  /* Signal dot */
+  .dot { width:7px; height:7px; border-radius:50%; display:inline-block; flex-shrink:0; }
+  .dot-green  { background:#357266; }
+  .dot-red    { background:#DF2935; }
+  .dot-yellow { background:#E6A817; }
+  .dot-gray   { background:#A3A3A3; }
+
+  /* Grid of metric cards */
+  .cov-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0.85rem; }
+  .cov-card {
+    background:#FFFFFF; border:1px solid #EBEBEB; border-radius:6px;
+    padding:0.9rem 1rem;
+  }
+  .cov-card-val   { font-size:1.6rem; font-weight:700; line-height:1; color:#111; }
+  .cov-card-label { font-size:0.7rem; color:#A3A3A3; margin-top:0.25rem; font-weight:400; }
+  .cov-card-sub   { font-size:0.68rem; color:#737373; margin-top:0.2rem; }
+
+  /* Two-column layout for wider content */
+  .cov-two-col { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+
+  /* Simple key-value list */
+  .kv-list { margin:0; padding:0; list-style:none; }
+  .kv-list li {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:0.42rem 0; border-bottom:1px solid #F5F5F5; font-size:0.8rem;
+  }
+  .kv-list li:last-child { border-bottom:none; }
+  .kv-key   { color:#525252; flex:1; }
+  .kv-val   { font-weight:500; color:#111; text-align:right; }
+  .kv-badge { display:inline-block; padding:0.08rem 0.4rem; border-radius:3px; font-size:0.67rem; font-weight:600; }
+
+  /* Breakdown bar */
+  .bar-wrap { display:flex; height:8px; border-radius:4px; overflow:hidden; gap:1px; margin:0.5rem 0; }
+  .bar-seg  { flex:0 0 auto; }
+
+  /* Framework / check-type breakdown table */
+  .breakdown-row { display:flex; align-items:center; gap:0.6rem; padding:0.3rem 0; font-size:0.8rem; }
+  .breakdown-key { flex:1; color:#525252; }
+  .breakdown-bar-wrap { flex:2; height:6px; background:#F0F0F0; border-radius:3px; overflow:hidden; }
+  .breakdown-bar-fill { height:100%; border-radius:3px; background:#3772FF; }
+  .breakdown-val { width:28px; text-align:right; font-weight:500; color:#111; font-size:0.78rem; }
+
+  /* Warning box */
+  .cov-warn {
+    background:#FEF9EC; border-left:3px solid #E6A817; border-radius:4px;
+    padding:0.65rem 0.9rem; font-size:0.8rem; color:#5C4200; margin-bottom:0.85rem;
+  }
+  .cov-warn strong { color:#3D2B00; }
+
+  /* Field tag list */
+  .tag-list { display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem; }
+  .tag {
+    background:#F5F5F5; border:1px solid #E5E5E5; border-radius:3px;
+    padding:0.12rem 0.45rem; font-size:0.68rem; color:#525252; font-family:monospace;
+  }
+  .tag-warn { background:#FEF9EC; border-color:#F5D47B; color:#5C4200; }
+  .tag-ok   { background:#EAF2F0; border-color:#C5E3DC; color:#357266; }
+
+  /* Action buttons row */
+  .cov-actions { display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:1rem; }
+
+  @media (max-width:768px) {
+    .cov-two-col { grid-template-columns:1fr; }
+    .cov-grid    { grid-template-columns:repeat(2,1fr); }
+    .cov-card-val { font-size:1.35rem; }
+  }
+  @media (max-width:480px) {
+    .cov-grid { grid-template-columns:1fr 1fr; gap:0.6rem; }
+  }
+</style>
+
+{# ── Page header ── #}
+<div class="cov-header">
+  <h1>Compliance Coverage Audit</h1>
+  <p>Live snapshot of rule health, extraction coverage, regulation sync and KB status. Generated {{ generated_at }}.</p>
+</div>
+
+{# ── Quick status bar ── #}
+{% set llm_ok   = format_llm_health.any_llm_available %}
+{% set sync_ok  = regulation_sync.pct_with_affected_codes > 50 %}
+{% set scan_ok  = product_scan.never_scanned == 0 %}
+{% set kb_ok    = kb_health.regulations.doc_count > 0 and kb_health.products.doc_count > 0 %}
+<div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1.5rem;">
+  <span class="cov-pill {{ 'pill-green' if llm_ok else 'pill-red' }}">
+    <span class="dot {{ 'dot-green' if llm_ok else 'dot-red' }}"></span>
+    LLM {{ 'Available' if llm_ok else 'Unavailable' }}
+  </span>
+  <span class="cov-pill {{ 'pill-green' if sync_ok else 'pill-yellow' }}">
+    <span class="dot {{ 'dot-green' if sync_ok else 'dot-yellow' }}"></span>
+    Reg Sync {{ regulation_sync.pct_with_affected_codes }}%
+  </span>
+  <span class="cov-pill {{ 'pill-green' if scan_ok else 'pill-yellow' }}">
+    <span class="dot {{ 'dot-green' if scan_ok else 'dot-yellow' }}"></span>
+    {% if scan_ok %}All Products Scanned{% else %}{{ product_scan.never_scanned }} Unscanned{% endif %}
+  </span>
+  <span class="cov-pill {{ 'pill-green' if kb_ok else 'pill-red' }}">
+    <span class="dot {{ 'dot-green' if kb_ok else 'dot-red' }}"></span>
+    KB {{ 'Seeded' if kb_ok else 'Empty' }}
+  </span>
+  {% if product_scan.failing_critical > 0 %}
+  <span class="cov-pill pill-red">
+    <span class="dot dot-red"></span>
+    {{ product_scan.failing_critical }} Critical Failure{{ 's' if product_scan.failing_critical != 1 }}
+  </span>
+  {% endif %}
+</div>
+
+{# ─────────────────────────── SECTION 1: Rule Summary ─────────────────────── #}
+<div class="cov-section">
+  <div class="cov-section-title">Rule Engine</div>
+  <div class="cov-grid" style="margin-bottom:1rem;">
+    <div class="cov-card">
+      <div class="cov-card-val">{{ rule_summary.total }}</div>
+      <div class="cov-card-label">Total rules</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-card-val" style="color:#357266;">{{ rule_summary.active }}</div>
+      <div class="cov-card-label">Active</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-card-val" style="color:{% if rule_summary.inactive > 0 %}#E6A817{% else %}#357266{% endif %};">{{ rule_summary.inactive }}</div>
+      <div class="cov-card-label">Inactive / disabled</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-card-val" style="color:{% if format_llm_health.rules_at_risk > 0 and not format_llm_health.any_llm_available %}#DF2935{% else %}#111{% endif %};">{{ format_llm_health.rules_at_risk }}</div>
+      <div class="cov-card-label">FORMAT_LLM rules</div>
+      <div class="cov-card-sub">{% if format_llm_health.any_llm_available %}LLM available{% else %}⚠ No LLM — will SKIP{% endif %}</div>
+    </div>
+  </div>
+
+  <div class="cov-two-col">
+    {# By framework #}
+    <div class="adm-table-wrap" style="padding:0.85rem 1rem;">
+      <div style="font-size:0.75rem;font-weight:600;color:#262626;margin-bottom:0.6rem;">By Framework</div>
+      {% set fw_total = rule_summary.active %}
+      {% for fw, cnt in rule_summary.by_framework.items() | sort(attribute='1', reverse=True) %}
+      <div class="breakdown-row">
+        <span class="breakdown-key">{{ fw }}</span>
+        <div class="breakdown-bar-wrap">
+          <div class="breakdown-bar-fill" style="width:{{ (cnt / fw_total * 100)|int }}%;"></div>
+        </div>
+        <span class="breakdown-val">{{ cnt }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {# By check type #}
+    <div class="adm-table-wrap" style="padding:0.85rem 1rem;">
+      <div style="font-size:0.75rem;font-weight:600;color:#262626;margin-bottom:0.6rem;">By Check Type</div>
+      {% set ct_total = rule_summary.active %}
+      {% for ct, cnt in rule_summary.by_check_type.items() | sort(attribute='1', reverse=True) %}
+      <div class="breakdown-row">
+        <span class="breakdown-key" style="font-family:monospace;font-size:0.72rem;">{{ ct }}</span>
+        <div class="breakdown-bar-wrap">
+          <div class="breakdown-bar-fill" style="width:{{ (cnt / ct_total * 100)|int }}%;{% if ct == 'FORMAT_LLM' %}background:#E6A817;{% endif %}"></div>
+        </div>
+        <span class="breakdown-val">{{ cnt }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{# ─────────────────────────── SECTION 2: FORMAT_LLM Health ────────────────── #}
+<div class="cov-section">
+  <div class="cov-section-title">LLM Provider Health</div>
+
+  {% if not format_llm_health.any_llm_available %}
+  <div class="cov-warn">
+    <strong>No LLM provider configured.</strong>
+    {{ format_llm_health.rules_at_risk }} FORMAT_LLM rules will return SKIPPED — they are excluded from scoring
+    but cannot flag real violations. Configure Gemini or Claude API keys to restore full coverage.
+  </div>
+  {% elif not format_llm_health.gemini_available %}
+  <div class="cov-warn">
+    <strong>Gemini not configured.</strong>
+    Claude is available as fallback, but Gemini is the preferred provider for FORMAT_LLM checks and
+    the daily regulation scraper. Set <code>GEMINI_API_KEY</code> for full functionality.
+  </div>
+  {% endif %}
+
+  <ul class="kv-list" style="background:#fff;border:1px solid #EBEBEB;border-radius:6px;padding:0.5rem 1rem;">
+    <li>
+      <span class="kv-key">Gemini API</span>
+      <span class="kv-val">
+        <span class="cov-pill {{ 'pill-green' if format_llm_health.gemini_available else 'pill-red' }}">
+          <span class="dot {{ 'dot-green' if format_llm_health.gemini_available else 'dot-red' }}"></span>
+          {{ 'Configured' if format_llm_health.gemini_available else 'Not configured' }}
+        </span>
+      </span>
+    </li>
+    <li>
+      <span class="kv-key">Claude API</span>
+      <span class="kv-val">
+        <span class="cov-pill {{ 'pill-green' if format_llm_health.claude_available else 'pill-red' }}">
+          <span class="dot {{ 'dot-green' if format_llm_health.claude_available else 'dot-red' }}"></span>
+          {{ 'Configured' if format_llm_health.claude_available else 'Not configured' }}
+        </span>
+      </span>
+    </li>
+    <li>
+      <span class="kv-key">FORMAT_LLM rules at risk</span>
+      <span class="kv-val">
+        <span class="kv-badge" style="background:{% if not format_llm_health.any_llm_available %}#FDEBEC;color:#DF2935{% else %}#EAF2F0;color:#357266{% endif %};">
+          {{ format_llm_health.rules_at_risk }} rule{{ 's' if format_llm_health.rules_at_risk != 1 }}
+        </span>
+      </span>
+    </li>
+    <li>
+      <span class="kv-key">Fallback behaviour when LLM absent</span>
+      <span class="kv-val" style="font-size:0.75rem;color:#737373;">
+        SKIPPED (score neutral) — not WARNING
+      </span>
+    </li>
+  </ul>
+
+  {% if format_llm_health.rule_codes %}
+  <div style="margin-top:0.6rem;font-size:0.73rem;color:#A3A3A3;margin-bottom:0.3rem;">FORMAT_LLM rule codes (first 20)</div>
+  <div class="tag-list">
+    {% for rc in format_llm_health.rule_codes %}
+    <span class="tag">{{ rc }}</span>
+    {% endfor %}
+    {% if format_llm_health.rules_at_risk > 20 %}
+    <span class="tag">+{{ format_llm_health.rules_at_risk - 20 }} more</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{# ─────────────────────────── SECTION 3: Extraction Coverage ──────────────── #}
+<div class="cov-section">
+  <div class="cov-section-title">Extraction Coverage</div>
+  <div class="cov-grid" style="margin-bottom:1rem;">
+    <div class="cov-card">
+      <div class="cov-card-val">{{ extraction_coverage.total_extracted_fields }}</div>
+      <div class="cov-card-label">Extracted fields</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-card-val" style="color:#357266;">{{ extraction_coverage.fields_with_rules }}</div>
+      <div class="cov-card-label">Fields with rules</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-card-val" style="color:{% if extraction_coverage.fields_extracted_no_rules|length > 0 %}#E6A817{% else %}#357266{% endif %};">
+        {{ extraction_coverage.fields_extracted_no_rules|length }}
+      </div>
+      <div class="cov-card-label">Fields with no rule</div>
+    </div>
+  </div>
+
+  {% if extraction_coverage.fields_extracted_no_rules %}
+  <div class="cov-warn">
+    <strong>{{ extraction_coverage.fields_extracted_no_rules|length }} extracted field(s) have no compliance rules.</strong>
+    These fields are captured from labels but never audited — potential blind spots.
+  </div>
+  <div style="font-size:0.73rem;color:#A3A3A3;margin-bottom:0.3rem;">Fields extracted but not checked by any rule</div>
+  <div class="tag-list">
+    {% for f in extraction_coverage.fields_extracted_no_rules %}
+    <span class="tag tag-warn">{{ f }}</span>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="cov-pill pill-green" style="display:inline-flex;">
+    <span class="dot dot-green"></span> All extracted fields are covered by at least one rule
+  </div>
+  {% endif %}
+
+  <div class="cov-actions">
+    <a href="/admin/rules" class="adm-btn">View All Rules</a>
+    <a href="/admin/llm/regulations/sync-rules" class="adm-btn adm-btn-primary"
+       onclick="return confirm('Sync all rules from JSON seed to database?')">Sync Rules to DB</a>
+  </div>
+</div>
+
+{# ─────────────────────────── SECTION 4: Regulation Sync ──────────────────── #}
+<div class="cov-section">
+  <div class="cov-section-title">Regulation Sync Status</div>
+  <ul class="kv-list" style="background:#fff;border:1px solid #EBEBEB;border-radius:6px;padding:0.5rem 1rem;">
+    <li>
+      <span class="kv-key">Total regulation changes tracked</span>
+      <span class="kv-val">{{ regulation_sync.total_regulation_changes }}</span>
+    </li>
+    <li>
+      <span class="kv-key">Last scrape detected</span>
+      <span class="kv-val" style="font-size:0.78rem;">
+        {{ regulation_sync.last_scrape | default('Never', true) }}
+      </span>
+    </li>
+    <li>
+      <span class="kv-key">Changes with <code>affected_rule_codes</code> populated</span>
+      <span class="kv-val">
+        {% set pct = regulation_sync.pct_with_affected_codes %}
+        <span class="kv-badge" style="background:{% if pct >= 80 %}#EAF2F0;color:#357266{% elif pct >= 40 %}#FEF9EC;color:#8F6314{% else %}#FDEBEC;color:#DF2935{% endif %};">
+          {{ regulation_sync.total_regulation_changes - regulation_sync.changes_with_empty_affected_codes }}
+          / {{ regulation_sync.total_regulation_changes }} ({{ pct }}%)
+        </span>
+      </span>
+    </li>
+    <li>
+      <span class="kv-key">Changes with empty affected codes</span>
+      <span class="kv-val">{{ regulation_sync.changes_with_empty_affected_codes }}</span>
+    </li>
+  </ul>
+  {% if regulation_sync.changes_with_empty_affected_codes > 0 and regulation_sync.total_regulation_changes > 0 %}
+  <div class="cov-warn" style="margin-top:0.75rem;">
+    <strong>{{ regulation_sync.changes_with_empty_affected_codes }} change(s) have no rule mapping.</strong>
+    These were scraped before the Gemini rule-mapping prompt was added, or Gemini was unavailable.
+    Per-product alerts for these changes cannot be targeted. Re-scrape or manually annotate to resolve.
+  </div>
+  {% endif %}
+
+  <div class="cov-actions" style="margin-top:0.75rem;">
+    <a href="/admin/llm/regulations/train" class="adm-btn">Regulations KB</a>
+    <a href="/admin/alerts" class="adm-btn">View Alerts</a>
+  </div>
+</div>
+
+{# ─────────────────────────── SECTION 5: Product Scan Coverage ────────────── #}
+<div class="cov-section">
+  <div class="cov-section-title">Product Scan Coverage</div>
+  <div class="cov-grid" style="margin-bottom:1rem;">
+    <div class="cov-card">
+      <div class="cov-card-val">{{ product_scan.total_active_products }}</div>
+      <div class="cov-card-label">Active products</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-card-val" style="color:#357266;">{{ product_scan.scanned_last_30_days }}</div>
+      <div class="cov-card-label">Scanned (30 days)</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-card-val" style="color:{% if product_scan.never_scanned > 0 %}#E6A817{% else %}#357266{% endif %};">{{ product_scan.never_scanned }}</div>
+      <div class="cov-card-label">Never scanned</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-card-val" style="color:{% if product_scan.avg_score is not none %}{% if product_scan.avg_score >= 80 %}#357266{% elif product_scan.avg_score >= 60 %}#E6A817{% else %}#DF2935{% endif %}{% else %}#A3A3A3{% endif %};">
+        {{ product_scan.avg_score if product_scan.avg_score is not none else '—' }}{% if product_scan.avg_score is not none %}<span style="font-size:1rem;font-weight:400;">%</span>{% endif %}
+      </div>
+      <div class="cov-card-label">Avg compliance score</div>
+    </div>
+    <div class="cov-card">
+      <div class="cov-card-val" style="color:{% if product_scan.failing_critical > 0 %}#DF2935{% else %}#357266{% endif %};">{{ product_scan.failing_critical }}</div>
+      <div class="cov-card-label">With critical fail</div>
+    </div>
+  </div>
+
+  {% if product_scan.never_scanned > 0 %}
+  <div class="cov-warn">
+    <strong>{{ product_scan.never_scanned }} product(s) have never been scanned.</strong>
+    These products have no compliance history. Upload a label image to run a full check.
+  </div>
+  {% endif %}
+  {% if product_scan.failing_critical > 0 %}
+  <div class="cov-warn" style="background:#FDEBEC;border-color:#DF2935;color:#7A0E17;">
+    <strong>{{ product_scan.failing_critical }} product(s) failing CRITICAL rules.</strong>
+    These products have high-priority violations that require immediate action.
+    <a href="/admin/products" style="color:#DF2935;text-decoration:underline;">Review products →</a>
+  </div>
+  {% endif %}
+
+  <div class="cov-actions">
+    <a href="/admin/products" class="adm-btn">View All Products</a>
+  </div>
+</div>
+
+{# ─────────────────────────── SECTION 6: KB Health ────────────────────────── #}
+<div class="cov-section">
+  <div class="cov-section-title">LLM Knowledge Base Health</div>
+  <div class="cov-two-col">
+    {# Regulations KB #}
+    <div class="adm-table-wrap" style="padding:0.85rem 1rem;">
+      <div style="font-size:0.75rem;font-weight:600;color:#262626;margin-bottom:0.5rem;">
+        Regulations KB
+        {% if kb_health.regulations.doc_count > 0 %}
+        <span class="cov-pill pill-green" style="margin-left:0.4rem;font-size:0.62rem;">Seeded</span>
+        {% else %}
+        <span class="cov-pill pill-red" style="margin-left:0.4rem;font-size:0.62rem;">Empty</span>
+        {% endif %}
+      </div>
+      <ul class="kv-list">
+        <li><span class="kv-key">Documents</span><span class="kv-val">{{ kb_health.regulations.doc_count }}</span></li>
+        <li><span class="kv-key">Chunks</span><span class="kv-val">{{ kb_health.regulations.chunk_count }}</span></li>
+        <li>
+          <span class="kv-key">Oldest entry</span>
+          <span class="kv-val">
+            {% if kb_health.regulations.oldest_days is not none %}
+              {{ kb_health.regulations.oldest_days }}d ago
+            {% else %}—{% endif %}
+          </span>
+        </li>
+      </ul>
+    </div>
+    {# Products KB #}
+    <div class="adm-table-wrap" style="padding:0.85rem 1rem;">
+      <div style="font-size:0.75rem;font-weight:600;color:#262626;margin-bottom:0.5rem;">
+        Products KB
+        {% if kb_health.products.doc_count > 0 %}
+        <span class="cov-pill pill-green" style="margin-left:0.4rem;font-size:0.62rem;">Seeded</span>
+        {% else %}
+        <span class="cov-pill pill-red" style="margin-left:0.4rem;font-size:0.62rem;">Empty</span>
+        {% endif %}
+      </div>
+      <ul class="kv-list">
+        <li><span class="kv-key">Documents</span><span class="kv-val">{{ kb_health.products.doc_count }}</span></li>
+        <li><span class="kv-key">Chunks</span><span class="kv-val">{{ kb_health.products.chunk_count }}</span></li>
+        <li>
+          <span class="kv-key">Oldest entry</span>
+          <span class="kv-val">
+            {% if kb_health.products.oldest_days is not none %}
+              {{ kb_health.products.oldest_days }}d ago
+            {% else %}—{% endif %}
+          </span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="cov-actions" style="margin-top:0.85rem;">
+    <a href="/admin/llm/regulations/seed" class="adm-btn adm-btn-primary"
+       onclick="return confirm('Re-seed the Regulations KB from current rules and regulation changes?')">
+      Seed Regulations KB
+    </a>
+    <a href="/admin/llm/products/seed" class="adm-btn"
+       onclick="return confirm('Re-seed the Products KB from all active products?')">
+      Seed Products KB
+    </a>
+    <a href="/admin/llm" class="adm-btn">LLM Studio</a>
+  </div>
+</div>
+
+{# ─────────────────────────── Footer refresh hint ──────────────────────────── #}
+<p style="font-size:0.72rem;color:#C0C0C0;margin-top:0.5rem;text-align:right;">
+  Data refreshes on each page load. Generated {{ generated_at }}.
+</p>
+
+{% endblock %}

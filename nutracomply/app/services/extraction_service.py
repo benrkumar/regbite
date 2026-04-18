@@ -747,12 +747,151 @@ def _cross_check_with_ocr(extraction: dict, ocr_text: str) -> dict:
     return extraction
 
 
+_MONTH_MAP = {
+    "jan": "01", "feb": "02", "mar": "03", "apr": "04",
+    "may": "05", "jun": "06", "jul": "07", "aug": "08",
+    "sep": "09", "oct": "10", "nov": "11", "dec": "12",
+    "january": "01", "february": "02", "march": "03", "april": "04",
+    "june": "06", "july": "07", "august": "08", "september": "09",
+    "october": "10", "november": "11", "december": "12",
+}
+
+
+def _normalize_date(raw: str | None) -> str | None:
+    """Normalize date strings to MM/YYYY format for consistent rule evaluation.
+
+    Handles common label formats:
+      06/2027   → 06/2027  (already correct)
+      06-2027   → 06/2027
+      2027-06   → 06/2027  (ISO order)
+      Jun 2027  → 06/2027  (month name)
+      June 2027 → 06/2027
+    Returns the original string if normalization fails — never discards data.
+    """
+    if not raw:
+        return raw
+    s = raw.strip()
+    import re as _re
+
+    # MM/YYYY or MM-YYYY
+    m = _re.match(r'^(\d{1,2})[/\-](\d{4})$', s)
+    if m:
+        return f"{int(m.group(1)):02d}/{m.group(2)}"
+
+    # YYYY/MM or YYYY-MM
+    m = _re.match(r'^(\d{4})[/\-](\d{1,2})$', s)
+    if m:
+        return f"{int(m.group(2)):02d}/{m.group(1)}"
+
+    # "Jun 2027" / "June 2027" / "Jun. 2027"
+    m = _re.match(r'^([A-Za-z]+)\.?\s+(\d{4})$', s)
+    if m:
+        month_num = _MONTH_MAP.get(m.group(1).lower().rstrip("."))
+        if month_num:
+            return f"{month_num}/{m.group(2)}"
+
+    # "2027 Jun" / "2027 June"
+    m = _re.match(r'^(\d{4})\s+([A-Za-z]+)$', s)
+    if m:
+        month_num = _MONTH_MAP.get(m.group(2).lower())
+        if month_num:
+            return f"{month_num}/{m.group(1)}"
+
+    return s  # Return unchanged if no pattern matches
+
+
+# Unit classification tables for _parse_quantity
+_WEIGHT_UNITS = {"g", "gram", "grams", "mg", "milligram", "milligrams", "kg", "kilogram", "kilograms"}
+_VOLUME_UNITS = {"ml", "mL", "l", "L", "litre", "litres", "liter", "liters", "millilitre", "millilitres"}
+_COUNT_UNITS  = {"tablet", "tablets", "capsule", "capsules", "softgel", "softgels", "sachet", "sachets",
+                 "piece", "pieces", "unit", "units", "strip", "strips", "gummy", "gummies",
+                 "chew", "chews", "scoop", "scoops", "stick", "sticks", "vial", "vials",
+                 "pouch", "pouches", "pack", "packs", "bottle", "bottles"}
+
+
+def _parse_quantity(raw: str | None) -> dict | None:
+    """
+    Parse a raw quantity string like "500 mL", "60 Tablets", "1 kg", "2 x 30g"
+    into a structured dict: {value, unit, unit_type, raw}.
+
+    unit_type is one of: "weight" | "volume" | "count" | "unknown"
+    Returns None if the string cannot be parsed.
+    """
+    if not raw:
+        return None
+    import re as _re
+    text = raw.strip()
+
+    # Handle compound form "2 x 30g" or "2x30 g" → use the per-unit value, note count
+    compound = _re.match(r'^(\d+)\s*[xX×]\s*(\d+\.?\d*)\s*([A-Za-z]+)', text)
+    if compound:
+        try:
+            count   = int(compound.group(1))
+            value   = float(compound.group(2))
+            unit    = compound.group(3).rstrip(".")
+        except ValueError:
+            count, value, unit = None, None, None
+    else:
+        compound = None
+
+    if compound is None:
+        # Standard form: optional prefix words, then number + unit
+        m = _re.search(r'(\d+\.?\d*)\s*([A-Za-z]+)', text)
+        if not m:
+            return None
+        try:
+            value = float(m.group(1))
+        except ValueError:
+            return None
+        unit  = m.group(2).rstrip(".")
+        count = None
+
+    unit_lower = unit.lower()
+
+    if unit_lower in _WEIGHT_UNITS:
+        unit_type = "weight"
+        # Normalise to grams
+        if unit_lower in {"kg", "kilogram", "kilograms"}:
+            value_g = value * 1000
+        elif unit_lower in {"mg", "milligram", "milligrams"}:
+            value_g = value / 1000
+        else:
+            value_g = value
+        normalised = {"value_g": round(value_g, 4)}
+    elif unit_lower in {u.lower() for u in _VOLUME_UNITS}:
+        unit_type = "volume"
+        # Normalise to mL
+        if unit_lower in {"l", "litre", "litres", "liter", "liters"}:
+            value_ml = value * 1000
+        else:
+            value_ml = value
+        normalised = {"value_ml": round(value_ml, 4)}
+    elif unit_lower in _COUNT_UNITS:
+        unit_type = "count"
+        normalised = {"value_count": int(value)}
+    else:
+        unit_type = "unknown"
+        normalised = {}
+
+    result: dict = {
+        "value": value,
+        "unit": unit,
+        "unit_type": unit_type,
+        "raw": raw,
+    }
+    result.update(normalised)
+    if count is not None:
+        result["pack_count"] = count
+    return result
+
+
 def _normalize_extraction(data: dict) -> dict:
     """
     Post-process extraction to fix common LLM output quirks:
     - Split comma-joined ingredient lists
     - Ensure all expected fields exist (fill missing with None/[]/False)
     - Strip whitespace from string values
+    - Normalize date fields to MM/YYYY format
     """
     # Ensure all expected fields present
     for field in ALL_EXPECTED_FIELDS:
@@ -771,6 +910,17 @@ def _normalize_extraction(data: dict) -> dict:
     ingredients = data.get("ingredient_list", [])
     if isinstance(ingredients, list) and len(ingredients) == 1 and "," in str(ingredients[0]):
         data["ingredient_list"] = [i.strip() for i in str(ingredients[0]).split(",") if i.strip()]
+
+    # Normalize date fields to MM/YYYY for consistent rule evaluation
+    data["expiry_date"] = _normalize_date(data.get("expiry_date"))
+    data["manufacturing_date"] = _normalize_date(data.get("manufacturing_date"))
+
+    # Parse quantity fields into structured form (EX-2)
+    # Raw strings ("500 mL", "60 Tablets", "1 kg") are preserved unchanged;
+    # the parsed dicts are stored under separate keys so new rules can evaluate
+    # thresholds/unit-types without touching the existing PRESENCE checks.
+    data["net_quantity_parsed"]   = _parse_quantity(data.get("net_quantity"))
+    data["serving_size_parsed"]   = _parse_quantity(data.get("serving_size"))
 
     # Strip whitespace from string fields
     for key, val in data.items():

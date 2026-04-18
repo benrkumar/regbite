@@ -40,6 +40,10 @@ async def renewals_list(request: Request, db: Session = Depends(get_db)):
 
     unread_alerts = get_unread_alert_count(user, db)
 
+    # Flash message support (from redirect query params)
+    flash_msg = request.query_params.get("msg", "")
+    flash_type = request.query_params.get("type", "info")
+
     return templates.TemplateResponse("renewals.html", {
         "request": request,
         "user": user,
@@ -52,6 +56,8 @@ async def renewals_list(request: Request, db: Session = Depends(get_db)):
         "license_types": [lt.value for lt in LicenseType],
         "unread_alerts": unread_alerts,
         "perpetual_notice": "FSSAI licenses issued after March 2026 have perpetual validity under the Licensing & Registration Amendment Regulations 2026. No renewal is required.",
+        "flash_message": flash_msg,
+        "flash_type": flash_type,
     })
 
 
@@ -95,7 +101,7 @@ async def add_renewal(
     except Exception as e:
         print(f"[renewals] Error adding license: {e}")
 
-    return RedirectResponse(url="/renewals", status_code=302)
+    return RedirectResponse(url="/renewals?msg=License+added+successfully&type=success", status_code=302)
 
 
 @router.post("/{license_id}/delete")
