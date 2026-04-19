@@ -443,6 +443,9 @@ async def llm_sync_rules(request: Request, db: Session = Depends(get_db)):
 
         for r_data in rules_data:
             code = r_data["rule_code"]
+            # Map seed JSON keys to model column names
+            if "remediation" in r_data and "remediation_template" not in r_data:
+                r_data["remediation_template"] = r_data.pop("remediation")
             if code not in existing_map:
                 db.add(_ComplianceRule(**r_data))
                 new_count += 1
