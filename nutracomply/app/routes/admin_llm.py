@@ -441,15 +441,26 @@ async def llm_sync_rules(request: Request, db: Session = Depends(get_db)):
         new_count = 0
         updated_count = 0
 
+        # Valid ComplianceRule column names (for filtering seed JSON keys)
+        _valid_cols = {
+            c.name for c in _ComplianceRule.__table__.columns if c.name != "id"
+        }
+        # Map seed JSON keys that differ from model column names
+        _key_map = {
+            "remediation": "remediation_template",
+            "regulation_reference": "regulation_source",
+        }
+
         for r_data in rules_data:
             code = r_data["rule_code"]
-            # Map seed JSON keys to model column names
-            if "remediation" in r_data and "remediation_template" not in r_data:
-                r_data["remediation_template"] = r_data.pop("remediation")
-            if "regulation_reference" in r_data and "regulation_source" not in r_data:
-                r_data["regulation_source"] = r_data.pop("regulation_reference")
+            # Remap mismatched keys and filter to valid columns only
+            mapped = {}
+            for k, v in r_data.items():
+                col = _key_map.get(k, k)
+                if col in _valid_cols:
+                    mapped[col] = v
             if code not in existing_map:
-                db.add(_ComplianceRule(**r_data))
+                db.add(_ComplianceRule(**mapped))
                 new_count += 1
             else:
                 existing = existing_map[code]
