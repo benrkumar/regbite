@@ -139,6 +139,183 @@
 </div>
 {% endif %}
 
+{# ── Risk Matrix ── #}
+{% if risk_matrix %}
+<style>
+.rm-wrap {
+  background:#fff; border:1px solid var(--border); border-radius:var(--r-lg);
+  padding:1.2rem 1.5rem 1rem; margin-bottom:1.5rem;
+}
+.rm-hdr {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;
+}
+.rm-hdr h3 { font-size:0.92rem; font-weight:800; color:var(--gray-900); margin:0; letter-spacing:-0.01em; }
+.rm-legend { display:flex; gap:0.8rem; align-items:center; flex-wrap:wrap; }
+.rm-legend-item { display:flex; align-items:center; gap:0.25rem; font-size:0.68rem; color:var(--gray-500); font-weight:600; }
+.rm-legend-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+.rm-body { display:flex; align-items:stretch; gap:0; }
+.rm-ylabel {
+  writing-mode:vertical-rl; transform:rotate(180deg);
+  font-size:0.58rem; font-weight:800; letter-spacing:0.14em; color:var(--gray-300);
+  text-transform:uppercase; display:flex; align-items:center; justify-content:center;
+  width:22px; flex-shrink:0;
+}
+.rm-main { flex:1; max-width:620px; }
+.rm-grid {
+  display:grid;
+  grid-template-columns:repeat(5, 1fr);
+  grid-template-rows:repeat(5, 54px);
+  gap:2px;
+}
+.rm-cell {
+  border-radius:4px; display:flex; align-items:center; justify-content:center;
+  gap:4px; flex-wrap:wrap; padding:3px; position:relative;
+}
+.rm-xlabels {
+  display:grid; grid-template-columns:repeat(5, 1fr); gap:2px;
+  margin-top:4px;
+}
+.rm-xlabel {
+  font-size:0.58rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;
+  color:var(--gray-300); text-align:center; padding-top:2px;
+}
+.rm-ylabels {
+  display:flex; flex-direction:column; gap:2px; margin-right:4px; flex-shrink:0;
+  justify-content:stretch;
+}
+.rm-ylab {
+  flex:1; display:flex; align-items:center; justify-content:flex-end;
+  font-size:0.55rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em;
+  color:var(--gray-300); padding-right:2px; min-height:54px;
+}
+.rm-dot {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; border-radius:7px;
+  font-size:0.6rem; font-weight:800; cursor:pointer;
+  transition:transform 0.15s, box-shadow 0.15s;
+  text-decoration:none; position:relative; z-index:1;
+  box-shadow:0 1px 3px rgba(0,0,0,0.1);
+}
+.rm-dot:hover { transform:scale(1.18); box-shadow:0 3px 10px rgba(0,0,0,0.18); z-index:5; text-decoration:none; }
+.rm-critical { background:#111111; color:#fff; }
+.rm-high     { background:#525252; color:#fff; }
+.rm-moderate { background:#A3A3A3; color:#fff; }
+.rm-low      { background:#D4D4D4; color:#262626; }
+.rm-count-dot { width:32px; height:32px; border-radius:8px; font-size:0.72rem; }
+.rm-tooltip {
+  display:none; position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%);
+  background:#262626; color:#fff; font-size:0.7rem; font-weight:600; padding:0.3rem 0.6rem;
+  border-radius:5px; white-space:nowrap; z-index:20; pointer-events:none;
+  box-shadow:0 2px 8px rgba(0,0,0,0.2);
+}
+.rm-tooltip::after {
+  content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
+  border:4px solid transparent; border-top-color:#262626;
+}
+.rm-dot:hover .rm-tooltip { display:block; }
+@media(max-width:768px) {
+  .rm-grid { grid-template-rows:repeat(5, 42px); }
+  .rm-dot { width:24px; height:24px; font-size:0.52rem; border-radius:5px; }
+  .rm-count-dot { width:26px; height:26px; font-size:0.62rem; }
+  .rm-ylabel { font-size:0.5rem; width:16px; }
+  .rm-ylab { font-size:0.48rem; min-height:42px; }
+  .rm-xlabel { font-size:0.48rem; }
+  .rm-wrap { padding:0.9rem 1rem 0.7rem; }
+}
+@media(max-width:480px) {
+  .rm-wrap { display:none; }
+}
+</style>
+
+<div class="rm-wrap">
+  <div class="rm-hdr">
+    <h3>Risk Matrix</h3>
+    <div class="rm-legend">
+      <span class="rm-legend-item"><span class="rm-legend-dot" style="background:#111111;"></span> Critical</span>
+      <span class="rm-legend-item"><span class="rm-legend-dot" style="background:#525252;"></span> High</span>
+      <span class="rm-legend-item"><span class="rm-legend-dot" style="background:#A3A3A3;"></span> Moderate</span>
+      <span class="rm-legend-item"><span class="rm-legend-dot" style="background:#D4D4D4;"></span> Low</span>
+    </div>
+  </div>
+  <div class="rm-body">
+    <div class="rm-ylabel">Likelihood</div>
+    <div class="rm-ylabels">
+      <div class="rm-ylab">Almost Certain</div>
+      <div class="rm-ylab">Likely</div>
+      <div class="rm-ylab">Possible</div>
+      <div class="rm-ylab">Unlikely</div>
+      <div class="rm-ylab">Rare</div>
+    </div>
+    <div class="rm-main">
+      <div class="rm-grid" id="rm-grid">
+        {# Row 5 (top) to Row 1 (bottom), Col 1 to Col 5 #}
+        {% for row in [5,4,3,2,1] %}
+          {% for col in [1,2,3,4,5] %}
+            {% set opacity = (row * col) / 25 * 0.07 %}
+            <div class="rm-cell" data-r="{{ row }}" data-c="{{ col }}"
+                 style="background:rgba(17,17,17,{{ '%.4f' % opacity }});">
+            </div>
+          {% endfor %}
+        {% endfor %}
+      </div>
+      <div class="rm-xlabels">
+        <div class="rm-xlabel">Insignificant</div>
+        <div class="rm-xlabel">Minor</div>
+        <div class="rm-xlabel">Moderate</div>
+        <div class="rm-xlabel">Major</div>
+        <div class="rm-xlabel">Catastrophic</div>
+      </div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:0.5rem;font-size:0.58rem;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--gray-300);">Impact</div>
+</div>
+
+<script>
+(function() {
+  var data = {{ risk_matrix | tojson }};
+  var cells = {};
+  data.forEach(function(item) {
+    var key = item.likelihood + '-' + item.impact;
+    if (!cells[key]) cells[key] = [];
+    cells[key].push(item);
+  });
+  Object.keys(cells).forEach(function(key) {
+    var items = cells[key];
+    var parts = key.split('-');
+    var r = parts[0], c = parts[1];
+    var cell = document.querySelector('.rm-cell[data-r="'+r+'"][data-c="'+c+'"]');
+    if (!cell) return;
+    if (items.length <= 2) {
+      items.forEach(function(item) {
+        var a = document.createElement('a');
+        a.href = '/labels/' + item.label_id;
+        a.className = 'rm-dot rm-' + item.risk_level;
+        var initials = item.name.substring(0, 3).toUpperCase();
+        a.textContent = initials;
+        var tip = document.createElement('span');
+        tip.className = 'rm-tooltip';
+        tip.textContent = item.name + ' (' + item.score + '%)';
+        a.appendChild(tip);
+        cell.appendChild(a);
+      });
+    } else {
+      var a = document.createElement('a');
+      a.href = '/products';
+      a.className = 'rm-dot rm-count-dot rm-' + items[0].risk_level;
+      a.textContent = items.length;
+      var names = items.map(function(i){ return i.name; }).join(', ');
+      var tip = document.createElement('span');
+      tip.className = 'rm-tooltip';
+      tip.textContent = items.length + ' products: ' + names;
+      a.appendChild(tip);
+      cell.appendChild(a);
+    }
+  });
+})();
+</script>
+{% endif %}
+
 {# ── Two-column dashboard layout ── #}
 <div class="dash-layout">
 

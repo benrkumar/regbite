@@ -870,6 +870,53 @@ async def dashboard(request: Request):
         .all()
     )
 
+    # Risk matrix — compute (impact, likelihood) position for each scanned product
+    from app.models import CheckResult, Severity
+    risk_matrix = []
+    for p in products_list:
+        latest = p.latest_label
+        if not latest or not latest.checks:
+            continue
+        checks = latest.checks
+        failed = [c for c in checks if c.result == CheckResult.FAIL]
+        total = len(checks)
+        if total == 0:
+            continue
+
+        crit = sum(1 for c in failed if c.rule and c.rule.severity == Severity.CRITICAL)
+        high = sum(1 for c in failed if c.rule and c.rule.severity == Severity.HIGH)
+        med  = sum(1 for c in failed if c.rule and c.rule.severity == Severity.MEDIUM)
+
+        # X-axis: Regulatory Impact (worst-severity profile)
+        if   crit >= 2:  impact = 5   # Catastrophic
+        elif crit >= 1:  impact = 4   # Major
+        elif high >= 3:  impact = 4   # Major
+        elif high >= 1:  impact = 3   # Moderate
+        elif med >= 1:   impact = 2   # Minor
+        elif failed:     impact = 1   # Insignificant
+        else:            impact = 1
+
+        # Y-axis: Likelihood (failure density %)
+        fail_rate = len(failed) / total * 100
+        if   fail_rate > 50: likelihood = 5
+        elif fail_rate > 35: likelihood = 4
+        elif fail_rate > 20: likelihood = 3
+        elif fail_rate > 10: likelihood = 2
+        else:                likelihood = 1
+
+        rs = impact * likelihood
+        if   rs >= 15: risk_level = "critical"
+        elif rs >= 8:  risk_level = "high"
+        elif rs >= 4:  risk_level = "moderate"
+        else:          risk_level = "low"
+
+        risk_matrix.append({
+            "id": p.id, "name": p.name,
+            "label_id": latest.id,
+            "impact": impact, "likelihood": likelihood,
+            "risk_level": risk_level, "score": p.compliance_score,
+        })
+
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "user": user,
@@ -887,6 +934,7 @@ async def dashboard(request: Request):
         "scans_this_month": scans_this_month,
         "scan_limit": scan_limit,
         "plan_name": plan_limits.get("name", "Starter"),
+        "risk_matrix": risk_matrix,
     })
 
 
