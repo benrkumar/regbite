@@ -50,6 +50,7 @@ def _run_all_startup_tasks():
         (_seed_initial_data,       "seed_initial_data"),
         (_seed_demo_users,         "seed_demo_users"),
         (_auto_seed_kb_if_empty,   "auto_seed_kb"),
+        (_cleanup_unknown_alerts,  "cleanup_unknown_alerts"),
     ]
     for fn, name in tasks:
         try:
@@ -640,6 +641,43 @@ def _auto_seed_kb_if_empty():
             log.info("[startup] Regulations KB already has %d documents — skipping auto-seed", count)
     except Exception as exc:
         log.error("[startup] auto_seed_kb error: %s", exc)
+    finally:
+        db.close()
+
+
+def _cleanup_unknown_alerts():
+    """
+    One-time cleanup: resolve all UNKNOWN regulation change alerts and their
+    backing RegulationChange records. These are navigation pages from FSSAI's
+    website that were incorrectly scraped and classified.
+    """
+    from app.models import Alert, AlertStatus, RegulationChange, ChangeType
+    db = SessionLocal()
+    try:
+        # Resolve alerts with UNKNOWN in the title
+        resolved = (
+            db.query(Alert)
+            .filter(
+                Alert.title.like("%UNKNOWN —%"),
+                Alert.status != AlertStatus.RESOLVED,
+            )
+            .update(
+                {"status": AlertStatus.RESOLVED, "resolved_at": datetime.utcnow()},
+                synchronize_session="fetch",
+            )
+        )
+        # Mark the backing RegulationChange records
+        cleaned = (
+            db.query(RegulationChange)
+            .filter(RegulationChange.change_type == ChangeType.UNKNOWN)
+            .update({"status": "IGNORED"}, synchronize_session="fetch")
+        )
+        if resolved or cleaned:
+            db.commit()
+            log.info("[startup] Cleaned up %d UNKNOWN alerts, %d UNKNOWN reg changes", resolved, cleaned)
+    except Exception as exc:
+        log.error("[startup] cleanup_unknown_alerts error: %s", exc)
+        db.rollback()
     finally:
         db.close()
 

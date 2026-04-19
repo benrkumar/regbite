@@ -70,12 +70,27 @@ def _run_daily_scrape():
 
             log.info("[scheduler] New/changed document: %s", name)
 
-            classification = classify_regulation_change(name, text or "")
+            # Skip navigation pages / non-regulation content early
+            _skip_patterns = {"navigation menu", "site map", "index of", "interface map", "directory of"}
+            _text_lower = (text or "").lower()[:500]
+            if any(pat in _text_lower for pat in _skip_patterns):
+                log.info("[scheduler] Skipping non-regulation content: %s", name)
+                continue
+
+            # Fetch all known rule codes so Gemini can map the change to affected rules
+            from app.models import ComplianceRule as _CRule
+            known_rule_codes = [r.rule_code for r in db.query(_CRule.rule_code).filter(_CRule.active).all()]
+            classification = classify_regulation_change(name, text or "", known_rule_codes)
 
             try:
                 change_type = ChangeType(classification.get("change_type", "UNKNOWN"))
             except ValueError:
                 change_type = ChangeType.UNKNOWN
+
+            # Skip UNKNOWN — these are navigation pages, not real regulation changes
+            if change_type == ChangeType.UNKNOWN:
+                log.info("[scheduler] Skipping UNKNOWN classification: %s", name)
+                continue
 
             try:
                 severity = Severity(classification.get("severity", "MEDIUM"))
@@ -90,6 +105,11 @@ def _run_daily_scrape():
                 except Exception:
                     pass
 
+            # Parse affected_rule_codes — keep only codes that actually exist in our DB
+            raw_affected = classification.get("affected_rule_codes", [])
+            known_set = set(known_rule_codes)
+            affected_rule_codes = [c for c in raw_affected if c in known_set] if raw_affected else []
+
             change = RegulationChange(
                 source_url=url,
                 document_name=name,
@@ -102,12 +122,14 @@ def _run_daily_scrape():
                 document_hash=new_hash,
                 status="NEW",
                 regulation_status=RegulationStatus.EFFECTIVE,
+                affected_rule_codes=affected_rule_codes,
             )
             db.add(change)
             db.commit()
             db.refresh(change)
             new_changes.append(change)
 
+            # Global regulation alert (no product_id) for the alerts feed
             alert = Alert(
                 regulation_change_id=change.id,
                 alert_type=AlertType.REGULATION_CHANGE,
@@ -118,6 +140,41 @@ def _run_daily_scrape():
                 status=AlertStatus.UNREAD,
             )
             db.add(alert)
+
+            # If we know which rules are affected, also create per-product alerts
+            # so product owners can see their specific products are impacted.
+            if affected_rule_codes:
+                from app.models import Product, LabelVersion, ComplianceCheck, ComplianceRule as _CR2
+                affected_products = (
+                    db.query(Product)
+                    .join(LabelVersion, Product.id == LabelVersion.product_id)
+                    .join(ComplianceCheck, LabelVersion.id == ComplianceCheck.label_version_id)
+                    .join(_CR2, ComplianceCheck.rule_id == _CR2.id)
+                    .filter(
+                        _CR2.rule_code.in_(affected_rule_codes),
+                        LabelVersion.is_current == True,
+                        Product.is_active == True,
+                        Product.is_quick_check == False,
+                    )
+                    .distinct()
+                    .all()
+                )
+                for prod in affected_products:
+                    prod_alert = Alert(
+                        product_id=prod.id,
+                        regulation_change_id=change.id,
+                        alert_type=AlertType.REGULATION_CHANGE,
+                        severity=severity,
+                        title=f"Your product may be affected: {name[:80]}",
+                        message=(
+                            f"{classification.get('summary_text', '')} "
+                            f"Affected rules: {', '.join(affected_rule_codes[:5])}"
+                        )[:500],
+                        rule_violations=[],
+                        status=AlertStatus.UNREAD,
+                    )
+                    db.add(prod_alert)
+
             db.commit()
 
             try:
@@ -127,11 +184,15 @@ def _run_daily_scrape():
 
         log.info("[scheduler] Scrape done. %d new changes detected.", len(new_changes))
 
-        # If there are critical changes, trigger label re-checks + rule suggestions
+        # Trigger label re-checks on CRITICAL or HIGH severity changes.
+        # CRITICAL changes additionally generate LLM rule-update suggestions.
+        # (MEDIUM changes are handled by the weekly full re-check cadence.)
+        high_or_critical = [c for c in new_changes if c.severity.value in ("CRITICAL", "HIGH")]
         critical_changes = [c for c in new_changes if c.severity.value == "CRITICAL"]
-        if critical_changes:
-            log.info("[scheduler] %d CRITICAL changes — triggering label re-check", len(critical_changes))
+        if high_or_critical:
+            log.info("[scheduler] %d CRITICAL/HIGH changes — triggering label re-check", len(high_or_critical))
             _run_recheck()
+        if critical_changes:
             _suggest_rule_updates(db, critical_changes)
 
         # If any new changes detected, auto-reseed LLM KB
@@ -270,13 +331,22 @@ def _suggest_rule_updates(db, critical_changes):
 
 
 def _reseed_llm_kb(db):
-    """Auto-reseed the Regulations LLM KB after new data arrives."""
+    """Auto-reseed the Regulations LLM KB after new data arrives.
+    Also refreshes the Products KB so that RAG queries reflect the latest
+    compliance state after the regulation update.
+    """
     try:
-        from app.services.llm_service import seed_regulations_kb
-        result = seed_regulations_kb(db)
-        log.info("[scheduler] LLM KB re-seeded: %d documents", result.get('document_count', 0))
+        from app.services.llm_service import seed_regulations_kb, seed_products_kb
+        reg_result = seed_regulations_kb(db)
+        log.info("[scheduler] Regulations KB re-seeded: %d documents", reg_result.get('document_count', 0))
     except Exception as e:
-        log.error("[scheduler] LLM KB reseed error: %s", e)
+        log.error("[scheduler] Regulations KB reseed error: %s", e)
+    try:
+        from app.services.llm_service import seed_products_kb
+        prod_result = seed_products_kb(db)
+        log.info("[scheduler] Products KB refreshed: %d documents", prod_result.get('document_count', 0))
+    except Exception as e:
+        log.error("[scheduler] Products KB refresh error: %s", e)
 
 
 def _run_license_expiry_reminders():

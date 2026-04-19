@@ -24,6 +24,7 @@ async def alerts_list(request: Request, db: Session = Depends(get_db)):
 
     alerts = (
         db.query(Alert)
+        .filter(~Alert.title.like("%UNKNOWN —%"))
         .order_by(Alert.created_at.desc())
         .limit(100)
         .all()
