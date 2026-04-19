@@ -476,6 +476,16 @@ async def llm_sync_rules(request: Request, db: Session = Depends(get_db)):
                 if seed_active is not None and seed_active != existing.active:
                     existing.active = seed_active
                     changed = True
+                # Sync remediation_template
+                seed_rem = mapped.get("remediation_template")
+                if seed_rem and seed_rem != (existing.remediation_template or ""):
+                    existing.remediation_template = seed_rem
+                    changed = True
+                # Sync description
+                seed_desc = mapped.get("description")
+                if seed_desc and seed_desc != (existing.description or ""):
+                    existing.description = seed_desc
+                    changed = True
                 if changed:
                     updated_count += 1
 
