@@ -153,7 +153,7 @@
 .rm-hdr h3 { font-size:0.92rem; font-weight:800; color:var(--gray-900); margin:0; letter-spacing:-0.01em; }
 .rm-legend { display:flex; gap:0.8rem; align-items:center; flex-wrap:wrap; }
 .rm-legend-item { display:flex; align-items:center; gap:0.25rem; font-size:0.68rem; color:var(--gray-500); font-weight:600; }
-.rm-legend-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+.rm-legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
 .rm-body { display:flex; align-items:stretch; gap:0; }
 .rm-ylabel {
   writing-mode:vertical-rl; transform:rotate(180deg);
@@ -191,18 +191,19 @@
 }
 .rm-dot {
   display:inline-flex; align-items:center; justify-content:center;
-  width:30px; height:30px; border-radius:7px;
-  font-size:0.6rem; font-weight:800; cursor:pointer;
-  transition:transform 0.15s, box-shadow 0.15s;
+  width:32px; height:32px; border-radius:50%;
+  font-size:0.58rem; font-weight:800; cursor:pointer;
+  transition:transform 0.18s, box-shadow 0.18s;
   text-decoration:none; position:relative; z-index:1;
-  box-shadow:0 1px 3px rgba(0,0,0,0.1);
+  box-shadow:0 2px 6px rgba(0,0,0,0.15);
+  letter-spacing:-0.01em;
 }
-.rm-dot:hover { transform:scale(1.18); box-shadow:0 3px 10px rgba(0,0,0,0.18); z-index:5; text-decoration:none; }
-.rm-critical { background:#111111; color:#fff; }
-.rm-high     { background:#525252; color:#fff; }
-.rm-moderate { background:#A3A3A3; color:#fff; }
-.rm-low      { background:#D4D4D4; color:#262626; }
-.rm-count-dot { width:32px; height:32px; border-radius:8px; font-size:0.72rem; }
+.rm-dot:hover { transform:scale(1.22); box-shadow:0 4px 14px rgba(0,0,0,0.25); z-index:5; text-decoration:none; }
+.rm-critical { background:#DC2626; color:#fff; }
+.rm-high     { background:#EA580C; color:#fff; }
+.rm-moderate { background:#CA8A04; color:#fff; }
+.rm-low      { background:#16A34A; color:#fff; }
+.rm-count-dot { width:34px; height:34px; font-size:0.7rem; }
 .rm-tooltip {
   display:none; position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%);
   background:#262626; color:#fff; font-size:0.7rem; font-weight:600; padding:0.3rem 0.6rem;
@@ -216,8 +217,8 @@
 .rm-dot:hover .rm-tooltip { display:block; }
 @media(max-width:768px) {
   .rm-grid { grid-template-rows:repeat(5, 42px); }
-  .rm-dot { width:24px; height:24px; font-size:0.52rem; border-radius:5px; }
-  .rm-count-dot { width:26px; height:26px; font-size:0.62rem; }
+  .rm-dot { width:26px; height:26px; font-size:0.48rem; }
+  .rm-count-dot { width:28px; height:28px; font-size:0.58rem; }
   .rm-ylabel { font-size:0.5rem; width:16px; }
   .rm-ylab { font-size:0.48rem; min-height:42px; }
   .rm-xlabel { font-size:0.48rem; }
@@ -232,10 +233,10 @@
   <div class="rm-hdr">
     <h3>Risk Matrix</h3>
     <div class="rm-legend">
-      <span class="rm-legend-item"><span class="rm-legend-dot" style="background:#111111;"></span> Critical</span>
-      <span class="rm-legend-item"><span class="rm-legend-dot" style="background:#525252;"></span> High</span>
-      <span class="rm-legend-item"><span class="rm-legend-dot" style="background:#A3A3A3;"></span> Moderate</span>
-      <span class="rm-legend-item"><span class="rm-legend-dot" style="background:#D4D4D4;"></span> Low</span>
+      <span class="rm-legend-item"><span class="rm-legend-dot" style="background:#DC2626;"></span> Critical</span>
+      <span class="rm-legend-item"><span class="rm-legend-dot" style="background:#EA580C;"></span> High</span>
+      <span class="rm-legend-item"><span class="rm-legend-dot" style="background:#CA8A04;"></span> Moderate</span>
+      <span class="rm-legend-item"><span class="rm-legend-dot" style="background:#16A34A;"></span> Low</span>
     </div>
   </div>
   <div class="rm-body">
@@ -252,9 +253,18 @@
         {# Row 5 (top) to Row 1 (bottom), Col 1 to Col 5 #}
         {% for row in [5,4,3,2,1] %}
           {% for col in [1,2,3,4,5] %}
-            {% set opacity = (row * col) / 25 * 0.07 %}
+            {% set rs = row * col %}
+            {% if rs >= 15 %}
+              {% set bg = 'rgba(220,38,38,0.08)' %}
+            {% elif rs >= 8 %}
+              {% set bg = 'rgba(234,88,12,0.06)' %}
+            {% elif rs >= 4 %}
+              {% set bg = 'rgba(202,138,4,0.05)' %}
+            {% else %}
+              {% set bg = 'rgba(22,163,74,0.04)' %}
+            {% endif %}
             <div class="rm-cell" data-r="{{ row }}" data-c="{{ col }}"
-                 style="background:rgba(17,17,17,{{ '%.4f' % opacity }});">
+                 style="background:{{ bg }};">
             </div>
           {% endfor %}
         {% endfor %}

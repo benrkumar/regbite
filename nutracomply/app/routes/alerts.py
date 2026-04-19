@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from pathlib import Path
 
 from app.database import get_db
-from app.models import Alert, AlertStatus
+from app.models import Alert, AlertStatus, Product, Severity
 from app.routes.auth import get_current_user_from_cookie
 
 router = APIRouter()
@@ -16,6 +16,18 @@ def require_user(request: Request, db: Session):
     return get_current_user_from_cookie(request, db)
 
 
+def _user_alerts_query(db: Session, user):
+    """Base query: alerts the user can see (their products + system-wide)."""
+    return (
+        db.query(Alert)
+        .outerjoin(Product, Alert.product_id == Product.id)
+        .filter(
+            (Alert.product_id.is_(None)) | (Product.user_id == user.id),
+            ~Alert.title.like("%UNKNOWN —%"),
+        )
+    )
+
+
 @router.get("/alerts")
 async def alerts_list(request: Request, db: Session = Depends(get_db)):
     user = require_user(request, db)
@@ -23,22 +35,27 @@ async def alerts_list(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url="/login", status_code=302)
 
     alerts = (
-        db.query(Alert)
-        .filter(~Alert.title.like("%UNKNOWN —%"))
+        _user_alerts_query(db, user)
         .order_by(Alert.created_at.desc())
         .limit(100)
         .all()
     )
     for a in alerts:
-        _ = a.product
+        _ = a.product  # eager-load
 
     unread_count = sum(1 for a in alerts if a.status == AlertStatus.UNREAD)
+    critical_count = sum(1 for a in alerts if a.severity == Severity.CRITICAL)
+    high_count = sum(1 for a in alerts if a.severity == Severity.HIGH)
+    medium_count = sum(1 for a in alerts if a.severity == Severity.MEDIUM)
 
     return templates.TemplateResponse("alerts.html", {
         "request": request,
         "user": user,
         "alerts": alerts,
         "unread_alerts": unread_count,
+        "critical_count": critical_count,
+        "high_count": high_count,
+        "medium_count": medium_count,
         "AlertStatus": AlertStatus,
     })
 
@@ -54,7 +71,12 @@ async def update_alert_status(
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    # Only allow updating alerts the user can see
+    alert = (
+        _user_alerts_query(db, user)
+        .filter(Alert.id == alert_id)
+        .first()
+    )
     if alert:
         try:
             alert.status = AlertStatus(status)
@@ -74,8 +96,19 @@ async def mark_all_read(request: Request, db: Session = Depends(get_db)):
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).update(
-        {"status": AlertStatus.ACKNOWLEDGED}
+    # Only mark user's own alerts as read
+    from sqlalchemy import select
+    user_alert_ids = (
+        select(Alert.id)
+        .outerjoin(Product, Alert.product_id == Product.id)
+        .where(
+            (Alert.product_id.is_(None)) | (Product.user_id == user.id),
+            Alert.status == AlertStatus.UNREAD,
+        )
+        .scalar_subquery()
+    )
+    db.query(Alert).filter(Alert.id.in_(user_alert_ids)).update(
+        {"status": AlertStatus.ACKNOWLEDGED}, synchronize_session="fetch"
     )
     db.commit()
     return RedirectResponse(url="/alerts", status_code=302)

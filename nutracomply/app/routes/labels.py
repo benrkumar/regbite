@@ -242,11 +242,24 @@ def _process_label(label_version_id: int):
             return
 
         # ── Check for cached extraction ───────────────────────────────────
+        # Require confidence >= 0.85 AND at least 4 of the 6 critical fields
+        # actually populated — prevents caching a marginal first scan that
+        # scored 0.85 only because non-critical fields happened to be present.
+        _CRITICAL_FIELDS = [
+            "product_name", "fssai_license_number", "ingredient_list",
+            "net_quantity", "manufacturer_details", "expiry_date",
+        ]
+        _critical_populated = sum(
+            1 for f in _CRITICAL_FIELDS
+            if label.extraction_json and label.extraction_json.get(f)
+        ) if label.extraction_json else 0
+
         if (label.extraction_json
                 and label.extraction_confidence
-                and label.extraction_confidence >= 0.85):
+                and label.extraction_confidence >= 0.85
+                and _critical_populated >= 4):
             job["step"] = "cached"
-            print(f"[scan] Using cached extraction conf={label.extraction_confidence:.2f}", flush=True)
+            print(f"[scan] Using cached extraction conf={label.extraction_confidence:.2f} critical_fields={_critical_populated}/6", flush=True)
         else:
             # Ensure API key is available
             cfg = get_settings()
@@ -549,6 +562,51 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
         ComplianceReport.label_version_id == label_id
     ).first()
 
+    # Compare with previous label version (if any) for diff view
+    prev_label = (
+        db.query(LabelVersion)
+        .options(joinedload(LabelVersion.checks).joinedload(ComplianceCheck.rule))
+        .filter(
+            LabelVersion.product_id == label.product_id,
+            LabelVersion.id < label.id,
+        )
+        .order_by(LabelVersion.id.desc())
+        .first()
+    )
+    version_diff = None
+    if prev_label and prev_label.checks:
+        prev_score = calculate_compliance_score(prev_label.checks)
+        prev_failed_codes = {
+            c.rule.rule_code for c in prev_label.checks
+            if c.result == CheckResult.FAIL and c.rule
+        }
+        curr_failed_codes = {
+            c.rule.rule_code for c in label.checks
+            if c.result == CheckResult.FAIL and c.rule
+        } if label.checks else set()
+        fixed = prev_failed_codes - curr_failed_codes
+        new_violations = curr_failed_codes - prev_failed_codes
+        still_failing = prev_failed_codes & curr_failed_codes
+        # Get human-readable descriptions for fixed/new rules
+        all_checks = {c.rule.rule_code: c for c in (label.checks or []) if c.rule}
+        prev_checks = {c.rule.rule_code: c for c in prev_label.checks if c.rule}
+        version_diff = {
+            "prev_score": prev_score,
+            "score_delta": (score or 0) - (prev_score or 0),
+            "prev_label_id": prev_label.id,
+            "prev_date": prev_label.uploaded_at,
+            "fixed": [
+                {"code": rc, "desc": prev_checks[rc].rule.description[:80] if rc in prev_checks else rc}
+                for rc in sorted(fixed)
+            ],
+            "new_violations": [
+                {"code": rc, "desc": all_checks[rc].rule.description[:80] if rc in all_checks else rc,
+                 "severity": all_checks[rc].rule.severity.value if rc in all_checks else ""}
+                for rc in sorted(new_violations)
+            ],
+            "still_failing": len(still_failing),
+        }
+
     return templates.TemplateResponse("label_report.html", {
         "request": request,
         "user": user,
@@ -563,6 +621,7 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
         "processing": bool(processing) and not label.checks,
         "CheckResult": CheckResult,
         "existing_report": existing_report,
+        "version_diff": version_diff,
     })
 
 

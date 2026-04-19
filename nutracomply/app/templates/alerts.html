@@ -2,6 +2,17 @@
 {% block title %}Alerts{% endblock %}
 
 {% block content %}
+<style>
+.alert-filter-row { display:flex; gap:0.4rem; margin-bottom:1.2rem; flex-wrap:wrap; }
+.alert-filter-btn {
+  padding:0.32rem 0.95rem; border-radius:var(--r-full); font-size:0.8rem; font-weight:600;
+  border:1.5px solid var(--border); background:#fff; color:var(--gray-500);
+  cursor:pointer; transition:all var(--t);
+}
+.alert-filter-btn.active { background:#404040; border-color:#404040; color:#fff; }
+.alert-filter-btn:hover:not(.active) { border-color:#A3A3A3; color:#111111; }
+</style>
+
 <div class="page-hdr">
   <div>
     <h2>Compliance Alerts</h2>
@@ -23,10 +34,24 @@
     <a href="/products" class="btn btn-primary">Go to Products</a>
   </div>
 </div>
-{% endif %}
+{% else %}
+
+{# Severity filter chips #}
+<div class="alert-filter-row">
+  <button class="alert-filter-btn active" onclick="filterAlerts('all',this)">All ({{ alerts|length }})</button>
+  {% if critical_count > 0 %}
+  <button class="alert-filter-btn" onclick="filterAlerts('CRITICAL',this)">Critical ({{ critical_count }})</button>
+  {% endif %}
+  {% if high_count > 0 %}
+  <button class="alert-filter-btn" onclick="filterAlerts('HIGH',this)">High ({{ high_count }})</button>
+  {% endif %}
+  {% if medium_count > 0 %}
+  <button class="alert-filter-btn" onclick="filterAlerts('MEDIUM',this)">Medium ({{ medium_count }})</button>
+  {% endif %}
+</div>
 
 {% for alert in alerts %}
-<div class="alert-item sev-{{ alert.severity.value }}{% if alert.status.value == 'UNREAD' %} unread{% endif %}">
+<div class="alert-item sev-{{ alert.severity.value }}{% if alert.status.value == 'UNREAD' %} unread{% endif %}" data-severity="{{ alert.severity.value }}">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem;">
     <div>
       <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
@@ -73,4 +98,25 @@
   </div>
 </div>
 {% endfor %}
+
+<div id="no-filter-results" style="display:none;text-align:center;padding:2rem 0;color:var(--gray-400);font-size:0.88rem;">
+  No alerts match this filter.
+</div>
+
+<script>
+function filterAlerts(severity, btn) {
+  document.querySelectorAll('.alert-filter-btn').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  var items = document.querySelectorAll('.alert-item');
+  var visible = 0;
+  items.forEach(function(item) {
+    var show = (severity === 'all' || item.dataset.severity === severity);
+    item.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  var noRes = document.getElementById('no-filter-results');
+  if (noRes) noRes.style.display = (visible === 0 && severity !== 'all') ? 'block' : 'none';
+}
+</script>
+{% endif %}
 {% endblock %}

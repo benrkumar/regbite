@@ -17,7 +17,7 @@
       ]
     },
     "severity": "CRITICAL",
-    "remediation_template": "Add a prominent declaration stating 'HEALTH SUPPLEMENT' or 'NUTRACEUTICAL' (as applicable) on the principal display panel in capital letters."
+    "remediation_template": "Add a prominent declaration stating 'HEALTH SUPPLEMENT' or 'NUTRACEUTICAL' (as applicable) on the principal display panel in capital letters. (Ref: FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(1))"
   },
   {
     "rule_code": "FSSAI-NUTRA-LBL-002",
@@ -30,7 +30,7 @@
       "required_text": "NOT FOR MEDICINAL USE"
     },
     "severity": "CRITICAL",
-    "remediation_template": "Add 'NOT FOR MEDICINAL USE' in bold capital letters prominently on the label. This is mandatory for all health supplements and nutraceuticals."
+    "remediation_template": "Add 'NOT FOR MEDICINAL USE' in bold capital letters prominently on the label. This is mandatory for all health supplements and nutraceuticals. (Ref: FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(2))"
   },
   {
     "rule_code": "FSSAI-NUTRA-LBL-003",
@@ -44,7 +44,7 @@
       "description": "14-digit FSSAI license number"
     },
     "severity": "CRITICAL",
-    "remediation_template": "Add your 14-digit FSSAI License/Registration number on the label. Format: 14 consecutive digits (e.g., 12345678901234)."
+    "remediation_template": "Add your 14-digit FSSAI License/Registration number on the label. Format: 14 consecutive digits (e.g., 12345678901234). (Ref: FSS (Labelling and Display) Regulations 2020, Reg 4(1)(f))"
   },
   {
     "rule_code": "FSSAI-NUTRA-LBL-004",
@@ -56,7 +56,7 @@
       "field": "product_name"
     },
     "severity": "CRITICAL",
-    "remediation_template": "Ensure the product name is clearly printed on the principal display panel of the label."
+    "remediation_template": "Ensure the product name is clearly printed on the principal display panel of the label. (Ref: FSS (Labelling and Display) Regulations 2020, Reg 4(1)(a))"
   },
   {
     "rule_code": "FSSAI-NUTRA-LBL-005",
@@ -68,7 +68,7 @@
       "field": "net_quantity"
     },
     "severity": "CRITICAL",
-    "remediation_template": "Declare the net quantity (weight or volume) on the principal display panel. Use standard metric units (g, kg, ml, L)."
+    "remediation_template": "Declare the net quantity (weight or volume) on the principal display panel. Use standard metric units (g, kg, ml, L). (Ref: FSS (Labelling and Display) Regulations 2020, Reg 4(1)(b))"
   },
   {
     "rule_code": "FSSAI-NUTRA-LBL-006",
@@ -80,7 +80,7 @@
       "field": "ingredient_list"
     },
     "severity": "CRITICAL",
-    "remediation_template": "List all ingredients in descending order by weight used in manufacture. Include all additives, preservatives, and flavoring agents."
+    "remediation_template": "List all ingredients in descending order by weight used in manufacture. Include all additives, preservatives, and flavoring agents. (Ref: FSS (Labelling and Display) Regulations 2020, Reg 4(1)(d))"
   },
   {
     "rule_code": "FSSAI-NUTRA-LBL-007",
@@ -92,7 +92,7 @@
       "field": "nutritional_table"
     },
     "severity": "CRITICAL",
-    "remediation_template": "Add a complete Nutritional Information table showing values per serving and per 100g/100ml. Include energy, protein, carbohydrates, fat, and relevant micronutrients."
+    "remediation_template": "Add a complete Nutritional Information table showing values per serving and per 100g/100ml. Include energy, protein, carbohydrates, fat, and relevant micronutrients. (Ref: FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(5))"
   },
   {
     "rule_code": "FSSAI-NUTRA-LBL-008",
@@ -105,7 +105,7 @@
       "description": "Nutritional table must include %RDA column"
     },
     "severity": "HIGH",
-    "remediation_template": "Add a %RDA column to the nutritional information table. Values must be based on ICMR Recommended Dietary Allowances for a reference adult (2000 kcal diet)."
+    "remediation_template": "Add a %RDA column to the nutritional information table. Values must be based on ICMR Recommended Dietary Allowances for a reference adult (2000 kcal diet). (Ref: FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(5)(c))"
   },
   {
     "rule_code": "FSSAI-NUTRA-LBL-009",
@@ -117,7 +117,7 @@
       "field": "serving_size"
     },
     "severity": "HIGH",
-    "remediation_template": "Clearly specify the recommended daily dosage/serving size (e.g., '1 capsule daily', '2 tablets twice daily'). Must not exceed the maximum limits in the regulations."
+    "remediation_template": "Clearly specify the recommended daily dosage/serving size (e.g., '1 capsule daily', '2 tablets twice daily'). Must not exceed the maximum limits in the regulations. (Ref: FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(6))"
   },
   {
     "rule_code": "FSSAI-NUTRA-LBL-010",
@@ -130,7 +130,7 @@
       "required_text": "not to exceed"
     },
     "severity": "HIGH",
-    "remediation_template": "Add the advisory statement: 'Not to exceed the stated recommended daily usage' on the label."
+    "remediation_template": "Add the advisory statement: 'Not to exceed the stated recommended daily usage' on the label. (Ref: FSS (Health Supplements, Nutraceuticals) Regulations 2022, Reg 5(7))"
   },
   {
     "rule_code": "FSSAI-NUTRA-LBL-011",
