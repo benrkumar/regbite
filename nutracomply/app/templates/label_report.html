@@ -420,10 +420,11 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
           {% if check.actual_value %}
           <div class="rpt-actual"><strong style="color:#525252;">Found:</strong> {{ check.actual_value }}</div>
           {% endif %}
-          {% if check.remediation %}
+          {% set rem_text = (check.rule.remediation_template if check.rule and check.rule.remediation_template else check.remediation) %}
+          {% if rem_text %}
           <details class="rpt-fix">
             <summary>How to fix &#8594;</summary>
-            <div class="rpt-fix-body">{{ check.remediation }}</div>
+            <div class="rpt-fix-body">{{ rem_text }}</div>
           </details>
           {% endif %}
         </div>
@@ -444,8 +445,9 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
   <div class="rpt-check sev-MEDIUM" style="margin-bottom:0.4rem;">
     <div class="rpt-check-desc">{{ check.rule.description if check.rule else 'Unknown Rule' }}</div>
     <div class="rpt-check-msg">{{ check.message }}</div>
-    {% if check.remediation %}
-    <details class="rpt-fix"><summary>Guidance &#8594;</summary><div class="rpt-fix-body">{{ check.remediation }}</div></details>
+    {% set rem_text2 = (check.rule.remediation_template if check.rule and check.rule.remediation_template else check.remediation) %}
+    {% if rem_text2 %}
+    <details class="rpt-fix"><summary>Guidance &#8594;</summary><div class="rpt-fix-body">{{ rem_text2 }}</div></details>
     {% endif %}
   </div>
 {% endfor %}
