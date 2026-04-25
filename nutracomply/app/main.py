@@ -909,7 +909,40 @@ async def dashboard(request: Request):
     )
 
     # Risk matrix — compute (impact, likelihood) position for each scanned product
-    from app.models import CheckResult, Severity
+    from app.models import CheckResult, Severity, ComplianceRule
+
+    # Action Required: top 3 critical violations across portfolio
+    action_required = []
+    for p in products_list:
+        lbl = p.latest_label
+        if not lbl or not lbl.checks:
+            continue
+        for c in lbl.checks:
+            if c.result == CheckResult.FAIL and c.rule and c.rule.severity == Severity.CRITICAL:
+                action_required.append({
+                    "product_name": p.name,
+                    "product_id": p.id,
+                    "label_id": lbl.id,
+                    "rule": c.rule.description,
+                    "remediation": c.rule.remediation_template or c.message or "",
+                })
+    action_required = action_required[:3]
+
+    # violation_count: total unique FAIL rules across latest labels (for sidebar badge)
+    latest_label_ids_dash = [p.latest_label.id for p in products_list if p.latest_label]
+    violation_count = 0
+    if latest_label_ids_dash:
+        from sqlalchemy import func
+        from app.models import ComplianceCheck
+        violation_count = (
+            db.query(func.count(func.distinct(ComplianceCheck.rule_id)))
+            .filter(
+                ComplianceCheck.label_version_id.in_(latest_label_ids_dash),
+                ComplianceCheck.result == CheckResult.FAIL,
+            )
+            .scalar() or 0
+        )
+
     risk_matrix = []
     for p in products_list:
         latest = p.latest_label
@@ -973,6 +1006,8 @@ async def dashboard(request: Request):
         "scan_limit": scan_limit,
         "plan_name": plan_limits.get("name", "Starter"),
         "risk_matrix": risk_matrix,
+        "action_required": action_required,
+        "violation_count": violation_count,
     })
 
 
@@ -1060,6 +1095,93 @@ async def privacy_page(request: Request):
 @app.get("/changelog")
 async def changelog_page(request: Request):
     return templates.TemplateResponse("changelog.html", {"request": request, "user": _get_optional_user(request), "active_page": "changelog"})
+
+
+@app.get("/violations")
+async def violations_triage(request: Request, severity: str = ""):
+    from app.routes.auth import get_current_user_from_cookie
+    from app.database import get_db
+    from app.models import (
+        Product, LabelVersion, ComplianceCheck, ComplianceRule,
+        CheckResult, Severity as Sev,
+    )
+    from sqlalchemy import func
+
+    db = next(get_db())
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse("/login", status_code=302)
+
+    # Latest label IDs across all user products
+    user_products = (
+        db.query(Product)
+        .filter(Product.user_id == user.id, Product.is_active == True)
+        .all()
+    )
+    latest_label_ids = [p.latest_label.id for p in user_products if p.latest_label]
+
+    if not latest_label_ids:
+        return templates.TemplateResponse("violations.html", {
+            "request": request, "user": user,
+            "grouped": [], "total_fails": 0,
+            "severity_filter": severity, "sev_counts": {},
+            "violation_count": 0,
+        })
+
+    # Aggregate FAILs by rule (across latest labels)
+    fail_rows = (
+        db.query(ComplianceRule, func.count(ComplianceCheck.id).label("affected_count"))
+        .join(ComplianceCheck, ComplianceCheck.rule_id == ComplianceRule.id)
+        .filter(
+            ComplianceCheck.label_version_id.in_(latest_label_ids),
+            ComplianceCheck.result == CheckResult.FAIL,
+            ComplianceRule.active == True,
+        )
+        .group_by(ComplianceRule.id)
+        .order_by(ComplianceRule.severity.desc(), func.count(ComplianceCheck.id).desc())
+        .all()
+    )
+
+    # Severity counts for filter chips (before applying the severity filter)
+    sev_counts: dict = {}
+    for rule, count in fail_rows:
+        key = rule.severity.value if rule.severity else "LOW"
+        sev_counts[key] = sev_counts.get(key, 0) + 1
+
+    violation_count = len(fail_rows)
+
+    # For each rule, find which products are affected
+    grouped = []
+    for rule, count in fail_rows:
+        if severity and (rule.severity is None or rule.severity.value != severity):
+            continue
+        affected_products = (
+            db.query(Product)
+            .join(LabelVersion, LabelVersion.product_id == Product.id)
+            .join(ComplianceCheck, ComplianceCheck.label_version_id == LabelVersion.id)
+            .filter(
+                ComplianceCheck.rule_id == rule.id,
+                ComplianceCheck.result == CheckResult.FAIL,
+                LabelVersion.id.in_(latest_label_ids),
+            )
+            .distinct()
+            .all()
+        )
+        grouped.append({
+            "rule": rule,
+            "affected_count": count,
+            "products": affected_products[:5],
+            "more": max(0, len(affected_products) - 5),
+        })
+
+    return templates.TemplateResponse("violations.html", {
+        "request": request, "user": user,
+        "grouped": grouped,
+        "total_fails": len(fail_rows),
+        "severity_filter": severity,
+        "sev_counts": sev_counts,
+        "violation_count": violation_count,
+    })
 
 
 @app.get("/r/{token}")

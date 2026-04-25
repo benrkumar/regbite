@@ -6,9 +6,10 @@
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.75rem;">
   <p style="margin:0;color:#737373;font-size:0.86rem;">{{ rules|length }} total rules</p>
-  <div style="display:flex;gap:0.5rem;">
+  <div style="display:flex;gap:0.5rem;align-items:center;">
     <span class="adm-badge badge-green">{{ rules | selectattr('active') | list | length }} Active</span>
     <span class="adm-badge badge-gray">{{ rules | rejectattr('active') | list | length }} Disabled</span>
+    <a href="/admin/rules/export.csv" class="adm-btn" style="font-size:0.78rem;padding:0.3rem 0.7rem;">↓ Export CSV</a>
   </div>
 </div>
 

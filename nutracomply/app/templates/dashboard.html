@@ -326,6 +326,25 @@
 </script>
 {% endif %}
 
+{# ── Action Required: Top Critical Violations ── #}
+{% if action_required is defined and action_required %}
+<div style="background:#fff;border:1px solid #EBEBEB;border-left:3px solid #DC2626;border-radius:10px;padding:1.1rem 1.4rem;margin-bottom:1.5rem;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+    <h3 style="font-size:0.88rem;font-weight:700;color:#DC2626;margin:0;">⚠ Action Required — Critical Violations</h3>
+    <a href="/violations?severity=CRITICAL" style="font-size:0.76rem;color:var(--gray-400);text-decoration:none;font-weight:500;">View all →</a>
+  </div>
+  {% for item in action_required %}
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid #F5F5F5;gap:1rem;">
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:0.84rem;font-weight:600;color:#111111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.rule[:72] }}{% if item.rule|length > 72 %}…{% endif %}</div>
+      <div style="font-size:0.75rem;color:var(--gray-400);">{{ item.product_name }}</div>
+    </div>
+    <a href="/labels/{{ item.label_id }}" style="flex-shrink:0;background:#DC2626;color:#fff;border-radius:6px;padding:0.28rem 0.65rem;font-size:0.76rem;font-weight:600;text-decoration:none;">Fix →</a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 {# ── Two-column dashboard layout ── #}
 <div class="dash-layout">
 

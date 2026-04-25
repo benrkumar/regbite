@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Violations Triage{% endblock %}
+{% block page_subtitle %}Cross-portfolio compliance failures{% endblock %}
+
+{% block content %}
+<style>
+.viol-sev-bar {
+  display:flex; gap:0.4rem; margin-bottom:1.5rem; flex-wrap:wrap;
+}
+.viol-filter-btn {
+  padding:0.32rem 0.95rem; border-radius:var(--r-full); font-size:0.8rem; font-weight:600;
+  border:1.5px solid var(--border); background:#fff; color:var(--gray-500);
+  text-decoration:none; transition:all var(--t);
+}
+.viol-filter-btn:hover { border-color:#A3A3A3; color:#111111; text-decoration:none; }
+.viol-filter-btn.active { background:#111111; border-color:#111111; color:#fff; }
+.viol-filter-btn.sev-critical.active { background:#DC2626; border-color:#DC2626; color:#fff; }
+.viol-filter-btn.sev-high.active    { background:#EA580C; border-color:#EA580C; color:#fff; }
+.viol-filter-btn.sev-medium.active  { background:#CA8A04; border-color:#CA8A04; color:#fff; }
+.viol-filter-btn.sev-low.active     { background:#6B7280; border-color:#6B7280; color:#fff; }
+
+.viol-row {
+  background:#fff; border:1px solid #EBEBEB; border-radius:10px;
+  padding:1rem 1.25rem; margin-bottom:0.6rem; transition:border-color 0.15s;
+}
+.viol-row:hover { border-color:#D4D4D4; }
+.viol-row.sev-critical { border-left:3px solid #DC2626; }
+.viol-row.sev-high     { border-left:3px solid #EA580C; }
+.viol-row.sev-medium   { border-left:3px solid #CA8A04; }
+.viol-row.sev-low      { border-left:3px solid #9CA3AF; }
+
+.viol-count {
+  font-size:1.6rem; font-weight:900; flex-shrink:0; line-height:1;
+}
+.prod-pill {
+  display:inline-flex; align-items:center; gap:0.3rem;
+  background:#F5F5F5; border:1px solid #EBEBEB; border-radius:5px;
+  padding:0.22rem 0.6rem; font-size:0.73rem; font-weight:500; color:#525252;
+  text-decoration:none; transition:all 0.15s;
+}
+.prod-pill:hover { background:#EBEBEB; color:#111111; text-decoration:none; }
+</style>
+
+{# ── Page Header ── #}
+<div class="page-hdr" style="margin-bottom:1.25rem;">
+  <div>
+    <h2>Violations Triage</h2>
+    <p style="color:#737373;font-size:0.82rem;">
+      {{ total_fails }} unique rule failure{{ 's' if total_fails != 1 }} across your portfolio — sorted by severity
+    </p>
+  </div>
+  <div style="display:flex;gap:0.5rem;">
+    <a href="/violations" class="btn btn-ghost btn-sm" style="color:#737373;" title="Refresh">↻ Refresh</a>
+    <a href="/products/export.csv" class="btn btn-ghost btn-sm" style="color:#525252;" title="Export products CSV">↓ Export CSV</a>
+  </div>
+</div>
+
+{# ── Severity filter chips ── #}
+<div class="viol-sev-bar">
+  <a href="/violations" class="viol-filter-btn {% if not severity_filter %}active{% endif %}">
+    All ({{ total_fails }})
+  </a>
+  {% for sev in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] %}
+    {% if sev_counts.get(sev, 0) > 0 %}
+    <a href="/violations?severity={{ sev }}"
+       class="viol-filter-btn sev-{{ sev | lower }} {% if severity_filter == sev %}active{% endif %}">
+      {{ sev | title }} ({{ sev_counts[sev] }})
+    </a>
+    {% endif %}
+  {% endfor %}
+</div>
+
+{# ── Violations list ── #}
+{% if not grouped %}
+<div class="card no-hover">
+  <div class="empty-state">
+    <span class="empty-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+    </span>
+    <h3>{% if severity_filter %}No {{ severity_filter | title }} violations{% else %}No violations found{% endif %}</h3>
+    <p>{% if severity_filter %}<a href="/violations">View all severities →</a>{% else %}All products are passing their compliance checks.{% endif %}</p>
+  </div>
+</div>
+{% else %}
+
+{% for item in grouped %}
+{% set sev = item.rule.severity.value if item.rule.severity else 'LOW' %}
+<div class="viol-row sev-{{ sev | lower }}">
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.5rem;">
+    <div style="flex:1;min-width:0;">
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.2rem;">
+        <strong style="font-size:0.93rem;color:#111111;">{{ item.rule.description }}</strong>
+        <span class="sev-tag sev-{{ sev }}">{{ sev }}</span>
+      </div>
+      <small style="color:var(--gray-400);font-size:0.75rem;">
+        {{ item.rule.rule_code }}
+        {% if item.rule.regulation_source %} · {{ item.rule.regulation_source[:60] }}{% elif item.rule.framework %} · {{ item.rule.framework.value }}{% endif %}
+      </small>
+    </div>
+    <div class="viol-count" style="color:{% if sev == 'CRITICAL' %}#DC2626{% elif sev == 'HIGH' %}#EA580C{% elif sev == 'MEDIUM' %}#CA8A04{% else %}#6B7280{% endif %};">
+      {{ item.affected_count }}
+    </div>
+  </div>
+
+  {% if item.rule.remediation_template %}
+  <div style="font-size:0.8rem;color:var(--gray-500);background:#FAFAFA;border-radius:6px;padding:0.45rem 0.7rem;margin-bottom:0.55rem;font-style:italic;border-left:2px solid #EBEBEB;">
+    <strong style="font-style:normal;font-size:0.73rem;color:var(--gray-400);">Fix:</strong> {{ item.rule.remediation_template }}
+  </div>
+  {% endif %}
+
+  <div style="display:flex;flex-wrap:wrap;gap:0.35rem;align-items:center;">
+    <span style="font-size:0.75rem;color:var(--gray-400);margin-right:0.2rem;">Affects:</span>
+    {% for p in item.products %}
+      {% set lbl = p.latest_label %}
+      {% if lbl %}
+      <a href="/labels/{{ lbl.id }}" class="prod-pill">{{ p.name[:22] }}{% if p.name|length > 22 %}…{% endif %}</a>
+      {% else %}
+      <span class="prod-pill" style="opacity:0.6;">{{ p.name[:22] }}</span>
+      {% endif %}
+    {% endfor %}
+    {% if item.more > 0 %}
+    <span style="font-size:0.75rem;color:var(--gray-400);">+{{ item.more }} more</span>
+    {% endif %}
+  </div>
+
+</div>
+{% endfor %}
+{% endif %}
+
+{% endblock %}

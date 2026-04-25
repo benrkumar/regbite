@@ -31,6 +31,56 @@ def require_user(request: Request, db: Session):
     return user
 
 
+@router.get("/products/export.csv")
+async def export_products_csv(request: Request, db: Session = Depends(get_db)):
+    from fastapi.responses import Response as FastResponse
+    from app.models import CheckResult
+
+    user = require_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+
+    products = (
+        db.query(Product)
+        .filter(Product.user_id == user.id, Product.is_active == True, Product.is_quick_check == False)
+        .order_by(Product.created_at.desc())
+        .all()
+    )
+    for p in products:
+        for lv in p.label_versions:
+            _ = lv.checks
+
+    output = io.StringIO()
+    w = csv.writer(output)
+    w.writerow(["Product Name", "SKU", "Category", "Latest Score", "Status",
+                "Last Scanned", "Critical Failures", "High Failures", "Top Violation"])
+    for p in products:
+        lbl = p.latest_label
+        score = p.compliance_score
+        status = "Compliant" if score is not None and score >= 80 else ("Flagged" if score is not None else "Not Scanned")
+        last_scan = lbl.uploaded_at.strftime("%Y-%m-%d") if lbl else ""
+        crit = high = 0
+        top_violation = ""
+        if lbl and lbl.checks:
+            failed = [c for c in lbl.checks if c.result == CheckResult.FAIL]
+            crit = sum(1 for c in failed if c.rule and c.rule.severity.value == "CRITICAL")
+            high = sum(1 for c in failed if c.rule and c.rule.severity.value == "HIGH")
+            if failed:
+                sev_order = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+                worst = sorted(
+                    failed,
+                    key=lambda c: sev_order.index(c.rule.severity.value if c.rule and c.rule.severity else "LOW")
+                )[0]
+                top_violation = (worst.rule.description[:80] if worst.rule else "")
+        w.writerow([p.name, p.sku or "", p.category or "", score if score is not None else "",
+                    status, last_scan, crit, high, top_violation])
+
+    return FastResponse(
+        output.getvalue(), media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=products_compliance.csv"},
+    )
+
+
 @router.get("/products")
 async def products_list(request: Request, db: Session = Depends(get_db)):
     user = require_user(request, db)

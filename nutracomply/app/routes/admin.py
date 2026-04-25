@@ -71,6 +71,58 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     recent_alerts  = db.query(Alert).order_by(Alert.created_at.desc()).limit(6).all()
     recent_signups = db.query(User).order_by(User.created_at.desc()).limit(5).all()
 
+    # ── Account Health Table ──────────────────────────────────────────────────
+    account_health = []
+    non_admin_users = db.query(User).filter(User.is_active == True, User.is_admin == False).limit(50).all()
+    for u in non_admin_users:
+        user_products = db.query(Product).filter(Product.user_id == u.id, Product.is_active == True).all()
+        if not user_products:
+            continue
+        scored = [p for p in user_products if p.compliance_score is not None]
+        avg_score = round(sum(p.compliance_score for p in scored) / len(scored)) if scored else None
+        latest_scan = None
+        for p in user_products:
+            lbl = p.latest_label
+            if lbl and (latest_scan is None or lbl.uploaded_at > latest_scan):
+                latest_scan = lbl.uploaded_at
+        crit_alerts = (
+            db.query(Alert)
+            .join(Product, Alert.product_id == Product.id)
+            .filter(Product.user_id == u.id, Alert.severity == Severity.CRITICAL, Alert.status == AlertStatus.UNREAD)
+            .count()
+        )
+        days_since = (datetime.utcnow() - latest_scan).days if latest_scan else 999
+        if days_since <= 7 and (avg_score or 0) >= 80 and crit_alerts == 0:
+            health = "green"
+        elif days_since > 30 or (avg_score or 0) < 50 or crit_alerts > 0:
+            health = "red"
+        else:
+            health = "yellow"
+        account_health.append({
+            "user": u, "products": len(user_products), "scanned": len(scored),
+            "avg_score": avg_score, "crit_alerts": crit_alerts,
+            "last_scan": latest_scan, "days_since": days_since, "health": health,
+        })
+    account_health.sort(key=lambda x: (0 if x["health"] == "red" else 1 if x["health"] == "yellow" else 2, x["days_since"]))
+
+    # ── Platform Analytics ────────────────────────────────────────────────────
+    top_violated = (
+        db.query(ComplianceRule, func.count(ComplianceCheck.id).label("fail_count"))
+        .join(ComplianceCheck, ComplianceCheck.rule_id == ComplianceRule.id)
+        .filter(ComplianceCheck.result == CheckResult.FAIL)
+        .group_by(ComplianceRule.id)
+        .order_by(func.count(ComplianceCheck.id).desc())
+        .limit(5).all()
+    )
+    cat_scores: dict = {}
+    for p in db.query(Product).filter(Product.is_active == True).all():
+        if p.compliance_score is not None and p.category:
+            cat_scores.setdefault(p.category, []).append(p.compliance_score)
+    category_scores = sorted(
+        [{"category": cat, "avg": round(sum(sc) / len(sc)), "count": len(sc)} for cat, sc in cat_scores.items()],
+        key=lambda x: -x["avg"],
+    )[:6]
+
     return templates.TemplateResponse("admin/dashboard.html", {
         "request": request,
         "user": user,
@@ -94,6 +146,9 @@ async def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "recent_users": recent_users,
         "recent_alerts": recent_alerts,
         "recent_signups": recent_signups,
+        "account_health": account_health,
+        "top_violated": top_violated,
+        "category_scores": category_scores,
     })
 
 
@@ -295,6 +350,36 @@ async def admin_products(request: Request, db: Session = Depends(get_db)):
 
 
 # ── Compliance Rules ──────────────────────────────────────────────────────────
+
+@router.get("/rules/export.csv")
+async def export_rules_csv(request: Request, db: Session = Depends(get_db)):
+    """Download all compliance rules as a CSV file."""
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+    import csv, io
+    from fastapi.responses import Response as FastResponse
+    rules = db.query(ComplianceRule).order_by(ComplianceRule.framework, ComplianceRule.rule_code).all()
+    output = io.StringIO()
+    w = csv.writer(output)
+    w.writerow(["rule_code", "framework", "category", "description", "severity", "active",
+                "regulation_source", "remediation_template"])
+    for r in rules:
+        w.writerow([
+            r.rule_code,
+            r.framework.value if r.framework else "",
+            r.category.value if r.category else "",
+            r.description or "",
+            r.severity.value if r.severity else "",
+            r.active,
+            r.regulation_source or "",
+            r.remediation_template or "",
+        ])
+    return FastResponse(
+        output.getvalue(), media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=compliance_rules.csv"},
+    )
+
 
 @router.get("/rules")
 async def admin_rules(request: Request, db: Session = Depends(get_db)):
