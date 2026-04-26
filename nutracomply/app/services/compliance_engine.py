@@ -17,6 +17,25 @@ logger = logging.getLogger(__name__)
 
 from app.models import ComplianceRule, ComplianceCheck, LabelVersion, CheckType, CheckResult, Severity
 
+
+# ─── Deterministic helper utilities ──────────────────────────────────────────
+
+def _norm(text) -> str:
+    """Lowercase, strip and collapse whitespace for fast substring comparison."""
+    return " ".join(str(text).lower().split())
+
+
+def _concat(extraction: dict, *fields: str) -> str:
+    """Concatenate multiple extraction fields into one searchable lowercase string."""
+    parts: list[str] = []
+    for f in fields:
+        val = extraction.get(f)
+        if isinstance(val, list):
+            parts.extend(str(v) for v in val)
+        elif val is not None:
+            parts.append(str(val))
+    return _norm(" ".join(parts))
+
 # Severity weights for compliance scoring — not all rules are equal
 SEVERITY_WEIGHTS = {
     Severity.CRITICAL: 4,
@@ -104,9 +123,40 @@ def run_compliance_check(label_version: LabelVersion, db: Session) -> list[Compl
         db.add(check)
         checks.append(check)
 
-    # FORMAT rules: single batched Gemini call instead of N individual calls
-    if format_rules:
-        batch_checks = _check_format_rules_batch(format_rules, extraction, label_version.id)
+    # FORMAT rules: deterministic handlers first, remainder to LLM batch
+    deterministic_rules = [r for r in format_rules if r.rule_code in _DETERMINISTIC_FORMAT_HANDLERS]
+    llm_format_rules    = [r for r in format_rules if r.rule_code not in _DETERMINISTIC_FORMAT_HANDLERS]
+
+    for rule in deterministic_rules:
+        handler = _DETERMINISTIC_FORMAT_HANDLERS[rule.rule_code]
+        try:
+            result, actual_value, message = handler(extraction)
+        except Exception as exc:
+            logger.warning(
+                "[compliance] Deterministic handler failed for %s: %s — routing to LLM",
+                rule.rule_code, exc,
+            )
+            llm_format_rules.append(rule)
+            continue
+        check = ComplianceCheck(
+            label_version_id=label_version.id,
+            rule_id=rule.id,
+            result=result,
+            actual_value=str(actual_value)[:500] if actual_value else None,
+            message=message,
+            remediation=(
+                rule.remediation_template or ""
+                if result in (CheckResult.FAIL, CheckResult.WARNING)
+                else None
+            ),
+        )
+        db.add(check)
+        checks.append(check)
+
+    if llm_format_rules:
+        logger.debug("[compliance] FORMAT rules: %d deterministic, %d to LLM batch",
+                     len(deterministic_rules), len(llm_format_rules))
+        batch_checks = _check_format_rules_batch(llm_format_rules, extraction, label_version.id)
         for check in batch_checks:
             db.add(check)
         checks.extend(batch_checks)
@@ -476,6 +526,338 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
         # unconfirmed but the score is not silently inflated to a full pass.
         logger.warning("[compliance] LLM format check failed for %s: %s", rule.rule_code, e)
         return CheckResult.WARNING, None, f"LLM check unavailable — manual verification required: {description}"
+
+
+# ─── Deterministic FORMAT rule handlers ──────────────────────────────────────
+# Each returns (CheckResult, actual_value_or_None, message_str).
+# These run before any LLM call — they use only the extraction JSON.
+
+def _handle_swtnr_001(extraction: dict):
+    """Aspartame present → must carry phenylketonuric warning."""
+    _ASPARTAME = {"aspartame", "ins 951", "ins951", "e951", "aspartame-acesulfame"}
+    ing = _concat(extraction, "ingredient_list")
+    if not any(a in ing for a in _ASPARTAME):
+        return CheckResult.PASS, None, "No aspartame found in ingredients — warning not required"
+    warn = _concat(extraction, "warnings", "health_claims")
+    if "phenylketonuric" in warn:
+        return CheckResult.PASS, "phenylketonuric warning found", "Aspartame warning 'Not recommended for phenylketonurics' is present"
+    return CheckResult.FAIL, "phenylketonuric warning missing", (
+        "Product contains aspartame but is missing 'Not recommended for phenylketonurics' warning"
+    )
+
+
+def _handle_swtnr_002(extraction: dict):
+    """Non-caloric sweeteners → must declare 'CONTAINS NON-CALORIC SWEETENER'."""
+    _SWEETENERS = {
+        "stevia", "sucralose", "aspartame", "acesulfame", "saccharin",
+        "neotame", "advantame", "monk fruit", "ins 950", "ins 951",
+        "ins 952", "ins 954", "ins 955", "ins 960", "ins 961",
+    }
+    ing = _concat(extraction, "ingredient_list")
+    if not any(s in ing for s in _SWEETENERS):
+        return CheckResult.PASS, None, "No artificial/non-caloric sweeteners found — declaration not required"
+    combined = _concat(extraction, "warnings", "health_claims", "product_name")
+    if "non-caloric sweetener" in combined or "non caloric sweetener" in combined:
+        return CheckResult.PASS, "declaration found", "'CONTAINS NON-CALORIC SWEETENER' declaration is present"
+    return CheckResult.FAIL, None, (
+        "Product contains artificial sweeteners but missing 'CONTAINS NON-CALORIC SWEETENER' declaration"
+    )
+
+
+def _handle_swtnr_003(extraction: dict):
+    """Polyols → may need laxative effect warning (WARNING — can't confirm 10% threshold)."""
+    _POLYOLS = {"sorbitol", "mannitol", "xylitol", "maltitol", "lactitol", "erythritol", "isomalt"}
+    ing = _concat(extraction, "ingredient_list")
+    found = [p for p in _POLYOLS if p in ing]
+    if not found:
+        return CheckResult.PASS, None, "No polyols found in ingredients — warning not required"
+    warn = _concat(extraction, "warnings")
+    if "laxative" in warn:
+        return CheckResult.PASS, str(found), "Laxative effect warning is present for polyols"
+    return CheckResult.WARNING, str(found), (
+        f"Product contains polyols ({found}) — verify laxative effect warning is present if used at ≥10% by weight"
+    )
+
+
+def _handle_caff_001(extraction: dict):
+    """Caffeine sources → must declare 'CONTAINS CAFFEINE'."""
+    _CAFF = {"caffeine", "guarana", "green tea extract", "coffee extract", "kola nut", "yerba mate", "matcha"}
+    ing = _concat(extraction, "ingredient_list")
+    if not any(c in ing for c in _CAFF):
+        return CheckResult.PASS, None, "No caffeine sources found in ingredients — declaration not required"
+    combined = _concat(extraction, "warnings", "health_claims")
+    if "contains caffeine" in combined:
+        return CheckResult.PASS, "CONTAINS CAFFEINE found", "'CONTAINS CAFFEINE' declaration is present"
+    return CheckResult.FAIL, None, (
+        "Product contains caffeine sources but missing 'CONTAINS CAFFEINE' declaration"
+    )
+
+
+def _handle_glut_001(extraction: dict):
+    """'Gluten Free' claim → must not contain wheat/barley/rye."""
+    combined = _concat(extraction, "health_claims", "product_name", "warnings")
+    if "gluten free" not in combined and "gluten-free" not in combined:
+        return CheckResult.PASS, None, "No 'Gluten Free' claim found — declaration not required"
+    ing = _concat(extraction, "ingredient_list")
+    _GLUTEN = {"wheat", "barley", "rye", "oat"}
+    found = [g for g in _GLUTEN if g in ing]
+    if found:
+        return CheckResult.FAIL, str(found), (
+            f"'Gluten Free' claim is made but product appears to contain gluten sources: {found}"
+        )
+    return CheckResult.PASS, "Gluten Free claim valid", "Gluten Free claim present with no gluten-containing ingredients detected"
+
+
+def _handle_alrg_001(extraction: dict):
+    """Allergens in ingredients → should have allergen_declarations box."""
+    allergens = extraction.get("allergen_declarations") or []
+    if allergens:
+        return CheckResult.PASS, str(allergens), f"Allergen declaration present: {allergens}"
+    ing = _concat(extraction, "ingredient_list")
+    _COMMON = {"milk", "egg", "fish", "crustacean", "tree nut", "peanut", "wheat", "soybean", "sesame", "gluten"}
+    found = [a for a in _COMMON if a in ing]
+    if found:
+        return CheckResult.WARNING, str(found), (
+            f"Possible allergens ({found}) found in ingredients but no allergen declaration detected — "
+            "verify 'Contains: [allergen]' box is present separately from ingredients list"
+        )
+    return CheckResult.PASS, None, "No common allergens detected — allergen declaration not required"
+
+
+def _handle_clm_brnd_001(extraction: dict):
+    """Brand adjectives (Natural/Pure/Fresh/etc.) → require trademark disclaimer."""
+    _ADJ = {"natural", "fresh", "pure", "original", "traditional", "authentic", "genuine", "real"}
+    brand = _concat(extraction, "product_name")
+    found = [a for a in _ADJ if re.search(r"\b" + a + r"\b", brand)]
+    if not found:
+        return CheckResult.PASS, None, "Product name/brand does not use regulated adjectives — disclaimer not required"
+    warn = _concat(extraction, "warnings", "health_claims")
+    if "brand name" in warn and "trademark" in warn:
+        return CheckResult.PASS, str(found), "Brand trademark disclaimer is present"
+    return CheckResult.WARNING, str(found), (
+        f"Brand name contains regulated adjective(s) {found} — "
+        "verify '*This is only a brand name or trademark, not representative of its true nature' disclaimer is present"
+    )
+
+
+def _handle_clm_med_001(extraction: dict):
+    """No medical/healthcare professional endorsement claims."""
+    combined = _concat(extraction, "health_claims", "warnings")
+    _PROHIBITED = [
+        "recommended by doctor", "recommended by physician", "recommended by nutritionist",
+        "recommended by dietician", "doctor approved", "doctor-approved",
+        "clinically recommended", "prescribed by", "endorsed by healthcare",
+        "as recommended by your doctor", "doctor recommended", "physician recommended",
+    ]
+    found = [p for p in _PROHIBITED if p in combined]
+    if found:
+        return CheckResult.FAIL, str(found[:2]), f"Prohibited medical endorsement claim detected: {found[:2]}"
+    return CheckResult.PASS, None, "No prohibited medical professional endorsement claims detected"
+
+
+def _handle_clm_comp_001(extraction: dict):
+    """No claims that disparage or undermine competitors."""
+    combined = _concat(extraction, "health_claims", "warnings")
+    _COMP = [
+        "unlike other brands", "unlike conventional", "unlike other supplements",
+        "better than", "other brands use fillers", "other brands use synthetics",
+        "competitors use", "inferior brands", "unlike regular brands",
+    ]
+    found = [p for p in _COMP if p in combined]
+    if found:
+        return CheckResult.FAIL, str(found[:2]), f"Prohibited comparative/disparaging claim detected: {found[:2]}"
+    return CheckResult.PASS, None, "No prohibited comparative claims detected"
+
+
+def _handle_spt_lbl_001(extraction: dict):
+    """Sports products → mandatory 'FOR SPORTSPERSON ONLY' declaration."""
+    combined = _concat(extraction, "warnings", "health_claims", "product_type_declaration")
+    if "sportsperson" in combined or "for sportsperson" in combined:
+        return CheckResult.PASS, "FOR SPORTSPERSON ONLY found", "'FOR SPORTSPERSON ONLY' declaration is present"
+    return CheckResult.FAIL, None, "Sports nutrition product missing mandatory 'FOR SPORTSPERSON ONLY' declaration"
+
+
+def _handle_spt_warn_001(extraction: dict):
+    """Sports products → must not contain WADA-prohibited substances."""
+    _WADA = [
+        "ephedrine", "sibutramine", "dmaa", "methylhexamine",
+        "androstene", "prohormone", "clenbuterol",
+        "ligandrol", "ostarine", "rad-140", "mk-677", "gw501516",
+        "erythropoietin", "human growth hormone",
+    ]
+    ing = _concat(extraction, "ingredient_list", "health_claims")
+    found = [s for s in _WADA if s in ing]
+    if found:
+        return CheckResult.FAIL, str(found[:3]), f"Potential WADA-prohibited substance detected: {found[:3]}"
+    return CheckResult.PASS, None, "No WADA-prohibited substances detected in ingredient list or claims"
+
+
+def _handle_fsmp_lbl_001(extraction: dict):
+    """FSMP → must carry 'RECOMMENDED TO BE USED UNDER MEDICAL ADVICE ONLY'."""
+    combined = _concat(extraction, "warnings", "health_claims")
+    if "under medical advice" in combined or "medical advice only" in combined:
+        return CheckResult.PASS, "medical advice statement found", "'RECOMMENDED TO BE USED UNDER MEDICAL ADVICE ONLY' is present"
+    return CheckResult.FAIL, None, (
+        "FSMP product missing mandatory 'RECOMMENDED TO BE USED UNDER MEDICAL ADVICE ONLY' statement in bold"
+    )
+
+
+def _handle_fsmp_lbl_002(extraction: dict):
+    """FSMP → must carry 'For the dietary management of [condition]'."""
+    combined = _concat(extraction, "warnings", "health_claims")
+    if "dietary management of" in combined:
+        return CheckResult.PASS, "dietary management statement found", "'For the dietary management of [condition]' statement is present"
+    return CheckResult.FAIL, None, "FSMP product missing 'For the dietary management of [specific condition]' statement"
+
+
+def _handle_fsmp_lbl_003(extraction: dict):
+    """FSMP → must carry 'NOT FOR PARENTERAL USE'."""
+    warn = _concat(extraction, "warnings")
+    if "parenteral" in warn:
+        return CheckResult.PASS, "NOT FOR PARENTERAL USE found", "'NOT FOR PARENTERAL USE' warning is present"
+    return CheckResult.FAIL, None, "FSMP product missing 'NOT FOR PARENTERAL USE' warning"
+
+
+def _handle_bot_lbl_001(extraction: dict):
+    """Botanical/herbal ingredients → must include scientific (Latin) name."""
+    ingredients = extraction.get("ingredient_list") or []
+    if not ingredients:
+        return CheckResult.PASS, None, "No ingredients found — botanical name check not applicable"
+    _HERBS = {
+        "ashwagandha", "turmeric", "bacopa", "moringa", "amla", "ginger",
+        "tulsi", "brahmi", "shatavari", "neem", "guggul", "boswellia",
+        "gokshura", "triphala", "shilajit", "arjuna", "guduchi", "punarnava",
+        "haritaki", "amalaki", "bibhitaki",
+    }
+    ing_text = _norm(" ".join(str(i) for i in ingredients))
+    found_herbs = [h for h in _HERBS if h in ing_text]
+    if not found_herbs:
+        return CheckResult.PASS, None, "No common herbal/botanical ingredients detected"
+    # Latin binomial pattern: (Capitalized genus lowercase species)
+    sci_pattern = r"\([A-Z][a-z]+ [a-z]+\)"
+    raw_ing = " ".join(str(i) for i in ingredients)
+    if re.search(sci_pattern, raw_ing):
+        return CheckResult.PASS, str(found_herbs[:3]), "Botanical scientific names (Latin binomials) found in ingredients list"
+    return CheckResult.WARNING, str(found_herbs[:3]), (
+        f"Herbal ingredients detected ({found_herbs[:3]}) — verify each herb includes its scientific name, "
+        "e.g. 'Ashwagandha (Withania somnifera)'"
+    )
+
+
+def _handle_bot_lbl_002(extraction: dict):
+    """Botanical extracts → must declare extract ratio or standardisation %."""
+    ingredients = extraction.get("ingredient_list") or []
+    if not ingredients:
+        return CheckResult.PASS, None, "No ingredients found — extract ratio check not applicable"
+    raw_ing = _norm(" ".join(str(i) for i in ingredients))
+    if "extract" not in raw_ing:
+        return CheckResult.PASS, None, "No botanical extracts found in ingredients"
+    _RATIO = re.compile(r"\d+:\d+|standardized? to \d+|std\.? to \d+|standardised? to \d+")
+    if _RATIO.search(raw_ing):
+        return CheckResult.PASS, "extract ratio declared", "Extract ratio or standardisation percentage is declared in ingredients"
+    return CheckResult.WARNING, "extract(s) without ratio", (
+        "Botanical extract(s) detected but extract ratio/standardisation may not be declared — "
+        "e.g. add '10:1' or 'standardized to 5% withanolides'"
+    )
+
+
+def _handle_bot_warn_001(extraction: dict):
+    """Schedule-IV contraindication herbs → must warn about pregnancy/disease."""
+    _CONTRA_HERBS = {
+        "andrographis", "berberine", "ephedra", "fenugreek", "ginseng",
+        "licorice", "senna", "valerian", "vitex", "chastetree",
+        "coleus forskohlii", "fennel seed", "panax ginseng",
+    }
+    ing = _concat(extraction, "ingredient_list")
+    found = [h for h in _CONTRA_HERBS if h in ing]
+    if not found:
+        return CheckResult.PASS, None, "No Schedule IV contraindication herbs detected"
+    warn = _concat(extraction, "warnings")
+    if "pregnancy" in warn or "pregnant" in warn:
+        return CheckResult.PASS, str(found), f"Pregnancy contraindication warning is present for herbs: {found}"
+    return CheckResult.WARNING, str(found), (
+        f"Herbs with potential pregnancy contraindications ({found}) detected — "
+        "verify 'Not recommended during pregnancy' warning is present per FSSAI Schedule IV"
+    )
+
+
+def _handle_frt_warn_001(extraction: dict):
+    """Iron-fortified products → must carry thalassemia/sickle cell advisory."""
+    health = _concat(extraction, "health_claims", "warnings")
+    ing = _concat(extraction, "ingredient_list")
+    _FORT_IRON = {"fortified with iron", "iron fortified", "iron-fortified", "iron enriched", "iron-enriched"}
+    is_iron_fortified = any(f in health for f in _FORT_IRON) or (
+        any(x in ing for x in ("ferrous", "ferric")) and
+        any(x in health for x in ("fortified", "enriched"))
+    )
+    if not is_iron_fortified:
+        return CheckResult.PASS, None, "Product does not appear to be iron-fortified"
+    if "thalassemia" in health or "sickle cell" in health:
+        return CheckResult.PASS, "thalassemia advisory found", "Mandatory iron fortification advisory for thalassemia/sickle cell is present"
+    return CheckResult.FAIL, None, (
+        "Iron-fortified product missing mandatory advisory: "
+        "'People with thalassemia may take under medical supervision and persons with Sickle Cell Anaemia are advised not to consume'"
+    )
+
+
+def _handle_vgn_lbl_001(extraction: dict):
+    """Vegan claim → must display FSSAI vegan logo (veg_nonveg_mark = VEGAN)."""
+    combined = _concat(extraction, "health_claims", "product_name", "warnings")
+    if "vegan" not in combined and "plant-based" not in combined:
+        return CheckResult.PASS, None, "No vegan claim detected — vegan logo not required"
+    veg_mark = (extraction.get("veg_nonveg_mark") or "").upper().strip()
+    if veg_mark == "VEGAN":
+        return CheckResult.PASS, "VEGAN mark present", "Vegan claim made and FSSAI 'VEGAN' mark is confirmed on label"
+    return CheckResult.WARNING, f"veg_nonveg_mark={veg_mark!r}", (
+        "Vegan/plant-based claim detected but FSSAI 'VEGAN' mark could not be confirmed — "
+        "verify the prescribed vegan logo is displayed on label"
+    )
+
+
+def _handle_prob_lbl_001(extraction: dict):
+    """Probiotic products → must declare genus/species and CFU count."""
+    _PROB_KEYWORDS = {
+        "lactobacillus", "bifidobacterium", "saccharomyces", "streptococcus thermophilus",
+        "live culture", "probiotic",
+    }
+    ing = _concat(extraction, "ingredient_list")
+    health = _concat(extraction, "health_claims")
+    found = [p for p in _PROB_KEYWORDS if p in ing or p in health]
+    if not found:
+        return CheckResult.PASS, None, "No probiotic organisms or claims detected"
+    combined = ing + " " + health
+    if re.search(r"cfu|colony forming unit", combined):
+        return CheckResult.PASS, str(found[:2]), "Probiotic CFU (colony forming units) count is declared"
+    return CheckResult.FAIL, str(found[:2]), (
+        f"Probiotic product ({found[:2]}) missing mandatory CFU (colony forming units) count per serving"
+    )
+
+
+# ─── Registry: rule_code → deterministic handler ─────────────────────────────
+# Rules NOT in this dict fall through to the LLM batch call.
+
+_DETERMINISTIC_FORMAT_HANDLERS: dict[str, object] = {
+    "FSSAI-LBL-SWTNR-001": _handle_swtnr_001,
+    "FSSAI-LBL-SWTNR-002": _handle_swtnr_002,
+    "FSSAI-LBL-SWTNR-003": _handle_swtnr_003,
+    "FSSAI-LBL-CAFF-001":  _handle_caff_001,
+    "FSSAI-LBL-GLUT-001":  _handle_glut_001,
+    "FSSAI-LBL-ALRG-001":  _handle_alrg_001,
+    "FSSAI-CLM-BRND-001":  _handle_clm_brnd_001,
+    "FSSAI-CLM-MED-001":   _handle_clm_med_001,
+    "FSSAI-CLM-COMP-001":  _handle_clm_comp_001,
+    "FSSAI-SPT-LBL-001":   _handle_spt_lbl_001,
+    "FSSAI-SPT-WARN-001":  _handle_spt_warn_001,
+    "FSSAI-FSMP-LBL-001":  _handle_fsmp_lbl_001,
+    "FSSAI-FSMP-LBL-002":  _handle_fsmp_lbl_002,
+    "FSSAI-FSMP-LBL-003":  _handle_fsmp_lbl_003,
+    "FSSAI-BOT-LBL-001":   _handle_bot_lbl_001,
+    "FSSAI-BOT-LBL-002":   _handle_bot_lbl_002,
+    "FSSAI-BOT-WARN-001":  _handle_bot_warn_001,
+    "FSSAI-FRT-WARN-001":  _handle_frt_warn_001,
+    "FSSAI-VGN-LBL-001":   _handle_vgn_lbl_001,
+    "FSSAI-PROB-LBL-001":  _handle_prob_lbl_001,
+}
 
 
 def _check_format_rules_batch(format_rules, extraction: dict, label_version_id: int) -> list:
