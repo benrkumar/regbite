@@ -2,6 +2,10 @@
 {% block title %}License Renewals{% endblock %}
 {% block page_subtitle %}Track and manage your license expiry dates{% endblock %}
 
+{% block flash_messages %}
+{# Renewals uses its own styled flash — suppress the base.html generic one #}
+{% endblock %}
+
 {% block content %}
 <style>
 .renewal-stats { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:1rem; margin-bottom:1.75rem; }
@@ -75,69 +79,78 @@
 }
 </style>
 
-{# ── Flash message ── #}
+{# ── Flash message (overrides base.html generic flash) ── #}
 {% if flash_message %}
-<div class="flash-msg flash-{{ flash_type or 'info' }}">
-  {% if flash_type == 'success' %}✓{% elif flash_type == 'error' %}✗{% else %}ℹ{% endif %}
+<div class="flash-msg flash-{{ flash_type or 'info' }}" style="margin-bottom:1.25rem;">
+  <span style="font-size:1rem;">{% if flash_type == 'success' %}✓{% elif flash_type == 'error' %}✕{% else %}ℹ{% endif %}</span>
   {{ flash_message }}
 </div>
 {% endif %}
 
+{# ── Page header ── #}
+<div class="page-hdr" style="margin-bottom:1.5rem;">
+  <div>
+    <h2 style="margin-bottom:0.2rem;">License Renewals</h2>
+    <p style="color:var(--gray-500);font-size:0.85rem;margin:0;">
+      {{ licenses|length }} license{{ 's' if licenses|length != 1 else '' }} tracked
+    </p>
+  </div>
+  <button class="btn btn-primary btn-sm" onclick="toggleAddForm()">+ Add License</button>
+</div>
+
 {# ── Perpetual license notice ── #}
 {% if perpetual_notice and perpetual and perpetual|length > 0 %}
-<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.25rem;font-size:0.82rem;color:#166534;">
-  ℹ <strong>Perpetual Licenses:</strong> {{ perpetual_notice }}
+<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:0.7rem 1rem;margin-bottom:1.25rem;font-size:0.82rem;color:#166534;display:flex;gap:0.5rem;align-items:flex-start;">
+  <span>ℹ</span><span><strong>Perpetual Licenses:</strong> {{ perpetual_notice }}</span>
 </div>
 {% endif %}
 
-{# ── Page header ── #}
-<div class="page-hdr">
-  <div>
-    <h2>License Renewals</h2>
-    <p>{{ licenses|length }} license{{ 's' if licenses|length != 1 }} tracked</p>
-  </div>
-  <button class="btn btn-primary btn-sm add-form-toggle" onclick="toggleAddForm()">+ Add License</button>
-</div>
-
 {# ── Stats strip ── #}
-<div class="renewal-stats">
+<div class="renewal-stats" style="margin-bottom:1.75rem;">
   <div class="renewal-stat">
-    <div class="renewal-stat-val val-neutral">{{ licenses|length }}</div>
+    <div class="renewal-stat-val" style="color:{% if licenses|length > 0 %}#111{% else %}var(--gray-300){% endif %};">{{ licenses|length }}</div>
     <div class="renewal-stat-lbl">Total</div>
   </div>
-  <div class="renewal-stat">
-    <div class="renewal-stat-val val-danger">{{ expired|length }}</div>
+  <div class="renewal-stat" style="{% if expired|length > 0 %}border-color:#FCA5A5;{% endif %}">
+    <div class="renewal-stat-val {% if expired|length > 0 %}val-danger{% else %}{% endif %}" style="{% if expired|length == 0 %}color:var(--gray-300);{% endif %}">{{ expired|length }}</div>
     <div class="renewal-stat-lbl">Expired</div>
   </div>
-  <div class="renewal-stat">
-    <div class="renewal-stat-val val-warning">{{ expiring_soon|length }}</div>
+  <div class="renewal-stat" style="{% if expiring_soon|length > 0 %}border-color:#FCD34D;{% endif %}">
+    <div class="renewal-stat-val {% if expiring_soon|length > 0 %}val-warning{% endif %}" style="{% if expiring_soon|length == 0 %}color:var(--gray-300);{% endif %}">{{ expiring_soon|length }}</div>
     <div class="renewal-stat-lbl">Expiring ≤ 30 days</div>
   </div>
   <div class="renewal-stat">
-    <div class="renewal-stat-val" style="color:#525252;">{{ expiring_60|length }}</div>
+    <div class="renewal-stat-val" style="color:{% if expiring_60|length > 0 %}#525252{% else %}var(--gray-300){% endif %};">{{ expiring_60|length }}</div>
     <div class="renewal-stat-lbl">Expiring ≤ 60 days</div>
   </div>
   <div class="renewal-stat">
-    <div class="renewal-stat-val val-success">{{ active|length }}</div>
+    <div class="renewal-stat-val" style="color:{% if active|length > 0 %}#16A34A{% else %}var(--gray-300){% endif %};">{{ active|length }}</div>
     <div class="renewal-stat-lbl">Active</div>
   </div>
+  {% if perpetual|length > 0 %}
+  <div class="renewal-stat" style="border-color:#BBF7D0;">
+    <div class="renewal-stat-val" style="color:#166534;">{{ perpetual|length }}</div>
+    <div class="renewal-stat-lbl">Perpetual</div>
+  </div>
+  {% endif %}
 </div>
 
 {# ── Add License form (collapsible) ── #}
-<div class="card add-form-card" id="add-form-card">
-  <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleAddForm()">
-    <div class="activity-header" style="margin:0;">Add New License</div>
-    <span id="add-form-chevron" style="font-size:0.9rem;color:var(--gray-400);transition:transform 0.2s;">▼</span>
+<div class="card add-form-card" id="add-form-card" style="margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-bottom:0;" onclick="toggleAddForm()">
+    <span style="font-weight:600;font-size:0.9rem;color:#111;">Add New License</span>
+    <span id="add-form-chevron" style="font-size:0.75rem;color:var(--gray-400);transition:transform 0.2s;line-height:1;">▲</span>
   </div>
   <div class="add-form-body" id="add-form-body">
+    <hr style="border:none;border-top:1px solid var(--border);margin:0.85rem -1.25rem 1rem;">
     <form method="post" action="/renewals/add">
-      <div class="form-grid" style="margin-top:0.25rem;">
+      <div class="form-grid">
         <div>
-          <label class="form-label">License Name *</label>
-          <input class="form-input" type="text" name="license_name" placeholder="e.g. FSSAI Central License" required />
+          <label class="form-label">License Name <span style="color:#DC2626;">*</span></label>
+          <input class="form-input" type="text" name="license_name" placeholder="e.g. FSSAI Central License" required autocomplete="off" />
         </div>
         <div>
-          <label class="form-label">License Type *</label>
+          <label class="form-label">License Type <span style="color:#DC2626;">*</span></label>
           <select class="form-input" name="license_type" required>
             <option value="" disabled selected>Select type…</option>
             {% for lt in license_types %}
@@ -147,32 +160,32 @@
         </div>
         <div>
           <label class="form-label">License Number</label>
-          <input class="form-input" type="text" name="license_number" placeholder="e.g. 10-19-XXXXXXXXX" />
+          <input class="form-input" type="text" name="license_number" placeholder="e.g. 10-19-XXXXXXXXX" autocomplete="off" />
         </div>
         <div id="expiry-field-wrap">
-          <label class="form-label">Expiry Date *</label>
-          <input class="form-input" id="expiry-date-input" type="date" name="expiry_date" />
+          <label class="form-label">Expiry Date <span style="color:#DC2626;">*</span></label>
+          <input class="form-input" id="expiry-date-input" type="date" name="expiry_date" required />
         </div>
         <div>
-          <label class="form-label">Issued Date</label>
+          <label class="form-label">Issued / Grant Date</label>
           <input class="form-input" type="date" name="issued_date" />
         </div>
-        <div class="form-grid-full" style="display:flex;align-items:center;gap:0.6rem;padding:0.3rem 0;">
-          <input type="checkbox" name="is_perpetual" id="is_perpetual_chk" value="on"
-                 onchange="togglePerpetuaField(this.checked);" style="width:16px;height:16px;cursor:pointer;">
-          <label for="is_perpetual_chk" style="font-size:0.85rem;cursor:pointer;margin:0;">
-            Perpetual license — no expiry date required
-            <span style="font-size:0.75rem;color:var(--gray-400);">(FSSAI licenses issued after March 2026)</span>
-          </label>
-        </div>
-        <div class="form-grid-full">
-          <label class="form-label">Notes</label>
-          <textarea class="form-input" name="notes" rows="2" placeholder="Any renewal notes or reminders…" style="resize:vertical;"></textarea>
-        </div>
-        <div class="form-grid-full" style="display:flex;gap:0.5rem;justify-content:flex-end;">
-          <button type="button" class="btn btn-outline btn-sm" onclick="toggleAddForm()">Cancel</button>
-          <button type="submit" class="btn btn-primary btn-sm">Save License</button>
-        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.6rem;margin:0.85rem 0 0.6rem;">
+        <input type="checkbox" name="is_perpetual" id="is_perpetual_chk" value="on"
+               onchange="togglePerpetuaField(this.checked);" style="width:15px;height:15px;cursor:pointer;flex-shrink:0;">
+        <label for="is_perpetual_chk" style="font-size:0.84rem;cursor:pointer;margin:0;line-height:1.4;">
+          Perpetual license — no expiry date
+          <span style="font-size:0.75rem;color:var(--gray-400);font-weight:400;">(FSSAI licenses issued after March 2026)</span>
+        </label>
+      </div>
+      <div style="margin-bottom:0.85rem;">
+        <label class="form-label">Notes</label>
+        <textarea class="form-input" name="notes" rows="2" placeholder="Renewal reminders, conditions, contact info…" style="resize:vertical;font-size:0.84rem;"></textarea>
+      </div>
+      <div style="display:flex;gap:0.5rem;justify-content:flex-end;padding-top:0.25rem;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="toggleAddForm()">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Save License</button>
       </div>
     </form>
   </div>
@@ -295,29 +308,32 @@
 {% endif %}
 
 <script>
+// Chevron starts pointing up (▲) = collapsed; rotate 180° when open
 function toggleAddForm() {
   var body = document.getElementById('add-form-body');
   var chev = document.getElementById('add-form-chevron');
   var isOpen = body.classList.toggle('open');
   chev.style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
   if (isOpen) {
-    document.getElementById('add-form-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    setTimeout(function() {
+      document.getElementById('add-form-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
   }
 }
 
 function togglePerpetuaField(isPerpetual) {
   var wrap = document.getElementById('expiry-field-wrap');
   var inp  = document.getElementById('expiry-date-input');
-  wrap.style.opacity  = isPerpetual ? '0.4' : '1';
+  wrap.style.opacity  = isPerpetual ? '0.35' : '1';
+  wrap.style.pointerEvents = isPerpetual ? 'none' : '';
   inp.required        = !isPerpetual;
   inp.disabled        = isPerpetual;
+  if (isPerpetual) inp.value = '';
 }
 
 function addOneYear(inputId, currentDateStr) {
-  var d = new Date(currentDateStr);
-  if (isNaN(d.getTime())) {
-    d = new Date();
-  }
+  var d = new Date(currentDateStr + 'T00:00:00');
+  if (isNaN(d.getTime())) d = new Date();
   d.setFullYear(d.getFullYear() + 1);
   var yyyy = d.getFullYear();
   var mm   = String(d.getMonth() + 1).padStart(2, '0');
@@ -325,9 +341,12 @@ function addOneYear(inputId, currentDateStr) {
   document.getElementById(inputId).value = yyyy + '-' + mm + '-' + dd;
 }
 
-// Auto-open form if there are no licenses
+// Auto-open form on page load when no licenses exist
 {% if not licenses %}
-window.addEventListener('DOMContentLoaded', function() { toggleAddForm(); });
+window.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('add-form-body').classList.add('open');
+  document.getElementById('add-form-chevron').style.transform = 'rotate(180deg)';
+});
 {% endif %}
 </script>
 {% endblock %}

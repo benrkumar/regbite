@@ -471,9 +471,9 @@ async def llm_sync_rules(request: Request, db: Session = Depends(get_db)):
                 if seed_sev and seed_sev != db_sev:
                     existing.severity = seed_sev
                     changed = True
-                # Sync active status
-                seed_active = r_data.get("active")
-                if seed_active is not None and seed_active != existing.active:
+                # Sync active status — rules with no "active" key default to True
+                seed_active = r_data.get("active", True)
+                if seed_active != existing.active:
                     existing.active = seed_active
                     changed = True
                 # Sync remediation_template

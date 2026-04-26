@@ -162,9 +162,11 @@
     </header>
 
     <main class="page-content">
+      {% block flash_messages %}
       {% if flash_message is defined and flash_message %}
       <div class="flash flash-{{ flash_type | default('info') }}">{{ flash_message }}</div>
       {% endif %}
+      {% endblock %}
       {% block content %}{% endblock %}
     </main>
 

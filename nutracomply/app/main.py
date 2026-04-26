@@ -387,8 +387,16 @@ def _seed_initial_data():
             else:
                 # Update regulation_source if it changed (e.g. Version VIII updates)
                 existing = existing_rules[code]
+                changed = False
                 if r.get("regulation_source") and existing.regulation_source != r["regulation_source"]:
                     existing.regulation_source = r["regulation_source"]
+                    changed = True
+                # Sync active status — rules with no "active" key default to True
+                seed_active = r.get("active", True)
+                if seed_active != existing.active:
+                    existing.active = seed_active
+                    changed = True
+                if changed:
                     updated += 1
                 # Backfill versioning fields if not set
                 if version and not existing.version:
@@ -656,28 +664,36 @@ def _auto_seed_kb_if_empty():
 
 def _activate_lm_rules():
     """
-    Idempotent: activate Legal Metrology rules that shipped with active=False
-    in early seed files.  Safe to re-run — only updates rows that are still
-    inactive.
+    Idempotent: activate all compliance rules that shipped as active=False in
+    older seed files but should be active now.  Targets LM, AYUSH, and all
+    FSSAI rules that may have been stuck as inactive.  Safe to re-run.
     """
+    import json
+    from pathlib import Path as _Path
     from app.models import ComplianceRule
-    _LM_CODES = [
-        "LM-PKG-001", "LM-PKG-002", "LM-PKG-004",
-        "LM-PKG-005", "LM-PKG-006", "LM-PKG-008",
-    ]
     db = SessionLocal()
     try:
+        # Load seed file to know which rules should be active
+        rules_path = _Path(__file__).parent / "data" / "fssai_rules_seed.json"
+        with open(rules_path, encoding="utf-8") as f:
+            rules_data = json.load(f)
+        # Collect codes that the seed says should be active (no "active" key = active by default)
+        should_be_active = {
+            r["rule_code"] for r in rules_data if r.get("active", True) is True
+        }
         updated = (
             db.query(ComplianceRule)
             .filter(
-                ComplianceRule.rule_code.in_(_LM_CODES),
                 ComplianceRule.active == False,
+                ComplianceRule.rule_code.in_(list(should_be_active)),
             )
             .update({"active": True}, synchronize_session="fetch")
         )
         if updated:
             db.commit()
-            log.info("[startup] Activated %d dormant LM rules", updated)
+            log.info("[startup] Activated %d dormant compliance rules (LM, AYUSH, FSSAI)", updated)
+        else:
+            log.info("[startup] All compliance rules already active")
     except Exception as exc:
         log.error("[startup] activate_lm_rules error: %s", exc)
         db.rollback()

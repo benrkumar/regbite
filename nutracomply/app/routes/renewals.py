@@ -86,14 +86,16 @@ async def add_renewal(
 
     try:
         perpetual = is_perpetual.lower() in ("true", "1", "on", "yes") if is_perpetual else False
-        # Perpetual licenses don't need an expiry date — use a far-future date
+        # Perpetual licenses don't need an expiry date — use a far-future sentinel date
         if perpetual:
             expiry_dt = datetime(2099, 12, 31)
         else:
+            if not expiry_date:
+                raise ValueError("Expiry date is required for non-perpetual licenses")
             expiry_dt = datetime.strptime(expiry_date, "%Y-%m-%d")
         issued_dt = datetime.strptime(issued_date, "%Y-%m-%d") if issued_date else None
 
-        license = LicenseRenewal(
+        lic = LicenseRenewal(
             user_id=user.id,
             license_name=license_name,
             license_type=LicenseType(license_type),
@@ -101,14 +103,16 @@ async def add_renewal(
             expiry_date=expiry_dt,
             issued_date=issued_dt,
             is_perpetual=perpetual,
+            is_active=True,
             notes=notes or None,
         )
-        db.add(license)
+        db.add(lic)
         db.commit()
+        return RedirectResponse(url="/renewals?msg=License+added+successfully&type=success", status_code=302)
     except Exception as e:
         print(f"[renewals] Error adding license: {e}")
-
-    return RedirectResponse(url="/renewals?msg=License+added+successfully&type=success", status_code=302)
+        err = str(e).replace(" ", "+").replace("&", "and")[:120]
+        return RedirectResponse(url=f"/renewals?msg=Error+saving+license:+{err}&type=error", status_code=302)
 
 
 @router.post("/{license_id}/delete")
