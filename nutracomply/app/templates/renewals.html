@@ -137,17 +137,20 @@
 
 {# ── Add License form (collapsible) ── #}
 <div class="card add-form-card" id="add-form-card" style="margin-bottom:1.5rem;">
-  <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-bottom:0;" onclick="toggleAddForm()">
+  <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleAddForm()">
     <span style="font-weight:600;font-size:0.9rem;color:#111;">Add New License</span>
     <span id="add-form-chevron" style="font-size:0.75rem;color:var(--gray-400);transition:transform 0.2s;line-height:1;">▲</span>
   </div>
   <div class="add-form-body" id="add-form-body">
-    <hr style="border:none;border-top:1px solid var(--border);margin:0.85rem -1.25rem 1rem;">
+    <div style="border-top:1px solid var(--border);margin:0.9rem -1.25rem 1.1rem;"></div>
     <form method="post" action="/renewals/add">
-      <div class="form-grid">
+
+      {# Row 1: Name (wider) + Type #}
+      <div style="display:grid;grid-template-columns:2fr 1.2fr;gap:0.85rem;margin-bottom:0.85rem;">
         <div>
           <label class="form-label">License Name <span style="color:#DC2626;">*</span></label>
-          <input class="form-input" type="text" name="license_name" placeholder="e.g. FSSAI Central License" required autocomplete="off" />
+          <input class="form-input" type="text" name="license_name"
+                 placeholder="e.g. FSSAI Central License" required autocomplete="off" />
         </div>
         <div>
           <label class="form-label">License Type <span style="color:#DC2626;">*</span></label>
@@ -158,9 +161,14 @@
             {% endfor %}
           </select>
         </div>
+      </div>
+
+      {# Row 2: Number + Expiry + Issued #}
+      <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:0.85rem;margin-bottom:0.85rem;">
         <div>
           <label class="form-label">License Number</label>
-          <input class="form-input" type="text" name="license_number" placeholder="e.g. 10-19-XXXXXXXXX" autocomplete="off" />
+          <input class="form-input" type="text" name="license_number"
+                 placeholder="e.g. 10-19-XXXXXXXXX" autocomplete="off" />
         </div>
         <div id="expiry-field-wrap">
           <label class="form-label">Expiry Date <span style="color:#DC2626;">*</span></label>
@@ -171,19 +179,28 @@
           <input class="form-input" type="date" name="issued_date" />
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:0.6rem;margin:0.85rem 0 0.6rem;">
+
+      {# Perpetual toggle #}
+      <div style="display:flex;align-items:center;gap:0.55rem;margin-bottom:0.85rem;padding:0.6rem 0.75rem;background:#F8F8F8;border-radius:6px;border:1px solid var(--border);">
         <input type="checkbox" name="is_perpetual" id="is_perpetual_chk" value="on"
-               onchange="togglePerpetuaField(this.checked);" style="width:15px;height:15px;cursor:pointer;flex-shrink:0;">
-        <label for="is_perpetual_chk" style="font-size:0.84rem;cursor:pointer;margin:0;line-height:1.4;">
-          Perpetual license — no expiry date
-          <span style="font-size:0.75rem;color:var(--gray-400);font-weight:400;">(FSSAI licenses issued after March 2026)</span>
+               onchange="togglePerpetuaField(this.checked);"
+               style="width:15px;height:15px;cursor:pointer;flex-shrink:0;accent-color:#111;">
+        <label for="is_perpetual_chk" style="font-size:0.84rem;cursor:pointer;margin:0;line-height:1.35;color:#374151;">
+          Perpetual license — no expiry date required
+          <span style="color:var(--gray-400);font-weight:400;"> · FSSAI licenses issued after March 2026</span>
         </label>
       </div>
-      <div style="margin-bottom:0.85rem;">
-        <label class="form-label">Notes</label>
-        <textarea class="form-input" name="notes" rows="2" placeholder="Renewal reminders, conditions, contact info…" style="resize:vertical;font-size:0.84rem;"></textarea>
+
+      {# Notes #}
+      <div style="margin-bottom:1rem;">
+        <label class="form-label">Notes <span style="font-weight:400;color:var(--gray-400);">(optional)</span></label>
+        <textarea class="form-input" name="notes" rows="2"
+                  placeholder="Renewal reminders, conditions, associated contacts…"
+                  style="resize:vertical;font-size:0.84rem;"></textarea>
       </div>
-      <div style="display:flex;gap:0.5rem;justify-content:flex-end;padding-top:0.25rem;">
+
+      {# Actions #}
+      <div style="display:flex;gap:0.5rem;justify-content:flex-end;">
         <button type="button" class="btn btn-outline btn-sm" onclick="toggleAddForm()">Cancel</button>
         <button type="submit" class="btn btn-primary btn-sm">Save License</button>
       </div>
