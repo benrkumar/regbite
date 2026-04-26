@@ -664,8 +664,7 @@
       "field": "manufacturer_details"
     },
     "severity": "CRITICAL",
-    "remediation_template": "Declare the complete name and address (including PIN code) of the manufacturer, packer, or importer on the package as per Legal Metrology (Packaged Commodities) Rules 2011.",
-    "active": false
+    "remediation_template": "Declare the complete name and address (including PIN code) of the manufacturer, packer, or importer on the package as per Legal Metrology (Packaged Commodities) Rules 2011."
   },
   {
     "rule_code": "LM-PKG-002",
@@ -678,8 +677,7 @@
       "description": "Must be in standard metric units per Legal Metrology rules"
     },
     "severity": "CRITICAL",
-    "remediation_template": "Declare net quantity on the principal display panel in standard metric units (g/kg for solids, mL/L for liquids). Font size must meet Legal Metrology height requirements based on package area.",
-    "active": false
+    "remediation_template": "Declare net quantity on the principal display panel in standard metric units (g/kg for solids, mL/L for liquids). Font size must meet Legal Metrology height requirements based on package area."
   },
   {
     "rule_code": "LM-PKG-003",
@@ -704,8 +702,7 @@
       "field": "manufacturing_date"
     },
     "severity": "HIGH",
-    "remediation_template": "Declare the month and year of manufacture (or packing/import). Format: 'Mfg.: MM/YYYY' or 'Pkg.: MM/YYYY'. Required under Legal Metrology rules.",
-    "active": false
+    "remediation_template": "Declare the month and year of manufacture (or packing/import). Format: 'Mfg.: MM/YYYY' or 'Pkg.: MM/YYYY'. Required under Legal Metrology rules."
   },
   {
     "rule_code": "LM-PKG-005",
@@ -717,8 +714,7 @@
       "field": "expiry_date"
     },
     "severity": "HIGH",
-    "remediation_template": "Declare 'Best Before' or 'Use By' date. For products with shelf life > 3 months, month/year is acceptable. For products with shelf life â‰¤ 3 months, declare day/month/year.",
-    "active": false
+    "remediation_template": "Declare 'Best Before' or 'Use By' date. For products with shelf life > 3 months, month/year is acceptable. For products with shelf life â‰¤ 3 months, declare day/month/year."
   },
   {
     "rule_code": "LM-PKG-006",
@@ -730,8 +726,7 @@
       "field": "product_name"
     },
     "severity": "CRITICAL",
-    "remediation_template": "Declare the common or generic name of the commodity on the package. This should clearly identify what the product is, distinct from brand/trade name.",
-    "active": false
+    "remediation_template": "Declare the common or generic name of the commodity on the package. This should clearly identify what the product is, distinct from brand/trade name."
   },
   {
     "rule_code": "LM-PKG-007",

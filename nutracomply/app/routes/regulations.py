@@ -8,9 +8,21 @@ from typing import Optional
 
 from app.database import get_db
 from app.models import (
-    RegulationChange, ComplianceRule, RuleCategory,
+    RegulationChange, ChangeType, ComplianceRule, RuleCategory,
     PublishedAlert, PublishedAlertStatus, PublishedAlertSeverity,
 )
+
+# Document name patterns that indicate non-compliance-relevant administrative
+# notifications (WTO bulletins, gazette entries, etc.).  These are filtered out
+# of the user-facing regulation feed so only actionable compliance changes show.
+_JUNK_DOCUMENT_PATTERNS = [
+    "Ordinary Notification",
+    "WTO TBT",
+    "WTO SPS",
+    "G.S.R.",
+    "S.O. ",
+    "F. No.",
+]
 from app.routes.auth import get_current_user_from_cookie
 from app.utils.alerts import get_unread_alert_count
 
@@ -35,6 +47,10 @@ async def regulations_feed(
     changes_q = db.query(RegulationChange).order_by(RegulationChange.detected_at.desc())
     if source:
         changes_q = changes_q.filter(RegulationChange.source_url.ilike(f"%{source}%"))
+    # Exclude UNKNOWN change types and known junk administrative notifications
+    changes_q = changes_q.filter(RegulationChange.change_type != ChangeType.UNKNOWN)
+    for pat in _JUNK_DOCUMENT_PATTERNS:
+        changes_q = changes_q.filter(~RegulationChange.document_name.ilike(f"%{pat}%"))
     changes = changes_q.all()
 
     # Group changes by Month Year (ordered, newest first)

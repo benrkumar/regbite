@@ -49,6 +49,7 @@ def _run_all_startup_tasks():
         (_promote_admin,           "promote_admin"),
         (_seed_initial_data,       "seed_initial_data"),
         (_seed_demo_users,         "seed_demo_users"),
+        (_activate_lm_rules,       "activate_lm_rules"),
         (_auto_seed_kb_if_empty,   "auto_seed_kb"),
         (_cleanup_unknown_alerts,  "cleanup_unknown_alerts"),
     ]
@@ -472,6 +473,7 @@ def _seed_demo_users():
         from app.models import User, UserRole
         db = SessionLocal()
 
+        from app.models import PlanType
         # --- ben (regular user) ---
         ben = db.query(User).filter(User.email == "ben").first()
         if not ben:
@@ -483,11 +485,12 @@ def _seed_demo_users():
                 role=UserRole.ACCOUNT_ADMIN,
                 is_active=True,
                 notification_emails=[],
+                plan=PlanType.ENTERPRISE,
             )
             db.add(ben)
             db.commit()
             db.refresh(ben)
-            print("[demo] Created user: ben")
+            print("[demo] Created user: ben (Enterprise plan)")
             try:
                 _seed_demo_products(ben, db)
                 print("[demo] Seeded demo products for ben")
@@ -498,7 +501,13 @@ def _seed_demo_users():
                 except Exception:
                     pass
         else:
-            print("[demo] User ben already exists — skipped")
+            # Ensure ben always has full enterprise access across deploys
+            if ben.plan != PlanType.ENTERPRISE:
+                ben.plan = PlanType.ENTERPRISE
+                db.commit()
+                print("[demo] Upgraded ben to Enterprise plan")
+            else:
+                print("[demo] User ben already exists — skipped")
 
         # --- admin (super admin) ---
         adm = db.query(User).filter(User.email == "admin").first()
@@ -645,11 +654,42 @@ def _auto_seed_kb_if_empty():
         db.close()
 
 
+def _activate_lm_rules():
+    """
+    Idempotent: activate Legal Metrology rules that shipped with active=False
+    in early seed files.  Safe to re-run — only updates rows that are still
+    inactive.
+    """
+    from app.models import ComplianceRule
+    _LM_CODES = [
+        "LM-PKG-001", "LM-PKG-002", "LM-PKG-004",
+        "LM-PKG-005", "LM-PKG-006", "LM-PKG-008",
+    ]
+    db = SessionLocal()
+    try:
+        updated = (
+            db.query(ComplianceRule)
+            .filter(
+                ComplianceRule.rule_code.in_(_LM_CODES),
+                ComplianceRule.active == False,
+            )
+            .update({"active": True}, synchronize_session="fetch")
+        )
+        if updated:
+            db.commit()
+            log.info("[startup] Activated %d dormant LM rules", updated)
+    except Exception as exc:
+        log.error("[startup] activate_lm_rules error: %s", exc)
+        db.rollback()
+    finally:
+        db.close()
+
+
 def _cleanup_unknown_alerts():
     """
-    One-time cleanup: resolve all UNKNOWN regulation change alerts and their
-    backing RegulationChange records. These are navigation pages from FSSAI's
-    website that were incorrectly scraped and classified.
+    Startup cleanup: resolve UNKNOWN regulation alerts and mark junk scraped
+    records (WTO TBT/SPS Notifications, Ordinary Notifications, UNKNOWN types)
+    as IGNORED so they stop appearing in the regulations feed.
     """
     from app.models import Alert, AlertStatus, RegulationChange, ChangeType
     db = SessionLocal()
@@ -666,15 +706,30 @@ def _cleanup_unknown_alerts():
                 synchronize_session="fetch",
             )
         )
-        # Mark the backing RegulationChange records
+        # Mark UNKNOWN change_type records
         cleaned = (
             db.query(RegulationChange)
             .filter(RegulationChange.change_type == ChangeType.UNKNOWN)
             .update({"status": "IGNORED"}, synchronize_session="fetch")
         )
-        if resolved or cleaned:
+        # Mark junk administrative notifications (WTO, GSR, etc.)
+        _JUNK_PATTERNS = [
+            "Ordinary Notification", "WTO TBT", "WTO SPS",
+            "G.S.R.", "S.O. ", "F. No.",
+        ]
+        junk_cleaned = 0
+        for pat in _JUNK_PATTERNS:
+            junk_cleaned += (
+                db.query(RegulationChange)
+                .filter(RegulationChange.document_name.ilike(f"%{pat}%"))
+                .update({"status": "IGNORED"}, synchronize_session="fetch")
+            )
+        if resolved or cleaned or junk_cleaned:
             db.commit()
-            log.info("[startup] Cleaned up %d UNKNOWN alerts, %d UNKNOWN reg changes", resolved, cleaned)
+            log.info(
+                "[startup] Cleaned %d UNKNOWN alerts, %d UNKNOWN reg changes, %d junk notifications",
+                resolved, cleaned, junk_cleaned,
+            )
     except Exception as exc:
         log.error("[startup] cleanup_unknown_alerts error: %s", exc)
         db.rollback()

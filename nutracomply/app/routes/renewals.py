@@ -10,7 +10,7 @@ from pathlib import Path
 
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
-from app.models import LicenseRenewal, LicenseType, Alert, AlertStatus
+from app.models import LicenseRenewal, LicenseType, Alert, AlertStatus, Notification
 from app.utils.alerts import get_unread_alert_count
 
 router = APIRouter(prefix="/renewals")
@@ -40,6 +40,12 @@ async def renewals_list(request: Request, db: Session = Depends(get_db)):
 
     unread_alerts = get_unread_alert_count(user, db)
 
+    # Unread in-app notifications (for topbar bell badge)
+    unread_notifications = db.query(Notification).filter(
+        Notification.user_id == user.id,
+        Notification.is_read == False,
+    ).count()
+
     # Flash message support (from redirect query params)
     flash_msg = request.query_params.get("msg", "")
     flash_type = request.query_params.get("type", "info")
@@ -55,6 +61,7 @@ async def renewals_list(request: Request, db: Session = Depends(get_db)):
         "perpetual": perpetual,
         "license_types": [lt.value for lt in LicenseType],
         "unread_alerts": unread_alerts,
+        "unread_notifications": unread_notifications,
         "perpetual_notice": "FSSAI licenses issued after March 2026 have perpetual validity under the Licensing & Registration Amendment Regulations 2026. No renewal is required.",
         "flash_message": flash_msg,
         "flash_type": flash_type,

@@ -42,6 +42,21 @@ async def notifications_page(request: Request, db: Session = Depends(get_db)):
     })
 
 
+@router.get("/notifications/unread-count")
+async def notif_unread_count(request: Request, db: Session = Depends(get_db)):
+    """Lightweight JSON endpoint — polled by the topbar every 30 s to refresh bell badge."""
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"count": 0})
+    count = db.query(Notification).filter(
+        Notification.user_id == user.id,
+        Notification.is_read == False,
+    ).count()
+    from fastapi.responses import JSONResponse
+    return JSONResponse({"count": count})
+
+
 @router.post("/notifications/mark-read")
 async def mark_read(request: Request, db: Session = Depends(get_db)):
     """AJAX: mark a single notification read. Body: {id: int}"""

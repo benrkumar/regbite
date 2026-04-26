@@ -92,11 +92,24 @@ def run_compliance_check(label_version: LabelVersion, db: Session) -> list[Compl
         ComplianceCheck.label_version_id == label_version.id
     ).delete()
 
+    # ── Separate FORMAT rules — processed in one batched LLM call ─────────────
+    _FORMAT_TYPES = {CheckType.FORMAT, CheckType.FORMAT_LLM}
+    format_rules = [r for r in rules if r.check_type in _FORMAT_TYPES]
+    other_rules  = [r for r in rules if r.check_type not in _FORMAT_TYPES]
+
     checks = []
-    for rule in rules:
+    # Non-FORMAT rules: fast regex / presence / list checks (no API calls)
+    for rule in other_rules:
         check = _evaluate_rule(rule, extraction, label_version.id)
         db.add(check)
         checks.append(check)
+
+    # FORMAT rules: single batched Gemini call instead of N individual calls
+    if format_rules:
+        batch_checks = _check_format_rules_batch(format_rules, extraction, label_version.id)
+        for check in batch_checks:
+            db.add(check)
+        checks.extend(batch_checks)
 
     db.commit()
     return checks
@@ -465,32 +478,177 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
         return CheckResult.WARNING, None, f"LLM check unavailable — manual verification required: {description}"
 
 
+def _check_format_rules_batch(format_rules, extraction: dict, label_version_id: int) -> list:
+    """
+    Run ALL FORMAT / FORMAT_LLM rules in a single Gemini call instead of one
+    call per rule.  Reduces ~43 sequential API calls (≈172 s) to 1 call (≈5 s).
+
+    Falls back gracefully: if the LLM is unavailable every rule becomes WARNING.
+    """
+    import json as _json
+
+    if not format_rules:
+        return []
+
+    # ── Pre-check: rules whose required field is missing → immediate FAIL ─────
+    prefail = []
+    pending_rules = []
+    for rule in format_rules:
+        config = rule.check_config or {}
+        field = config.get("field")
+        if field and not extraction.get(field) and extraction.get(field) is not False:
+            prefail.append(ComplianceCheck(
+                label_version_id=label_version_id,
+                rule_id=rule.id,
+                result=CheckResult.FAIL,
+                actual_value=None,
+                message=f"Required field '{field}' is missing — cannot verify format",
+                remediation=rule.remediation_template or "",
+            ))
+        else:
+            pending_rules.append(rule)
+
+    if not pending_rules:
+        return prefail
+
+    # ── Build batch prompt ────────────────────────────────────────────────────
+    relevant_keys = [k for k in extraction if extraction[k] and k != "_extraction_warnings"]
+    label_summary = "\n".join(
+        f"  {k}: {str(extraction[k])[:300]}" for k in relevant_keys[:20]
+    )
+
+    items_desc = []
+    for i, rule in enumerate(pending_rules):
+        config = rule.check_config or {}
+        field = config.get("field")
+        desc  = config.get("description") or rule.description
+        if field:
+            val = extraction.get(field, "")
+            items_desc.append(
+                f'{i+1}. [{rule.rule_code}] {desc}\n   Field "{field}" value: {str(val)[:200]}'
+            )
+        else:
+            items_desc.append(f'{i+1}. [{rule.rule_code}] {desc}')
+
+    prompt = (
+        "You are an FSSAI / Legal Metrology compliance auditor for Indian product labels.\n\n"
+        "EXTRACTED LABEL DATA:\n" + label_summary + "\n\n"
+        "Evaluate ALL of the following format/content requirements based on the extracted data.\n"
+        "For each, return PASS, FAIL, or WARNING with a 1-sentence reason.\n\n"
+        + "\n".join(items_desc) + "\n\n"
+        "Respond ONLY with a valid JSON array (no markdown fences):\n"
+        '[{"rule_code":"X","verdict":"PASS","reason":"..."},...]'
+    )
+
+    # ── Call Gemini once ──────────────────────────────────────────────────────
+    results_map: dict[str, tuple[str, str]] = {}
+    try:
+        from app.config import get_settings
+        settings = get_settings()
+        if not settings.gemini_api_key:
+            raise ValueError("No Gemini key")
+
+        import google.generativeai as genai
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel("gemini-2.0-flash-lite")
+        response = model.generate_content(
+            prompt,
+            generation_config={"temperature": 0.1, "max_output_tokens": 2048},
+            request_options={"timeout": 60},
+        )
+        raw = response.text.strip()
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```$", "", raw)
+        for item in _json.loads(raw):
+            results_map[item["rule_code"]] = (
+                item.get("verdict", "WARNING").upper(),
+                item.get("reason", ""),
+            )
+        try:
+            from app.services.api_logger import log_api_call
+            _usage = getattr(response, "usage_metadata", None)
+            _inp = getattr(_usage, "prompt_token_count", None) if _usage else None
+            _out = getattr(_usage, "candidates_token_count", None) if _usage else None
+            log_api_call("compliance_format_batch", "gemini", "gemini-2.0-flash-lite", _inp, _out)
+        except Exception:
+            pass
+        logger.debug("[compliance] Batch FORMAT: %d rules → 1 Gemini call", len(pending_rules))
+    except Exception as exc:
+        logger.warning("[compliance] Batch FORMAT check failed: %s — falling back to WARNING", exc)
+
+    # ── Convert verdicts → ComplianceCheck objects ────────────────────────────
+    batch_checks = []
+    for rule in pending_rules:
+        config  = rule.check_config or {}
+        field   = config.get("field")
+        val     = extraction.get(field) if field else None
+        verdict, reason = results_map.get(rule.rule_code, ("WARNING", "Batch format check unavailable"))
+
+        if verdict == "PASS":
+            result  = CheckResult.PASS
+            msg     = f"Format check passed: {reason}"
+            actual  = str(val)[:200] if field and val else "verified"
+        elif verdict == "FAIL":
+            result  = CheckResult.FAIL
+            msg     = f"Format check failed: {reason}"
+            actual  = str(val)[:200] if field and val else None
+        else:
+            result  = CheckResult.WARNING
+            msg     = f"Format check inconclusive: {reason}"
+            actual  = str(val)[:200] if field and val else None
+
+        batch_checks.append(ComplianceCheck(
+            label_version_id=label_version_id,
+            rule_id=rule.id,
+            result=result,
+            actual_value=actual,
+            message=msg,
+            remediation=rule.remediation_template or "",
+        ))
+
+    return prefail + batch_checks
+
+
 # ─── Compliance Score ─────────────────────────────────────────────────────────
+
+# Deduction per failure — absolute penalty model so score doesn't depend on
+# how many total rules apply.  2 CRITICAL failures → 100-20 = 80%.
+_DEDUCTIONS = {
+    Severity.CRITICAL: 10,
+    Severity.HIGH:      6,
+    Severity.MEDIUM:    3,
+    Severity.LOW:       1,
+}
+
 
 def calculate_compliance_score(checks: list[ComplianceCheck]) -> int:
     """
-    Severity-weighted compliance score.
-    CRITICAL rules count 4x, HIGH 3x, MEDIUM 2x, LOW 1x.
-    This means failing a CRITICAL rule drops the score much more than failing a LOW rule.
+    Penalty-based compliance score.
+
+    Starts at 100 and deducts per violation:
+      CRITICAL: -10   (2 criticals → 80%)
+      HIGH:     -6
+      MEDIUM:   -3
+      LOW:      -1
+      WARNING:  half the severity deduction (not a confirmed failure)
+
+    Score is floored at 0. Independent of the total number of rules so
+    adding more rules does not silently inflate scores.
     """
     if not checks:
         return 0
 
-    weighted_earned = 0
-    weighted_total = 0
-
+    deductions = 0.0
     for check in checks:
-        weight = SEVERITY_WEIGHTS.get(check.rule.severity, 1) if check.rule else 1
-        weighted_total += weight
-        if check.result == CheckResult.PASS:
-            weighted_earned += weight
+        if not check.rule:
+            continue
+        penalty = _DEDUCTIONS.get(check.rule.severity, 1)
+        if check.result == CheckResult.FAIL:
+            deductions += penalty
         elif check.result == CheckResult.WARNING:
-            # Warnings get half credit — not a failure, but not confirmed
-            weighted_earned += weight * 0.5
+            deductions += penalty * 0.5
 
-    if weighted_total == 0:
-        return 0
-    return round((weighted_earned / weighted_total) * 100)
+    return max(0, round(100 - deductions))
 
 
 def calculate_critical_score(checks: list[ComplianceCheck]) -> dict:

@@ -335,7 +335,24 @@ def _process_label(label_version_id: int):
 
         # ── Mark ready BEFORE alerts/KB (those are non-critical) ──────────
         job["ready"] = True
-        print(f"[scan] READY in {_time_mod.time()-t0:.1f}s", flush=True)
+        elapsed_ready = _time_mod.time() - t0
+        print(f"[scan] READY in {elapsed_ready:.1f}s", flush=True)
+
+        # ── In-app notification so bell badge updates when user navigated away ─
+        try:
+            from app.models import Notification, NotificationType
+            score_val = calculate_compliance_score(checks) if checks else 0
+            _notif = Notification(
+                user_id=product.user_id,
+                title=f"Scan complete — {product.name}",
+                message=f"Compliance score: {score_val}%. Tap to view the full report.",
+                ntype=NotificationType.SUCCESS,
+                link=f"/labels/{label.id}",
+            )
+            db.add(_notif)
+            db.commit()
+        except Exception:
+            pass
 
         # ── Alerts (non-critical) ─────────────────────────────────────────
         try:
