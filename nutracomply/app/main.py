@@ -899,6 +899,18 @@ async def dashboard(request: Request):
         .all()
     )
 
+    # Licenses expiring in the next 30 days (for sidebar badge)
+    sidebar_cutoff = datetime.utcnow() + timedelta(days=30)
+    expiring_license_count = (
+        db.query(LicenseRenewal)
+        .filter(
+            LicenseRenewal.user_id == user.id,
+            LicenseRenewal.is_active == True,
+            LicenseRenewal.expiry_date <= sidebar_cutoff,
+        )
+        .count()
+    )
+
     # Latest 3 published regulation alerts
     recent_reg_alerts = (
         db.query(PublishedAlert)
@@ -1008,6 +1020,7 @@ async def dashboard(request: Request):
         "risk_matrix": risk_matrix,
         "action_required": action_required,
         "violation_count": violation_count,
+        "expiring_license_count": expiring_license_count,
     })
 
 
