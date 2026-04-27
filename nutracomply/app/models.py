@@ -129,10 +129,27 @@ class SubscriptionStatus(str, enum.Enum):
 
 # ─── Models ──────────────────────────────────────────────────────────────────
 
+class Account(Base):
+    __tablename__ = "accounts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    owner_email = Column(String(255), nullable=True)
+    company_name = Column(String(255), nullable=True)
+    company_gstin = Column(String(20), nullable=True)
+    report_brand_name = Column(String(255), nullable=True)
+    report_brand_color = Column(String(10), nullable=True)
+    created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     name = Column(String(255), nullable=False)
     hashed_password = Column(String(255), nullable=False)
@@ -149,6 +166,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     team_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # who invited/owns this sub-user
 
+    account = relationship("Account", foreign_keys=[account_id])
     products = relationship("Product", back_populates="owner")
     licenses = relationship("LicenseRenewal", back_populates="owner")
 
@@ -157,6 +175,7 @@ class Product(Base):
     __tablename__ = "products"
 
     id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     name = Column(String(255), nullable=False)
     sku = Column(String(100), index=True)
@@ -164,13 +183,17 @@ class Product(Base):
     category = Column(String(100))
     description = Column(Text)
     is_active = Column(Boolean, default=True)
+    is_temporary = Column(Boolean, default=False)
+    is_sample = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (
         Index("ix_products_user_active", "user_id", "is_active"),
+        Index("ix_products_account_active", "account_id", "is_active"),
     )
 
+    account = relationship("Account", foreign_keys=[account_id])
     owner = relationship("User", back_populates="products")
     label_versions = relationship(
         "LabelVersion", back_populates="product",
@@ -257,6 +280,12 @@ class ComplianceRule(Base):
     version = Column(String(50), nullable=True)          # e.g. "VIII", "2022-v2", "2025-Amendment-1"
     framework = Column(SAEnum(RuleFramework), nullable=True)  # FSSAI, LEGAL_METROLOGY, AYUSH, BIS, DGFT
     regulation_status = Column(SAEnum(RegulationStatus), default=RegulationStatus.EFFECTIVE)
+    applicable_product_classes = Column(JSON, default=list)
+    applicable_claim_classes = Column(JSON, default=list)
+    applicable_import_scope = Column(String(30), nullable=True)
+    applicable_dosage_forms = Column(JSON, default=list)
+    applicable_target_groups = Column(JSON, default=list)
+    exception_flags = Column(JSON, default=list)
 
     checks = relationship("ComplianceCheck", back_populates="rule")
 
@@ -285,6 +314,7 @@ class RegulationChange(Base):
     __tablename__ = "regulation_changes"
 
     id = Column(Integer, primary_key=True, index=True)
+    source_id = Column(Integer, ForeignKey("regulation_sources.id"), nullable=True)
     source_url = Column(String(1000))
     document_name = Column(String(500))
     detected_at = Column(DateTime, default=datetime.utcnow)
@@ -297,14 +327,39 @@ class RegulationChange(Base):
     status = Column(String(20), default="NEW")
     regulation_status = Column(SAEnum(RegulationStatus), default=RegulationStatus.EFFECTIVE)
     document_hash = Column(String(64))
+    document_type = Column(String(100), nullable=True)
+    crawl_status = Column(String(50), nullable=True)
+    reject_reason = Column(Text, nullable=True)
+    supersedes_change_id = Column(Integer, ForeignKey("regulation_changes.id"), nullable=True)
+    superseded_by_change_id = Column(Integer, ForeignKey("regulation_changes.id"), nullable=True)
 
     alerts = relationship("Alert", back_populates="regulation_change")
+    source = relationship("RegulationSource", foreign_keys=[source_id])
+
+
+class RegulationSource(Base):
+    __tablename__ = "regulation_sources"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    slug = Column(String(120), nullable=False, unique=True, index=True)
+    base_url = Column(String(1000), nullable=False)
+    doc_type = Column(String(100), nullable=True)
+    is_active = Column(Boolean, default=True)
+    last_crawled_at = Column(DateTime, nullable=True)
+    last_status = Column(String(50), nullable=True)
+    last_discovery_count = Column(Integer, nullable=True)
+    last_reject_count = Column(Integer, nullable=True)
+    last_reject_reason = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class Alert(Base):
     __tablename__ = "alerts"
 
     id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
     label_version_id = Column(Integer, ForeignKey("label_versions.id"), nullable=True)
     regulation_change_id = Column(Integer, ForeignKey("regulation_changes.id"), nullable=True)
@@ -318,9 +373,26 @@ class Alert(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     resolved_at = Column(DateTime, nullable=True)
 
+    account = relationship("Account", foreign_keys=[account_id])
     product = relationship("Product")
     label_version = relationship("LabelVersion", back_populates="alerts")
     regulation_change = relationship("RegulationChange", back_populates="alerts")
+
+
+class AlertReadState(Base):
+    __tablename__ = "alert_read_states"
+
+    id = Column(Integer, primary_key=True, index=True)
+    alert_id = Column(Integer, ForeignKey("alerts.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    read_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index("ix_alert_read_states_alert_user", "alert_id", "user_id", unique=True),
+    )
+
+    alert = relationship("Alert", foreign_keys=[alert_id])
+    user = relationship("User", foreign_keys=[user_id])
 
 
 class Ingredient(Base):
@@ -350,6 +422,7 @@ class KBDocument(Base):
 
     id           = Column(Integer, primary_key=True, index=True)
     kb_type      = Column(SAEnum(KBType), nullable=False, index=True)
+    account_id   = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
     title        = Column(String(500), nullable=False)
     source       = Column(String(500))           # e.g. "db:rule:42", "upload:file.pdf"
     content      = Column(Text, nullable=False)
@@ -413,6 +486,7 @@ class LicenseRenewal(Base):
     __tablename__ = "license_renewals"
 
     id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     license_name = Column(String(255), nullable=False)
     license_type = Column(SAEnum(LicenseType), nullable=False)
@@ -497,9 +571,11 @@ class ComplianceReport(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     report_ref = Column(String(30), unique=True, index=True, nullable=False)  # RB-YYYYMMDD-NNNN
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     label_version_id = Column(Integer, ForeignKey("label_versions.id"), nullable=True)
+    checker_session_id = Column(Integer, ForeignKey("checker_sessions.id"), nullable=True)
     score = Column(Integer, nullable=True)  # 0-100
     verdict = Column(String(30), nullable=True)  # COMPLIANT / PARTIAL / NON_COMPLIANT
     check_results = Column(JSON, default=list)  # full per-rule results
@@ -511,6 +587,29 @@ class ComplianceReport(Base):
     user = relationship("User", foreign_keys=[user_id])
     product = relationship("Product", back_populates="reports", foreign_keys=[product_id])
     label_version = relationship("LabelVersion")
+    checker_session = relationship("CheckerSession", foreign_keys=[checker_session_id])
+
+
+class CheckerSession(Base):
+    __tablename__ = "checker_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
+    label_version_id = Column(Integer, ForeignKey("label_versions.id"), nullable=True)
+    source_type = Column(String(20), nullable=False, default="manual")
+    input_payload = Column(JSON, default=dict)
+    promoted_product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
+    promoted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    account = relationship("Account", foreign_keys=[account_id])
+    user = relationship("User", foreign_keys=[user_id])
+    product = relationship("Product", foreign_keys=[product_id])
+    label_version = relationship("LabelVersion", foreign_keys=[label_version_id])
+    promoted_product = relationship("Product", foreign_keys=[promoted_product_id])
 
 
 # ─── Team Invites ─────────────────────────────────────────────────────────────
@@ -519,6 +618,7 @@ class TeamInvite(Base):
     __tablename__ = "team_invites"
 
     id          = Column(Integer, primary_key=True, index=True)
+    account_id  = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
     email       = Column(String(255), nullable=False, index=True)
     role        = Column(SAEnum(UserRole), nullable=False, default=UserRole.VIEWER)
     invited_by  = Column(Integer, ForeignKey("users.id"), nullable=False)
@@ -550,6 +650,7 @@ class ActivityLog(Base):
 class APIKey(Base):
     __tablename__ = "api_keys"
     id           = Column(Integer, primary_key=True, index=True)
+    account_id   = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
     user_id      = Column(Integer, ForeignKey("users.id"), nullable=False)
     name         = Column(String(100), nullable=False)          # e.g. "Production", "Dev laptop"
     key_prefix   = Column(String(10), nullable=False)           # first 8 chars, shown in UI
@@ -565,6 +666,7 @@ class APIKey(Base):
 class Subscription(Base):
     __tablename__ = "subscriptions"
     id                   = Column(Integer, primary_key=True, index=True)
+    account_id           = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
     user_id              = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
     plan                 = Column(SAEnum(PlanType), nullable=False, default=PlanType.FREE)
     status               = Column(SAEnum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.ACTIVE)
@@ -583,6 +685,7 @@ class Subscription(Base):
 class PaymentRecord(Base):
     __tablename__ = "payment_records"
     id                  = Column(Integer, primary_key=True, index=True)
+    account_id          = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
     user_id             = Column(Integer, ForeignKey("users.id"), nullable=False)
     razorpay_payment_id = Column(String(100), nullable=True)
     razorpay_order_id   = Column(String(100), nullable=True)

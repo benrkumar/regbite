@@ -15,8 +15,10 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
+from app.services.access_control import is_platform_admin, sync_user_role_flags
 
 # ── In-memory extraction job store (admin-only, single-process) ────────────
 _EXTRACTION_JOBS: dict = {}   # job_id → state dict
@@ -31,6 +33,7 @@ router    = APIRouter(prefix="/admin")
 templates = Jinja2Templates(
     directory=str(Path(__file__).parent.parent / "templates")
 )
+settings = get_settings()
 
 _VALID_KB = {"regulations", "products"}
 
@@ -40,7 +43,8 @@ def _require_admin(request: Request, db: Session):
     user = get_current_user_from_cookie(request, db)
     if not user:
         return None, RedirectResponse(url="/login", status_code=302)
-    if not user.is_admin:
+    sync_user_role_flags(user)
+    if not is_platform_admin(user):
         return None, RedirectResponse(url="/dashboard", status_code=302)
     return user, None
 
@@ -109,7 +113,7 @@ async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
             headers = {
                 "content-type": "application/json",
                 "Authorization": f"Bearer {settings.openrouter_api_key}",
-                "HTTP-Referer": "https://steadfast-courage-production-0f66.up.railway.app",
+                "HTTP-Referer": settings.public_base_url,
                 "X-Title": "RegBite",
             }
             payload = {
@@ -202,7 +206,7 @@ async def llm_api_key_stats(request: Request, db: Session = Depends(get_db)):
                 "https://openrouter.ai/api/v1/auth/key",
                 headers={
                     "Authorization": f"Bearer {settings.openrouter_api_key}",
-                    "HTTP-Referer": "https://steadfast-courage-production-0f66.up.railway.app",
+                    "HTTP-Referer": settings.public_base_url,
                 },
                 timeout=10.0,
             )
@@ -275,7 +279,7 @@ async def llm_openrouter_models(request: Request, db: Session = Depends(get_db))
             "https://openrouter.ai/api/v1/models",
             headers={
                 "Authorization": f"Bearer {settings.openrouter_api_key}",
-                "HTTP-Referer": "https://steadfast-courage-production-0f66.up.railway.app",
+                "HTTP-Referer": settings.public_base_url,
             },
             timeout=15.0,
         )

@@ -2,6 +2,21 @@
 {% block title %}API Keys{% endblock %}
 
 {% block content %}
+<style>
+  .api-keys-table-wrap {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .api-keys-table {
+    width: 100%;
+    min-width: 680px;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+</style>
 <div class="page-hdr">
   <div>
     <h2>API Keys</h2>
@@ -71,8 +86,8 @@ function copyKey() {
   <h3 style="font-size:0.96rem;font-weight:700;color:#0f172a;margin-bottom:0.85rem;">Active Keys</h3>
 
   {% if keys %}
-  <div style="background:#fff;border:1px solid var(--gray-200);border-radius:12px;overflow:hidden;">
-    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+  <div class="api-keys-table-wrap">
+    <table class="api-keys-table">
       <thead>
         <tr style="background:#F8F8F8;">
           <th style="padding:0.65rem 1rem;text-align:left;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#737373;border-bottom:1.5px solid var(--gray-200);">Name</th>

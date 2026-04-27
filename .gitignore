@@ -37,6 +37,12 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Local audit / smoke server logs
+mobile_*.out
+mobile_*.err
+smoke_server.out
+smoke_server.err
+
 # Claude private memory
 .claude/
 

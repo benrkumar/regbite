@@ -315,7 +315,8 @@ def chunk_text(text: str, max_chars: int = 600) -> list[str]:
 
 def _ingest_document(db, kb_type: str, title: str, source: str,
                      content: str, uploaded_by_id: int | None = None,
-                     content_hash: str | None = None):
+                     content_hash: str | None = None,
+                     account_id: int | None = None):
     """
     Create a KBDocument, chunk its content, insert KBChunk rows, and commit.
     Skips exact-duplicate chunks already present in this KB.
@@ -325,6 +326,7 @@ def _ingest_document(db, kb_type: str, title: str, source: str,
 
     doc = KBDocument(
         kb_type=KBType(kb_type),
+        account_id=account_id,
         title=title,
         source=source,
         content=content,
@@ -682,7 +684,11 @@ def seed_products_kb(db, force_update_product_id: int | None = None) -> dict:
 
     count = 0
 
-    for product in db.query(Product).filter(Product.is_active).all():
+    for product in db.query(Product).filter(
+        Product.is_active,
+        Product.is_temporary == False,
+        Product.is_sample == False,
+    ).all():
         source = f"db:product:{product.id}"
 
         if force_update_product_id and product.id == force_update_product_id:
@@ -749,6 +755,7 @@ def seed_products_kb(db, force_update_product_id: int | None = None) -> dict:
             title=f"Product: {product.name}",
             source=source,
             content=content,
+            account_id=product.account_id,
         )
         count += 1
 
@@ -980,7 +987,7 @@ def _call_gemma_chat(system_prompt: str, user_message: str,
     headers = {
         "content-type": "application/json",
         "Authorization": f"Bearer {api_key}",
-        "HTTP-Referer": "https://steadfast-courage-production-0f66.up.railway.app",
+        "HTTP-Referer": _gs().public_base_url,
         "X-Title": "RegBite",
     }
 

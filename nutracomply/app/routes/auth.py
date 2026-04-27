@@ -15,6 +15,7 @@ from app.models import (
     ComplianceRule, CheckResult, AlertType, AlertStatus, Severity, UserRole
 )
 from app.config import get_settings
+from app.services.access_control import ensure_workspace_for_user, sync_user_role_flags
 
 router = APIRouter()
 settings = get_settings()
@@ -59,6 +60,14 @@ def get_current_user_from_cookie(request: Request, db: Session) -> Optional[User
         user = db.query(User).filter(User.email == email).first()
         if user and not user.is_active:
             return None
+        if user:
+            original_account_id = user.account_id
+            original_is_admin = user.is_admin
+            sync_user_role_flags(user)
+            ensure_workspace_for_user(db, user)
+            if user.account_id != original_account_id or user.is_admin != original_is_admin:
+                db.commit()
+                db.refresh(user)
         return user
     except JWTError:
         return None
@@ -66,6 +75,7 @@ def get_current_user_from_cookie(request: Request, db: Session) -> Optional[User
 
 def _seed_demo_products(user: User, db: Session):
     """Create 5 demo products with synthetic compliance data for new users."""
+    ensure_workspace_for_user(db, user)
     rules = {r.rule_code: r for r in db.query(ComplianceRule).filter(ComplianceRule.active).all()}
     if not rules:
         return
@@ -302,11 +312,13 @@ def _seed_demo_products(user: User, db: Session):
 
     for demo in demos:
         product = Product(
+            account_id=user.account_id,
             user_id=user.id,
             name=demo["name"],
             sku=demo["sku"],
             category=demo["category"],
             description=demo["description"],
+            is_sample=True,
         )
         db.add(product)
         db.flush()
@@ -371,6 +383,7 @@ def _seed_demo_products(user: User, db: Session):
                 for code in list(failing_set)[:5]
             ]
             alert = Alert(
+                account_id=user.account_id,
                 product_id=product.id,
                 label_version_id=label.id,
                 alert_type=AlertType.LABEL_VIOLATION,
@@ -390,7 +403,11 @@ def _seed_demo_products(user: User, db: Session):
 
 @router.get("/login")
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse("login.html", {
+        "request": request,
+        "error": None,
+        "show_demo_login_hints": settings.show_demo_login_hints,
+    })
 
 
 @router.post("/login")
@@ -418,12 +435,14 @@ async def login(
     if not user or not verify_password(password, user.hashed_password):
         return templates.TemplateResponse("login.html", {
             "request": request,
-            "error": "Invalid username or password"
+            "error": "Invalid username or password",
+            "show_demo_login_hints": settings.show_demo_login_hints,
         })
     if not user.is_active:
         return templates.TemplateResponse("login.html", {
             "request": request,
-            "error": "Your account has been deactivated. Please contact support."
+            "error": "Your account has been deactivated. Please contact support.",
+            "show_demo_login_hints": settings.show_demo_login_hints,
         })
 
     token = create_access_token({"sub": user.email})
@@ -500,16 +519,19 @@ async def register(
     db.add(user)
     db.commit()
     db.refresh(user)
+    ensure_workspace_for_user(db, user)
+    db.commit()
+    db.refresh(user)
 
-    # Seed demo products for new regular users
-    try:
-        _seed_demo_products(user, db)
-    except Exception as e:
-        print(f"[register] Demo product seed failed: {e}")
+    if settings.enable_demo_data:
         try:
-            db.rollback()
-        except Exception:
-            pass
+            _seed_demo_products(user, db)
+        except Exception as e:
+            print(f"[register] Demo product seed failed: {e}")
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
     # Send welcome email
     try:

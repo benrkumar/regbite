@@ -1,12 +1,24 @@
-from fastapi import APIRouter, Request, Depends, Form
+from __future__ import annotations
+
+from datetime import datetime
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from pathlib import Path
 
 from app.database import get_db
 from app.models import Alert, AlertStatus
 from app.routes.auth import get_current_user_from_cookie
+from app.services.access_control import can_edit_account_data
+from app.services.alert_service import (
+    account_alert_query,
+    attach_read_state,
+    count_unread_alerts,
+    mark_alert_read,
+    mark_all_alerts_read,
+)
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -23,15 +35,15 @@ async def alerts_list(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url="/login", status_code=302)
 
     alerts = (
-        db.query(Alert)
+        account_alert_query(db, user)
         .order_by(Alert.created_at.desc())
         .limit(100)
         .all()
     )
-    for a in alerts:
-        _ = a.product
-
-    unread_count = sum(1 for a in alerts if a.status == AlertStatus.UNREAD)
+    for alert in alerts:
+        _ = alert.product
+    attach_read_state(db, user, alerts)
+    unread_count = sum(1 for alert in alerts if getattr(alert, "is_unread", False))
 
     return templates.TemplateResponse("alerts.html", {
         "request": request,
@@ -39,6 +51,7 @@ async def alerts_list(request: Request, db: Session = Depends(get_db)):
         "alerts": alerts,
         "unread_alerts": unread_count,
         "AlertStatus": AlertStatus,
+        "can_update_alerts": can_edit_account_data(user),
     })
 
 
@@ -52,17 +65,19 @@ async def update_alert_status(
     user = require_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
+    if not can_edit_account_data(user):
+        return RedirectResponse(url="/alerts", status_code=302)
 
-    alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    alert = account_alert_query(db, user).filter(Alert.id == alert_id).first()
     if alert:
         try:
             alert.status = AlertStatus(status)
-            if status == AlertStatus.RESOLVED.value:
-                from datetime import datetime
+            if alert.status == AlertStatus.RESOLVED:
                 alert.resolved_at = datetime.utcnow()
+            mark_alert_read(db, user, alert)
             db.commit()
         except ValueError:
-            pass
+            db.rollback()
 
     return RedirectResponse(url="/alerts", status_code=302)
 
@@ -73,8 +88,6 @@ async def mark_all_read(request: Request, db: Session = Depends(get_db)):
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).update(
-        {"status": AlertStatus.ACKNOWLEDGED}
-    )
+    mark_all_alerts_read(db, user)
     db.commit()
     return RedirectResponse(url="/alerts", status_code=302)

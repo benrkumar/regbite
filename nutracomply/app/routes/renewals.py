@@ -1,43 +1,53 @@
 """
-License Renewal Tracker Routes
+License renewal tracker routes.
 """
+from __future__ import annotations
+
 from datetime import datetime
-from fastapi import APIRouter, Request, Depends, Form
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from pathlib import Path
 
 from app.database import get_db
+from app.models import LicenseRenewal, LicenseType
 from app.routes.auth import get_current_user_from_cookie
-from app.models import LicenseRenewal, LicenseType, Alert, AlertStatus
+from app.services.access_control import get_account_id
+from app.services.alert_service import count_unread_alerts
 
 router = APIRouter(prefix="/renewals")
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
 
 
+def _require_user(request: Request, db: Session):
+    return get_current_user_from_cookie(request, db)
+
+
+def _renewal_query(db: Session, user):
+    account_id = get_account_id(user)
+    query = db.query(LicenseRenewal).filter(LicenseRenewal.is_active == True)
+    if account_id:
+        query = query.filter(LicenseRenewal.account_id == account_id)
+    else:
+        query = query.filter(LicenseRenewal.user_id == user.id)
+    return query
+
+
 @router.get("")
 async def renewals_list(request: Request, db: Session = Depends(get_db)):
-    user = get_current_user_from_cookie(request, db)
+    user = _require_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    licenses = (
-        db.query(LicenseRenewal)
-        .filter(LicenseRenewal.user_id == user.id, LicenseRenewal.is_active == True)
-        .order_by(LicenseRenewal.expiry_date.asc())
-        .all()
-    )
-
-    # Count by status (perpetual licenses are always active)
-    perpetual = [l for l in licenses if l.is_perpetual]
-    non_perpetual = [l for l in licenses if not l.is_perpetual]
-    expired = [l for l in non_perpetual if l.days_until_expiry < 0]
-    expiring_soon = [l for l in non_perpetual if 0 <= l.days_until_expiry <= 30]
-    expiring_60 = [l for l in non_perpetual if 30 < l.days_until_expiry <= 60]
-    active = [l for l in non_perpetual if l.days_until_expiry > 60] + perpetual
-
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    licenses = _renewal_query(db, user).order_by(LicenseRenewal.expiry_date.asc()).all()
+    perpetual = [item for item in licenses if item.is_perpetual]
+    non_perpetual = [item for item in licenses if not item.is_perpetual]
+    expired = [item for item in non_perpetual if item.days_until_expiry < 0]
+    expiring_soon = [item for item in non_perpetual if 0 <= item.days_until_expiry <= 30]
+    expiring_60 = [item for item in non_perpetual if 30 < item.days_until_expiry <= 60]
+    active = [item for item in non_perpetual if item.days_until_expiry > 60] + perpetual
 
     return templates.TemplateResponse("renewals.html", {
         "request": request,
@@ -48,8 +58,8 @@ async def renewals_list(request: Request, db: Session = Depends(get_db)):
         "expiring_60": expiring_60,
         "active": active,
         "perpetual": perpetual,
-        "license_types": [lt.value for lt in LicenseType],
-        "unread_alerts": unread_alerts,
+        "license_types": [item.value for item in LicenseType],
+        "unread_alerts": count_unread_alerts(db, user),
         "perpetual_notice": "FSSAI licenses issued after March 2026 have perpetual validity under the Licensing & Registration Amendment Regulations 2026. No renewal is required.",
     })
 
@@ -66,20 +76,17 @@ async def add_renewal(
     notes: str = Form(""),
     db: Session = Depends(get_db),
 ):
-    user = get_current_user_from_cookie(request, db)
+    user = _require_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
     try:
         perpetual = is_perpetual.lower() in ("true", "1", "on", "yes") if is_perpetual else False
-        # Perpetual licenses don't need an expiry date — use a far-future date
-        if perpetual:
-            expiry_dt = datetime(2099, 12, 31)
-        else:
-            expiry_dt = datetime.strptime(expiry_date, "%Y-%m-%d")
+        expiry_dt = datetime(2099, 12, 31) if perpetual else datetime.strptime(expiry_date, "%Y-%m-%d")
         issued_dt = datetime.strptime(issued_date, "%Y-%m-%d") if issued_date else None
 
-        license = LicenseRenewal(
+        renewal = LicenseRenewal(
+            account_id=get_account_id(user),
             user_id=user.id,
             license_name=license_name,
             license_type=LicenseType(license_type),
@@ -89,28 +96,24 @@ async def add_renewal(
             is_perpetual=perpetual,
             notes=notes or None,
         )
-        db.add(license)
+        db.add(renewal)
         db.commit()
-    except Exception as e:
-        print(f"[renewals] Error adding license: {e}")
+    except Exception as exc:
+        print(f"[renewals] Error adding license: {exc}")
 
     return RedirectResponse(url="/renewals", status_code=302)
 
 
 @router.post("/{license_id}/delete")
 async def delete_renewal(license_id: int, request: Request, db: Session = Depends(get_db)):
-    user = get_current_user_from_cookie(request, db)
+    user = _require_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    license = db.query(LicenseRenewal).filter(
-        LicenseRenewal.id == license_id,
-        LicenseRenewal.user_id == user.id
-    ).first()
-    if license:
-        license.is_active = False
+    renewal = _renewal_query(db, user).filter(LicenseRenewal.id == license_id).first()
+    if renewal:
+        renewal.is_active = False
         db.commit()
-
     return RedirectResponse(url="/renewals", status_code=302)
 
 
@@ -121,21 +124,18 @@ async def renew_license(
     new_expiry_date: str = Form(...),
     db: Session = Depends(get_db),
 ):
-    user = get_current_user_from_cookie(request, db)
+    user = _require_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    license = db.query(LicenseRenewal).filter(
-        LicenseRenewal.id == license_id,
-        LicenseRenewal.user_id == user.id
-    ).first()
-    if license:
+    renewal = _renewal_query(db, user).filter(LicenseRenewal.id == license_id).first()
+    if renewal:
         try:
-            new_dt = datetime.strptime(new_expiry_date, "%Y-%m-%d")
-            license.expiry_date = new_dt
-            license.updated_at = datetime.utcnow()
+            renewal.expiry_date = datetime.strptime(new_expiry_date, "%Y-%m-%d")
+            renewal.updated_at = datetime.utcnow()
+            renewal.is_perpetual = False
             db.commit()
-        except Exception as e:
-            print(f"[renewals] Error renewing: {e}")
+        except Exception as exc:
+            print(f"[renewals] Error renewing: {exc}")
 
     return RedirectResponse(url="/renewals", status_code=302)

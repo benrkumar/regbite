@@ -4,215 +4,349 @@
 
 {% block content %}
 <style>
-  @media (max-width: 900px) {
-    .finance-charts-grid { grid-template-columns: 1fr !important; }
+.finance-card {
+  background:#FFFFFF;
+  border:1px solid #EBEBEB;
+  border-radius:10px;
+  padding:1.15rem 1.2rem;
+}
+
+.finance-toolbar {
+  display:flex;
+  flex-wrap:wrap;
+  gap:0.55rem;
+  align-items:center;
+}
+
+.finance-custom-range {
+  display:flex;
+  gap:0.75rem;
+  flex-wrap:wrap;
+  align-items:flex-end;
+}
+
+.finance-range-note {
+  margin-left:auto;
+  font-size:0.78rem;
+  color:#737373;
+}
+
+.finance-charts-grid {
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:1rem;
+  margin-bottom:1rem;
+}
+
+.finance-breakdown-grid {
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:1rem;
+  margin-bottom:1rem;
+}
+
+.finance-plan-list {
+  display:grid;
+  gap:0.85rem;
+}
+
+.finance-plan-row {
+  display:flex;
+  flex-direction:column;
+  gap:0.35rem;
+}
+
+.finance-plan-head {
+  display:flex;
+  justify-content:space-between;
+  gap:0.75rem;
+  align-items:center;
+}
+
+.finance-plan-name {
+  font-size:0.84rem;
+  font-weight:600;
+  color:#111111;
+}
+
+.finance-plan-meta {
+  font-size:0.79rem;
+  color:#737373;
+}
+
+.finance-plan-bar {
+  height:8px;
+  border-radius:999px;
+  background:#F4F4F4;
+  overflow:hidden;
+}
+
+.finance-plan-bar span {
+  display:block;
+  height:100%;
+  background:#111111;
+  border-radius:999px;
+}
+
+.finance-mobile-daily .adm-mobile-meta {
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width:900px) {
+  .finance-charts-grid,
+  .finance-breakdown-grid {
+    grid-template-columns:1fr;
   }
+}
+
+@media (max-width:768px) {
+  .finance-range-note {
+    margin-left:0;
+    width:100%;
+  }
+}
+
+@media (max-width:480px) {
+  .finance-mobile-daily .adm-mobile-meta {
+    grid-template-columns:1fr;
+  }
+}
 </style>
 
-{# ── Period filter bar ──────────────────────────────────────────────────────── #}
-<form method="GET" action="/admin/finance" style="margin-bottom:2rem;">
-  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:0.5rem;">
-    {% set periods = [('today','Today'),('7d','7 Days'),('30d','30 Days'),('90d','90 Days'),('all','All Time')] %}
-    {% for val, label in periods %}
-    <button type="submit" name="period" value="{{ val }}"
-      style="padding:0.4rem 0.85rem;border-radius:5px;border:1px solid {% if period == val %}#111111{% else %}#EBEBEB{% endif %};background:{% if period == val %}#111111{% else %}#fff{% endif %};color:{% if period == val %}#fff{% else %}#525252{% endif %};font-size:0.8rem;font-weight:{% if period == val %}600{% else %}400{% endif %};cursor:pointer;font-family:inherit;">
-      {{ label }}
-    </button>
-    {% endfor %}
+{% set periods = [('today','Today'),('7d','7 Days'),('30d','30 Days'),('90d','90 Days'),('all','All Time')] %}
+{% set conv_rate = (active_subs / total_users * 100) if total_users > 0 else 0 %}
+{% set period_payments = daily_list | map(attribute='payments') | sum %}
+{% set arpu = (period_revenue_inr / active_subs) if active_subs > 0 else 0 %}
 
-    <button type="button"
-      onclick="document.getElementById('customRange').style.display=document.getElementById('customRange').style.display==='none'?'flex':'none'"
-      style="padding:0.4rem 0.85rem;border-radius:5px;border:1px solid {% if period == 'custom' %}#111111{% else %}#EBEBEB{% endif %};background:{% if period == 'custom' %}#111111{% else %}#fff{% endif %};color:{% if period == 'custom' %}#fff{% else %}#525252{% endif %};font-size:0.8rem;cursor:pointer;font-family:inherit;">
-      Custom
-    </button>
-
-    <div id="customRange" style="display:{% if period == 'custom' %}flex{% else %}none{% endif %};align-items:center;gap:0.4rem;flex-wrap:wrap;">
-      <input type="date" name="date_from" value="{{ date_from }}"
-        style="padding:0.35rem 0.6rem;border:1px solid #EBEBEB;border-radius:5px;font-size:0.8rem;font-family:inherit;color:#111;">
-      <span style="color:#A3A3A3;font-size:0.8rem;">to</span>
-      <input type="date" name="date_to" value="{{ date_to }}"
-        style="padding:0.35rem 0.6rem;border:1px solid #EBEBEB;border-radius:5px;font-size:0.8rem;font-family:inherit;color:#111;">
-      <button type="submit" name="period" value="custom"
-        style="padding:0.35rem 0.75rem;border-radius:5px;border:1px solid #111111;background:#111111;color:#fff;font-size:0.8rem;cursor:pointer;font-family:inherit;">
-        Apply
-      </button>
+<form method="get" action="/admin/finance" class="adm-filter-card">
+  <div class="adm-filter-row">
+    <div class="finance-toolbar">
+      {% for val, label in periods %}
+      <button type="submit" name="period" value="{{ val }}" class="adm-btn {% if period == val %}adm-btn-primary{% endif %}">{{ label }}</button>
+      {% endfor %}
+      <button type="button" class="adm-btn {% if period == 'custom' %}adm-btn-primary{% endif %}" onclick="toggleCustomRange()">Custom</button>
     </div>
+
+    <div id="customRange" class="finance-custom-range" style="display:{% if period == 'custom' %}flex{% else %}none{% endif %};">
+      <div class="adm-field">
+        <label class="adm-field-label">From</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="adm-input" />
+      </div>
+      <div class="adm-field">
+        <label class="adm-field-label">To</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="adm-input" />
+      </div>
+      <button type="submit" name="period" value="custom" class="adm-btn adm-btn-primary">Apply</button>
+    </div>
+
+    <div class="finance-range-note">Showing {{ date_from }} to {{ date_to }}</div>
   </div>
 </form>
 
-{# ── Summary cards row 1 ────────────────────────────────────────────────────── #}
-{% set conv_rate = (active_subs / total_users * 100) if total_users > 0 else 0 %}
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:1rem;margin-bottom:1rem;">
-
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Total Users</div>
-    <div style="font-size:1.6rem;font-weight:700;color:#111;">{{ total_users }}</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">all time</div>
+<div class="adm-stat-grid">
+  <div class="adm-stat">
+    <div class="adm-stat-val">{{ total_users }}</div>
+    <div class="adm-stat-lbl">Total Users</div>
   </div>
-
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">New Signups</div>
-    <div style="font-size:1.6rem;font-weight:700;color:#111111;">{{ new_users_period }}</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">{{ date_from }} – {{ date_to }}</div>
+  <div class="adm-stat">
+    <div class="adm-stat-val">{{ new_users_period }}</div>
+    <div class="adm-stat-lbl">New Signups</div>
   </div>
-
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Active Subscriptions</div>
-    <div style="font-size:1.6rem;font-weight:700;color:#111;">{{ active_subs }}</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">paid plans</div>
+  <div class="adm-stat">
+    <div class="adm-stat-val">{{ active_subs }}</div>
+    <div class="adm-stat-lbl">Active Subscriptions</div>
   </div>
-
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Conversion Rate</div>
-    <div style="font-size:1.6rem;font-weight:700;color:{% if conv_rate >= 10 %}#3D7A4A{% elif conv_rate >= 3 %}#D4845A{% else %}#111111{% endif %};">{{ "%.1f"|format(conv_rate) }}%</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">active / total users</div>
+  <div class="adm-stat">
+    <div class="adm-stat-val" style="color:{% if conv_rate >= 10 %}#357266{% elif conv_rate >= 3 %}#8F6314{% else %}#111111{% endif %};">{{ "%.1f"|format(conv_rate) }}%</div>
+    <div class="adm-stat-lbl">Conversion Rate</div>
   </div>
-
+  <div class="adm-stat">
+    <div class="adm-stat-val">&#8377;{{ "{:,.0f}".format(total_revenue_inr) }}</div>
+    <div class="adm-stat-lbl">Total Revenue</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat-val" style="color:#8F6314;">&#8377;{{ "{:,.0f}".format(period_revenue_inr) }}</div>
+    <div class="adm-stat-lbl">Period Revenue</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat-val">&#8377;{{ "{:,.0f}".format(arpu) }}</div>
+    <div class="adm-stat-lbl">Avg Rev / Paying User</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat-val">{{ period_payments }}</div>
+    <div class="adm-stat-lbl">Paid Transactions</div>
+  </div>
 </div>
 
-{# ── Summary cards row 2 ────────────────────────────────────────────────────── #}
-{% set period_payments = daily_list | map(attribute='payments') | sum %}
-{% set arpu = (period_revenue_inr / active_subs) if active_subs > 0 else 0 %}
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:1rem;margin-bottom:2rem;">
-
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Total Revenue</div>
-    <div style="font-size:1.6rem;font-weight:700;color:#111;">₹{{ "{:,.0f}".format(total_revenue_inr) }}</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">all time</div>
-  </div>
-
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Period Revenue</div>
-    <div style="font-size:1.6rem;font-weight:700;color:#D4845A;">₹{{ "{:,.0f}".format(period_revenue_inr) }}</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">{{ date_from }} – {{ date_to }}</div>
-  </div>
-
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Avg Rev / Paying User</div>
-    <div style="font-size:1.6rem;font-weight:700;color:#111;">₹{{ "{:,.0f}".format(arpu) }}</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">period rev ÷ active subs</div>
-  </div>
-
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Total Payments</div>
-    <div style="font-size:1.6rem;font-weight:700;color:#111;">{{ period_payments }}</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">paid transactions</div>
-  </div>
-
+<div class="finance-charts-grid">
+  <section class="finance-card">
+    <div class="adm-section-title">Daily Signups</div>
+    <canvas id="signupChart" height="120"></canvas>
+  </section>
+  <section class="finance-card">
+    <div class="adm-section-title">Daily Revenue (&#8377;)</div>
+    <canvas id="revenueChart" height="120"></canvas>
+  </section>
 </div>
 
-{# ── Charts row ─────────────────────────────────────────────────────────────── #}
-<div style="display:grid;grid-template-columns:55fr 45fr;gap:1rem;margin-bottom:2rem;" class="finance-charts-grid">
-
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.25rem 1.5rem;">
-    <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">Daily Signups</div>
-    <canvas id="signupChart" height="110"></canvas>
-  </div>
-
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.25rem 1.5rem;">
-    <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">Daily Revenue (₹)</div>
-    <canvas id="revenueChart" height="110"></canvas>
-  </div>
-
-</div>
-
-{# ── Subscription breakdown ──────────────────────────────────────────────────── #}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.25rem 1.5rem;margin-bottom:2rem;">
-  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">Active Subscriptions by Plan</div>
-
-  {% if active_subs > 0 %}
-    {% for plan, cnt in sub_by_plan.items() %}
-    {% set pct = (cnt / active_subs * 100) | round(1) %}
-    <div style="margin-bottom:0.75rem;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
-        <span style="font-size:0.82rem;font-weight:500;color:#111;">{{ plan }}</span>
-        <span style="font-size:0.8rem;color:#737373;">{{ cnt }} &nbsp;<span style="color:#A3A3A3;">({{ pct }}%)</span></span>
+<div class="finance-breakdown-grid">
+  <section class="finance-card">
+    <div class="adm-section-title">Active Subscriptions by Plan</div>
+    {% if active_subs > 0 %}
+    <div class="finance-plan-list">
+      {% for plan, cnt in sub_by_plan.items() %}
+      {% set pct = (cnt / active_subs * 100) | round(1) %}
+      <div class="finance-plan-row">
+        <div class="finance-plan-head">
+          <span class="finance-plan-name">{{ plan }}</span>
+          <span class="finance-plan-meta">{{ cnt }} ({{ pct }}%)</span>
+        </div>
+        <div class="finance-plan-bar">
+          <span style="width:{{ pct }}%;"></span>
+        </div>
       </div>
-      <div style="background:#F4F4F4;border-radius:4px;height:8px;overflow:hidden;">
-        <div style="width:{{ pct }}%;height:100%;background:#111111;border-radius:4px;"></div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="adm-empty">No active subscriptions.</div>
+    {% endif %}
+  </section>
+
+  <section class="finance-card">
+    <div class="adm-section-title">Revenue Snapshot</div>
+    <div class="adm-kv-grid">
+      <div class="adm-kv-item">
+        <span class="adm-kv-label">Date Range</span>
+        <span class="adm-kv-value">{{ date_from }} to {{ date_to }}</span>
+      </div>
+      <div class="adm-kv-item">
+        <span class="adm-kv-label">New Signups</span>
+        <span class="adm-kv-value">{{ new_users_period }}</span>
+      </div>
+      <div class="adm-kv-item">
+        <span class="adm-kv-label">Active Subscribers</span>
+        <span class="adm-kv-value">{{ active_subs }}</span>
+      </div>
+      <div class="adm-kv-item">
+        <span class="adm-kv-label">Period Revenue</span>
+        <span class="adm-kv-value">&#8377;{{ "{:,.2f}".format(period_revenue_inr) }}</span>
+      </div>
+      <div class="adm-kv-item">
+        <span class="adm-kv-label">Paid Transactions</span>
+        <span class="adm-kv-value">{{ period_payments }}</span>
+      </div>
+      <div class="adm-kv-item">
+        <span class="adm-kv-label">ARPPU</span>
+        <span class="adm-kv-value">&#8377;{{ "{:,.2f}".format(arpu) }}</span>
       </div>
     </div>
-    {% endfor %}
-  {% else %}
-    <div style="font-size:0.85rem;color:#A3A3A3;">No active subscriptions.</div>
-  {% endif %}
+  </section>
 </div>
 
-{# ── Daily table ─────────────────────────────────────────────────────────────── #}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.25rem 1.5rem;margin-bottom:2rem;">
-  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">Daily Breakdown</div>
-
-  <div style="{% if daily_list|length > 14 %}max-height:420px;overflow-y:auto;{% endif %}">
-    <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+<section class="finance-card">
+  <div class="adm-section-title">Daily Breakdown</div>
+  {% if daily_list %}
+  <div class="adm-table-wrap adm-desktop-only" {% if daily_list|length > 14 %}style="max-height:420px;overflow-y:auto;"{% endif %}>
+    <table class="adm-table">
       <thead>
-        <tr style="position:sticky;top:0;z-index:10;background:#F8F8F8;box-shadow:0 2px 4px rgba(0,0,0,0.04);">
-          <th style="text-align:left;padding:0.5rem 0.75rem;font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #EBEBEB;">Date</th>
-          <th style="text-align:right;padding:0.5rem 0.75rem;font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #EBEBEB;">Signups</th>
-          <th style="text-align:right;padding:0.5rem 0.75rem;font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #EBEBEB;">Revenue (₹)</th>
-          <th style="text-align:right;padding:0.5rem 0.75rem;font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #EBEBEB;">Payments</th>
+        <tr>
+          <th>Date</th>
+          <th style="text-align:right;">Signups</th>
+          <th style="text-align:right;">Revenue (&#8377;)</th>
+          <th style="text-align:right;">Payments</th>
         </tr>
       </thead>
       <tbody>
         {% for row in daily_list %}
-        <tr style="background:{% if row.revenue_inr > 0 %}#F0FAF0{% else %}#fff{% endif %};">
-          <td style="padding:0.45rem 0.75rem;border-bottom:1px solid #F4F4F4;color:#111;font-weight:{% if row.revenue_inr > 0 %}500{% else %}400{% endif %};">{{ row.day }}</td>
-          <td style="padding:0.45rem 0.75rem;border-bottom:1px solid #F4F4F4;text-align:right;color:{% if row.signups > 0 %}#111111{% else %}#A3A3A3{% endif %};">{{ row.signups }}</td>
-          <td style="padding:0.45rem 0.75rem;border-bottom:1px solid #F4F4F4;text-align:right;color:{% if row.revenue_inr > 0 %}#D4845A{% else %}#A3A3A3{% endif %};">{% if row.revenue_inr > 0 %}₹{{ "{:,.2f}".format(row.revenue_inr) }}{% else %}—{% endif %}</td>
-          <td style="padding:0.45rem 0.75rem;border-bottom:1px solid #F4F4F4;text-align:right;color:{% if row.payments > 0 %}#111{% else %}#A3A3A3{% endif %};">{{ row.payments if row.payments > 0 else '—' }}</td>
+        <tr>
+          <td style="font-weight:600;color:#111111;">{{ row.day }}</td>
+          <td style="text-align:right;color:{% if row.signups > 0 %}#111111{% else %}#A3A3A3{% endif %};">{{ row.signups }}</td>
+          <td style="text-align:right;color:{% if row.revenue_inr > 0 %}#8F6314{% else %}#A3A3A3{% endif %};">{% if row.revenue_inr > 0 %}&#8377;{{ "{:,.2f}".format(row.revenue_inr) }}{% else %}-{% endif %}</td>
+          <td style="text-align:right;color:{% if row.payments > 0 %}#111111{% else %}#A3A3A3{% endif %};">{{ row.payments if row.payments > 0 else '-' }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-</div>
 
-{# ── Chart.js ────────────────────────────────────────────────────────────────── #}
+  <div class="adm-mobile-list">
+    {% for row in daily_list %}
+    <article class="adm-mobile-card finance-mobile-daily">
+      <div class="adm-mobile-card-title">{{ row.day }}</div>
+      <div class="adm-mobile-meta">
+        <div>
+          <div class="adm-field-label">Signups</div>
+          <div style="margin-top:0.25rem;color:#262626;">{{ row.signups }}</div>
+        </div>
+        <div>
+          <div class="adm-field-label">Revenue</div>
+          <div style="margin-top:0.25rem;color:#262626;">{% if row.revenue_inr > 0 %}&#8377;{{ "{:,.2f}".format(row.revenue_inr) }}{% else %}-{% endif %}</div>
+        </div>
+        <div>
+          <div class="adm-field-label">Payments</div>
+          <div style="margin-top:0.25rem;color:#262626;">{{ row.payments if row.payments > 0 else '-' }}</div>
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="adm-empty">No finance data is available for this period.</div>
+  {% endif %}
+</section>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
+function toggleCustomRange() {
+  const box = document.getElementById('customRange');
+  box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+}
+
 const daily = {{ daily_list | tojson }};
 const labels = daily.map(d => d.day);
 
 new Chart(document.getElementById('signupChart'), {
-    type: 'line',
-    data: {
-        labels,
-        datasets: [{
-            label: 'Signups',
-            data: daily.map(d => d.signups),
-            borderColor: '#111111',
-            backgroundColor: 'rgba(90,154,152,0.12)',
-            fill: true,
-            tension: 0.3,
-            pointRadius: 3
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-    }
+  type: 'line',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Signups',
+      data: daily.map(d => d.signups),
+      borderColor: '#111111',
+      backgroundColor: 'rgba(17,17,17,0.08)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 3
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+  }
 });
 
 new Chart(document.getElementById('revenueChart'), {
-    type: 'bar',
-    data: {
-        labels,
-        datasets: [{
-            label: 'Revenue (₹)',
-            data: daily.map(d => d.revenue_inr),
-            backgroundColor: '#D4845A'
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: { callback: v => '₹' + v.toLocaleString('en-IN') }
-            }
-        }
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Revenue',
+      data: daily.map(d => d.revenue_inr),
+      backgroundColor: '#D4845A',
+      borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: { callback: value => 'INR ' + value.toLocaleString('en-IN') }
+      }
     }
+  }
 });
 </script>
 

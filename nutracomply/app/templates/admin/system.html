@@ -3,81 +3,116 @@
 {% block page_title %}System &amp; Controls{% endblock %}
 
 {% block content %}
+<style>
+.system-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:1.25rem;
+  margin-bottom:1.5rem;
+}
 
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.75rem;">
+.system-card {
+  background:#FFFFFF;
+  border:1px solid #EBEBEB;
+  border-radius:12px;
+  padding:1.25rem;
+}
 
-  {# ── Database Stats ── #}
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:12px;padding:1.3rem;">
-    <h4 class="adm-section-title" style="display:flex;align-items:center;gap:0.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg> Database Records</h4>
-    <div style="display:grid;gap:0.65rem;">
+.system-controls {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:1rem;
+}
+
+.system-control-card {
+  border:1px solid #EBEBEB;
+  border-radius:10px;
+  padding:1rem;
+  background:#FCFCFC;
+}
+
+@media (max-width:900px) {
+  .system-grid,
+  .system-controls {
+    grid-template-columns:1fr;
+  }
+}
+</style>
+
+{% if flash_message %}
+<div class="adm-flash adm-flash-{{ flash_type }}" style="margin-bottom:1rem;">{{ flash_message }}</div>
+{% endif %}
+
+<div class="system-grid">
+  <section class="system-card">
+    <h4 class="adm-section-title">Database Records</h4>
+    <div class="adm-kv-grid">
       {% for key, val in db_stats.items() %}
-      <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid #F5F5F5;">
-        <span style="font-size:0.84rem;color:#525252;font-weight:500;">{{ key.replace('_', ' ') | title }}</span>
-        <span style="font-size:0.84rem;font-weight:700;color:#262626;">{{ val }}</span>
+      <div class="adm-kv-item">
+        <span class="adm-kv-label">{{ key.replace('_', ' ') | title }}</span>
+        <span class="adm-kv-value">{{ val }}</span>
       </div>
       {% endfor %}
     </div>
-  </div>
+  </section>
 
-  {# ── Environment Info ── #}
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:12px;padding:1.3rem;">
-    <h4 class="adm-section-title">&#x2699; Configuration</h4>
-    <div style="display:grid;gap:0.65rem;">
+  <section class="system-card">
+    <h4 class="adm-section-title">Configuration</h4>
+    <div class="adm-kv-grid">
       {% for key, val in env_info.items() %}
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid #F5F5F5;">
-        <span style="font-size:0.84rem;color:#525252;font-weight:500;">{{ key.replace('_', ' ') | title }}</span>
-        <span>
+      <div class="adm-kv-item">
+        <span class="adm-kv-label">{{ key.replace('_', ' ') | title }}</span>
+        <span class="adm-kv-value">
           {% if val is sameas true %}
-            <span class="adm-badge badge-green">&#x2713; Yes</span>
+          <span class="adm-badge badge-green">Yes</span>
           {% elif val is sameas false %}
-            <span class="adm-badge badge-red">&#x2715; No</span>
+          <span class="adm-badge badge-red">No</span>
           {% else %}
-            <span style="font-size:0.82rem;font-weight:600;color:#262626;">{{ val }}</span>
+          {{ val }}
           {% endif %}
         </span>
       </div>
       {% endfor %}
     </div>
-  </div>
-
+  </section>
 </div>
 
-{# ── Manual Controls ── #}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:12px;padding:1.3rem;margin-bottom:1.5rem;">
-  <h4 class="adm-section-title" style="display:flex;align-items:center;gap:0.4rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg> Manual Controls</h4>
-  <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-
-    <div style="flex:1;min-width:220px;border:1px solid #EBEBEB;border-radius:10px;padding:1rem;">
-      <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.3rem;">&#x21BB; Run Regulation Scrape</div>
-      <p style="font-size:0.8rem;color:#737373;margin-bottom:0.85rem;">
-        Scrapes FSSAI, AYUSH and Legal Metrology for new regulation updates. Normally runs automatically at 6:00 AM IST.
-      </p>
+<section class="system-card" style="margin-bottom:1.5rem;">
+  <h4 class="adm-section-title">Manual Controls</h4>
+  <div class="system-controls">
+    <div class="system-control-card">
+      <div style="font-weight:700;font-size:0.92rem;margin-bottom:0.3rem;">Run Regulation Scrape</div>
+      <p style="font-size:0.82rem;color:#737373;line-height:1.55;margin:0 0 0.85rem;">Scrapes FSSAI, AYUSH, and Legal Metrology for new regulation updates.</p>
       <form method="post" action="/admin/trigger-scrape" style="margin:0;">
         <button type="submit" class="adm-btn adm-btn-primary" style="width:100%;">Trigger Scrape Now</button>
       </form>
     </div>
-
-    <div style="flex:1;min-width:220px;border:1px solid #EBEBEB;border-radius:10px;padding:1rem;">
-      <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.3rem;display:flex;align-items:center;gap:0.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Re-check All Labels</div>
-      <p style="font-size:0.8rem;color:#737373;margin-bottom:0.85rem;">
-        Re-runs compliance checks on all stored label versions against the current rule set. Use after updating rules.
-      </p>
+    <div class="system-control-card">
+      <div style="font-weight:700;font-size:0.92rem;margin-bottom:0.3rem;">Re-check All Labels</div>
+      <p style="font-size:0.82rem;color:#737373;line-height:1.55;margin:0 0 0.85rem;">Re-runs compliance checks on stored label versions against the current rule set.</p>
       <form method="post" action="/admin/trigger-recheck" style="margin:0;">
         <button type="submit" class="adm-btn adm-btn-success" style="width:100%;">Trigger Re-check Now</button>
       </form>
     </div>
-
   </div>
-</div>
+</section>
 
-{# ── Schedule Info ── #}
-<div style="background:#F0F0F0;border:1px solid #F0F0F0;border-radius:12px;padding:1.1rem 1.3rem;">
-  <h4 style="margin:0 0 0.6rem;font-size:0.9rem;color:#404040;display:flex;align-items:center;gap:0.35rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Automated Schedule</h4>
-  <div style="font-size:0.84rem;color:#404040;display:grid;gap:0.35rem;">
-    <div>&#x2022; <strong>Daily Regulation Scrape:</strong> 6:00 AM IST every day (FSSAI + AYUSH + Legal Metrology)</div>
-    <div>&#x2022; <strong>Auto re-check:</strong> Triggered automatically when CRITICAL regulation changes are detected</div>
-    <div>&#x2022; <strong>Email alerts:</strong> Sent to all users' configured notification addresses when new violations or regulation updates are found</div>
+<section class="adm-filter-card" style="background:#FAFAFA;">
+  <h4 class="adm-section-title">Automated Schedule</h4>
+  <div class="adm-kv-grid">
+    <div class="adm-kv-item">
+      <span class="adm-kv-label">Daily Regulation Scrape</span>
+      <span class="adm-kv-value">6:00 AM IST every day</span>
+    </div>
+    <div class="adm-kv-item">
+      <span class="adm-kv-label">Auto Re-check</span>
+      <span class="adm-kv-value">Runs when critical regulation changes are detected</span>
+    </div>
+    <div class="adm-kv-item">
+      <span class="adm-kv-label">Email Alerts</span>
+      <span class="adm-kv-value">Sent to configured notification addresses</span>
+    </div>
   </div>
-</div>
+</section>
 
 {% endblock %}

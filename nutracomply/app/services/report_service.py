@@ -1,36 +1,49 @@
 """
-Compliance Report Service — generates unique report IDs and PDF reports.
+Compliance report service.
 """
+from __future__ import annotations
+
 import secrets
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session, joinedload
 
-from app.models import ComplianceReport, Product, ComplianceCheck
+from app.models import ComplianceCheck, ComplianceReport, Product
 
 
 def _generate_report_ref(db: Session) -> str:
-    """Generate unique report reference: RB-YYYYMMDD-NNNN"""
     today = datetime.utcnow().strftime("%Y%m%d")
     prefix = f"RB-{today}-"
-
-    # Find highest sequence for today
     existing = (
         db.query(ComplianceReport)
         .filter(ComplianceReport.report_ref.like(f"{prefix}%"))
         .order_by(ComplianceReport.report_ref.desc())
         .first()
     )
-
     if existing:
         try:
-            seq = int(existing.report_ref.split("-")[-1]) + 1
+            sequence = int(existing.report_ref.split("-")[-1]) + 1
         except (ValueError, IndexError):
-            seq = 1
+            sequence = 1
     else:
-        seq = 1
+        sequence = 1
+    return f"{prefix}{sequence:04d}"
 
-    return f"{prefix}{seq:04d}"
+
+def _critical_failures(check_results: list[dict]) -> int:
+    return sum(
+        1
+        for result in check_results
+        if result.get("result") == "FAIL" and result.get("severity") == "CRITICAL"
+    )
+
+
+def _build_verdict(score: int, critical_failures: int) -> str:
+    if critical_failures == 0 and score >= 90:
+        return "COMPLIANT"
+    if critical_failures == 0 and score >= 60:
+        return "PARTIAL"
+    return "NON_COMPLIANT"
 
 
 def get_or_create_report(
@@ -38,53 +51,48 @@ def get_or_create_report(
     user_id: int,
     product_id: int,
     label_version_id: int,
-) -> "ComplianceReport":
-    """Get existing report for this label version, or create a new one."""
-    existing = (
-        db.query(ComplianceReport)
-        .filter(ComplianceReport.label_version_id == label_version_id)
-        .first()
-    )
+    checker_session_id: int | None = None,
+) -> ComplianceReport:
+    existing = db.query(ComplianceReport).filter(ComplianceReport.label_version_id == label_version_id).first()
     if existing:
+        if checker_session_id and existing.checker_session_id != checker_session_id:
+            existing.checker_session_id = checker_session_id
+            db.commit()
         return existing
 
-    # Get check results for this label version — load rules eagerly
     checks = (
         db.query(ComplianceCheck)
         .options(joinedload(ComplianceCheck.rule))
         .filter(ComplianceCheck.label_version_id == label_version_id)
         .all()
     )
-
     from app.services.compliance_engine import calculate_compliance_score
+
     score = calculate_compliance_score(checks)
-
-    if score >= 90:
-        verdict = "COMPLIANT"
-    elif score >= 60:
-        verdict = "PARTIAL"
-    else:
-        verdict = "NON_COMPLIANT"
-
     check_results = []
-    for c in checks:
+    for check in checks:
         check_results.append({
-            "rule_code": c.rule.rule_code if c.rule else "",
-            "category": c.rule.category.value if c.rule else "",
-            "severity": c.rule.severity.value if c.rule else "",
-            "description": c.rule.description if c.rule else "",
-            "regulation_source": c.rule.regulation_source if c.rule else "",
-            "result": c.result.value,
-            "message": c.message or "",
-            "remediation": c.remediation or "",
-            "actual_value": c.actual_value or "",
+            "rule_code": check.rule.rule_code if check.rule else "",
+            "category": check.rule.category.value if check.rule else "",
+            "severity": check.rule.severity.value if check.rule else "",
+            "description": check.rule.description if check.rule else "",
+            "regulation_source": check.rule.regulation_source if check.rule else "",
+            "result": check.result.value,
+            "message": check.message or "",
+            "remediation": check.remediation or "",
+            "actual_value": check.actual_value or "",
         })
+
+    product = db.query(Product).filter(Product.id == product_id).first()
+    verdict = _build_verdict(score, _critical_failures(check_results))
 
     report = ComplianceReport(
         report_ref=_generate_report_ref(db),
+        account_id=product.account_id if product else None,
         user_id=user_id,
         product_id=product_id,
         label_version_id=label_version_id,
+        checker_session_id=checker_session_id,
         score=score,
         verdict=verdict,
         check_results=check_results,
@@ -95,8 +103,7 @@ def get_or_create_report(
     return report
 
 
-def generate_share_token(db: Session, report: "ComplianceReport") -> str:
-    """Generate a 30-day shareable link token."""
+def generate_share_token(db: Session, report: ComplianceReport) -> str:
     token = secrets.token_urlsafe(32)
     report.share_token = token
     report.share_expires_at = datetime.utcnow() + timedelta(days=30)
@@ -104,29 +111,31 @@ def generate_share_token(db: Session, report: "ComplianceReport") -> str:
     return token
 
 
-def generate_pdf_html(report: "ComplianceReport", product: "Product", brand_name=None, brand_color=None) -> str:
-    """Generate the HTML content for a PDF report."""
-
+def generate_pdf_html(report: ComplianceReport, product: Product, brand_name=None, brand_color=None) -> str:
     _brand_name = brand_name or "RegBite"
     _brand_color = brand_color or "#6366f1"
 
     score = report.score or 0
     verdict = report.verdict or "PENDING"
+    critical_failures = _critical_failures(report.check_results or [])
+    is_certificate = score >= 90 and critical_failures == 0
 
-    # Color based on score
-    if score >= 90:
+    if score >= 90 and critical_failures == 0:
         score_color = "#16a34a"
         score_bg = "#dcfce7"
-    elif score >= 60:
+        verdict_desc = "High overall compliance with no critical failures detected."
+    elif critical_failures == 0 and score >= 60:
         score_color = "#d97706"
         score_bg = "#fef3c7"
+        verdict_desc = "No critical failures were found, but medium and high-priority fixes remain."
     else:
         score_color = "#dc2626"
         score_bg = "#fee2e2"
+        verdict_desc = "Critical failures or major gaps remain before this label can be treated as compliant."
 
     check_rows = ""
-    for cr in (report.check_results or []):
-        result = cr.get("result", "")
+    for check_result in (report.check_results or []):
+        result = check_result.get("result", "")
         if result == "PASS":
             result_icon = "&#10003;"
             result_color = "#16a34a"
@@ -141,42 +150,34 @@ def generate_pdf_html(report: "ComplianceReport", product: "Product", brand_name
             result_bg = "#fef3c7"
 
         remediation_html = ""
-        if cr.get("remediation") and result != "PASS":
-            remediation_html = f'<div style="font-size:10px;color:#6b7280;margin-top:3px;font-style:italic;">Fix: {cr["remediation"][:200]}</div>'
+        if check_result.get("remediation") and result != "PASS":
+            remediation_html = f'<div style="font-size:10px;color:#6b7280;margin-top:3px;font-style:italic;">Fix: {check_result["remediation"][:200]}</div>'
 
         check_rows += f"""
         <tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:11px;color:#374151;">{cr.get('description','')[:80]}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:10px;color:#6b7280;">{cr.get('regulation_source','')[:60]}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:11px;color:#374151;">{check_result.get('description','')[:80]}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;font-size:10px;color:#6b7280;">{check_result.get('regulation_source','')[:60]}</td>
           <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:center;">
             <span style="background:{result_bg};color:{result_color};padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;">{result_icon} {result}</span>
           </td>
           <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">
-            <div style="font-size:10px;color:#374151;">{cr.get('message','')[:120]}</div>
+            <div style="font-size:10px;color:#374151;">{check_result.get('message','')[:120]}</div>
             {remediation_html}
           </td>
         </tr>"""
 
-    is_certificate = score >= 90
     cert_section = ""
     if is_certificate:
         cert_section = f"""
         <div style="margin:24px 0;padding:20px 24px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #16a34a;border-radius:12px;text-align:center;">
           <div style="font-size:28px;margin-bottom:8px;">&#127942;</div>
           <div style="font-size:18px;font-weight:800;color:#15803d;margin-bottom:4px;">COMPLIANCE CERTIFICATE</div>
-          <div style="font-size:12px;color:#166534;">This product has achieved a compliance score of {score}% and meets all critical FSSAI requirements.</div>
+          <div style="font-size:12px;color:#166534;">This label achieved a score of {score}% with zero critical failures. Treat this as an internal readiness signal, not a regulatory approval certificate.</div>
           <div style="margin-top:12px;font-size:11px;color:#4b5563;">Certificate valid for 90 days from generation date · Subject to regulatory amendments</div>
         </div>"""
 
+    generated_str = report.created_at.strftime("%d %b %Y, %H:%M UTC") if report.created_at else "N/A"
     num_checks = len(report.check_results or [])
-    generated_str = report.created_at.strftime('%d %b %Y, %H:%M UTC') if report.created_at else "N/A"
-
-    if score >= 90:
-        verdict_desc = "All critical FSSAI compliance requirements met."
-    elif score >= 60:
-        verdict_desc = "Some requirements need attention before market release."
-    else:
-        verdict_desc = "Multiple critical violations require immediate correction."
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -191,10 +192,9 @@ def generate_pdf_html(report: "ComplianceReport", product: "Product", brand_name
 </head>
 <body>
 <div class="page">
-  <!-- Header -->
   <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:#0f172a;border-radius:10px;margin-bottom:20px;">
     <div>
-      <div style="font-size:20px;font-weight:900;color:#4ade80;letter-spacing:-0.03em;">{_brand_name}</div>
+      <div style="font-size:20px;font-weight:900;color:{_brand_color};letter-spacing:-0.03em;">{_brand_name}</div>
       <div style="font-size:10px;color:#94a3b8;margin-top:2px;">India Nutraceutical Compliance Platform</div>
     </div>
     <div style="text-align:right;">
@@ -203,7 +203,6 @@ def generate_pdf_html(report: "ComplianceReport", product: "Product", brand_name
     </div>
   </div>
 
-  <!-- Product info -->
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;margin-bottom:16px;">
     <div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:8px;">{product.name}</div>
     <div style="display:flex;gap:16px;flex-wrap:wrap;">
@@ -212,7 +211,6 @@ def generate_pdf_html(report: "ComplianceReport", product: "Product", brand_name
     </div>
   </div>
 
-  <!-- Score -->
   <div style="display:flex;gap:16px;margin-bottom:16px;">
     <div style="flex:1;background:{score_bg};border:2px solid {score_color};border-radius:10px;padding:16px 20px;text-align:center;">
       <div style="font-size:42px;font-weight:900;color:{score_color};line-height:1;">{score}%</div>
@@ -221,13 +219,12 @@ def generate_pdf_html(report: "ComplianceReport", product: "Product", brand_name
     <div style="flex:2;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;">
       <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:8px;">Verdict: <span style="color:{score_color};">{verdict.replace('_',' ')}</span></div>
       <div style="font-size:11px;color:#6b7280;line-height:1.6;">{verdict_desc}</div>
-      <div style="font-size:10px;color:#9ca3af;margin-top:8px;">Checked against FSSAI (FSS 2022), Legal Metrology, AYUSH guidelines</div>
+      <div style="font-size:10px;color:#9ca3af;margin-top:8px;">Checked against FSSAI, Legal Metrology, AYUSH guidelines</div>
     </div>
   </div>
 
   {cert_section}
 
-  <!-- Check results table -->
   <div style="margin-bottom:20px;">
     <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;">
       Detailed Compliance Check Results ({num_checks} checks)
@@ -247,12 +244,10 @@ def generate_pdf_html(report: "ComplianceReport", product: "Product", brand_name
     </table>
   </div>
 
-  <!-- Footer disclaimer -->
   <div style="border-top:1px solid #e2e8f0;padding-top:12px;font-size:9px;color:#9ca3af;text-align:center;line-height:1.6;">
     <strong>DISCLAIMER:</strong> This compliance report is generated for informational purposes only and does not constitute legal, regulatory, or professional advice.
     {_brand_name} outputs should be verified against primary regulatory sources before making any business decisions.
-    {_brand_name} is not liable for any regulatory actions taken or not taken on the basis of this report.
-    <br/>Report ID: {report.report_ref} · Platform: {_brand_name} v3.0 · <b>Not a substitute for professional regulatory advice</b>
+    <br/>Report ID: {report.report_ref} · Platform: {_brand_name} v3.0 · <b>Internal readiness aid, not a regulatory approval</b>
   </div>
 </div>
 </body>

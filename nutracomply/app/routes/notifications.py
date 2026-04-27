@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
 from app.models import Notification
+from app.services.alert_service import count_unread_alerts
 
 router = APIRouter()
 
@@ -21,16 +22,6 @@ async def notifications_page(request: Request, db: Session = Depends(get_db)):
         .limit(50)
         .all()
     )
-    # Mark all as read when viewing the page
-    db.query(Notification).filter(
-        Notification.user_id == user.id,
-        Notification.is_read == False,
-    ).update({"is_read": True})
-    db.commit()
-
-    from app.models import Alert, AlertStatus
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
-
     from fastapi.templating import Jinja2Templates
     from pathlib import Path
     templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -38,7 +29,7 @@ async def notifications_page(request: Request, db: Session = Depends(get_db)):
         "request": request,
         "user": user,
         "notifications": notifications,
-        "unread_alerts": unread_alerts,
+        "unread_alerts": count_unread_alerts(db, user),
     })
 
 
@@ -51,6 +42,13 @@ async def mark_read(request: Request, db: Session = Depends(get_db)):
     try:
         body = await request.json()
         nid = int(body.get("id", 0))
+        if nid <= 0:
+            db.query(Notification).filter(
+                Notification.user_id == user.id,
+                Notification.is_read == False,
+            ).update({"is_read": True})
+            db.commit()
+            return JSONResponse({"status": "ok"})
         db.query(Notification).filter(
             Notification.id == nid,
             Notification.user_id == user.id,
@@ -58,4 +56,18 @@ async def mark_read(request: Request, db: Session = Depends(get_db)):
         db.commit()
     except Exception:
         pass
+    return JSONResponse({"status": "ok"})
+
+
+@router.post("/notifications/mark-all-read")
+async def mark_all_read(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    db.query(Notification).filter(
+        Notification.user_id == user.id,
+        Notification.is_read == False,
+    ).update({"is_read": True})
+    db.commit()
     return JSONResponse({"status": "ok"})

@@ -18,6 +18,8 @@ from app.models import (
     AlertType, AlertStatus, CheckResult, Severity, ComplianceReport,
 )
 from app.routes.auth import get_current_user_from_cookie
+from app.services.access_control import can_upload_labels, get_account_contact_user, get_account_id
+from app.services.upload_service import persist_upload_bytes, validate_upload_content
 from app.services.ocr_service import extract_text_from_file
 from app.services.extraction_service import (
     extract_label_data, extract_label_data_from_image, _cross_check_with_ocr,
@@ -57,15 +59,35 @@ def require_user(request: Request, db: Session):
     return user
 
 
+def _owned_product_query(db: Session, user):
+    account_id = get_account_id(user)
+    query = db.query(Product)
+    if account_id:
+        query = query.filter(Product.account_id == account_id)
+    else:
+        query = query.filter(Product.user_id == user.id)
+    return query
+
+
+def _owned_label_query(db: Session, user):
+    account_id = get_account_id(user)
+    query = db.query(LabelVersion).join(Product, LabelVersion.product_id == Product.id)
+    if account_id:
+        query = query.filter(Product.account_id == account_id)
+    else:
+        query = query.filter(Product.user_id == user.id)
+    return query
+
+
 @router.get("/products/{product_id}/upload")
 async def upload_page(product_id: int, request: Request, db: Session = Depends(get_db)):
     user = require_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
+    if not can_upload_labels(user):
+        return RedirectResponse(url="/products?msg=Read-only+role&type=error", status_code=302)
 
-    product = db.query(Product).filter(
-        Product.id == product_id, Product.user_id == user.id
-    ).first()
+    product = _owned_product_query(db, user).filter(Product.id == product_id).first()
     if not product:
         return RedirectResponse(url="/products")
 
@@ -87,6 +109,8 @@ async def upload_label(
     user = require_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
+    if not can_upload_labels(user):
+        return RedirectResponse(url="/products?msg=Read-only+role&type=error", status_code=302)
 
     try:
         from app.services.rate_limiter import limiter
@@ -107,63 +131,20 @@ async def upload_label(
     except Exception:
         pass
 
-    product = db.query(Product).filter(
-        Product.id == product_id, Product.user_id == user.id
-    ).first()
+    product = _owned_product_query(db, user).filter(Product.id == product_id).first()
     if not product:
         return RedirectResponse(url="/products")
-
-    # Validate file extension
-    suffix = Path(file.filename).suffix.lower()
-    if suffix not in ALLOWED_EXTENSIONS:
+    try:
+        content = await file.read()
+        suffix = validate_upload_content(file.filename or "", content)
+        file_path = persist_upload_bytes(settings.upload_dir, str(product_id), suffix, content)
+    except ValueError as exc:
         return templates.TemplateResponse("label_upload.html", {
             "request": request,
             "user": user,
             "product": product,
-            "error": f"Unsupported file type '{suffix}'. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+            "error": str(exc),
         })
-
-    # Read file with size limit (50 MB)
-    MAX_FILE_SIZE = 50 * 1024 * 1024
-    content = await file.read()
-    if len(content) > MAX_FILE_SIZE:
-        return templates.TemplateResponse("label_upload.html", {
-            "request": request,
-            "user": user,
-            "product": product,
-            "error": "File too large. Maximum size is 50 MB."
-        })
-
-    # Validate MIME type via file magic bytes
-    MAGIC_SIGNATURES = {
-        b"\xff\xd8\xff": ".jpg",       # JPEG
-        b"\x89PNG\r\n\x1a\n": ".png",  # PNG
-        b"%PDF": ".pdf",               # PDF
-        b"II\x2a\x00": ".tiff",        # TIFF (little-endian)
-        b"MM\x00\x2a": ".tiff",        # TIFF (big-endian)
-        b"RIFF": ".webp",              # WebP (inside RIFF container)
-    }
-    detected_ext = None
-    for sig, ext in MAGIC_SIGNATURES.items():
-        if content[:len(sig)] == sig:
-            detected_ext = ext
-            break
-    if detected_ext is None:
-        return templates.TemplateResponse("label_upload.html", {
-            "request": request,
-            "user": user,
-            "product": product,
-            "error": "File content doesn't match a supported image or PDF format."
-        })
-
-    # Save file
-    upload_dir = Path(settings.upload_dir) / str(product_id)
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    file_name = f"{uuid.uuid4().hex}{suffix}"
-    file_path = upload_dir / file_name
-
-    with open(file_path, "wb") as f:
-        f.write(content)
 
     # Mark previous versions as not current
     db.query(LabelVersion).filter(
@@ -353,6 +334,7 @@ def _process_label(label_version_id: int):
             if crit or high:
                 score = calculate_compliance_score(checks)
                 alert = Alert(
+                    account_id=product.account_id,
                     product_id=label.product_id,
                     label_version_id=label.id,
                     alert_type=AlertType.LABEL_VIOLATION,
@@ -367,8 +349,7 @@ def _process_label(label_version_id: int):
 
                 try:
                     from app.services.notification import send_alert_email
-                    from app.models import User
-                    owner = db.query(User).filter(User.id == product.user_id).first()
+                    owner = get_account_contact_user(db, product.account_id) or product.owner
                     send_alert_email(alert, product, user=owner)
                 except Exception:
                     pass
@@ -441,9 +422,11 @@ async def reanalyze_label(
     user = require_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
+    if not can_upload_labels(user):
+        return RedirectResponse(url="/products?msg=Read-only+role&type=error", status_code=302)
 
-    label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
-    if not label or not label.product or label.product.user_id != user.id:
+    label = _owned_label_query(db, user).filter(LabelVersion.id == label_id).first()
+    if not label or not label.product:
         return RedirectResponse(url="/products")
 
     force_extract = request.query_params.get("force_extract") == "1"
@@ -490,16 +473,9 @@ async def label_status(label_id: int, request: Request, db: Session = Depends(ge
         return JSONResponse({"ready": False, "failed": False, "step": job.get("step", "")})
 
     # ── No in-memory job → check DB (page refresh after completion) ──
-    row = (
-        db.query(LabelVersion, Product)
-        .join(Product, Product.id == LabelVersion.product_id)
-        .filter(LabelVersion.id == label_id, Product.user_id == user.id)
-        .first()
-    )
-    if not row:
+    label = _owned_label_query(db, user).filter(LabelVersion.id == label_id).first()
+    if not label:
         return JSONResponse({"ready": False, "failed": True, "step": ""})
-
-    label, _ = row
     has_checks = db.query(ComplianceCheck.id).filter(
         ComplianceCheck.label_version_id == label_id
     ).first() is not None
@@ -543,7 +519,11 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
         .filter(LabelVersion.id == label_id)
         .first()
     )
-    if not label or not label.product or label.product.user_id != user.id:
+    if not label or not label.product or (
+        label.product.account_id and label.product.account_id != get_account_id(user)
+    ) or (
+        not label.product.account_id and label.product.user_id != user.id
+    ):
         return RedirectResponse(url="/products")
 
     score = calculate_compliance_score(label.checks) if label.checks else None
@@ -587,8 +567,8 @@ async def label_image(label_id: int, request: Request = None, db: Session = Depe
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
-    if not label or not label.product or label.product.user_id != user.id:
+    label = _owned_label_query(db, user).filter(LabelVersion.id == label_id).first()
+    if not label or not label.product:
         return JSONResponse({"detail": "Label not found"}, status_code=404)
 
     # Resolve bytes: prefer DB, fall back to disk
@@ -639,8 +619,8 @@ async def label_preview_page(label_id: int, page_num: int = 0, request: Request 
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
-    if not label or not label.product or label.product.user_id != user.id:
+    label = _owned_label_query(db, user).filter(LabelVersion.id == label_id).first()
+    if not label or not label.product:
         return JSONResponse({"detail": "Label not found"}, status_code=404)
 
     # Resolve bytes: prefer DB, fall back to disk
@@ -677,9 +657,11 @@ async def update_extraction_fields(label_id: int, request: Request, db: Session 
     user = require_user(request, db)
     if not user:
         return JSONResponse({"detail": "Not authenticated"}, status_code=401)
+    if not can_upload_labels(user):
+        return JSONResponse({"detail": "Read-only role"}, status_code=403)
 
-    label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
-    if not label or not label.product or label.product.user_id != user.id:
+    label = _owned_label_query(db, user).filter(LabelVersion.id == label_id).first()
+    if not label or not label.product:
         return JSONResponse({"detail": "Label not found"}, status_code=404)
 
     try:

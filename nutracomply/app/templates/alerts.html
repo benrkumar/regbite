@@ -25,12 +25,12 @@
 {% endif %}
 
 {% for alert in alerts %}
-<div class="alert-item sev-{{ alert.severity.value }}{% if alert.status.value == 'UNREAD' %} unread{% endif %}">
+<div class="alert-item sev-{{ alert.severity.value }}{% if alert.is_unread %} unread{% endif %}">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem;">
     <div>
       <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
         <strong style="font-size:0.95rem;">{{ alert.title }}</strong>
-        {% if alert.status.value == 'UNREAD' %}<span class="pill pill-new" style="font-size:0.65rem;">NEW</span>{% endif %}
+        {% if alert.is_unread %}<span class="pill pill-new" style="font-size:0.65rem;">NEW</span>{% endif %}
       </div>
       <small>{{ alert.alert_type.value.replace('_',' ') }} &middot; {{ alert.created_at.strftime('%d %b %Y, %H:%M') }}{% if alert.product %} &middot; {{ alert.product.name }}{% endif %}</small>
     </div>
@@ -57,7 +57,7 @@
     {% if alert.label_version_id %}
     <a href="/labels/{{ alert.label_version_id }}" class="btn btn-outline btn-sm">View Report</a>
     {% endif %}
-    {% if alert.status.value != 'RESOLVED' %}
+    {% if can_update_alerts and alert.status.value != 'RESOLVED' %}
     <form method="post" action="/alerts/{{ alert.id }}/status" style="display:inline;">
       <input type="hidden" name="status" value="IN_PROGRESS" />
       <button type="submit" class="btn btn-ghost btn-sm">In Progress</button>
@@ -66,8 +66,10 @@
       <input type="hidden" name="status" value="RESOLVED" />
       <button type="submit" class="btn btn-success btn-sm">&#x2713; Resolve</button>
     </form>
-    {% else %}
+    {% elif alert.status.value == 'RESOLVED' %}
     <span style="font-size:0.82rem;color:var(--success-fg);">&#x2713; Resolved {{ alert.resolved_at.strftime('%d %b %Y') if alert.resolved_at else '' }}</span>
+    {% else %}
+    <span style="font-size:0.82rem;color:var(--gray-500);">Read-only role</span>
     {% endif %}
   </div>
 </div>

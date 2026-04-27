@@ -1,26 +1,29 @@
 """
-Form-First Compliance Checker
-Allows users to input product details manually or upload a label image
-and run a compliance check without needing to create a product first.
+Workspace-authenticated compliance checker with ephemeral checker sessions.
 """
-import uuid
+from __future__ import annotations
+
 from datetime import datetime
-from fastapi import APIRouter, Request, Depends, Form, UploadFile, File
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from pathlib import Path
 
-from app.database import get_db
-from app.routes.auth import get_current_user_from_cookie
-from app.models import (
-    Product, LabelVersion, ComplianceRule, ComplianceCheck, CheckResult,
-    Alert, AlertStatus
-)
 from app.config import get_settings
+from app.database import get_db
+from app.models import CheckerSession, ComplianceCheck, ComplianceRule, LabelVersion, Product, CheckResult
+from app.routes.auth import get_current_user_from_cookie
+from app.routes.labels import _process_label
+from app.services.access_control import can_mutate_products, can_run_checker, get_account_id
+from app.services.alert_service import count_unread_alerts
+from app.services.quota_service import check_product_limit, check_scan_limit
+from app.services.upload_service import persist_upload_bytes, validate_upload_content
 
 router = APIRouter(prefix="/checker")
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+settings = get_settings()
 
 PRODUCT_CATEGORIES = [
     "Health Supplement",
@@ -47,18 +50,61 @@ TARGET_GROUPS = [
 ]
 
 
+def _require_checker_user(request: Request, db: Session):
+    user = get_current_user_from_cookie(request, db)
+    if not user or not can_run_checker(user):
+        return None
+    return user
+
+
+def _get_checker_user(request: Request, db: Session):
+    return get_current_user_from_cookie(request, db)
+
+
+def _session_query(db: Session, user):
+    account_id = get_account_id(user)
+    query = db.query(CheckerSession)
+    if account_id:
+        query = query.filter(CheckerSession.account_id == account_id)
+    else:
+        query = query.filter(CheckerSession.user_id == user.id)
+    return query
+
+
+def _create_session_record(db: Session, user, product: Product, label: LabelVersion | None, source_type: str, input_payload: dict) -> CheckerSession:
+    session = CheckerSession(
+        account_id=get_account_id(user),
+        user_id=user.id,
+        product_id=product.id if product else None,
+        label_version_id=label.id if label else None,
+        source_type=source_type,
+        input_payload=input_payload,
+    )
+    db.add(session)
+    db.flush()
+    return session
+
+
 @router.get("")
 async def checker_form(request: Request, db: Session = Depends(get_db)):
-    user = get_current_user_from_cookie(request, db)
+    user = _get_checker_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
-
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    if not can_run_checker(user):
+        return templates.TemplateResponse("permission_denied.html", {
+            "request": request,
+            "user": user,
+            "unread_alerts": count_unread_alerts(db, user),
+            "denied_title": "Checker access is limited to editing roles",
+            "denied_message": "Your role can review existing reports, but only editors and account admins can run new checker sessions.",
+            "back_url": "/reports",
+            "back_label": "Back to Reports",
+        }, status_code=403)
 
     return templates.TemplateResponse("checker.html", {
         "request": request,
         "user": user,
-        "unread_alerts": unread_alerts,
+        "unread_alerts": count_unread_alerts(db, user),
         "categories": PRODUCT_CATEGORIES,
         "target_groups": TARGET_GROUPS,
         "flash_message": request.query_params.get("msg"),
@@ -86,33 +132,29 @@ async def run_check(
     has_consult_doctor: str = Form(""),
     db: Session = Depends(get_db),
 ):
-    user = get_current_user_from_cookie(request, db)
+    user = _get_checker_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
+    if not can_run_checker(user):
+        return RedirectResponse(
+            url="/reports?msg=Your+role+can+review+reports+but+cannot+run+new+checker+sessions.&type=error",
+            status_code=302,
+        )
 
     try:
         from app.services.rate_limiter import limiter
         client_ip = request.client.host if request.client else "unknown"
-        allowed, retry_after = limiter.check("checker", client_ip, limit=20, window=3600)  # 20/hr
+        allowed, retry_after = limiter.check("checker", client_ip, limit=20, window=3600)
         if not allowed:
-            return RedirectResponse(url=f"/checker?error=Rate+limit+exceeded.+Try+again+in+{retry_after}+seconds.", status_code=302)
+            return RedirectResponse(
+                url=f"/checker?msg=Rate+limit+exceeded.+Try+again+in+{retry_after}+seconds.&type=error",
+                status_code=302,
+            )
     except Exception:
         pass
 
-    # Quota check
-    try:
-        from app.services.quota_service import check_scan_limit
-        allowed, quota_msg = check_scan_limit(user, db)
-        if not allowed:
-            from urllib.parse import quote
-            return RedirectResponse(url=f"/checker?msg={quote(quota_msg)}&type=error", status_code=302)
-    except Exception:
-        pass
-
-    # Build extraction_json from form data (same structure as OCR extraction)
-    ingredient_list = [i.strip() for i in ingredients.split(",") if i.strip()]
-    health_claims = [c.strip() for c in label_claims.split(",") if c.strip()] if label_claims else []
-
+    ingredient_list = [item.strip() for item in ingredients.split(",") if item.strip()]
+    health_claims = [item.strip() for item in label_claims.split(",") if item.strip()] if label_claims else []
     extraction_json = {
         "product_name": product_name,
         "product_type_declaration": "HEALTH SUPPLEMENT",
@@ -139,12 +181,13 @@ async def run_check(
         "not_exceed_daily_usage_advisory": True,
     }
 
-    # Create Product + LabelVersion + run compliance
     product = Product(
+        account_id=get_account_id(user),
         user_id=user.id,
         name=product_name,
         category=category,
-        description=f"Checked via Compliance Checker on {datetime.utcnow().strftime('%d %b %Y')}",
+        description=f"Ephemeral checker session created on {datetime.utcnow().strftime('%d %b %Y')}",
+        is_temporary=True,
     )
     db.add(product)
     db.flush()
@@ -162,45 +205,34 @@ async def run_check(
     db.add(label)
     db.flush()
 
-    # Run compliance engine
+    session = _create_session_record(db, user, product, label, "manual", extraction_json)
+
     try:
         from app.services.compliance_engine import run_compliance_check
         run_compliance_check(label, db)
-    except Exception as e:
-        print(f"[checker] Compliance engine error: {e}")
-        # Fall back to basic rule checking
+    except Exception as exc:
+        print(f"[checker] Compliance engine error: {exc}")
         _run_basic_checks(label, extraction_json, db)
 
     db.commit()
     db.refresh(label)
 
-    # Feed into LLM knowledge base
-    try:
-        from app.routes.products import _feed_product_to_llm
-        _feed_product_to_llm(product.id, db)
-    except Exception as e:
-        print(f"[checker] LLM feed error: {e}")
-
     try:
         from app.services.activity_service import log_action
-        log_action(user.id, "compliance_checked", "product", product.id, detail=f"Checker run for {product_name}")
+        log_action(user.id, "compliance_checked", "checker_session", session.id, detail=f"Checker run for {product_name}")
     except Exception:
         pass
 
-    # Generate report
     try:
         from app.services.report_service import get_or_create_report
         _ = label.checks
-        for c in label.checks:
-            _ = c.rule
-        report = get_or_create_report(db, user.id, product.id, label.id)
+        for check in label.checks:
+            _ = check.rule
+        report = get_or_create_report(db, user.id, product.id, label.id, checker_session_id=session.id)
         return RedirectResponse(url=f"/reports/{report.id}", status_code=302)
-    except Exception as e:
-        print(f"[checker] Report generation error: {e}")
+    except Exception as exc:
+        print(f"[checker] Report generation error: {exc}")
         return RedirectResponse(url=f"/labels/{label.id}", status_code=302)
-
-
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".pdf", ".webp"}
 
 
 @router.post("/upload")
@@ -210,151 +242,166 @@ async def upload_check(
     category: str = Form("Health Supplement"),
     db: Session = Depends(get_db),
 ):
-    """Upload a label image/PDF, run Vision extraction + compliance check."""
-    user = get_current_user_from_cookie(request, db)
+    user = _get_checker_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
+    if not can_run_checker(user):
+        return RedirectResponse(
+            url="/reports?msg=Your+role+can+review+reports+but+cannot+run+new+checker+sessions.&type=error",
+            status_code=302,
+        )
 
     try:
         from app.services.rate_limiter import limiter
         client_ip = request.client.host if request.client else "unknown"
         allowed, retry_after = limiter.check("checker_upload", client_ip, limit=15, window=3600)
         if not allowed:
-            return RedirectResponse(url="/?error=Rate+limit+exceeded", status_code=302)
+            return RedirectResponse(
+                url=f"/checker?msg=Rate+limit+exceeded.+Try+again+in+{retry_after}+seconds.&type=error",
+                status_code=302,
+            )
     except Exception:
         pass
 
-    # Quota check
     try:
-        from app.services.quota_service import check_scan_limit
-        allowed, quota_msg = check_scan_limit(user, db)
-        if not allowed:
-            from urllib.parse import quote
-            return RedirectResponse(url=f"/?error={quote(quota_msg)}", status_code=302)
-    except Exception:
-        pass
+        content = await file.read()
+        suffix = validate_upload_content(file.filename or "", content)
+    except ValueError as exc:
+        return RedirectResponse(url=f"/checker?msg={str(exc).replace(' ', '+')}&type=error", status_code=302)
 
-    # Validate file
-    suffix = Path(file.filename).suffix.lower()
-    if suffix not in ALLOWED_EXTENSIONS:
-        return RedirectResponse(url="/?error=Unsupported+file+type", status_code=302)
-
-    content = await file.read()
-    if len(content) > 50 * 1024 * 1024:
-        return RedirectResponse(url="/?error=File+too+large", status_code=302)
-
-    # Save file
-    settings = get_settings()
-    upload_dir = Path(settings.upload_dir) / "checker"
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    file_name = f"{uuid.uuid4().hex}{suffix}"
-    file_path = upload_dir / file_name
-
-    with open(file_path, "wb") as f:
-        f.write(content)
-
-    # Create product + label version
     product = Product(
+        account_id=get_account_id(user),
         user_id=user.id,
         name=file.filename.rsplit(".", 1)[0][:80] or "Uploaded Label",
         category=category,
-        description=f"Label uploaded via Quick Check on {datetime.utcnow().strftime('%d %b %Y')}",
+        description=f"Ephemeral checker upload on {datetime.utcnow().strftime('%d %b %Y')}",
+        is_temporary=True,
     )
     db.add(product)
     db.flush()
 
+    file_path = persist_upload_bytes(settings.upload_dir, f"checker/{product.id}", suffix, content)
     label = LabelVersion(
         product_id=product.id,
         file_path=str(file_path),
         file_name=file.filename,
         file_type="pdf" if suffix == ".pdf" else "image",
         is_current=True,
+        file_data=content,
     )
     db.add(label)
+    db.flush()
+
+    session = _create_session_record(db, user, product, label, "upload", {"filename": file.filename, "category": category})
     db.commit()
     db.refresh(label)
 
-    # Run OCR + extraction + compliance in background via the same pipeline as /products upload
     try:
-        from app.routes.labels import _process_label
         _process_label(label.id)
-    except Exception as e:
-        print(f"[checker/upload] Processing error: {e}")
+    except Exception as exc:
+        print(f"[checker/upload] Processing error: {exc}")
 
-    # Try to generate report
     try:
         db.refresh(label)
         from app.services.report_service import get_or_create_report
         _ = label.checks
-        for c in label.checks:
-            _ = c.rule
-        report = get_or_create_report(db, user.id, product.id, label.id)
+        for check in label.checks:
+            _ = check.rule
+        report = get_or_create_report(db, user.id, product.id, label.id, checker_session_id=session.id)
         return RedirectResponse(url=f"/reports/{report.id}", status_code=302)
-    except Exception as e:
-        print(f"[checker/upload] Report error: {e}")
+    except Exception as exc:
+        print(f"[checker/upload] Report error: {exc}")
         return RedirectResponse(url=f"/labels/{label.id}", status_code=302)
 
 
+@router.post("/sessions/{session_id}/promote")
+async def promote_checker_session(session_id: int, request: Request, db: Session = Depends(get_db)):
+    user = _get_checker_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+    if not can_run_checker(user):
+        return RedirectResponse(
+            url="/reports?msg=Your+role+can+review+reports+but+cannot+promote+checker+sessions.&type=error",
+            status_code=302,
+        )
+    if not can_mutate_products(user):
+        return RedirectResponse(url="/reports?msg=Read-only+role&type=error", status_code=302)
+
+    session = _session_query(db, user).filter(CheckerSession.id == session_id).first()
+    if not session or not session.product:
+        return RedirectResponse(url="/reports?msg=Checker+session+not+found&type=error", status_code=302)
+    if session.promoted_at:
+        return RedirectResponse(url=f"/products/{session.promoted_product_id or session.product_id}", status_code=302)
+
+    allowed_product, product_msg = check_product_limit(user, db)
+    if not allowed_product:
+        return RedirectResponse(url=f"/reports?msg={product_msg.replace(' ', '+')}&type=error", status_code=302)
+    allowed_scan, scan_msg = check_scan_limit(user, db)
+    if not allowed_scan:
+        return RedirectResponse(url=f"/reports?msg={scan_msg.replace(' ', '+')}&type=error", status_code=302)
+
+    session.product.is_temporary = False
+    session.promoted_product_id = session.product.id
+    session.promoted_at = datetime.utcnow()
+    db.commit()
+
+    try:
+        from app.routes.products import _feed_product_to_llm
+        _feed_product_to_llm(session.product.id, db)
+    except Exception:
+        pass
+
+    return RedirectResponse(url=f"/products/{session.product.id}", status_code=302)
+
+
 def _run_basic_checks(label: LabelVersion, extraction: dict, db: Session):
-    """Basic rule-based checks when the main compliance engine fails."""
     rules = db.query(ComplianceRule).filter(ComplianceRule.active == True).all()
 
     for rule in rules:
         result = CheckResult.PASS
-        msg = "Check passed"
+        message = "Check passed"
         remediation = ""
-
         code = rule.rule_code
 
-        # Check FSSAI license
         if "LBL-003" in code or "LBL-001" in code:
-            fssai = extraction.get("fssai_license_number")
-            if not fssai:
+            if not extraction.get("fssai_license_number"):
                 result = CheckResult.FAIL
-                msg = "FSSAI license number is missing"
+                message = "FSSAI license number is missing"
                 remediation = rule.remediation_template or "Add valid FSSAI license number"
-
-        # Check mandatory label elements
         elif "LBL-002" in code:
             if not extraction.get("not_for_medicinal_use"):
                 result = CheckResult.FAIL
-                msg = "'NOT FOR MEDICINAL USE' declaration is missing"
+                message = "'NOT FOR MEDICINAL USE' declaration is missing"
                 remediation = rule.remediation_template or ""
-
         elif "LBL-005" in code:
             if not extraction.get("net_quantity"):
                 result = CheckResult.FAIL
-                msg = "Net quantity declaration is missing"
+                message = "Net quantity declaration is missing"
                 remediation = rule.remediation_template or ""
-
         elif "LBL-007" in code:
             if not extraction.get("nutritional_table"):
                 result = CheckResult.WARNING
-                msg = "Nutritional information table not provided"
+                message = "Nutritional information table not provided"
                 remediation = rule.remediation_template or ""
-
         elif "LBL-008" in code:
             if not extraction.get("rda_percentages"):
                 result = CheckResult.WARNING
-                msg = "%RDA values not declared in nutritional table"
+                message = "%RDA values not declared in nutritional table"
                 remediation = rule.remediation_template or ""
-
         elif "LBL-011" in code:
             if not extraction.get("expiry_date"):
                 result = CheckResult.FAIL
-                msg = "Best before / expiry date is missing"
+                message = "Best before / expiry date is missing"
                 remediation = rule.remediation_template or ""
-
         elif "LBL-013" in code:
             if not extraction.get("batch_number"):
                 result = CheckResult.WARNING
-                msg = "Batch/lot number is missing"
+                message = "Batch/lot number is missing"
                 remediation = rule.remediation_template or ""
-
         elif "LBL-017" in code:
             if not extraction.get("manufacturing_date"):
                 result = CheckResult.WARNING
-                msg = "Manufacturing date is missing"
+                message = "Manufacturing date is missing"
                 remediation = rule.remediation_template or ""
 
         db.add(ComplianceCheck(
@@ -362,7 +409,7 @@ def _run_basic_checks(label: LabelVersion, extraction: dict, db: Session):
             rule_id=rule.id,
             result=result,
             actual_value=None if result == CheckResult.PASS else "Missing",
-            message=msg,
+            message=message,
             remediation=remediation,
             checked_at=datetime.utcnow(),
         ))

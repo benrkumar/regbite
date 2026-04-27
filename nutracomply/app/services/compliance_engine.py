@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-from app.models import ComplianceRule, ComplianceCheck, LabelVersion, CheckType, CheckResult, Severity
+from app.models import ComplianceRule, ComplianceCheck, LabelVersion, CheckType, CheckResult, Severity, RuleFramework
 
 # Severity weights for compliance scoring — not all rules are equal
 SEVERITY_WEIGHTS = {
@@ -24,6 +24,76 @@ SEVERITY_WEIGHTS = {
     Severity.MEDIUM: 2,
     Severity.LOW: 1,
 }
+
+
+def _normalize_text(value) -> str:
+    return str(value or "").lower().strip()
+
+
+def _normalize_tokens(values) -> set[str]:
+    return {
+        _normalize_text(value).replace("_", " ").replace("-", " ")
+        for value in (values or [])
+        if _normalize_text(value)
+    }
+
+
+def _rule_applies(rule: ComplianceRule, extraction: dict, product_category: str) -> bool:
+    product_category_norm = _normalize_text(product_category).replace("_", " ").replace("-", " ")
+    claims_text = " ".join(_normalize_text(item) for item in (extraction.get("health_claims") or []))
+    target_consumer = _normalize_text(extraction.get("target_consumer"))
+    dosage_form = _normalize_text(
+        extraction.get("dosage_form")
+        or extraction.get("net_quantity")
+        or extraction.get("product_type_declaration")
+    )
+    country = _normalize_text(extraction.get("country_of_origin"))
+    is_imported = bool(country and "india" not in country)
+    is_ayurvedic = "ayurvedic" in product_category_norm or "asu" in product_category_norm or "ayur" in claims_text
+
+    if rule.applicable_product_classes and not any(
+        token in product_category_norm for token in _normalize_tokens(rule.applicable_product_classes)
+    ):
+        return False
+    if rule.applicable_claim_classes and not any(
+        token in claims_text for token in _normalize_tokens(rule.applicable_claim_classes)
+    ):
+        return False
+    if rule.applicable_target_groups and not any(
+        token in target_consumer for token in _normalize_tokens(rule.applicable_target_groups)
+    ):
+        return False
+    if rule.applicable_dosage_forms and not any(
+        token in dosage_form for token in _normalize_tokens(rule.applicable_dosage_forms)
+    ):
+        return False
+
+    import_scope = _normalize_text(rule.applicable_import_scope)
+    if import_scope == "imported" and not is_imported:
+        return False
+    if import_scope == "domestic" and is_imported:
+        return False
+
+    exception_flags = _normalize_tokens(rule.exception_flags)
+    if exception_flags:
+        normalized_extraction = {
+            _normalize_text(key).replace("_", " ").replace("-", " "): value
+            for key, value in extraction.items()
+        }
+        if any(bool(normalized_extraction.get(flag)) for flag in exception_flags):
+            return False
+
+    if rule.framework == RuleFramework.AYUSH:
+        return is_ayurvedic
+    if rule.framework == RuleFramework.DGFT:
+        return is_imported
+
+    code = rule.rule_code or ""
+    if code.startswith("AYUSH-"):
+        return is_ayurvedic
+    if code.startswith("DGFT-"):
+        return is_imported
+    return True
 
 
 def run_compliance_check(label_version: LabelVersion, db: Session) -> list[ComplianceCheck]:
@@ -60,6 +130,32 @@ def run_compliance_check(label_version: LabelVersion, db: Session) -> list[Compl
         rules.append(rule)
 
     # Delete previous checks for this label version
+    db.query(ComplianceCheck).filter(
+        ComplianceCheck.label_version_id == label_version.id
+    ).delete()
+
+    checks = []
+    for rule in rules:
+        check = _evaluate_rule(rule, extraction, label_version.id)
+        db.add(check)
+        checks.append(check)
+
+    db.commit()
+    return checks
+
+
+def run_compliance_check(label_version: LabelVersion, db: Session) -> list[ComplianceCheck]:
+    """
+    Runs all active rules that apply to the extracted label context.
+
+    Applicability now uses structured rule metadata first and falls back to
+    legacy code prefixes only when structured fields are absent.
+    """
+    extraction = label_version.extraction_json or {}
+    all_rules = db.query(ComplianceRule).filter(ComplianceRule.active).all()
+    product_category = label_version.product.category or ""
+    rules = [rule for rule in all_rules if _rule_applies(rule, extraction, product_category)]
+
     db.query(ComplianceCheck).filter(
         ComplianceCheck.label_version_id == label_version.id
     ).delete()

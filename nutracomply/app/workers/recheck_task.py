@@ -83,7 +83,11 @@ def recheck_all_labels(self):
                 db.commit()
 
                 try:
-                    owner = db.query(User).filter(User.id == product.user_id).first() if product else None
+                    from app.services.access_control import get_account_contact_user
+
+                    owner = (
+                        get_account_contact_user(db, product.account_id) if product else None
+                    ) or (product.owner if product else None)
                     send_alert_email(alert, product, user=owner)
                 except Exception as e:
                     print(f"[recheck] Email failed: {e}")

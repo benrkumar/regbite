@@ -14,6 +14,7 @@ import nh3
 
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
+from app.services.access_control import is_platform_admin, sync_user_role_flags
 from app.models import (
     BlogPost, BlogCategory, BlogPostStatus,
     Alert, AlertStatus,
@@ -55,7 +56,8 @@ def _require_admin(request: Request, db: Session):
     user = get_current_user_from_cookie(request, db)
     if not user:
         return None, RedirectResponse(url="/login", status_code=302)
-    if not user.is_admin:
+    sync_user_role_flags(user)
+    if not is_platform_admin(user):
         return None, RedirectResponse(url="/dashboard")
     return user, None
 

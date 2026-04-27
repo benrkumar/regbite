@@ -5,6 +5,7 @@ from functools import lru_cache
 class Settings(BaseSettings):
     app_name: str = "RegBite"
     debug: bool = False
+    environment: str = "development"
 
     # Database
     database_url: str = "postgresql://regbite:regbite@localhost:5432/regbite"
@@ -16,6 +17,9 @@ class Settings(BaseSettings):
     secret_key: str = "change-this-secret"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 120
+    public_base_url: str = "http://127.0.0.1:8000"
+    enable_demo_data: bool = False
+    show_demo_login_hints: bool = False
 
     # Gemini
     gemini_api_key: str = ""

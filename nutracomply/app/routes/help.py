@@ -9,7 +9,7 @@ from pathlib import Path
 
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
-from app.models import Alert, AlertStatus
+from app.services.alert_service import count_unread_alerts
 
 router = APIRouter(prefix="/help")
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -81,7 +81,7 @@ def _get_user_faq_categories(role_value: str) -> list[str]:
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 
-@router.get("")
+@router.get("/hub")
 async def help_hub(request: Request, db: Session = Depends(get_db)):
     """Documentation index — cards linking to each section."""
     user = get_current_user_from_cookie(request, db)
@@ -90,13 +90,12 @@ async def help_hub(request: Request, db: Session = Depends(get_db)):
 
     role = user.role.value if user.role else "account_admin"
     sections = _get_user_sections(role)
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
-
     return templates.TemplateResponse("help/hub.html", {
         "request": request,
         "user": user,
         "sections": sections,
-        "unread_alerts": unread_alerts,
+        "active_section": "hub",
+        "unread_alerts": count_unread_alerts(db, user),
     })
 
 
@@ -110,15 +109,13 @@ async def help_faq(request: Request, db: Session = Depends(get_db)):
     role = user.role.value if user.role else "account_admin"
     sections = _get_user_sections(role)
     faq_categories = _get_user_faq_categories(role)
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
-
     return templates.TemplateResponse("help/faq.html", {
         "request": request,
         "user": user,
         "sections": sections,
         "faq_categories": faq_categories,
         "active_section": "faq",
-        "unread_alerts": unread_alerts,
+        "unread_alerts": count_unread_alerts(db, user),
     })
 
 
@@ -136,7 +133,6 @@ async def help_section(section: str, request: Request, db: Session = Depends(get
         return RedirectResponse(url="/help")
 
     sections = _get_user_sections(role)
-    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
 
     # Map slug to template filename (hyphens → underscores)
     template_name = f"help/{section.replace('-', '_')}.html"
@@ -146,5 +142,5 @@ async def help_section(section: str, request: Request, db: Session = Depends(get
         "user": user,
         "sections": sections,
         "active_section": section,
-        "unread_alerts": unread_alerts,
+        "unread_alerts": count_unread_alerts(db, user),
     })

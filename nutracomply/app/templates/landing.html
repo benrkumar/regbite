@@ -315,8 +315,9 @@
         wellness brands
       </h1>
       <p class="hero-sub">
-        Upload a product label or paste your ingredients — get instant compliance analysis against FSSAI, Legal Metrology, and AYUSH regulations. Powered by AI.
+        Sign in once, then upload a product label or paste ingredients to run workspace-tracked compliance analysis against FSSAI, Legal Metrology, and AYUSH regulations.
       </p>
+      <div style="font-size:0.8rem;color:var(--g400);margin:-0.9rem 0 1.4rem;">Quick Checker access requires sign-in so scans stay inside your workspace and can be promoted into tracked products.</div>
       <div class="hero-ctas">
         <a href="/register" class="btn btn-primary btn-xl">Start Free &rarr;</a>
         <a href="#how-it-works" class="btn btn-ghost btn-xl">See How It Works</a>
@@ -331,8 +332,9 @@
     <!-- Hero Checker -->
     <div class="hero-checker">
       <div class="hc-title">Quick Compliance Check</div>
-      <div class="hc-sub">Upload a label or enter details manually — instant FSSAI analysis.</div>
+      <div class="hc-sub">Run a signed-in label or manual check inside your shared workspace.</div>
 
+      <div style="font-size:0.72rem;color:var(--g400);margin-bottom:0.9rem;">Sign in is required before any upload or manual check will run.</div>
       <div class="hc-tabs">
         <button class="hc-tab active" onclick="switchCheckerTab('upload')" type="button">&#9650; Upload Label</button>
         <button class="hc-tab" onclick="switchCheckerTab('manual')" type="button">&#9998; Enter Manually</button>
@@ -340,7 +342,7 @@
 
       <!-- Upload Panel -->
       <div class="hc-panel active" id="hc-upload-panel">
-        <form method="post" action="/checker/upload" enctype="multipart/form-data" id="hc-upload-form">
+        <form method="post" action="/checker/upload" enctype="multipart/form-data" id="hc-upload-form" onsubmit="window.location='/login';return false;">
           <div class="hc-upload-zone" id="hc-drop-zone"
                ondragover="event.preventDefault();this.classList.add('dragover')"
                ondragleave="this.classList.remove('dragover')"
@@ -366,14 +368,14 @@
               <option value="Weight Management">Weight Management</option>
             </select>
           </div>
-          <button type="submit" class="hc-submit" style="margin-top:1rem;" id="hc-upload-btn" disabled>Upload &amp; Analyze &rarr;</button>
-          <div class="hc-footer">AI Vision extracts label data automatically, then runs full compliance analysis</div>
+          <button type="submit" class="hc-submit" style="margin-top:1rem;" id="hc-upload-btn" disabled>Sign In to Analyze &rarr;</button>
+          <div class="hc-footer">AI Vision extracts label data into a checker session that can later be promoted into a tracked product.</div>
         </form>
       </div>
 
       <!-- Manual Panel -->
       <div class="hc-panel" id="hc-manual-panel">
-        <form method="post" action="/checker/run">
+        <form method="post" action="/checker/run" onsubmit="window.location='/login';return false;">
           <div class="hc-row">
             <div class="hc-field">
               <label class="hc-label">Product Name</label>
@@ -407,8 +409,8 @@
             </div>
           </div>
           <input type="hidden" name="manufacturing_origin" value="India" />
-          <button type="submit" class="hc-submit">Analyze Compliance &rarr;</button>
-          <div class="hc-footer">Checks across FSSAI, Legal Metrology, AYUSH, BIS &amp; DGFT frameworks</div>
+          <button type="submit" class="hc-submit">Sign In to Analyze &rarr;</button>
+          <div class="hc-footer">Checks across FSSAI, Legal Metrology, AYUSH, BIS &amp; DGFT frameworks inside your authenticated workspace.</div>
         </form>
       </div>
     </div>
@@ -506,7 +508,7 @@
       <div class="feat-card">
         <div class="feat-icon">◎</div>
         <h3>AI Label Scanner</h3>
-        <p>Upload a label image and get instant compliance analysis. Gemini Vision reads the label directly — no manual data entry needed.</p>
+        <p>Sign in, upload a label image, and keep the extracted evidence, report, and follow-up actions inside your workspace.</p>
       </div>
       <div class="feat-card">
         <div class="feat-icon">≡</div>

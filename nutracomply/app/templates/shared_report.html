@@ -42,18 +42,18 @@
 
   <!-- Score + Verdict -->
   {% set score = report.score or 0 %}
-  {% if score >= 90 %}
+  {% if score >= 90 and critical_failures == 0 %}
     {% set sc = '#262626' %}
     {% set sb = '#F5F5F5' %}
-    {% set sd = 'All critical FSSAI compliance requirements met.' %}
-  {% elif score >= 60 %}
+    {% set sd = 'No critical failures detected. This is a strong internal readiness signal, not legal approval.' %}
+  {% elif score >= 60 and critical_failures == 0 %}
     {% set sc = '#525252' %}
     {% set sb = '#F5F5F5' %}
-    {% set sd = 'Some requirements need attention before market release.' %}
+    {% set sd = 'Core requirements look healthy, but the label still needs review before market release.' %}
   {% else %}
     {% set sc = '#111111' %}
     {% set sb = '#EBEBEB' %}
-    {% set sd = 'Multiple critical violations require immediate correction.' %}
+    {% set sd = 'Critical or material failures were detected. Treat this report as a remediation list, not a clearance signal.' %}
   {% endif %}
 
   <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;margin-bottom:16px;">
@@ -66,17 +66,17 @@
         Verdict: <span style="color:{{ sc }};">{{ (report.verdict or 'PENDING').replace('_', ' ') }}</span>
       </div>
       <div style="font-size:0.85rem;color:#737373;line-height:1.6;">{{ sd }}</div>
-      <div style="font-size:0.73rem;color:#A3A3A3;margin-top:8px;">Checked against FSSAI (FSS 2022), Legal Metrology, AYUSH guidelines</div>
+      <div style="font-size:0.73rem;color:#A3A3A3;margin-top:8px;">{{ critical_failures }} critical failure{{ '' if critical_failures == 1 else 's' }} detected across the active rule set.</div>
     </div>
   </div>
 
   <!-- Certificate -->
-  {% if score >= 90 %}
+  {% if score >= 90 and critical_failures == 0 %}
   <div style="background:linear-gradient(135deg,#F5F5F5,#F5F5F5);border:2px solid #262626;border-radius:14px;padding:22px;margin-bottom:16px;text-align:center;">
     <div style="display:flex;justify-content:center;margin-bottom:8px;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg></div>
     <div style="font-size:1.1rem;font-weight:800;color:#262626;margin-bottom:6px;">COMPLIANCE CERTIFICATE</div>
-    <div style="font-size:0.85rem;color:#262626;max-width:460px;margin:0 auto;">This product has achieved a compliance score of {{ score }}% and meets all critical FSSAI requirements.</div>
-    <div style="margin-top:10px;font-size:0.73rem;color:#525252;">Certificate valid for 90 days from generation date · Subject to regulatory amendments</div>
+    <div style="font-size:0.85rem;color:#262626;max-width:460px;margin:0 auto;">This product achieved a score of {{ score }}% with zero critical failures. Use this as an internal readiness signal pending human review.</div>
+    <div style="margin-top:10px;font-size:0.73rem;color:#525252;">Internal certificate snapshot generated on {{ report.created_at.strftime('%d %b %Y') if report.created_at else 'N/A' }}. Re-run the check before relying on it for release decisions.</div>
   </div>
   {% endif %}
 

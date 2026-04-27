@@ -40,6 +40,22 @@
   text-decoration: none; margin-top: 0.35rem;
 }
 .notif-link-btn:hover { text-decoration: underline; }
+.notif-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.45rem;
+}
+.notif-action-btn {
+  border: 1px solid var(--border, #EBEBEB);
+  background: #fff;
+  color: #404040;
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
 .page-hdr {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.5rem;
@@ -51,7 +67,8 @@
 <div class="page-hdr">
   <div>
     <h2 style="display:flex;align-items:center;gap:0.45rem;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Notifications</h2>
-    <p>{{ notifications | length }} notification{{ 's' if notifications | length != 1 }} total &mdash; all marked as read on this visit</p>
+    {% set unread_count = notifications | selectattr('is_read', 'equalto', false) | list | length %}
+    <p>{{ notifications | length }} notification{{ 's' if notifications | length != 1 }} total{% if unread_count %} &mdash; {{ unread_count }} unread{% endif %}</p>
   </div>
   {% if notifications %}
   <form method="post" action="/notifications/mark-read" id="mark-all-form" style="margin:0;">
@@ -84,11 +101,18 @@
       <div class="notif-time">
         {{ n.created_at.strftime('%d %b %Y, %H:%M') if n.created_at else '' }}
       </div>
-      {% if n.link %}
-      <a href="{{ n.link }}" class="notif-link-btn">
-        View &#8594;
-      </a>
-      {% endif %}
+      <div class="notif-actions">
+        {% if n.link %}
+        <a href="{{ n.link }}" class="notif-link-btn" onclick="markNotificationRead({{ n.id }})">
+          View &#8594;
+        </a>
+        {% endif %}
+        {% if not n.is_read %}
+        <button type="button" class="notif-action-btn" onclick="markNotificationRead({{ n.id }})">
+          Mark read
+        </button>
+        {% endif %}
+      </div>
     </div>
   </div>
   {% endfor %}
@@ -106,15 +130,43 @@
 {% endif %}
 
 <script>
-function markAllRead() {
+function getCsrfToken() {
+  var match = document.cookie.match(/(?:^|;\s*)_csrf=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+function updateNotificationCard(id) {
+  var card = document.getElementById('notif-' + id);
+  if (!card) return;
+  card.classList.remove('unread');
+  card.classList.add('read');
+  var btn = card.querySelector('.notif-action-btn');
+  if (btn) btn.remove();
+}
+function markNotificationRead(id) {
   fetch('/notifications/mark-read', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({id: 0})
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': getCsrfToken()
+    },
+    body: JSON.stringify({id: id})
+  }).then(function() {
+    updateNotificationCard(id);
+  }).catch(function() {});
+}
+function markAllRead() {
+  fetch('/notifications/mark-all-read', {
+    method: 'POST',
+    headers: {
+      'X-CSRF-Token': getCsrfToken()
+    },
   }).then(function() {
     document.querySelectorAll('.notif-card.unread').forEach(function(el) {
       el.classList.remove('unread');
       el.classList.add('read');
+    });
+    document.querySelectorAll('.notif-action-btn').forEach(function(el) {
+      el.remove();
     });
   }).catch(function() {});
 }

@@ -13,6 +13,7 @@ from pathlib import Path
 from sqlalchemy import func
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
+from app.services.access_control import ensure_workspace_for_user, is_platform_admin, sync_user_role_flags
 from app.models import (
     User, Product, LabelVersion, ComplianceCheck, ComplianceRule,
     Alert, AlertStatus, AlertType, RegulationChange, Severity, CheckResult,
@@ -29,7 +30,8 @@ def _require_admin(request: Request, db: Session):
     user = get_current_user_from_cookie(request, db)
     if not user:
         return None, RedirectResponse(url="/login", status_code=302)
-    if not user.is_admin:
+    sync_user_role_flags(user)
+    if not is_platform_admin(user):
         return None, RedirectResponse(url="/dashboard")
     return user, None
 
@@ -111,19 +113,30 @@ async def admin_users(request: Request, db: Session = Depends(get_db)):
     users = db.query(User).order_by(User.created_at.desc()).all()
     user_stats = []
     for u in users:
-        product_count = db.query(Product).filter(Product.user_id == u.id).count()
-        label_count   = (
-            db.query(LabelVersion)
-            .join(Product, Product.id == LabelVersion.product_id)
-            .filter(Product.user_id == u.id)
-            .count()
-        )
+        if u.account_id:
+            product_count = db.query(Product).filter(Product.account_id == u.account_id).count()
+            label_count = (
+                db.query(LabelVersion)
+                .join(Product, Product.id == LabelVersion.product_id)
+                .filter(Product.account_id == u.account_id)
+                .count()
+            )
+        else:
+            product_count = db.query(Product).filter(Product.user_id == u.id).count()
+            label_count = (
+                db.query(LabelVersion)
+                .join(Product, Product.id == LabelVersion.product_id)
+                .filter(Product.user_id == u.id)
+                .count()
+            )
         user_stats.append({
             "user": u,
             "product_count": product_count,
             "label_count": label_count,
             "is_demo": u.email in DEMO_EMAILS,
+            "company_sort": (u.company_name or "").strip().lower(),
         })
+    user_stats.sort(key=lambda row: row["company_sort"])
 
     unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
 
@@ -163,9 +176,15 @@ async def toggle_user_admin(user_id: int, request: Request, db: Session = Depend
 
     target = db.query(User).filter(User.id == user_id).first()
     if target and target.id != user.id:
-        target.is_admin = not target.is_admin
+        target.role = (
+            UserRole.ACCOUNT_ADMIN
+            if target.role == UserRole.SUPER_ADMIN
+            else UserRole.SUPER_ADMIN
+        )
+        sync_user_role_flags(target)
+        ensure_workspace_for_user(db, target)
         db.commit()
-        action = "granted" if target.is_admin else "revoked"
+        action = "granted" if target.role == UserRole.SUPER_ADMIN else "revoked"
         return RedirectResponse(
             url=f"/admin/users?msg=Admin+access+{action}&type=success",
             status_code=302
@@ -206,11 +225,13 @@ async def admin_create_user(
         email=email.strip().lower(),
         hashed_password=hash_password(password),
         role=new_role,
-        is_admin=new_role in (UserRole.SUPER_ADMIN,),
         is_active=True,
         onboarding_complete=True,
     )
+    sync_user_role_flags(new_user)
     db.add(new_user)
+    db.flush()
+    ensure_workspace_for_user(db, new_user)
     db.commit()
 
     role_label = new_role.value.replace("_", " ").title()
@@ -241,9 +262,8 @@ async def change_user_role(
         return RedirectResponse(url="/admin/users?msg=Invalid+role&type=error", status_code=302)
 
     target.role = new_role
-    # Super admin role automatically gets admin flag
-    if new_role == UserRole.SUPER_ADMIN:
-        target.is_admin = True
+    sync_user_role_flags(target)
+    ensure_workspace_for_user(db, target)
     db.commit()
 
     role_label = new_role.value.replace("_", " ").title()
@@ -272,12 +292,12 @@ async def admin_products(request: Request, db: Session = Depends(get_db)):
 
     accounts = []
     for u in users_with_products:
-        products = (
-            db.query(Product)
-            .filter(Product.user_id == u.id, Product.is_active == True)
-            .order_by(Product.created_at.desc())
-            .all()
-        )
+        products_query = db.query(Product).filter(Product.is_active == True)
+        if u.account_id:
+            products_query = products_query.filter(Product.account_id == u.account_id)
+        else:
+            products_query = products_query.filter(Product.user_id == u.id)
+        products = products_query.order_by(Product.created_at.desc()).all()
         if products:
             accounts.append({"user": u, "products": products})
 
@@ -668,7 +688,12 @@ async def admin_user_detail(user_id: int, request: Request, db: Session = Depend
     target = db.query(User).filter(User.id == user_id).first()
     if not target:
         return RedirectResponse(url="/admin/users?msg=User+not+found&type=error")
-    products = db.query(Product).filter(Product.user_id == user_id, Product.is_active == True).all()
+    products_query = db.query(Product).filter(Product.is_active == True)
+    if target.account_id:
+        products_query = products_query.filter(Product.account_id == target.account_id)
+    else:
+        products_query = products_query.filter(Product.user_id == user_id)
+    products = products_query.all()
     recent_activity = (
         db.query(ActivityLog)
         .filter(ActivityLog.user_id == user_id)
@@ -676,7 +701,12 @@ async def admin_user_detail(user_id: int, request: Request, db: Session = Depend
         .limit(20)
         .all()
     )
-    report_count = db.query(ComplianceReport).filter(ComplianceReport.user_id == user_id).count()
+    report_query = db.query(ComplianceReport)
+    if target.account_id:
+        report_query = report_query.filter(ComplianceReport.account_id == target.account_id)
+    else:
+        report_query = report_query.filter(ComplianceReport.user_id == user_id)
+    report_count = report_query.count()
     unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
     return templates.TemplateResponse("admin/user_detail.html", {
         "request": request,
@@ -698,7 +728,13 @@ async def admin_toggle_admin(user_id: int, request: Request, db: Session = Depen
         return redir
     target = db.query(User).filter(User.id == user_id).first()
     if target and target.id != user.id:  # can't demote yourself
-        target.is_admin = not target.is_admin
+        target.role = (
+            UserRole.ACCOUNT_ADMIN
+            if target.role == UserRole.SUPER_ADMIN
+            else UserRole.SUPER_ADMIN
+        )
+        sync_user_role_flags(target)
+        ensure_workspace_for_user(db, target)
         db.commit()
     return RedirectResponse(url=f"/admin/users/{user_id}?msg=Updated&type=success", status_code=302)
 
@@ -811,81 +847,62 @@ async def admin_api_usage(
         })
     provider_stats.sort(key=lambda x: x["cost_usd"], reverse=True)
 
-    # Daily breakdown
-    from sqlalchemy import text as _sa_text
-    _ist_date = func.date(LabelVersion.uploaded_at + _sa_text("INTERVAL '5 hours 30 minutes'"))
-    daily_rows = (
+    def _new_usage_bucket():
+        return {"total": 0, "gemma": 0, "claude": 0, "gemini": 0, "local": 0, "fallback": 0, "cost": 0.0}
+
+    scan_rows = (
         db.query(
-            _ist_date.label("day"),
+            LabelVersion.uploaded_at,
             LabelVersion.extraction_source,
-            func.count(LabelVersion.id).label("scans"),
-            func.coalesce(func.sum(LabelVersion.tokens_input), 0).label("inp"),
-            func.coalesce(func.sum(LabelVersion.tokens_output), 0).label("out"),
+            LabelVersion.tokens_input,
+            LabelVersion.tokens_output,
         )
         .filter(LabelVersion.uploaded_at >= cutoff, LabelVersion.uploaded_at <= cutoff_end)
-        .group_by(_ist_date, LabelVersion.extraction_source)
-        .order_by(_ist_date)
         .all()
     )
 
     daily: dict = {}
-    for row in daily_rows:
-        day = str(row.day)
-        if day not in daily:
-            daily[day] = {"total": 0, "gemma": 0, "claude": 0, "gemini": 0, "local": 0, "fallback": 0, "cost": 0.0}
-        src = row.extraction_source or "fallback"
-        daily[day][src] = daily[day].get(src, 0) + row.scans
-        daily[day]["total"] += row.scans
+    hourly: dict = {}
+    for uploaded_at, extraction_source, tokens_input, tokens_output in scan_rows:
+        if not uploaded_at:
+            continue
+        ist_dt = uploaded_at + _IST
+        src = extraction_source or "fallback"
+        inp = int(tokens_input or 0)
+        out = int(tokens_output or 0)
         rate = COST_RATES.get(src, {"in": 0, "out": 0})
-        daily[day]["cost"] += (int(row.inp) / 1_000_000) * rate["in"] + (int(row.out) / 1_000_000) * rate["out"]
+        cost = (inp / 1_000_000) * rate["in"] + (out / 1_000_000) * rate["out"]
+
+        day = str(ist_dt.date())
+        day_bucket = daily.setdefault(day, _new_usage_bucket())
+        day_bucket[src] = day_bucket.get(src, 0) + 1
+        day_bucket["total"] += 1
+        day_bucket["cost"] += cost
+
+        if period == "today":
+            hour = int(ist_dt.hour)
+            hour_bucket = hourly.setdefault(hour, _new_usage_bucket())
+            hour_bucket[src] = hour_bucket.get(src, 0) + 1
+            hour_bucket["total"] += 1
+            hour_bucket["cost"] += cost
 
     # Fill missing days with zeros
     all_days = []
     d = start_date
     while d <= end_date:
         ds = str(d)
-        all_days.append({"day": ds, **(daily.get(ds, {"total": 0, "gemma": 0, "claude": 0, "gemini": 0, "local": 0, "fallback": 0, "cost": 0.0}))})
+        all_days.append({"day": ds, **daily.get(ds, _new_usage_bucket())})
         d += timedelta(days=1)
 
     # ── Hourly breakdown (only for "today" period) ──────────────────────────
     hourly_list = []
     if period == "today":
-        try:
-            from sqlalchemy import extract as sa_extract
-            from sqlalchemy import text as _sa_text2
-            _ist_ts = LabelVersion.uploaded_at + _sa_text2("INTERVAL '5 hours 30 minutes'")
-            hourly_rows = (
-                db.query(
-                    sa_extract("hour", _ist_ts).label("hr"),
-                    LabelVersion.extraction_source,
-                    func.count(LabelVersion.id).label("scans"),
-                    func.coalesce(func.sum(LabelVersion.tokens_input), 0).label("inp"),
-                    func.coalesce(func.sum(LabelVersion.tokens_output), 0).label("out"),
-                )
-                .filter(LabelVersion.uploaded_at >= cutoff, LabelVersion.uploaded_at <= cutoff_end)
-                .group_by(sa_extract("hour", _ist_ts), LabelVersion.extraction_source)
-                .order_by(sa_extract("hour", _ist_ts))
-                .all()
-            )
-            hourly = {}
-            for row in hourly_rows:
-                h = int(row.hr)
-                if h not in hourly:
-                    hourly[h] = {"total": 0, "gemma": 0, "claude": 0, "gemini": 0, "local": 0, "fallback": 0, "cost": 0.0}
-                src = row.extraction_source or "fallback"
-                hourly[h][src] = hourly[h].get(src, 0) + row.scans
-                hourly[h]["total"] += row.scans
-                rate = COST_RATES.get(src, {"in": 0, "out": 0})
-                hourly[h]["cost"] += (int(row.inp) / 1_000_000) * rate["in"] + (int(row.out) / 1_000_000) * rate["out"]
-            # Fill all 24 hours with zeros
-            for h in range(24):
-                label = f"{h:02d}:00"
-                hourly_list.append({
-                    "hour": label,
-                    **hourly.get(h, {"total": 0, "gemma": 0, "claude": 0, "gemini": 0, "local": 0, "fallback": 0, "cost": 0.0})
-                })
-        except Exception:
-            pass
+        for h in range(24):
+            label = f"{h:02d}:00"
+            hourly_list.append({
+                "hour": label,
+                **hourly.get(h, _new_usage_bucket()),
+            })
 
     # Most used provider
     most_used = max(source_counts, key=lambda s: source_counts[s]) if total_scans > 0 else "—"
@@ -993,15 +1010,15 @@ async def admin_finance(
     cutoff_end = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
 
     # ── User / signup stats ─────────────────────────────────────────────────
-    total_users = db.query(func.count(User.id)).filter(User.is_admin == False).scalar() or 0
+    total_users = db.query(func.count(User.id)).filter(User.role != UserRole.SUPER_ADMIN).scalar() or 0
     new_users_period = db.query(func.count(User.id)).filter(
-        User.created_at >= cutoff, User.created_at <= cutoff_end, User.is_admin == False
+        User.created_at >= cutoff, User.created_at <= cutoff_end, User.role != UserRole.SUPER_ADMIN
     ).scalar() or 0
 
     # Daily signups
     signup_rows = (
         db.query(func.date(User.created_at).label("day"), func.count(User.id).label("cnt"))
-        .filter(User.created_at >= cutoff, User.created_at <= cutoff_end, User.is_admin == False)
+        .filter(User.created_at >= cutoff, User.created_at <= cutoff_end, User.role != UserRole.SUPER_ADMIN)
         .group_by(func.date(User.created_at))
         .order_by(func.date(User.created_at))
         .all()

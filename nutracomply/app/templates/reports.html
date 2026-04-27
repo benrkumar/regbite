@@ -3,49 +3,172 @@
 {% block page_subtitle %}Your saved compliance reports{% endblock %}
 
 {% block content %}
+<style>
+.reports-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  flex-wrap:wrap;
+  gap:1rem;
+  margin-bottom:1.5rem;
+}
 
-<!-- Page header -->
-<div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+.reports-stat-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:1rem;
+  margin-bottom:1.8rem;
+}
+
+.reports-stat {
+  background:#fff;
+  border:1px solid #EBEBEB;
+  border-radius:10px;
+  padding:14px 18px;
+  text-align:center;
+}
+
+.reports-stat.muted {
+  background:#F5F5F5;
+}
+
+.reports-stat.soft {
+  background:#fffbeb;
+}
+
+.reports-stat.strong {
+  background:#EBEBEB;
+  border-color:#D4D4D4;
+}
+
+.reports-table-card {
+  background:#fff;
+  border:1px solid #EBEBEB;
+  border-radius:12px;
+  overflow:hidden;
+}
+
+.reports-mobile-list {
+  display:none;
+}
+
+.report-score-badge {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:72px;
+  padding:4px 12px;
+  border-radius:999px;
+  font-weight:800;
+  font-size:1rem;
+}
+
+.report-verdict-badge {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:0.72rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+}
+
+.report-mobile-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:0.75rem;
+}
+
+.report-mobile-grid .mobile-card-meta {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+.report-ref {
+  display:inline-flex;
+  align-items:center;
+  font-family:monospace;
+  font-size:0.82rem;
+  font-weight:700;
+  color:#525252;
+  background:#F5F5F5;
+  padding:4px 8px;
+  border-radius:6px;
+}
+
+@media (max-width:768px) {
+  .reports-header {
+    align-items:stretch;
+  }
+
+  .reports-header > a,
+  .reports-header .btn {
+    width:100%;
+    justify-content:center;
+    text-align:center;
+  }
+
+  .reports-desktop-table {
+    display:none;
+  }
+
+  .reports-mobile-list {
+    display:grid;
+  }
+}
+
+@media (max-width:480px) {
+  .report-mobile-grid,
+  .report-mobile-grid .mobile-card-meta {
+    grid-template-columns:1fr;
+  }
+}
+</style>
+
+{% set compliant_reports = reports | selectattr('score', 'ge', 90) | list %}
+{% set partial_reports = reports | selectattr('score', 'ge', 60) | selectattr('score', 'lt', 90) | list %}
+{% set non_compliant_reports = reports | selectattr('score', 'lt', 60) | list %}
+{% set can_run_checks = user.role.value not in ['viewer', 'consultant'] %}
+
+<div class="reports-header">
   <hgroup>
     <h2 style="margin:0;font-size:1.6rem;font-weight:800;color:#0f172a;">Compliance Reports</h2>
     <p style="margin:0.2rem 0 0;color:#737373;font-size:0.95rem;">All generated compliance reports for your products</p>
   </hgroup>
-  <a href="/checker" style="background:linear-gradient(135deg,#262626,#262626);color:#fff;padding:9px 20px;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:700;">
+  {% if can_run_checks %}
+  <a href="/checker" class="btn btn-primary btn-sm">
     + New Check
   </a>
+  {% endif %}
 </div>
 
-<!-- Stats strip -->
-{% set compliant_reports = reports | selectattr('score', 'ge', 90) | list %}
-{% set partial_reports = reports | selectattr('score', 'ge', 60) | selectattr('score', 'lt', 90) | list %}
-{% set non_compliant_reports = reports | selectattr('score', 'lt', 60) | list %}
-
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.8rem;">
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:10px;padding:14px 18px;text-align:center;">
+<div class="reports-stat-grid">
+  <div class="reports-stat">
     <div style="font-size:1.8rem;font-weight:900;color:#0f172a;">{{ reports | length }}</div>
     <div style="font-size:0.78rem;color:#737373;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Total Reports</div>
   </div>
-  <div style="background:#F5F5F5;border:1px solid #F5F5F5;border-radius:10px;padding:14px 18px;text-align:center;">
+  <div class="reports-stat muted">
     <div style="font-size:1.8rem;font-weight:900;color:#262626;">{{ compliant_reports | length }}</div>
     <div style="font-size:0.78rem;color:#262626;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Compliant</div>
   </div>
-  <div style="background:#fffbeb;border:1px solid #E5E5E5;border-radius:10px;padding:14px 18px;text-align:center;">
+  <div class="reports-stat soft">
     <div style="font-size:1.8rem;font-weight:900;color:#525252;">{{ partial_reports | length }}</div>
     <div style="font-size:0.78rem;color:#b45309;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Partial</div>
   </div>
-  <div style="background:#EBEBEB;border:1px solid #D4D4D4;border-radius:10px;padding:14px 18px;text-align:center;">
+  <div class="reports-stat strong">
     <div style="font-size:1.8rem;font-weight:900;color:#111111;">{{ non_compliant_reports | length }}</div>
     <div style="font-size:0.78rem;color:#111111;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Non-Compliant</div>
   </div>
 </div>
 
-<!-- Reports table -->
 {% if reports %}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:12px;overflow:hidden;">
+<div class="reports-table-card">
   <div style="padding:16px 20px;border-bottom:1px solid #F5F5F5;">
     <span style="font-size:0.9rem;font-weight:700;color:#525252;">{{ reports | length }} report{{ 's' if reports | length != 1 else '' }}</span>
   </div>
-  <div style="overflow-x:auto;">
+
+  <div class="reports-desktop-table" style="overflow-x:auto;">
     <table style="width:100%;border-collapse:collapse;">
       <thead>
         <tr style="background:#F8F8F8;">
@@ -81,7 +204,7 @@
         {% endif %}
         <tr style="border-bottom:1px solid #F5F5F5;transition:background 0.15s;" onmouseover="this.style.background='#F8F8F8'" onmouseout="this.style.background=''">
           <td style="padding:12px 16px;">
-            <span style="font-family:monospace;font-size:0.82rem;font-weight:700;color:#525252;background:#F5F5F5;padding:3px 8px;border-radius:5px;">{{ report.report_ref }}</span>
+            <span class="report-ref">{{ report.report_ref }}</span>
           </td>
           <td style="padding:12px 16px;">
             <div style="font-size:0.9rem;font-weight:600;color:#0f172a;">{{ report.product.name if report.product else 'Unknown' }}</div>
@@ -90,18 +213,18 @@
             {% endif %}
           </td>
           <td style="padding:12px 16px;text-align:center;">
-            <span style="background:{{ score_bg }};color:{{ score_color }};font-weight:800;font-size:1rem;padding:4px 12px;border-radius:20px;">{{ score }}%</span>
+            <span class="report-score-badge" style="background:{{ score_bg }};color:{{ score_color }};">{{ score }}%</span>
           </td>
           <td style="padding:12px 16px;text-align:center;">
-            <span style="background:{{ verdict_bg }};color:{{ verdict_color }};font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:0.05em;">{{ verdict_label }}</span>
+            <span class="report-verdict-badge" style="background:{{ verdict_bg }};color:{{ verdict_color }};">{{ verdict_label }}</span>
           </td>
           <td style="padding:12px 16px;">
             <span style="font-size:0.83rem;color:#737373;">{{ report.created_at.strftime('%d %b %Y') }}</span>
           </td>
           <td style="padding:12px 16px;text-align:right;">
             <div style="display:flex;gap:0.4rem;justify-content:flex-end;">
-              <a href="/reports/{{ report.id }}" style="background:#0f172a;color:#fff;padding:5px 12px;border-radius:6px;text-decoration:none;font-size:0.78rem;font-weight:600;">View</a>
-              <a href="/reports/{{ report.id }}/download" style="background:#EBEBEB;color:#525252;padding:5px 12px;border-radius:6px;text-decoration:none;font-size:0.78rem;font-weight:600;">PDF</a>
+              <a href="/reports/{{ report.id }}" class="btn btn-primary btn-sm">View</a>
+              <a href="/reports/{{ report.id }}/download" class="btn btn-outline btn-sm">PDF</a>
             </div>
           </td>
         </tr>
@@ -109,17 +232,83 @@
       </tbody>
     </table>
   </div>
+
+  <div class="mobile-only reports-mobile-list" style="padding:1rem;">
+    <div class="mobile-card-list report-mobile-grid">
+      {% for report in reports %}
+      {% set score = report.score or 0 %}
+      {% if score >= 90 %}
+        {% set score_color = '#262626' %}
+        {% set score_bg = '#F5F5F5' %}
+        {% set verdict_label = 'Compliant' %}
+        {% set verdict_bg = '#F5F5F5' %}
+        {% set verdict_color = '#262626' %}
+      {% elif score >= 60 %}
+        {% set score_color = '#525252' %}
+        {% set score_bg = '#F5F5F5' %}
+        {% set verdict_label = 'Partial' %}
+        {% set verdict_bg = '#F5F5F5' %}
+        {% set verdict_color = '#b45309' %}
+      {% else %}
+        {% set score_color = '#111111' %}
+        {% set score_bg = '#EBEBEB' %}
+        {% set verdict_label = 'Non-Compliant' %}
+        {% set verdict_bg = '#EBEBEB' %}
+        {% set verdict_color = '#111111' %}
+      {% endif %}
+      <article class="mobile-card">
+        <div class="mobile-card-header" style="align-items:flex-start;">
+          <div>
+            <div class="mobile-card-title">{{ report.product.name if report.product else 'Unknown' }}</div>
+            <div class="mobile-card-meta" style="margin-top:0.35rem;grid-template-columns:1fr;">
+              <div>
+                <div class="product-meta-label">Report Ref</div>
+                <div class="product-meta-value"><span class="report-ref">{{ report.report_ref }}</span></div>
+              </div>
+            </div>
+          </div>
+          <span class="report-score-badge" style="background:{{ score_bg }};color:{{ score_color }};">{{ score }}%</span>
+        </div>
+        <div class="mobile-card-meta">
+          <div>
+            <div class="product-meta-label">Verdict</div>
+            <div class="product-meta-value">
+              <span class="report-verdict-badge" style="background:{{ verdict_bg }};color:{{ verdict_color }};">{{ verdict_label }}</span>
+            </div>
+          </div>
+          <div>
+            <div class="product-meta-label">Generated</div>
+            <div class="product-meta-value">{{ report.created_at.strftime('%d %b %Y') }}</div>
+          </div>
+          <div>
+            <div class="product-meta-label">Category</div>
+            <div class="product-meta-value">{{ report.product.category if report.product and report.product.category else 'Uncategorized' }}</div>
+          </div>
+          <div>
+            <div class="product-meta-label">Product</div>
+            <div class="product-meta-value">{{ report.product.name if report.product else 'Unknown' }}</div>
+          </div>
+        </div>
+        <div class="mobile-actions">
+          <a href="/reports/{{ report.id }}" class="btn btn-primary btn-sm">View Report</a>
+          <a href="/reports/{{ report.id }}/download" class="btn btn-outline btn-sm">Download PDF</a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
 </div>
 
 {% else %}
-<!-- Empty state -->
 <div style="background:#fff;border:2px dashed #EBEBEB;border-radius:16px;padding:48px 24px;text-align:center;">
   <div style="display:flex;justify-content:center;margin-bottom:12px;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
   <h3 style="font-size:1.2rem;font-weight:700;color:#525252;margin:0 0 8px;">No reports yet</h3>
   <p style="color:#737373;font-size:0.9rem;max-width:400px;margin:0 auto 20px;">Generate your first compliance report by using the Compliance Checker or from a label upload result.</p>
   <div style="display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;">
-    <a href="/checker" style="background:linear-gradient(135deg,#262626,#262626);color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:700;">Use Compliance Checker</a>
-    <a href="/products" style="background:#F5F5F5;color:#525252;padding:10px 22px;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:600;">View Products</a>
+    {% if can_run_checks %}
+    <a href="/checker" class="btn btn-primary">Use Compliance Checker</a>
+    {% endif %}
+    <a href="/products" class="btn btn-outline">View Products</a>
   </div>
 </div>
 {% endif %}

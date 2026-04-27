@@ -3,6 +3,31 @@
 {% block page_subtitle %}Check any product's FSSAI compliance instantly{% endblock %}
 
 {% block content %}
+<style>
+  .checker-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .checker-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  @media (max-width: 900px) {
+    .checker-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 640px) {
+    .checker-two-col {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+  }
+</style>
 
 <!-- Page header -->
 <div style="margin-bottom:1.5rem;">
@@ -10,7 +35,7 @@
   <p style="margin:0;color:#737373;font-size:0.95rem;">Fill in your product details to get an instant FSSAI compliance report — no label upload needed.</p>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start;">
+<div class="checker-layout">
 
   <!-- LEFT: Form -->
   <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:24px;">
@@ -28,7 +53,7 @@
             onfocus="this.style.borderColor='#404040'" onblur="this.style.borderColor='#D4D4D4'" />
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div class="checker-two-col">
           <div>
             <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Product Category <span style="color:#111111;">*</span></label>
             <select name="category" required
@@ -72,7 +97,7 @@
       <div style="margin-bottom:1.4rem;">
         <h4 style="margin:0 0 12px;font-size:0.9rem;font-weight:700;color:#262626;text-transform:uppercase;letter-spacing:0.07em;padding-bottom:8px;border-bottom:1px solid #EBEBEB;">Label Details</h4>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div class="checker-two-col">
           <div>
             <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">FSSAI License Number</label>
             <input type="text" name="fssai_license" placeholder="e.g. 10019042000241"
@@ -87,7 +112,7 @@
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div class="checker-two-col">
           <div>
             <label style="display:block;font-size:0.85rem;font-weight:600;color:#262626;margin-bottom:5px;">Manufacturing Date</label>
             <input type="date" name="manufacturing_date"

@@ -1,6 +1,7 @@
 import json
 import time
 import asyncio
+import threading
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -30,11 +31,43 @@ if settings.secret_key == "change-this-secret":
 # Ensure upload directory exists
 Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
 
+_startup_state = {
+    "ready": False,
+    "started_at": None,
+    "finished_at": None,
+    "completed": [],
+    "errors": [],
+}
+_startup_lock = threading.Lock()
+
 
 def _create_tables():
     """Create all tables (idempotent)."""
     Base.metadata.create_all(bind=engine)
 
+
+def _record_startup_step(name: str, ok: bool, detail: str | None = None) -> None:
+    with _startup_lock:
+        if ok:
+            if name not in _startup_state["completed"]:
+                _startup_state["completed"].append(name)
+        else:
+            _startup_state["errors"].append({"step": name, "detail": detail or ""})
+
+
+def _bootstrap_workspace_data():
+    from app.services.bootstrap_service import backfill_account_ownership, seed_regulation_sources
+
+    db = SessionLocal()
+    try:
+        backfill_account_ownership(db)
+        seed_regulation_sources(db)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 
 def _run_all_startup_tasks():
@@ -43,20 +76,37 @@ def _run_all_startup_tasks():
     Errors in individual steps are caught and logged so a failure in one
     step never prevents the remaining steps from running.
     """
+    with _startup_lock:
+        _startup_state["ready"] = False
+        _startup_state["started_at"] = time.time()
+        _startup_state["finished_at"] = None
+        _startup_state["completed"] = []
+        _startup_state["errors"] = []
+
     tasks = [
-        (_create_tables,           "create_tables"),
-        (_run_migrations,          "migrations"),
-        (_promote_admin,           "promote_admin"),
-        (_seed_initial_data,       "seed_initial_data"),
-        (_seed_demo_users,         "seed_demo_users"),
-        (_auto_seed_kb_if_empty,   "auto_seed_kb"),
+        (_create_tables, "create_tables", True),
+        (_run_migrations, "migrations", True),
+        (_run_foundational_migrations, "foundational_migrations", True),
+        (_promote_admin, "promote_admin", True),
+        (_seed_initial_data, "seed_initial_data", True),
+        (_bootstrap_workspace_data, "workspace_bootstrap", True),
+        (_seed_demo_users, "seed_demo_users", False),
+        (_auto_seed_kb_if_empty, "auto_seed_kb", False),
     ]
-    for fn, name in tasks:
+    for fn, name, required in tasks:
         try:
             fn()
             log.info("[startup] %s OK", name)
+            _record_startup_step(name, True)
         except Exception as exc:
             log.error("[startup] %s error: %s", name, exc)
+            _record_startup_step(name, False, str(exc))
+            if required:
+                break
+
+    with _startup_lock:
+        _startup_state["finished_at"] = time.time()
+        _startup_state["ready"] = not _startup_state["errors"]
 
 
 @asynccontextmanager
@@ -313,6 +363,95 @@ def _run_migrations():
     log.info("[migrate] Column migrations complete")
 
 
+def _run_foundational_migrations():
+    from sqlalchemy import inspect, text
+
+    for table_name in ("accounts", "regulation_sources", "alert_read_states", "checker_sessions"):
+        try:
+            Base.metadata.tables[table_name].create(bind=engine, checkfirst=True)
+        except Exception as exc:
+            log.debug("[migrate] metadata create skipped for %s (%s)", table_name, exc)
+
+    with engine.begin() as conn:
+        inspector = inspect(conn)
+
+        def ensure_column(table: str, column: str, definition: str) -> None:
+            try:
+                if table not in inspector.get_table_names():
+                    return
+                existing = {item["name"] for item in inspector.get_columns(table)}
+                if column in existing:
+                    return
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {definition}"))
+                log.info("[migrate] Added %s.%s", table, column)
+            except Exception as exc:
+                log.debug("[migrate] Column skipped for %s.%s (%s)", table, column, exc)
+
+        new_columns = [
+            ("users", "account_id", "INTEGER"),
+            ("products", "account_id", "INTEGER"),
+            ("products", "is_temporary", "BOOLEAN DEFAULT FALSE"),
+            ("products", "is_sample", "BOOLEAN DEFAULT FALSE"),
+            ("alerts", "account_id", "INTEGER"),
+            ("kb_documents", "account_id", "INTEGER"),
+            ("license_renewals", "account_id", "INTEGER"),
+            ("compliance_reports", "account_id", "INTEGER"),
+            ("compliance_reports", "checker_session_id", "INTEGER"),
+            ("team_invites", "account_id", "INTEGER"),
+            ("api_keys", "account_id", "INTEGER"),
+            ("subscriptions", "account_id", "INTEGER"),
+            ("payment_records", "account_id", "INTEGER"),
+            ("regulation_changes", "source_id", "INTEGER"),
+            ("regulation_changes", "document_type", "VARCHAR(100)"),
+            ("regulation_changes", "crawl_status", "VARCHAR(50)"),
+            ("regulation_changes", "reject_reason", "TEXT"),
+            ("regulation_changes", "supersedes_change_id", "INTEGER"),
+            ("regulation_changes", "superseded_by_change_id", "INTEGER"),
+            ("compliance_rules", "applicable_product_classes", "JSON DEFAULT '[]'"),
+            ("compliance_rules", "applicable_claim_classes", "JSON DEFAULT '[]'"),
+            ("compliance_rules", "applicable_import_scope", "VARCHAR(30)"),
+            ("compliance_rules", "applicable_dosage_forms", "JSON DEFAULT '[]'"),
+            ("compliance_rules", "applicable_target_groups", "JSON DEFAULT '[]'"),
+            ("compliance_rules", "exception_flags", "JSON DEFAULT '[]'"),
+        ]
+        for table, column, definition in new_columns:
+            ensure_column(table, column, definition)
+
+        index_sql = [
+            "CREATE INDEX IF NOT EXISTS ix_users_account_id ON users (account_id)",
+            "CREATE INDEX IF NOT EXISTS ix_products_account_active ON products (account_id, is_active)",
+            "CREATE INDEX IF NOT EXISTS ix_alerts_account_id ON alerts (account_id)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_alert_read_states_alert_user ON alert_read_states (alert_id, user_id)",
+            "CREATE INDEX IF NOT EXISTS ix_kb_documents_account_id ON kb_documents (account_id)",
+            "CREATE INDEX IF NOT EXISTS ix_license_renewals_account_id ON license_renewals (account_id)",
+            "CREATE INDEX IF NOT EXISTS ix_compliance_reports_account_id ON compliance_reports (account_id)",
+            "CREATE INDEX IF NOT EXISTS ix_api_keys_account_id ON api_keys (account_id)",
+            "CREATE INDEX IF NOT EXISTS ix_subscriptions_account_id ON subscriptions (account_id)",
+            "CREATE INDEX IF NOT EXISTS ix_payment_records_account_id ON payment_records (account_id)",
+        ]
+        for sql in index_sql:
+            try:
+                conn.execute(text(sql))
+            except Exception as exc:
+                log.debug("[migrate] Index skipped (%s)", exc)
+
+        normalization_sql = [
+            "UPDATE users SET role = 'account_admin' WHERE role = 'ACCOUNT_ADMIN'",
+            "UPDATE users SET role = 'super_admin' WHERE role = 'SUPER_ADMIN'",
+            "UPDATE users SET role = 'editor' WHERE role = 'EDITOR'",
+            "UPDATE users SET role = 'viewer' WHERE role = 'VIEWER'",
+            "UPDATE users SET role = 'consultant' WHERE role = 'CONSULTANT'",
+            "UPDATE users SET role = 'account_admin' WHERE role IS NULL OR role = ''",
+        ]
+        for sql in normalization_sql:
+            try:
+                conn.execute(text(sql))
+            except Exception as exc:
+                log.debug("[migrate] Role normalization skipped (%s)", exc)
+
+    log.info("[migrate] Foundational migrations complete")
+
+
 def _promote_admin():
     """
     On every startup: if ADMIN_EMAIL is set in config, find that user in the DB
@@ -321,17 +460,21 @@ def _promote_admin():
     """
     if not settings.admin_email:
         return
-    from app.models import User
+    from app.models import User, UserRole
+    from app.services.access_control import ensure_workspace_for_user
     db = SessionLocal()
     try:
         user = db.query(User).filter(
             User.email == settings.admin_email.lower().strip()
         ).first()
-        if user and not user.is_admin:
+        if user and (not user.is_admin or user.role != UserRole.SUPER_ADMIN):
             user.is_admin = True
+            user.role = UserRole.SUPER_ADMIN
+            ensure_workspace_for_user(db, user)
             db.commit()
             print(f"[admin] Promoted {user.email} to super admin")
         elif user:
+            ensure_workspace_for_user(db, user)
             print(f"[admin] {user.email} is already super admin")
         else:
             print(f"[admin] ADMIN_EMAIL={settings.admin_email} — user not found yet (will be promoted on registration)")
@@ -463,10 +606,15 @@ def _seed_demo_users():
       viewer     — viewer (read-only dashboard)
       consultant — consultant (external audit access)
     """
+    if not settings.enable_demo_data:
+        log.info("[demo] ENABLE_DEMO_DATA is false - skipping demo user seed")
+        return
+
     db = None
     try:
         from app.routes.auth import hash_password, _seed_demo_products
         from app.models import User, UserRole
+        from app.services.access_control import ensure_workspace_for_user
         db = SessionLocal()
 
         # --- ben (regular user) ---
@@ -484,6 +632,8 @@ def _seed_demo_users():
             db.add(ben)
             db.commit()
             db.refresh(ben)
+            ensure_workspace_for_user(db, ben)
+            db.commit()
             print("[demo] Created user: ben")
             try:
                 _seed_demo_products(ben, db)
@@ -511,6 +661,9 @@ def _seed_demo_users():
             )
             db.add(adm)
             db.commit()
+            db.refresh(adm)
+            ensure_workspace_for_user(db, adm)
+            db.commit()
             print("[demo] Created user: admin")
         else:
             if not adm.is_admin:
@@ -533,6 +686,8 @@ def _seed_demo_users():
             db.add(editor)
             db.commit()
             db.refresh(editor)
+            ensure_workspace_for_user(db, editor)
+            db.commit()
             print("[demo] Created user: editor")
             try:
                 _seed_demo_products(editor, db)
@@ -559,6 +714,8 @@ def _seed_demo_users():
             db.add(viewer)
             db.commit()
             db.refresh(viewer)
+            ensure_workspace_for_user(db, viewer)
+            db.commit()
             print("[demo] Created user: viewer")
             try:
                 _seed_demo_products(viewer, db)
@@ -585,6 +742,8 @@ def _seed_demo_users():
             db.add(consultant)
             db.commit()
             db.refresh(consultant)
+            ensure_workspace_for_user(db, consultant)
+            db.commit()
             print("[demo] Created user: consultant")
             try:
                 _seed_demo_products(consultant, db)
@@ -674,6 +833,30 @@ app.add_middleware(RequestLoggingMiddleware)
 from app.services.csrf import CSRFMiddleware, COOKIE_NAME as CSRF_COOKIE, generate_csrf_token
 app.add_middleware(CSRFMiddleware)
 
+
+@app.middleware("http")
+async def onboarding_enforcement_middleware(request: Request, call_next):
+    path = request.url.path or "/"
+    if path == "/health" or path.startswith(("/static/", "/uploads/")):
+        return await call_next(request)
+
+    try:
+        from app.routes.auth import get_current_user_from_cookie
+        from app.services.onboarding_service import should_force_onboarding
+
+        with SessionLocal() as db:
+            user = get_current_user_from_cookie(request, db)
+            if should_force_onboarding(user, path, settings.enable_demo_data):
+                return RedirectResponse(
+                    url="/onboarding?msg=Complete+workspace+setup+to+continue&type=info",
+                    status_code=302,
+                )
+    except Exception as exc:
+        log.debug("[onboarding] middleware skipped (%s)", exc)
+
+    return await call_next(request)
+
+
 # Static files
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(exist_ok=True)
@@ -752,10 +935,19 @@ async def health_check():
     """Railway healthcheck — verifies DB connectivity."""
     from sqlalchemy import text
     try:
-        db = SessionLocal()
-        db.execute(text("SELECT 1"))
-        db.close()
-        return JSONResponse({"status": "ok"})
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+        with _startup_lock:
+            ready = bool(_startup_state["ready"])
+            payload = {
+                "status": "ok" if ready else "starting",
+                "ready": ready,
+                "started_at": _startup_state["started_at"],
+                "finished_at": _startup_state["finished_at"],
+                "completed": list(_startup_state["completed"]),
+                "errors": list(_startup_state["errors"]),
+            }
+        return JSONResponse(payload, status_code=200 if ready else 503)
     except Exception as exc:
         return JSONResponse({"status": "error", "detail": str(exc)}, status_code=503)
 
@@ -765,10 +957,9 @@ async def health_check():
 @app.get("/")
 async def root(request: Request):
     from app.routes.auth import get_current_user_from_cookie
-    from app.database import get_db
     try:
-        db = next(get_db())
-        user = get_current_user_from_cookie(request, db)
+        with SessionLocal() as db:
+            user = get_current_user_from_cookie(request, db)
     except Exception as e:
         print(f"[root] DB not ready: {e}")
         user = None
@@ -785,25 +976,40 @@ async def dashboard(request: Request):
     from app.models import Product, Alert, AlertStatus, LabelVersion, LicenseRenewal, PublishedAlert, PublishedAlertStatus, Notification
     from sqlalchemy.orm import selectinload
 
-    db = next(get_db())
+    from app.services.access_control import get_account_id
+    from app.services.alert_service import count_unread_alerts
+
+    db = SessionLocal()
     user = get_current_user_from_cookie(request, db)
     if not user:
+        db.close()
         return RedirectResponse(url="/login")
 
-    # Redirect new users to onboarding (skip demo accounts ben/admin)
-    if not user.onboarding_complete and user.email not in ("ben", "admin"):
+    from app.services.onboarding_service import should_force_onboarding
+
+    if should_force_onboarding(user, "/dashboard", settings.enable_demo_data):
+        db.close()
         return RedirectResponse(url="/onboarding")
 
+    account_id = get_account_id(user)
+
     # Eager-load label_versions→checks in 2 queries instead of N+1
-    products_list = (
+    products_query = (
         db.query(Product)
         .options(
             selectinload(Product.label_versions)
             .selectinload(LabelVersion.checks)
         )
-        .filter(Product.user_id == user.id, Product.is_active == True)
-        .all()
+        .filter(
+            Product.is_active == True,
+            Product.is_temporary == False,
+        )
     )
+    if account_id:
+        products_query = products_query.filter(Product.account_id == account_id)
+    else:
+        products_query = products_query.filter(Product.user_id == user.id)
+    products_list = products_query.order_by(Product.created_at.desc()).all()
 
     # Summary stats
     total_products  = len(products_list)
@@ -817,11 +1023,7 @@ async def dashboard(request: Request):
         cat = p.category or "Nutraceutical"
         categories[cat].append(p)
 
-    unread_alerts = (
-        db.query(Alert)
-        .filter(Alert.status == AlertStatus.UNREAD)
-        .count()
-    )
+    unread_alerts = count_unread_alerts(db, user)
 
     unread_notifications = (
         db.query(Notification)
@@ -832,16 +1034,18 @@ async def dashboard(request: Request):
     # Licenses expiring in the next 90 days
     from datetime import timedelta
     cutoff = datetime.utcnow() + timedelta(days=90)
-    expiring_licenses = (
+    expiring_query = (
         db.query(LicenseRenewal)
         .filter(
-            LicenseRenewal.user_id == user.id,
             LicenseRenewal.is_active == True,
             LicenseRenewal.expiry_date <= cutoff,
         )
-        .order_by(LicenseRenewal.expiry_date.asc())
-        .all()
     )
+    if account_id:
+        expiring_query = expiring_query.filter(LicenseRenewal.account_id == account_id)
+    else:
+        expiring_query = expiring_query.filter(LicenseRenewal.user_id == user.id)
+    expiring_licenses = expiring_query.order_by(LicenseRenewal.expiry_date.asc()).all()
 
     # Latest 3 published regulation alerts
     recent_reg_alerts = (
@@ -851,6 +1055,9 @@ async def dashboard(request: Request):
         .limit(3)
         .all()
     )
+
+    db.expunge_all()
+    db.close()
 
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
@@ -871,12 +1078,13 @@ async def dashboard(request: Request):
 @app.get("/reg-alerts")
 async def reg_alerts(request: Request):
     from app.routes.auth import get_current_user_from_cookie
-    from app.database import get_db
-    from app.models import Alert, AlertStatus, PublishedAlert, PublishedAlertStatus, PublishedAlertSeverity
+    from app.models import PublishedAlert, PublishedAlertStatus, PublishedAlertSeverity
+    from app.services.alert_service import count_unread_alerts
 
-    db = next(get_db())
+    db = SessionLocal()
     user = get_current_user_from_cookie(request, db)
     if not user:
+        db.close()
         return RedirectResponse(url="/login")
 
     severity_filter = request.query_params.get("severity", "")
@@ -889,11 +1097,9 @@ async def reg_alerts(request: Request):
 
     alerts_list = q.order_by(PublishedAlert.published_at.desc()).all()
 
-    unread_alerts = (
-        db.query(Alert)
-        .filter(Alert.status == AlertStatus.UNREAD)
-        .count()
-    )
+    unread_alerts = count_unread_alerts(db, user)
+    db.expunge_all()
+    db.close()
 
     return templates.TemplateResponse("reg_alerts.html", {
         "request": request,
@@ -907,19 +1113,22 @@ async def reg_alerts(request: Request):
 @app.get("/pricing")
 async def pricing_page(request: Request):
     from app.routes.auth import get_current_user_from_cookie
-    from app.database import get_db
-    db = next(get_db())
+    db = SessionLocal()
     user = get_current_user_from_cookie(request, db)
+    db.expunge_all()
+    db.close()
     return templates.TemplateResponse("pricing.html", {"request": request, "user": user})
 
 
 def _get_optional_user(request: Request):
     """Return current user or None (never raises)."""
     from app.routes.auth import get_current_user_from_cookie
-    from app.database import get_db
     try:
-        db = next(get_db())
-        return get_current_user_from_cookie(request, db)
+        db = SessionLocal()
+        user = get_current_user_from_cookie(request, db)
+        db.expunge_all()
+        db.close()
+        return user
     except Exception:
         return None
 
@@ -962,7 +1171,10 @@ async def contact_submit(request: Request):
 
 @app.get("/help")
 async def help_page(request: Request):
-    return templates.TemplateResponse("help.html", {"request": request, "user": _get_optional_user(request), "active_page": "help"})
+    user = _get_optional_user(request)
+    if user:
+        return RedirectResponse(url="/help/hub", status_code=302)
+    return templates.TemplateResponse("help.html", {"request": request, "user": None, "active_page": "help"})
 
 
 @app.get("/terms")
@@ -983,30 +1195,39 @@ async def changelog_page(request: Request):
 @app.get("/r/{token}")
 async def shared_report(token: str, request: Request):
     from datetime import datetime
-    from app.database import get_db
     from app.models import ComplianceReport
 
-    db = next(get_db())
+    db = SessionLocal()
     report = db.query(ComplianceReport).filter(
         ComplianceReport.share_token == token
     ).first()
 
     if not report:
+        db.close()
         return templates.TemplateResponse("shared_report_expired.html", {
             "request": request,
             "error": "This report link is invalid or has been revoked."
         })
 
     if report.share_expires_at and report.share_expires_at < datetime.utcnow():
+        db.close()
         return templates.TemplateResponse("shared_report_expired.html", {
             "request": request,
             "error": "This report link has expired. Please request a new link from the account holder."
         })
 
     _ = report.product
+    critical_failures = sum(
+        1
+        for result in (report.check_results or [])
+        if result.get("result") == "FAIL" and result.get("severity") == "CRITICAL"
+    )
+    db.expunge_all()
+    db.close()
 
     return templates.TemplateResponse("shared_report.html", {
         "request": request,
         "report": report,
         "product": report.product,
+        "critical_failures": critical_failures,
     })

@@ -217,7 +217,11 @@ def _run_recheck():
                 db.commit()
 
                 try:
-                    owner = db.query(User).filter(User.id == product.user_id).first() if product else None
+                    from app.services.access_control import get_account_contact_user
+
+                    owner = (
+                        get_account_contact_user(db, product.account_id) if product else None
+                    ) or (product.owner if product else None)
                     send_alert_email(alert, product, user=owner)
                 except Exception as e:
                     log.warning("[scheduler] Recheck email failed: %s", e)
@@ -255,8 +259,9 @@ def _suggest_rule_updates(db, critical_changes):
                          change.document_name[:60], len(suggestions))
                 # Store suggestions as a notification for admin review
                 from app.services.notify_service import push
-                from app.models import User
-                admins = db.query(User).filter(User.is_admin == True).all()
+                from app.models import User, UserRole
+
+                admins = db.query(User).filter(User.role == UserRole.SUPER_ADMIN).all()
                 for admin in admins:
                     push(
                         admin.id,

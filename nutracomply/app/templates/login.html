@@ -77,7 +77,7 @@
     <div class="error-banner">{{ error }}</div>
     {% endif %}
 
-    <!-- Demo credentials hint -->
+    {% if show_demo_login_hints %}
     <div class="demo-hint">
       <div>
         <strong>Demo accounts</strong>
@@ -91,6 +91,7 @@
         </table>
       </div>
     </div>
+    {% endif %}
 
     <form method="post" action="/login">
       <div class="field">
