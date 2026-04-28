@@ -707,6 +707,7 @@ def _cleanup_unknown_alerts():
     records (WTO TBT/SPS Notifications, Ordinary Notifications, UNKNOWN types)
     as IGNORED so they stop appearing in the regulations feed.
     """
+    from datetime import datetime as _dt
     from app.models import Alert, AlertStatus, RegulationChange, ChangeType
     db = SessionLocal()
     try:
@@ -718,7 +719,7 @@ def _cleanup_unknown_alerts():
                 Alert.status != AlertStatus.RESOLVED,
             )
             .update(
-                {"status": AlertStatus.RESOLVED, "resolved_at": datetime.utcnow()},
+                {"status": AlertStatus.RESOLVED, "resolved_at": _dt.utcnow()},
                 synchronize_session="fetch",
             )
         )
