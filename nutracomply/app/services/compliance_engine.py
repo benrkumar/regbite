@@ -833,6 +833,93 @@ def _handle_prob_lbl_001(extraction: dict):
     )
 
 
+# FSSAI-NUTRA-NOVL-001 — Novel Food prior FSSAI approval
+def _handle_nutra_novl_001(extraction: dict):
+    ptd = _norm(extraction.get("product_type_declaration") or "")
+    if "novel food" not in ptd:
+        return CheckResult.PASS, None, "Product is not declared as Novel Food — prior approval check not applicable"
+    # Novel Food declared — look for an approval reference anywhere on the label
+    all_text = _concat(extraction, "warnings", "product_type_declaration", "notes", "health_claims")
+    approval_kws = ["approved", "fssai approval", "approval no", "approval ref", "fssai order", "novel food approval"]
+    for kw in approval_kws:
+        if kw in all_text:
+            return CheckResult.PASS, ptd, "Novel Food — FSSAI approval reference detected on label"
+    return CheckResult.FAIL, ptd, (
+        "Product declared as NOVEL FOOD but no FSSAI approval reference found. "
+        "Novel Food cannot be marketed without prior FSSAI approval (Reg 13)."
+    )
+
+
+# FSSAI-NUTRA-PREBIOTIC-001 — Prebiotic characterisation (source + effective dose)
+_PREBIOTIC_KEYWORDS = [
+    "inulin", "fos", "fructo-oligosaccharide", "fructooligosaccharide",
+    "galacto-oligosaccharide", "galactooligosaccharide", "gos",
+    "lactulose", "pectin", "resistant starch", "arabinogalactan",
+    "oligosaccharide", "prebiotic",
+]
+
+def _handle_nutra_prebiotic_001(extraction: dict):
+    ing = _concat(extraction, "ingredient_list")
+    found_pre = [kw for kw in _PREBIOTIC_KEYWORDS if kw in ing]
+    if not found_pre:
+        return CheckResult.PASS, None, "No prebiotic ingredients detected"
+    # Prebiotic found — check for any quantity/dose in the ingredient text
+    dose_match = re.search(r"\d+\s*(?:mg|g\b|mcg|μg)", ing)
+    if dose_match:
+        return CheckResult.PASS, str(found_pre[:2]), (
+            f"Prebiotic ingredient(s) {found_pre[:2]} present with dose declaration"
+        )
+    return CheckResult.WARNING, str(found_pre[:2]), (
+        f"Prebiotic ingredient(s) {found_pre[:2]} present but minimum effective dose per serving "
+        "not clearly declared. Characterise source and effective dose per serving."
+    )
+
+
+# FSSAI-NUTRA-PIF-001 — Product Information File for botanical products
+_BOTANICAL_KEYWORDS = [
+    "ashwagandha", "withania", "turmeric", "curcuma", "ginseng", "panax",
+    "green tea", "camellia", "moringa", "shatavari", "asparagus racemosus",
+    "brahmi", "bacopa", "tulsi", "ocimum", "neem", "azadirachta",
+    "guduchi", "tinospora", "triphala", "amla", "amalaki", "haritaki",
+    "ginger", "zingiber", "boswellia", "shallaki", "valerian", "garlic",
+    "allium", "elderberry", "sambucus", "echinacea", "milk thistle",
+    "silybum", "gymnema", "fenugreek", "trigonella", "bitter melon",
+    "momordica", "holy basil", "botanical extract", "herbal extract",
+    "plant extract", "standardized extract", "standardised extract",
+]
+
+def _handle_nutra_pif_001(extraction: dict):
+    ing = _concat(extraction, "ingredient_list")
+    found_bot = [kw for kw in _BOTANICAL_KEYWORDS if kw in ing]
+    if not found_bot:
+        return CheckResult.PASS, None, "No botanical ingredients detected — PIF requirement not applicable"
+    # Botanical found — check for PIF reference in any field
+    all_text = _concat(extraction, "warnings", "notes", "health_claims", "certifications")
+    pif_kws = ["product information file", "pif available", "pif on request", "product dossier"]
+    for kw in pif_kws:
+        if kw in all_text:
+            return CheckResult.PASS, str(found_bot[:2]), "Botanical ingredients found with PIF reference on label"
+    return CheckResult.WARNING, str(found_bot[:2]), (
+        f"Botanical ingredient(s) {found_bot[:2]} present but no Product Information File (PIF) reference found. "
+        "Add 'Product Information File available with manufacturer' to the label or package insert."
+    )
+
+
+# FSSAI-FSMP-OSM-001 — FSMP osmolality / osmolarity declaration
+def _handle_fsmp_osm_001(extraction: dict):
+    all_text = _concat(extraction,
+                       "nutrition_facts", "warnings", "notes",
+                       "product_type_declaration", "health_claims")
+    osm_kws = ["osmolality", "osmolarity", "mosm", "mosmol"]
+    for kw in osm_kws:
+        if kw in all_text:
+            return CheckResult.PASS, kw, "Osmolality/osmolarity declaration found on label"
+    return CheckResult.FAIL, None, (
+        "FSMP product is missing osmolality (mOsm/kg) or osmolarity (mOsm/L) declaration. "
+        "This is mandatory for FSMP products under FSS Regulations 2016."
+    )
+
+
 # ─── Registry: rule_code → deterministic handler ─────────────────────────────
 # Rules NOT in this dict fall through to the LLM batch call.
 
@@ -855,8 +942,13 @@ _DETERMINISTIC_FORMAT_HANDLERS: dict[str, object] = {
     "FSSAI-BOT-LBL-002":   _handle_bot_lbl_002,
     "FSSAI-BOT-WARN-001":  _handle_bot_warn_001,
     "FSSAI-FRT-WARN-001":  _handle_frt_warn_001,
-    "FSSAI-VGN-LBL-001":   _handle_vgn_lbl_001,
-    "FSSAI-PROB-LBL-001":  _handle_prob_lbl_001,
+    "FSSAI-VGN-LBL-001":         _handle_vgn_lbl_001,
+    "FSSAI-PROB-LBL-001":        _handle_prob_lbl_001,
+    # New rules — deterministic handlers (no Gemini call needed)
+    "FSSAI-NUTRA-NOVL-001":      _handle_nutra_novl_001,
+    "FSSAI-NUTRA-PREBIOTIC-001": _handle_nutra_prebiotic_001,
+    "FSSAI-NUTRA-PIF-001":       _handle_nutra_pif_001,
+    "FSSAI-FSMP-OSM-001":        _handle_fsmp_osm_001,
 }
 
 

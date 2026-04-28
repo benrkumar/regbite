@@ -337,6 +337,21 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
   {% endif %}
 </div>
 
+{# ── AYUSH / ASU rules notice ── #}
+{% set _cat_lc = (product.category or '')|lower %}
+{% if 'ayurvedic' not in _cat_lc and 'ayurveda' not in _cat_lc and 'asu' not in _cat_lc and 'siddha' not in _cat_lc and 'unani' not in _cat_lc and 'ayush' not in _cat_lc %}
+<div style="background:var(--gray-50);border:1px solid var(--border);border-radius:var(--r-md);padding:0.6rem 1rem;margin-bottom:1rem;font-size:0.77rem;color:var(--gray-500);display:flex;align-items:flex-start;gap:0.5rem;">
+  <span style="flex-shrink:0;">ℹ</span>
+  <span>
+    <strong style="color:var(--gray-700);">AYUSH / ASU rules not evaluated</strong> — product category is
+    "<strong style="color:var(--gray-600);">{{ product.category or 'Not set' }}</strong>".
+    If this is an Ayurvedic, Siddha, or Unani product,
+    <a href="/products/{{ product.id }}" style="color:var(--gray-800);font-weight:600;text-decoration:underline;">update the product category</a>
+    to include "Ayurvedic" or "ASU" to activate AYUSH-specific compliance checks (Drugs &amp; Cosmetics Act 1940, AYUSH Ministry regulations).
+  </span>
+</div>
+{% endif %}
+
 {# ── Version Comparison ── #}
 {% if version_diff %}
 <div style="background:#fff;border:1px solid var(--border);border-radius:var(--r-lg);padding:1rem 1.2rem;margin-bottom:1.2rem;">

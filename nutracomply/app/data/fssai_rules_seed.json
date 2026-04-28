@@ -1934,5 +1934,103 @@
     },
     "remediation": "Use the FSSAI-mandated green dot (VEG) or brown dot (NON-VEG) symbol with the text \"VEG\" or \"NON-VEG\". Vegan products may use \"VEGAN\".",
     "regulation_reference": "FSS (Labelling and Display) Regulations 2020, Regulation 9 — Veg/Non-Veg declaration"
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-NOVL-001",
+    "framework": "FSSAI",
+    "category": "MANDATORY_FIELD",
+    "severity": "CRITICAL",
+    "description": "Novel Food products require prior FSSAI approval — approval reference number must be present on the label",
+    "active": true,
+    "check_type": "FORMAT_LLM",
+    "check_config": {
+      "description": "If the product is declared as NOVEL FOOD (product_type_declaration contains 'NOVEL FOOD'), verify that an FSSAI novel food approval reference number or an explicit approval statement (e.g. 'Approved by FSSAI vide order No. ...') is present on the label or packaging. If the product is NOT declared as Novel Food, return PASS."
+    },
+    "remediation_template": "Novel Food products cannot be marketed without prior FSSAI approval under FSS (Health Supplements, Nutraceuticals) Regulations 2022, Regulation 13. Obtain approval from FSSAI and display the approval reference number on the label. Ref: FSS (Health Supplements, Nutraceuticals) Regulations 2022, Regulation 13.",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Regulation 13 — Novel Food Prior Approval"
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-PREBIOTIC-001",
+    "framework": "FSSAI",
+    "category": "FORMAT_REQUIREMENT",
+    "severity": "HIGH",
+    "description": "Prebiotic products must declare the source, prebiotic activity, and minimum effective dose per serving",
+    "active": true,
+    "check_type": "FORMAT_LLM",
+    "check_config": {
+      "description": "If the product contains prebiotic ingredients (inulin, FOS, GOS, fructo-oligosaccharide, galacto-oligosaccharide, lactulose, pectin, resistant starch, arabinogalactan, etc.), verify that the label declares: (1) source organism or plant of the prebiotic, (2) minimum effective dose per serving with units (g or mg), and (3) the nature of prebiotic activity. If no prebiotic ingredient is present, return PASS."
+    },
+    "remediation_template": "For prebiotic products, declare: (1) source of prebiotic ingredient (e.g. 'Chicory root inulin'), (2) minimum effective dose per serving (e.g. '5 g per serving'), and (3) nature of prebiotic activity. Ref: FSS (Health Supplements, Nutraceuticals) Regulations 2022, Regulation 6 — Prebiotic Characterisation.",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Regulation 6 — Prebiotic Characterisation"
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-GMP-001",
+    "framework": "FSSAI",
+    "category": "FORMAT_REQUIREMENT",
+    "severity": "MEDIUM",
+    "description": "Nutraceuticals and health supplements must be manufactured under Schedule 4 Good Manufacturing Practices (GMP); product should carry a Central FSSAI Manufacturing Licence",
+    "active": true,
+    "check_type": "FORMAT_LLM",
+    "check_config": {
+      "description": "Verify that the FSSAI licence number on the label appears to be a Central Manufacturing Licence (14-digit number indicating Schedule 4 GMP compliance for supplements and nutraceuticals). A State licence (starting with a 2-digit state code like '10' or '21') for a nutraceutical or health supplement product may indicate the manufacturer does not hold a Schedule 4 GMP Central Licence. Return PASS if a valid 14-digit FSSAI licence is present, WARNING if the format suggests a State-level or registration-only licence for a supplement product."
+    },
+    "remediation_template": "Health supplements and nutraceuticals must be manufactured under Schedule 4 GMP conditions. Obtain a Central FSSAI Manufacturing Licence (Schedule 4 compliant). Ref: FSS (Health Supplements, Nutraceuticals) Regulations 2022, Regulation 22 and Part II of Schedule 4 of FSS Act 2006.",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Regulation 22 — GMP (Schedule 4)"
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-PHARM-001",
+    "framework": "FSSAI",
+    "category": "FORMAT_REQUIREMENT",
+    "severity": "MEDIUM",
+    "description": "Ingredient specifications for vitamins, minerals, and amino acids must conform to Indian Pharmacopoeia (IP), British Pharmacopoeia (BP), USP, or WHO standards where monographs exist",
+    "active": true,
+    "check_type": "FORMAT_LLM",
+    "check_config": {
+      "description": "For isolated vitamins (e.g. Vitamin C, Vitamin D3, Vitamin B12), mineral salts (e.g. Zinc Gluconate, Magnesium Oxide, Ferrous Fumarate), and amino acids (e.g. L-Glutamine, L-Carnitine), verify that the ingredient list or label cites or implies a pharmacopoeial grade (IP, BP, USP, or equivalent). Red flags: vague ingredient names without form (e.g. 'Vitamin C' with no salt form), or unspecified mineral sources. If no pharmacopoeial-grade ingredients are present (e.g. purely herbal product), return PASS."
+    },
+    "remediation_template": "Ingredient specifications must conform to Indian Pharmacopoeia (IP), British Pharmacopoeia (BP), United States Pharmacopeia (USP), or WHO standards where applicable. Specify the pharmacopoeial grade and salt form for each isolated vitamin, mineral, or amino acid (e.g. 'Vitamin C as Ascorbic Acid IP 500 mg'). Ref: FSS (Health Supplements, Nutraceuticals) Regulations 2022, Regulation 4 — Ingredient Specifications.",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Regulation 4 — Ingredient Specifications and Pharmacopoeia Standards"
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-TOLE-001",
+    "framework": "FSSAI",
+    "category": "FORMAT_REQUIREMENT",
+    "severity": "LOW",
+    "description": "Declared nutrient content values must comply with permitted tolerance limits (±10% for vitamins/minerals in supplements); quantities implying unrealistic precision may indicate non-compliance",
+    "active": true,
+    "check_type": "FORMAT_LLM",
+    "check_config": {
+      "description": "Review the Nutrition Information / supplement facts panel for declared nutrient values. Flag if: (1) Values are declared with implausible precision (e.g. Vitamin C '1000.00 mg' exact) with no tolerance statement, (2) declared values for a combined formula appear to contradict each other (e.g. total minerals exceed total serving size), or (3) the label makes '100% purity' or 'exact' quantity claims for nutrients which cannot be guaranteed. If the panel appears reasonable and consistent, return PASS. This is an indicative check — actual tolerance compliance requires laboratory verification."
+    },
+    "remediation_template": "Declared nutrient content must fall within ±10% tolerance (vitamins) and ±20% (minerals) as per Schedule III, FSS Labelling Regulations 2020. Ensure batch testing maintains declared values and consider adding 'typical values' caveat. Ref: FSS (Labelling and Display) Regulations 2020, Schedule III — Nutrient Tolerance Limits.",
+    "regulation_source": "FSS (Labelling and Display) Regulations 2020, Schedule III — Nutrient Tolerance Limits"
+  },
+  {
+    "rule_code": "FSSAI-NUTRA-PIF-001",
+    "framework": "FSSAI",
+    "category": "FORMAT_REQUIREMENT",
+    "severity": "MEDIUM",
+    "description": "Products containing botanical/herbal ingredients must maintain and reference a Product Information File (PIF) with safety and efficacy documentation",
+    "active": true,
+    "check_type": "FORMAT_LLM",
+    "check_config": {
+      "description": "If the product contains botanical or herbal ingredients (plant extracts, herbs, phytochemicals such as Ashwagandha, Turmeric, Green Tea Extract, Ginseng, Moringa, etc.), check if the label or accompanying leaflet references a Product Information File (PIF) or product dossier being available (e.g. 'Product Information File available with manufacturer' or 'PIF available on request'). If no botanical ingredients are present, return PASS. If botanical ingredients are present but no PIF reference is found, return WARNING."
+    },
+    "remediation_template": "For products containing botanical ingredients, maintain a Product Information File (PIF) documenting safety data, efficacy evidence, and quality specifications for each botanical ingredient. Add a statement 'Product Information File available with manufacturer' on the label or package insert. Ref: FSS (Health Supplements, Nutraceuticals) Regulations 2022, Regulation 20 — Product Information File.",
+    "regulation_source": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Regulation 20 — Product Information File for Botanical Products"
+  },
+  {
+    "rule_code": "FSSAI-FSMP-OSM-001",
+    "framework": "FSSAI",
+    "category": "MANDATORY_FIELD",
+    "severity": "HIGH",
+    "description": "Food for Special Medical Purpose (FSMP) must declare osmolality (mOsm/kg) or osmolarity (mOsm/L) on the label; residue solvents must also be declared if solvents are used in manufacture",
+    "active": true,
+    "check_type": "FORMAT_LLM",
+    "check_config": {
+      "description": "This check applies only to FSMP (Food for Special Medical Purpose) products. Verify that: (1) osmolality (mOsm/kg) or osmolarity (mOsm/L) is declared in the nutrition or product information panel, and (2) if the product mentions solvent-based extraction or processing, Residue Solvents (RS) levels are declared. Return FAIL if osmolality/osmolarity declaration is absent for an FSMP product, WARNING if present but without clear units."
+    },
+    "remediation_template": "FSMP products must declare osmolality (mOsm/kg) or osmolarity (mOsm/L) on the label as part of the nutritional/product composition declaration. If solvents are used in manufacture, Residue Solvents (RS) must also be listed. Ref: FSS (Foods for Special Dietary Use, Special Medical Purpose) Regulations 2016, Schedule I.",
+    "regulation_source": "FSS (Foods for Special Dietary Use, Special Medical Purpose, Foods for Special Dietary Use and Dietary Supplements) Regulations 2016 — FSMP Composition Requirements"
   }
 ]
