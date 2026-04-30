@@ -46,6 +46,7 @@ def _run_all_startup_tasks():
     tasks = [
         (_create_tables,           "create_tables"),
         (_run_migrations,          "migrations"),
+        (_run_enum_migrations,     "enum_migrations"),
         (_promote_admin,           "promote_admin"),
         (_seed_initial_data,       "seed_initial_data"),
         (_seed_demo_users,         "seed_demo_users"),
@@ -315,6 +316,38 @@ def _run_migrations():
         except Exception as e:
             log.debug("[migrate] Skipped (%s)", e)
     log.info("[migrate] Column migrations complete")
+
+
+def _run_enum_migrations():
+    """
+    Add new values to PostgreSQL enum types.
+
+    PostgreSQL's ALTER TYPE ... ADD VALUE cannot run inside a transaction block,
+    so these statements must be executed in AUTOCOMMIT isolation level.
+    SQLite has no native enum types — skip entirely.
+    """
+    from sqlalchemy import text
+
+    _sqlite = settings.database_url.startswith("sqlite")
+    if _sqlite:
+        return
+
+    enum_migrations = [
+        # checktype enum: FORMAT_LLM added in batch-2 FORMAT rule refactor
+        "ALTER TYPE checktype ADD VALUE IF NOT EXISTS 'FORMAT_LLM'",
+    ]
+
+    # Use engine-level AUTOCOMMIT so the option is applied before any
+    # transaction begins — required for ALTER TYPE ... ADD VALUE in PostgreSQL.
+    autocommit_engine = engine.execution_options(isolation_level="AUTOCOMMIT")
+    for sql in enum_migrations:
+        try:
+            with autocommit_engine.connect() as conn:
+                conn.execute(text(sql))
+            log.info("[migrate-enum] OK: %s", sql[:80])
+        except Exception as exc:
+            log.debug("[migrate-enum] Skipped (%s)", exc)
+    log.info("[migrate-enum] Enum migrations complete")
 
 
 def _promote_admin():
