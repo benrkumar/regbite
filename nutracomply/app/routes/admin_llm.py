@@ -357,6 +357,10 @@ async def llm_train(kb_type: str, request: Request, db: Session = Depends(get_db
         total_rules = len(rules)
         reg_changes = (
             db.query(RegulationChange)
+            .filter(
+                (RegulationChange.crawl_status.is_(None))
+                | (RegulationChange.crawl_status == "accepted")
+            )
             .order_by(RegulationChange.effective_date.desc())
             .all()
         )

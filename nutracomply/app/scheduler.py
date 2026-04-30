@@ -33,109 +33,34 @@ def _next_run_utc(hour_utc: int, minute_utc: int) -> datetime:
 
 
 def _run_daily_scrape():
-    """Run the FSSAI regulation scraper (same logic as the Celery task)."""
+    """Run the shared regulation source-registry crawl."""
     from app.database import SessionLocal
-    from app.models import (
-        RegulationChange, ChangeType, Severity, Alert, AlertType, AlertStatus,
-        RegulationStatus,
-    )
+    from app.services.regulation_ingestion import crawl_active_regulation_sources
 
     db = SessionLocal()
-    new_changes = []
 
     try:
-        from app.services.scraper import (
-            scrape_fssai_pages, download_and_hash, classify_regulation_change,
+        log.info("[scheduler] Starting daily regulation crawl")
+        result = crawl_active_regulation_sources(db, initiated_by="scheduler")
+        log.info(
+            "[scheduler] Regulation crawl complete. %d accepted, %d rejected, %d unchanged.",
+            result["accepted_count"],
+            result["reject_count"],
+            result["unchanged_count"],
         )
-        from app.services.notification import send_regulation_change_email
 
-        log.info("[scheduler] Starting daily FSSAI scrape")
-        documents = scrape_fssai_pages()
-        log.info("[scheduler] Found %d documents to check", len(documents))
-
-        for doc in documents:
-            url = doc["source_url"]
-            name = doc["document_name"]
-
-            existing = db.query(RegulationChange).filter(
-                RegulationChange.source_url == url
-            ).order_by(RegulationChange.detected_at.desc()).first()
-
-            text, new_hash = download_and_hash(url)
-            if not new_hash:
-                continue
-
-            if existing and existing.document_hash == new_hash:
-                continue
-
-            log.info("[scheduler] New/changed document: %s", name)
-
-            classification = classify_regulation_change(name, text or "")
-
-            try:
-                change_type = ChangeType(classification.get("change_type", "UNKNOWN"))
-            except ValueError:
-                change_type = ChangeType.UNKNOWN
-
-            try:
-                severity = Severity(classification.get("severity", "MEDIUM"))
-            except ValueError:
-                severity = Severity.MEDIUM
-
-            effective_date = None
-            if classification.get("effective_date"):
-                try:
-                    from dateutil import parser as dateparser
-                    effective_date = dateparser.parse(classification["effective_date"])
-                except Exception:
-                    pass
-
-            change = RegulationChange(
-                source_url=url,
-                document_name=name,
-                detected_at=datetime.utcnow(),
-                change_type=change_type,
-                summary_text=classification.get("summary_text", ""),
-                diff_text=(text or "")[:2000],
-                effective_date=effective_date,
-                severity=severity,
-                document_hash=new_hash,
-                status="NEW",
-                regulation_status=RegulationStatus.EFFECTIVE,
-            )
-            db.add(change)
-            db.commit()
-            db.refresh(change)
-            new_changes.append(change)
-
-            alert = Alert(
-                regulation_change_id=change.id,
-                alert_type=AlertType.REGULATION_CHANGE,
-                severity=severity,
-                title=f"Regulation Update: {change_type.value} — {name[:100]}",
-                message=classification.get("summary_text", f"New/updated document detected: {name}"),
-                rule_violations=[],
-                status=AlertStatus.UNREAD,
-            )
-            db.add(alert)
-            db.commit()
-
-            try:
-                send_regulation_change_email(change)
-            except Exception as e:
-                log.warning("[scheduler] Email notification failed: %s", e)
-
-        log.info("[scheduler] Scrape done. %d new changes detected.", len(new_changes))
-
-        # If there are critical changes, trigger label re-checks + rule suggestions
-        critical_changes = [c for c in new_changes if c.severity.value == "CRITICAL"]
+        critical_changes = [
+            change
+            for change in result["accepted_changes"]
+            if getattr(change.severity, "value", change.severity) == "CRITICAL"
+        ]
         if critical_changes:
             log.info("[scheduler] %d CRITICAL changes — triggering label re-check", len(critical_changes))
             _run_recheck()
             _suggest_rule_updates(db, critical_changes)
 
         # If any new changes detected, auto-reseed LLM KB
-        if new_changes:
+        if result["accepted_changes"]:
             _reseed_llm_kb(db)
 
     except Exception as e:

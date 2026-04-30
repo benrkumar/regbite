@@ -366,7 +366,7 @@ def _run_migrations():
 def _run_foundational_migrations():
     from sqlalchemy import inspect, text
 
-    for table_name in ("accounts", "regulation_sources", "alert_read_states", "checker_sessions"):
+    for table_name in ("accounts", "regulation_sources", "alert_read_states", "checker_sessions", "regulation_crawl_runs"):
         try:
             Base.metadata.tables[table_name].create(bind=engine, checkfirst=True)
         except Exception as exc:
@@ -405,8 +405,21 @@ def _run_foundational_migrations():
             ("regulation_changes", "document_type", "VARCHAR(100)"),
             ("regulation_changes", "crawl_status", "VARCHAR(50)"),
             ("regulation_changes", "reject_reason", "TEXT"),
+            ("regulation_changes", "source_document_key", "VARCHAR(255)"),
+            ("regulation_changes", "published_at", "TIMESTAMP"),
+            ("regulation_changes", "review_state", "VARCHAR(50)"),
+            ("regulation_changes", "extracted_page_count", "INTEGER"),
+            ("regulation_changes", "total_page_count", "INTEGER"),
             ("regulation_changes", "supersedes_change_id", "INTEGER"),
             ("regulation_changes", "superseded_by_change_id", "INTEGER"),
+            ("regulation_sources", "parser_kind", "VARCHAR(100)"),
+            ("regulation_sources", "cadence", "VARCHAR(30)"),
+            ("regulation_sources", "freshness_state", "VARCHAR(30)"),
+            ("regulation_sources", "discovery_config", "JSON"),
+            ("regulation_sources", "last_checked_at", "TIMESTAMP"),
+            ("regulation_sources", "last_success_at", "TIMESTAMP"),
+            ("regulation_sources", "last_error_at", "TIMESTAMP"),
+            ("regulation_sources", "last_error_message", "TEXT"),
             ("compliance_rules", "applicable_product_classes", "JSON DEFAULT '[]'"),
             ("compliance_rules", "applicable_claim_classes", "JSON DEFAULT '[]'"),
             ("compliance_rules", "applicable_import_scope", "VARCHAR(30)"),
@@ -428,6 +441,8 @@ def _run_foundational_migrations():
             "CREATE INDEX IF NOT EXISTS ix_api_keys_account_id ON api_keys (account_id)",
             "CREATE INDEX IF NOT EXISTS ix_subscriptions_account_id ON subscriptions (account_id)",
             "CREATE INDEX IF NOT EXISTS ix_payment_records_account_id ON payment_records (account_id)",
+            "CREATE INDEX IF NOT EXISTS ix_regulation_changes_source_document ON regulation_changes (source_id, source_document_key)",
+            "CREATE INDEX IF NOT EXISTS ix_regulation_crawl_runs_source_started ON regulation_crawl_runs (source_id, started_at)",
         ]
         for sql in index_sql:
             try:

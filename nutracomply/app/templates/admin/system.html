@@ -81,10 +81,10 @@
   <h4 class="adm-section-title">Manual Controls</h4>
   <div class="system-controls">
     <div class="system-control-card">
-      <div style="font-weight:700;font-size:0.92rem;margin-bottom:0.3rem;">Run Regulation Scrape</div>
-      <p style="font-size:0.82rem;color:#737373;line-height:1.55;margin:0 0 0.85rem;">Scrapes FSSAI, AYUSH, and Legal Metrology for new regulation updates.</p>
+      <div style="font-weight:700;font-size:0.92rem;margin-bottom:0.3rem;">Run Regulation Refresh</div>
+      <p style="font-size:0.82rem;color:#737373;line-height:1.55;margin:0 0 0.85rem;">Runs the source-registry crawl and auto-publishes accepted discoveries into the regulation feed and KB.</p>
       <form method="post" action="/admin/trigger-scrape" style="margin:0;">
-        <button type="submit" class="adm-btn adm-btn-primary" style="width:100%;">Trigger Scrape Now</button>
+        <button type="submit" class="adm-btn adm-btn-primary" style="width:100%;">Refresh All Sources Now</button>
       </form>
     </div>
     <div class="system-control-card">
@@ -93,6 +93,11 @@
       <form method="post" action="/admin/trigger-recheck" style="margin:0;">
         <button type="submit" class="adm-btn adm-btn-success" style="width:100%;">Trigger Re-check Now</button>
       </form>
+    </div>
+    <div class="system-control-card">
+      <div style="font-weight:700;font-size:0.92rem;margin-bottom:0.3rem;">Open Source Registry</div>
+      <p style="font-size:0.82rem;color:#737373;line-height:1.55;margin:0 0 0.85rem;">Inspect freshness, last-run telemetry, and run targeted refreshes source by source.</p>
+      <a href="/admin/regulations/sources" class="adm-btn" style="display:block;width:100%;text-align:center;">View Source Registry</a>
     </div>
   </div>
 </section>
@@ -103,6 +108,10 @@
     <div class="adm-kv-item">
       <span class="adm-kv-label">Daily Regulation Scrape</span>
       <span class="adm-kv-value">6:00 AM IST every day</span>
+    </div>
+    <div class="adm-kv-item">
+      <span class="adm-kv-label">Source Freshness</span>
+      <span class="adm-kv-value">{{ source_summary.fresh }} fresh · {{ source_summary.stale }} stale · {{ source_summary.degraded }} degraded · {{ source_summary.never }} never</span>
     </div>
     <div class="adm-kv-item">
       <span class="adm-kv-label">Auto Re-check</span>

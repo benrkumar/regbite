@@ -355,6 +355,66 @@ def _ingest_document(db, kb_type: str, title: str, source: str,
     return doc
 
 
+def build_regulation_change_kb_content(change) -> str:
+    eff = change.effective_date.strftime("%Y-%m-%d") if change.effective_date else "TBD"
+    published = change.published_at.strftime("%Y-%m-%d") if getattr(change, "published_at", None) else "Unpublished"
+    source_name = getattr(getattr(change, "source", None), "name", None) or "Unknown source"
+    review_state = getattr(change, "review_state", None) or "legacy"
+    page_meta = "Unknown"
+    if getattr(change, "total_page_count", None):
+        extracted = change.extracted_page_count or 0
+        page_meta = f"{extracted}/{change.total_page_count} pages extracted"
+
+    return (
+        f"Regulation Update: {change.document_name or 'Unnamed'}\n"
+        f"Source: {source_name}\n"
+        f"Change Type: {change.change_type.value}\n"
+        f"Detected: {change.detected_at.strftime('%Y-%m-%d')}\n"
+        f"Published: {published}\n"
+        f"Effective Date: {eff}\n"
+        f"Severity: {change.severity.value}\n"
+        f"Document Type: {change.document_type or 'Unknown'}\n"
+        f"Review State: {review_state}\n"
+        f"Extraction Completeness: {page_meta}\n"
+        f"Summary: {change.summary_text or 'N/A'}\n"
+        f"Affected Rules: {', '.join(change.affected_rule_codes or [])}\n"
+        f"Source URL: {change.source_url or 'N/A'}\n"
+        f"Document Text Excerpt:\n{(change.diff_text or '')[:4000]}"
+    )
+
+
+def sync_regulation_change_to_kb(db, change, replace_existing: bool = False) -> dict:
+    from app.models import KBDocument, KBType
+
+    source = f"db:regulation_change:{change.id}"
+    existing_doc = (
+        db.query(KBDocument)
+        .filter(
+            KBDocument.kb_type == KBType.REGULATIONS,
+            KBDocument.source == source,
+            KBDocument.is_active,
+        )
+        .first()
+    )
+    if existing_doc and not replace_existing:
+        return {"status": "up_to_date", "source": source}
+
+    if existing_doc and replace_existing:
+        db.delete(existing_doc)
+        db.commit()
+
+    content = build_regulation_change_kb_content(change)
+    _ingest_document(
+        db,
+        "regulations",
+        title=f"Reg Change: {(change.document_name or 'Update')[:70]}",
+        source=source,
+        content=content,
+    )
+    invalidate_cache("regulations")
+    return {"status": "synced", "source": source}
+
+
 def reindex_kb(db, kb_type: str) -> dict:
     """
     Re-chunk all existing KBDocuments for a KB type using the current chunk_text logic.
@@ -610,26 +670,23 @@ def seed_regulations_kb(db, framework: str | None = None) -> dict:
 
     # ── Regulation Changes + Ingredients — FSSAI scope only ──────────────────
     if framework in (None, "fssai"):
-        for change in db.query(RegulationChange).all():
+        visible_changes = (
+            db.query(RegulationChange)
+            .filter(
+                (RegulationChange.crawl_status.is_(None))
+                | (RegulationChange.crawl_status == "accepted")
+            )
+            .all()
+        )
+        for change in visible_changes:
             source = f"db:regulation_change:{change.id}"
             if source in existing_sources:
                 continue
-            eff = change.effective_date.strftime("%Y-%m-%d") if change.effective_date else "TBD"
-            content = (
-                f"Regulation Update: {change.document_name or 'Unnamed'}\n"
-                f"Change Type: {change.change_type.value}\n"
-                f"Detected: {change.detected_at.strftime('%Y-%m-%d')}\n"
-                f"Effective Date: {eff}\n"
-                f"Severity: {change.severity.value}\n"
-                f"Summary: {change.summary_text or 'N/A'}\n"
-                f"Affected Rules: {', '.join(change.affected_rule_codes or [])}\n"
-                f"Source URL: {change.source_url or 'N/A'}"
-            )
             _ingest_document(
                 db, "regulations",
                 title=f"Reg Change: {(change.document_name or 'Update')[:70]}",
                 source=source,
-                content=content,
+                content=build_regulation_change_kb_content(change),
             )
             count += 1
 

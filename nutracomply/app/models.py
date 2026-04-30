@@ -312,10 +312,14 @@ class ComplianceCheck(Base):
 
 class RegulationChange(Base):
     __tablename__ = "regulation_changes"
+    __table_args__ = (
+        Index("ix_regulation_changes_source_document", "source_id", "source_document_key"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     source_id = Column(Integer, ForeignKey("regulation_sources.id"), nullable=True)
     source_url = Column(String(1000))
+    source_document_key = Column(String(255), nullable=True)
     document_name = Column(String(500))
     detected_at = Column(DateTime, default=datetime.utcnow)
     change_type = Column(SAEnum(ChangeType), default=ChangeType.UNKNOWN)
@@ -330,11 +334,15 @@ class RegulationChange(Base):
     document_type = Column(String(100), nullable=True)
     crawl_status = Column(String(50), nullable=True)
     reject_reason = Column(Text, nullable=True)
+    published_at = Column(DateTime, nullable=True)
+    review_state = Column(String(50), nullable=True)
+    extracted_page_count = Column(Integer, nullable=True)
+    total_page_count = Column(Integer, nullable=True)
     supersedes_change_id = Column(Integer, ForeignKey("regulation_changes.id"), nullable=True)
     superseded_by_change_id = Column(Integer, ForeignKey("regulation_changes.id"), nullable=True)
 
     alerts = relationship("Alert", back_populates="regulation_change")
-    source = relationship("RegulationSource", foreign_keys=[source_id])
+    source = relationship("RegulationSource", foreign_keys=[source_id], back_populates="changes")
 
 
 class RegulationSource(Base):
@@ -345,7 +353,15 @@ class RegulationSource(Base):
     slug = Column(String(120), nullable=False, unique=True, index=True)
     base_url = Column(String(1000), nullable=False)
     doc_type = Column(String(100), nullable=True)
+    parser_kind = Column(String(100), nullable=True)
+    cadence = Column(String(30), nullable=True)
     is_active = Column(Boolean, default=True)
+    freshness_state = Column(String(30), nullable=True)
+    discovery_config = Column(JSON, default=dict)
+    last_checked_at = Column(DateTime, nullable=True)
+    last_success_at = Column(DateTime, nullable=True)
+    last_error_at = Column(DateTime, nullable=True)
+    last_error_message = Column(Text, nullable=True)
     last_crawled_at = Column(DateTime, nullable=True)
     last_status = Column(String(50), nullable=True)
     last_discovery_count = Column(Integer, nullable=True)
@@ -353,6 +369,35 @@ class RegulationSource(Base):
     last_reject_reason = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    changes = relationship("RegulationChange", back_populates="source")
+    crawl_runs = relationship(
+        "RegulationCrawlRun",
+        back_populates="source",
+        order_by="RegulationCrawlRun.started_at.desc()",
+    )
+
+
+class RegulationCrawlRun(Base):
+    __tablename__ = "regulation_crawl_runs"
+    __table_args__ = (
+        Index("ix_regulation_crawl_runs_source_started", "source_id", "started_at"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_id = Column(Integer, ForeignKey("regulation_sources.id"), nullable=False, index=True)
+    initiated_by = Column(String(30), nullable=True)
+    started_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    finished_at = Column(DateTime, nullable=True)
+    status = Column(String(30), nullable=False, default="running")
+    discovery_count = Column(Integer, default=0)
+    accepted_count = Column(Integer, default=0)
+    reject_count = Column(Integer, default=0)
+    unchanged_count = Column(Integer, default=0)
+    error_summary = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    source = relationship("RegulationSource", back_populates="crawl_runs")
 
 
 class Alert(Base):

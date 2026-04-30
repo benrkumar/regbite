@@ -3,29 +3,197 @@
 
 {% block content %}
 <style>
-.source-filter { display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1.2rem; }
-.src-btn { padding:0.3rem 0.85rem; border-radius:var(--r-full); font-size:0.78rem; font-weight:600;
-  border:1.5px solid var(--gray-200); background:rgba(255,255,255,0.75); color:var(--gray-500);
-  cursor:pointer; transition:all var(--t); }
-.src-btn.active { border-color:var(--primary); color:var(--primary); background:rgba(99,102,241,0.08); }
-.src-btn:hover:not(.active) { border-color:var(--primary); color:var(--primary); }
-.source-badge { display:inline-block; padding:0.12rem 0.5rem; border-radius:5px; font-size:0.68rem; font-weight:700; white-space:nowrap; }
-.sb-fssai { background:#F0F0F0; color:#404040; }
-.sb-ayush { background:#F5F5F5; color:#262626; }
-.sb-lm    { background:#F5F5F5; color:#525252; }
-.date-group-hdr { font-size:0.78rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase;
-  color:var(--gray-400); margin:1.6rem 0 0.7rem; display:flex; align-items:center; gap:0.75rem; }
-.date-group-hdr::after { content:''; flex:1; height:1px; background:var(--gray-200); }
+.reg-meta-banner,
+.reg-filter-card,
+.reg-change-card {
+  background:#FFFFFF;
+  border:1px solid var(--gray-200);
+  border-radius:14px;
+}
+
+.reg-meta-banner {
+  padding:1rem 1.1rem;
+  margin-bottom:1.2rem;
+}
+
+.reg-meta-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0.85rem;
+  margin-top:0.9rem;
+}
+
+.reg-meta-pill {
+  border:1px solid var(--gray-200);
+  border-radius:12px;
+  padding:0.8rem 0.9rem;
+  background:var(--gray-50);
+}
+
+.reg-meta-pill h4 {
+  margin:0 0 0.25rem;
+  font-size:0.82rem;
+}
+
+.reg-meta-pill p {
+  margin:0;
+  font-size:0.78rem;
+  color:var(--gray-500);
+  line-height:1.45;
+}
+
+.reg-filter-card {
+  padding:1rem 1.1rem;
+  margin-bottom:1.25rem;
+}
+
+.reg-filter-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0.75rem;
+  align-items:end;
+}
+
+.reg-filter-actions {
+  display:flex;
+  gap:0.55rem;
+  align-items:flex-end;
+}
+
+.reg-change-card {
+  padding:1rem 1.1rem;
+  margin-bottom:0.95rem;
+  border-left:4px solid var(--gray-300);
+}
+
+.reg-header-row {
+  display:flex;
+  justify-content:space-between;
+  gap:0.8rem;
+  align-items:flex-start;
+  flex-wrap:wrap;
+}
+
+.reg-badge-row {
+  display:flex;
+  gap:0.45rem;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-bottom:0.35rem;
+}
+
+.reg-source-badge,
+.reg-review-badge,
+.reg-freshness-badge,
+.reg-doc-badge {
+  display:inline-flex;
+  align-items:center;
+  border-radius:999px;
+  padding:0.16rem 0.55rem;
+  font-size:0.72rem;
+  font-weight:700;
+  white-space:nowrap;
+}
+
+.reg-source-badge.fssai { background:#F3F4F6; color:#1F2937; }
+.reg-source-badge.ayush { background:#EEF7F0; color:#166534; }
+.reg-source-badge.legal_metrology { background:#FFF7ED; color:#9A3412; }
+.reg-review-badge.auto_published { background:#EBF5FF; color:#1D4ED8; }
+.reg-review-badge.reviewed { background:#ECFDF3; color:#047857; }
+.reg-review-badge.legacy { background:#FAFAFA; color:#525252; }
+.reg-freshness-badge.fresh { background:#ECFDF3; color:#047857; }
+.reg-freshness-badge.stale { background:#FEF3C7; color:#92400E; }
+.reg-freshness-badge.degraded { background:#FEE2E2; color:#B91C1C; }
+.reg-freshness-badge.never { background:#F3F4F6; color:#4B5563; }
+.reg-doc-badge { background:#F5F5F5; color:#525252; }
+
+.reg-card-title {
+  margin:0.15rem 0 0.35rem;
+  font-size:1rem;
+  color:var(--gray-900);
+}
+
+.reg-card-summary {
+  margin:0.25rem 0 0;
+  color:var(--gray-600);
+  font-size:0.88rem;
+  line-height:1.6;
+}
+
+.reg-detail-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0.75rem;
+  margin-top:0.9rem;
+}
+
+.reg-detail {
+  border:1px solid var(--gray-200);
+  border-radius:12px;
+  background:var(--gray-50);
+  padding:0.75rem 0.85rem;
+}
+
+.reg-detail-label {
+  display:block;
+  font-size:0.72rem;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  color:var(--gray-400);
+  margin-bottom:0.25rem;
+}
+
+.reg-detail-value {
+  font-size:0.84rem;
+  color:var(--gray-800);
+  line-height:1.45;
+}
+
+.reg-lineage {
+  margin-top:0.75rem;
+  padding:0.7rem 0.8rem;
+  border-radius:12px;
+  background:#FAFAFA;
+  border:1px dashed var(--gray-200);
+  font-size:0.8rem;
+  color:var(--gray-500);
+}
+
+.date-group-hdr {
+  font-size:0.78rem;
+  font-weight:700;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--gray-400);
+  margin:1.45rem 0 0.75rem;
+  display:flex;
+  align-items:center;
+  gap:0.75rem;
+}
+
+.date-group-hdr::after {
+  content:"";
+  flex:1;
+  height:1px;
+  background:var(--gray-200);
+}
+
+@media (max-width: 900px) {
+  .reg-meta-grid,
+  .reg-detail-grid,
+  .reg-filter-grid {
+    grid-template-columns:1fr;
+  }
+}
 </style>
 
 <div class="page-hdr">
   <div>
     <h2>Regulation Database</h2>
-    <p>{{ changes | length }} regulatory updates &middot; {{ rules | length }} active compliance rules</p>
+    <p>{{ changes | length }} visible updates · {{ rules | length }} active compliance rules</p>
   </div>
 </div>
 
-{# ── Tab navigation ── #}
 <div class="tabs">
   <a href="/regulations?tab=feed"
      class="tab{% if active_tab == 'feed' %} active{% endif %}">
@@ -39,138 +207,202 @@
   </a>
 </div>
 
-
-{# ══════════════════════════════════════════════════════════
-   TAB 1 — UPDATE FEED
-   ══════════════════════════════════════════════════════════ #}
 {% if active_tab == 'feed' %}
-
-{# Sources monitored banner #}
-<div class="card card-flat no-hover" style="margin-bottom:1.5rem;font-size:0.83rem;color:var(--gray-600);">
-  <strong style="color:var(--gray-800);">Sources monitored:</strong>
-  <span class="source-badge sb-fssai">FSSAI</span> fssai.gov.in &nbsp;&middot;&nbsp;
-  <span class="source-badge sb-ayush">AYUSH</span> ayush.gov.in &nbsp;&middot;&nbsp;
-  <span class="source-badge sb-lm">Legal Metrology</span> consumeraffairs.nic.in
-  <br/><span style="color:var(--gray-400);font-size:0.79rem;margin-top:0.3rem;display:block;">
-    SHA-256 change detection — new documents trigger automatic label re-checks. Updated daily at 6:00 AM IST.
-  </span>
+<div class="reg-meta-banner">
+  <div style="display:flex;justify-content:space-between;gap:0.8rem;flex-wrap:wrap;align-items:flex-start;">
+    <div>
+      <h3 style="margin:0;font-size:1rem;">Source registry and freshness</h3>
+      <p style="margin:0.35rem 0 0;color:var(--gray-500);font-size:0.84rem;line-height:1.55;">
+        Accepted discoveries are auto-published into this feed after the daily crawl.
+        Manual refresh is available in the admin source registry.
+      </p>
+    </div>
+    <span class="pill pill-neutral" style="font-size:0.74rem;">Daily crawl + manual refresh</span>
+  </div>
+  <div class="reg-meta-grid">
+    {% for source_row in source_registry %}
+    <div class="reg-meta-pill">
+      <div style="display:flex;justify-content:space-between;gap:0.5rem;align-items:center;">
+        <h4>{{ source_row.name }}</h4>
+        <span class="reg-freshness-badge {{ source_row.freshness_state or 'never' }}">{{ (source_row.freshness_state or 'never').replace('_', ' ') | title }}</span>
+      </div>
+      <p>
+        Last checked:
+        {% if source_row.last_checked_at %}{{ source_row.last_checked_at.strftime('%d %b %Y, %I:%M %p') }}{% else %}Never{% endif %}
+        <br>
+        Last success:
+        {% if source_row.last_success_at %}{{ source_row.last_success_at.strftime('%d %b %Y, %I:%M %p') }}{% else %}No successful crawl yet{% endif %}
+      </p>
+    </div>
+    {% endfor %}
+  </div>
 </div>
 
-{# Source filter #}
-{% if changes %}
-<div class="source-filter">
-  <button class="src-btn active" onclick="filterSource('all',this)">All Sources</button>
-  <button class="src-btn" onclick="filterSource('FSSAI',this)"> FSSAI</button>
-  <button class="src-btn" onclick="filterSource('AYUSH',this)"> AYUSH</button>
-  <button class="src-btn" onclick="filterSource('LEGAL_METROLOGY',this)">&#x2696;&#xFE0F; Legal Metrology</button>
+<div class="reg-filter-card">
+  <form method="get" action="/regulations">
+    <input type="hidden" name="tab" value="feed">
+    <div class="reg-filter-grid">
+      <div class="field" style="margin:0;">
+        <label class="field-label">Source</label>
+        <select class="input" name="source">
+          <option value="">All sources</option>
+          <option value="fssai" {% if filter_source == 'fssai' %}selected{% endif %}>FSSAI (all)</option>
+          <option value="ayush" {% if filter_source == 'ayush' %}selected{% endif %}>AYUSH (all)</option>
+          <option value="legal_metrology" {% if filter_source == 'legal_metrology' %}selected{% endif %}>Legal Metrology (all)</option>
+          {% for source_row in source_registry %}
+          <option value="{{ source_row.slug }}" {% if filter_source == source_row.slug %}selected{% endif %}>{{ source_row.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field" style="margin:0;">
+        <label class="field-label">Freshness</label>
+        <select class="input" name="freshness">
+          <option value="">All freshness states</option>
+          {% for option in freshness_options %}
+          <option value="{{ option }}" {% if filter_freshness == option %}selected{% endif %}>{{ option.replace('_', ' ') | title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field" style="margin:0;">
+        <label class="field-label">Review State</label>
+        <select class="input" name="review">
+          <option value="">All visible states</option>
+          {% for option in review_options %}
+          <option value="{{ option }}" {% if filter_review == option %}selected{% endif %}>
+            {% if option == 'auto_published' %}Auto-detected{% elif option == 'reviewed' %}Reviewed{% else %}Legacy{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="reg-filter-actions" style="margin-top:0.85rem;">
+      <button type="submit" class="btn btn-primary btn-sm">Apply Filters</button>
+      {% if filter_source or filter_freshness or filter_review %}
+      <a href="/regulations?tab=feed" class="btn btn-ghost btn-sm">Clear</a>
+      {% endif %}
+    </div>
+  </form>
 </div>
-{% endif %}
 
 {% if not changes %}
 <div class="card no-hover">
   <div class="empty-state">
     <span class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
-    <h3>No updates yet</h3>
-    <p>Regulation data will appear here after the daily 6 AM scrape runs.</p>
+    <h3>No visible updates yet</h3>
+    <p>Accepted regulation discoveries will appear here after the scheduled or manual crawl finishes.</p>
   </div>
 </div>
 {% endif %}
 
-{# ── Grouped by Month/Year ── #}
 {% for group in grouped_changes %}
-<div class="date-group-hdr" data-group="{{ group.label }}">{{ group.label }}</div>
+<div class="date-group-hdr">{{ group.label }}</div>
 
 {% for change in group.changes %}
-{# Derive source org from URL #}
-{% set src_url = change.source_url or '' %}
-{% if 'ayush.gov.in' in src_url %}
-  {% set src_org = 'AYUSH' %}
-  {% set src_cls = 'sb-ayush' %}
-{% elif 'consumeraffairs.nic.in' in src_url or 'legalmetrology' in src_url.lower() %}
-  {% set src_org = 'LEGAL_METROLOGY' %}
-  {% set src_cls = 'sb-lm' %}
-{% else %}
-  {% set src_org = 'FSSAI' %}
-  {% set src_cls = 'sb-fssai' %}
-{% endif %}
-
-<div class="card no-hover reg-change-card" data-source="{{ src_org }}" style="margin-bottom:1rem;border-left:4px solid
+{% set family = source_family_for_change(change) %}
+{% set source_name = change.source.name if change.source and change.source.name else ('AYUSH' if family == 'ayush' else 'Legal Metrology' if family == 'legal_metrology' else 'FSSAI') %}
+{% set review_state = change.review_state or 'legacy' %}
+{% set freshness_state = change.source.freshness_state if change.source and change.source.freshness_state else 'never' %}
+<div class="reg-change-card" style="border-left-color:
   {% if change.severity.value == 'CRITICAL' %}var(--danger)
-  {% elif change.severity.value == 'HIGH' %}#f97316
+  {% elif change.severity.value == 'HIGH' %}#F97316
   {% elif change.severity.value == 'MEDIUM' %}var(--warning)
   {% else %}var(--gray-300){% endif %};">
-
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
-    <div>
-      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-        <strong style="font-size:0.9rem;color:var(--gray-800);">{{ change.change_type.value.replace('_', ' ') | title }}</strong>
-        <span class="source-badge {{ src_cls }}">
-          {% if src_org == 'AYUSH' %}AYUSH
-          {% elif src_org == 'LEGAL_METROLOGY' %}Legal Metrology
-          {% else %}FSSAI{% endif %}
+  <div class="reg-header-row">
+    <div style="min-width:0;flex:1;">
+      <div class="reg-badge-row">
+        <span class="reg-source-badge {{ family }}">{{ source_name }}</span>
+        <span class="reg-review-badge {{ review_state }}">
+          {% if review_state == 'auto_published' %}Auto-detected{% elif review_state == 'reviewed' %}Reviewed{% else %}Legacy{% endif %}
         </span>
-        {% if change.status == 'NEW' %}
-          <span class="pill pill-new" style="font-size:0.68rem;">NEW</span>
+        <span class="reg-freshness-badge {{ freshness_state }}">{{ freshness_state.replace('_', ' ') | title }}</span>
+        {% if change.document_type %}
+        <span class="reg-doc-badge">{{ change.document_type.replace('_', ' ') | title }}</span>
         {% endif %}
       </div>
-      <div style="font-size:0.79rem;color:var(--gray-400);margin-top:0.2rem;">
-        {{ change.detected_at.strftime('%d %b %Y') }}
-        {% if change.effective_date %}&middot; Effective {{ change.effective_date.strftime('%d %b %Y') }}{% endif %}
+      <h3 class="reg-card-title">{{ change.document_name or 'Regulation Update' }}</h3>
+      <div style="font-size:0.82rem;color:var(--gray-500);">
+        {{ change.change_type.value.replace('_', ' ') | title }}
+        {% if change.status == 'NEW' %}&middot; Newly published{% endif %}
       </div>
     </div>
     <span class="sev-tag sev-{{ change.severity.value }}">{{ change.severity.value }}</span>
   </div>
 
-  <p style="margin:0.6rem 0 0.25rem;font-weight:600;color:var(--gray-900);font-size:0.91rem;">{{ change.document_name }}</p>
-
   {% if change.summary_text %}
-  <p style="margin:0.3rem 0;color:var(--gray-600);font-size:0.85rem;line-height:1.5;">{{ change.summary_text }}</p>
+  <p class="reg-card-summary">{{ change.summary_text }}</p>
   {% endif %}
 
-  {% if change.affected_rule_codes and change.affected_rule_codes | length > 0 %}
-  <div style="margin:0.4rem 0;font-size:0.79rem;color:var(--gray-500);">
-    Rules affected:
-    {% for code in change.affected_rule_codes %}
-      <code style="background:var(--gray-100);padding:0.1rem 0.4rem;border-radius:6px;margin-right:3px;font-size:0.75rem;">{{ code }}</code>
-    {% endfor %}
+  <div class="reg-detail-grid">
+    <div class="reg-detail">
+      <span class="reg-detail-label">Detection</span>
+      <div class="reg-detail-value">
+        {{ change.detected_at.strftime('%d %b %Y, %I:%M %p') }}
+        <br>
+        Last checked:
+        {% if change.source and change.source.last_checked_at %}
+          {{ change.source.last_checked_at.strftime('%d %b %Y, %I:%M %p') }}
+        {% else %}
+          Not recorded
+        {% endif %}
+      </div>
+    </div>
+    <div class="reg-detail">
+      <span class="reg-detail-label">Effective Date</span>
+      <div class="reg-detail-value">
+        {% if change.effective_date %}
+          {{ change.effective_date.strftime('%d %b %Y') }}
+        {% else %}
+          Not stated
+        {% endif %}
+      </div>
+    </div>
+    <div class="reg-detail">
+      <span class="reg-detail-label">Extraction Completeness</span>
+      <div class="reg-detail-value">
+        {% if change.total_page_count %}
+          {{ change.extracted_page_count or 0 }}/{{ change.total_page_count }} pages extracted
+          {% if change.extracted_page_count and change.total_page_count and change.extracted_page_count < change.total_page_count %}
+            <br><span style="color:#B45309;font-weight:600;">Partial extraction</span>
+          {% endif %}
+        {% else %}
+          No page metadata recorded
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if change.supersedes_change_id or change.superseded_by_change_id %}
+  <div class="reg-lineage">
+    {% if change.supersedes_change_id %}
+      This version supersedes an earlier tracked document version.
+    {% endif %}
+    {% if change.supersedes_change_id and change.superseded_by_change_id %}<br>{% endif %}
+    {% if change.superseded_by_change_id %}
+      A newer tracked version already supersedes this entry.
+    {% endif %}
   </div>
   {% endif %}
 
   {% if change.diff_text %}
-  <details style="margin-top:0.5rem;">
-    <summary style="cursor:pointer;color:var(--primary);font-size:0.83rem;font-weight:500;">View full details &rarr;</summary>
+  <details style="margin-top:0.85rem;">
+    <summary style="cursor:pointer;color:var(--primary);font-size:0.84rem;font-weight:600;">View extracted text excerpt</summary>
     <pre style="font-size:0.74rem;overflow:auto;max-height:360px;background:var(--gray-50);padding:0.8rem;margin-top:0.5rem;white-space:pre-wrap;border-radius:var(--r-md);border:1px solid var(--gray-200);">{{ change.diff_text }}</pre>
   </details>
   {% endif %}
 
   {% if change.source_url %}
-  <div style="margin-top:0.75rem;">
-    <a href="{{ change.source_url }}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">View Source &rarr;</a>
+  <div style="margin-top:0.85rem;">
+    <a href="{{ change.source_url }}" target="_blank" rel="noopener" class="btn btn-outline btn-sm">Open Source Document</a>
   </div>
   {% endif %}
 </div>
 {% endfor %}
 {% endfor %}
 
-<div id="no-source-results" style="display:none;" class="card no-hover">
-  <div class="empty-state">
-    <span class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-    <h3>No updates from this source</h3>
-    <p><button onclick="filterSource('all', document.querySelector('.src-btn'))"
-       style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:inherit;padding:0;">Show all sources</button></p>
-  </div>
-</div>
-
-
-{# ══════════════════════════════════════════════════════════
-   TAB 2 — RULES DATABASE
-   ══════════════════════════════════════════════════════════ #}
 {% elif active_tab == 'rules' %}
-
-{# Filter bar #}
 <div class="card card-flat no-hover" style="margin-bottom:1.2rem;">
   <form method="get" action="/regulations" style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;">
-    <input type="hidden" name="tab" value="rules"/>
+    <input type="hidden" name="tab" value="rules">
     <div class="field" style="flex:1;min-width:180px;margin:0;">
       <label class="field-label">Category</label>
       <select class="input" name="category" style="margin-top:0.3rem;">
@@ -185,9 +417,9 @@
       <select class="input" name="severity" style="margin-top:0.3rem;">
         <option value="">All severities</option>
         <option value="CRITICAL" {% if filter_severity == 'CRITICAL' %}selected{% endif %}>CRITICAL</option>
-        <option value="HIGH"     {% if filter_severity == 'HIGH'     %}selected{% endif %}>HIGH</option>
-        <option value="MEDIUM"   {% if filter_severity == 'MEDIUM'   %}selected{% endif %}>MEDIUM</option>
-        <option value="LOW"      {% if filter_severity == 'LOW'      %}selected{% endif %}>LOW</option>
+        <option value="HIGH" {% if filter_severity == 'HIGH' %}selected{% endif %}>HIGH</option>
+        <option value="MEDIUM" {% if filter_severity == 'MEDIUM' %}selected{% endif %}>MEDIUM</option>
+        <option value="LOW" {% if filter_severity == 'LOW' %}selected{% endif %}>LOW</option>
       </select>
     </div>
     <div style="display:flex;gap:0.4rem;align-items:flex-end;padding-bottom:0.05rem;">
@@ -199,7 +431,6 @@
   </form>
 </div>
 
-{# Group rules by category #}
 {% set ns = namespace(current_cat='') %}
 {% for rule in rules %}
   {% if rule.category.value != ns.current_cat %}
@@ -253,40 +484,6 @@
   </div>
 </div>
 {% endif %}
-
 {% endif %}
 
-<script>
-function filterSource(src, btn) {
-  document.querySelectorAll('.src-btn').forEach(function(b){ b.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-
-  var cards = document.querySelectorAll('.reg-change-card');
-  var visible = 0;
-  cards.forEach(function(card) {
-    var show = (src === 'all' || card.dataset.source === src);
-    card.style.display = show ? '' : 'none';
-    if (show) visible++;
-  });
-
-  // Show/hide date group headers
-  document.querySelectorAll('.date-group-hdr').forEach(function(hdr) {
-    var groupLabel = hdr.dataset.group;
-    // Check if any visible card follows this header
-    var next = hdr.nextElementSibling;
-    var hasVisible = false;
-    while (next && !next.classList.contains('date-group-hdr')) {
-      if (next.classList.contains('reg-change-card') && next.style.display !== 'none') {
-        hasVisible = true;
-        break;
-      }
-      next = next.nextElementSibling;
-    }
-    hdr.style.display = hasVisible ? '' : 'none';
-  });
-
-  var noRes = document.getElementById('no-source-results');
-  if (noRes) noRes.style.display = (visible === 0 && src !== 'all') ? 'block' : 'none';
-}
-</script>
 {% endblock %}

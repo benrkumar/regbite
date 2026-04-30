@@ -178,13 +178,16 @@ def send_regulation_change_email(change, users=None):
     if not recipients:
         return
 
-    source_url = change.source_url or ""
-    if "ayush.gov.in" in source_url:
-        source_org = "Ministry of AYUSH"
-    elif "consumeraffairs.nic.in" in source_url or "legalmetrology" in source_url.lower():
-        source_org = "Legal Metrology"
+    if getattr(change, "source", None) and getattr(change.source, "name", None):
+        source_org = change.source.name
     else:
-        source_org = "FSSAI"
+        source_url = change.source_url or ""
+        if "ayush.gov.in" in source_url:
+            source_org = "Ministry of AYUSH"
+        elif "consumeraffairs.nic.in" in source_url or "legalmetrology" in source_url.lower():
+            source_org = "Legal Metrology"
+        else:
+            source_org = "FSSAI"
 
     severity_color = "#DC2626" if change.severity.value in ("CRITICAL", "HIGH") else "#D97706"
     subject = f"[RegBite] {source_org} Update: {change.document_name[:60]}"

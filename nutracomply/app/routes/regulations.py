@@ -5,33 +5,40 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models import ComplianceRule, RegulationChange, RegulationSource, RuleCategory
 from app.routes.auth import get_current_user_from_cookie
 from app.services.alert_service import count_unread_alerts
+from app.services.regulation_ingestion import derive_source_freshness
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
 
+SOURCE_FILTER_GROUPS = {
+    "fssai": ["fssai-regulations", "fssai-gazette"],
+    "ayush": ["ayush-advisories", "ayush-regulations"],
+    "legal_metrology": ["legal-metrology-rules", "legal-metrology-act"],
+}
 
-def _normalize_source_filter(source: str | None) -> str | None:
-    if not source:
+
+def _normalize_filter(value: str | None) -> str | None:
+    if not value:
         return None
-    normalized = source.strip().lower().replace(" ", "_")
-    mapping = {
-        "all": None,
-        "fssai": "fssai",
-        "ayush": "ayush",
-        "legal_metrology": "legal_metrology",
-    }
-    return mapping.get(normalized, normalized)
+    normalized = value.strip().lower().replace(" ", "_")
+    return None if normalized == "all" else normalized
 
 
-def _source_slug_for_change(change: RegulationChange) -> str:
+def _source_family_for_change(change: RegulationChange) -> str:
     if change.source and change.source.slug:
-        return change.source.slug
+        slug = change.source.slug
+        if slug.startswith("ayush"):
+            return "ayush"
+        if slug.startswith("legal-metrology"):
+            return "legal_metrology"
+        return "fssai"
 
     url = (change.source_url or "").lower()
     if "ayush" in url:
@@ -49,27 +56,61 @@ async def regulations_feed(
     category: Optional[str] = None,
     severity: Optional[str] = None,
     source: Optional[str] = None,
+    freshness: Optional[str] = None,
+    review: Optional[str] = None,
 ):
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    source_filter = _normalize_source_filter(source)
+    source_filter = _normalize_filter(source)
+    freshness_filter = _normalize_filter(freshness)
+    review_filter = _normalize_filter(review)
+
     changes_query = (
         db.query(RegulationChange)
         .options(joinedload(RegulationChange.source))
+        .outerjoin(RegulationSource, RegulationChange.source_id == RegulationSource.id)
+        .filter(
+            (RegulationChange.crawl_status.is_(None))
+            | (RegulationChange.crawl_status == "accepted")
+        )
         .order_by(RegulationChange.detected_at.desc())
     )
-    if source_filter:
-        changes_query = changes_query.outerjoin(RegulationSource, RegulationChange.source_id == RegulationSource.id).filter(
-            (RegulationSource.slug == source_filter)
-            | RegulationChange.source_url.ilike(f"%{source_filter.replace('_', '')}%")
-            | RegulationChange.source_url.ilike(f"%{source_filter.replace('_', '-')}%")
-            | RegulationChange.source_url.ilike(f"%{source_filter.replace('_', ' ')}%")
-        )
-    changes = changes_query.all()
 
-    grouped: OrderedDict = OrderedDict()
+    if source_filter:
+        source_slugs = SOURCE_FILTER_GROUPS.get(source_filter, [source_filter])
+        url_patterns = [
+            source_filter.replace("_", ""),
+            source_filter.replace("_", "-"),
+            source_filter.replace("_", " "),
+        ]
+        changes_query = changes_query.filter(
+            or_(
+                RegulationSource.slug.in_(source_slugs),
+                *[RegulationChange.source_url.ilike(f"%{pattern}%") for pattern in url_patterns],
+            )
+        )
+
+    if freshness_filter:
+        changes_query = changes_query.filter(RegulationSource.freshness_state == freshness_filter)
+
+    if review_filter == "legacy":
+        changes_query = changes_query.filter(
+            or_(
+                RegulationChange.review_state.is_(None),
+                RegulationChange.review_state == "legacy",
+            )
+        )
+    elif review_filter:
+        changes_query = changes_query.filter(RegulationChange.review_state == review_filter)
+
+    changes = changes_query.all()
+    for change in changes:
+        if change.source:
+            change.source.freshness_state = derive_source_freshness(change.source)
+
+    grouped: OrderedDict[str, list[RegulationChange]] = OrderedDict()
     for change in changes:
         key = change.detected_at.strftime("%B %Y")
         grouped.setdefault(key, []).append(change)
@@ -88,6 +129,8 @@ async def regulations_feed(
         .order_by(RegulationSource.name.asc())
         .all()
     )
+    for source_row in source_registry:
+        source_row.freshness_state = derive_source_freshness(source_row)
 
     return templates.TemplateResponse("regulations.html", {
         "request": request,
@@ -100,7 +143,12 @@ async def regulations_feed(
         "filter_category": category or "",
         "filter_severity": severity or "",
         "filter_source": source_filter or "",
+        "filter_freshness": freshness_filter or "",
+        "filter_review": review_filter or "",
         "unread_alerts": count_unread_alerts(db, user),
         "source_registry": source_registry,
-        "source_slug_for_change": _source_slug_for_change,
+        "source_filter_groups": SOURCE_FILTER_GROUPS,
+        "source_family_for_change": _source_family_for_change,
+        "freshness_options": ["fresh", "stale", "degraded", "never"],
+        "review_options": ["auto_published", "reviewed", "legacy"],
     })

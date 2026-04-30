@@ -4,21 +4,24 @@ All routes require is_admin=True on the current user.
 Admin is designated by matching ADMIN_EMAIL env var on registration.
 """
 from datetime import datetime
+from urllib.parse import quote_plus
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from pathlib import Path
 
 from sqlalchemy import func
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
 from app.services.access_control import ensure_workspace_for_user, is_platform_admin, sync_user_role_flags
+from app.services.regulation_ingestion import crawl_active_regulation_sources, derive_source_freshness
 from app.models import (
     User, Product, LabelVersion, ComplianceCheck, ComplianceRule,
     Alert, AlertStatus, AlertType, RegulationChange, Severity, CheckResult,
     PublishedAlert, PublishedAlertSeverity, PublishedAlertStatus,
     ComplianceReport, PlanType, UserRole, Subscription, PaymentRecord,
+    RegulationSource, RegulationCrawlRun,
 )
 
 router = APIRouter(prefix="/admin")
@@ -478,8 +481,23 @@ async def admin_system(request: Request, db: Session = Depends(get_db)):
         "compliance_checks": db.query(ComplianceCheck).count(),
         "compliance_rules":  db.query(ComplianceRule).count(),
         "regulation_changes":db.query(RegulationChange).count(),
+        "regulation_sources": db.query(RegulationSource).count(),
+        "crawl_runs":        db.query(RegulationCrawlRun).count(),
         "alerts":            db.query(Alert).count(),
     }
+
+    source_rows = db.query(RegulationSource).order_by(RegulationSource.name.asc()).all()
+    source_summary = {
+        "total": len(source_rows),
+        "fresh": 0,
+        "stale": 0,
+        "degraded": 0,
+        "never": 0,
+    }
+    for source in source_rows:
+        state = derive_source_freshness(source)
+        source.freshness_state = state
+        source_summary[state] = source_summary.get(state, 0) + 1
 
     env_info = {
         "app_name":              cfg.app_name,
@@ -497,9 +515,87 @@ async def admin_system(request: Request, db: Session = Depends(get_db)):
         "unread_alerts": unread_alerts,
         "db_stats": db_stats,
         "env_info": env_info,
+        "source_summary": source_summary,
         "flash_message": request.query_params.get("msg"),
         "flash_type": request.query_params.get("type", "info"),
     })
+
+
+@router.get("/regulations/sources")
+async def admin_regulation_sources(request: Request, db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    sources = db.query(RegulationSource).order_by(RegulationSource.name.asc()).all()
+    for source in sources:
+        source.freshness_state = derive_source_freshness(source)
+
+    recent_runs = (
+        db.query(RegulationCrawlRun)
+        .options(joinedload(RegulationCrawlRun.source))
+        .order_by(RegulationCrawlRun.started_at.desc())
+        .limit(12)
+        .all()
+    )
+    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+
+    summary = {
+        "total": len(sources),
+        "fresh": sum(1 for source in sources if source.freshness_state == "fresh"),
+        "stale": sum(1 for source in sources if source.freshness_state == "stale"),
+        "degraded": sum(1 for source in sources if source.freshness_state == "degraded"),
+        "never": sum(1 for source in sources if source.freshness_state == "never"),
+    }
+
+    return templates.TemplateResponse("admin/regulation_sources.html", {
+        "request": request,
+        "user": user,
+        "sources": sources,
+        "recent_runs": recent_runs,
+        "summary": summary,
+        "unread_alerts": unread_alerts,
+        "flash_message": request.query_params.get("msg"),
+        "flash_type": request.query_params.get("type", "info"),
+    })
+
+
+@router.post("/regulations/sources/{source_id}/refresh")
+async def admin_refresh_regulation_source(source_id: int, request: Request, db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    source = db.query(RegulationSource).filter(RegulationSource.id == source_id).first()
+    if not source:
+        return RedirectResponse(url="/admin/regulations/sources?msg=Unknown+source&type=error", status_code=302)
+
+    result = crawl_active_regulation_sources(db, source_ids=[source_id], initiated_by="manual")
+    message = (
+        f"Refreshed {source.name}: {result['accepted_count']} accepted, "
+        f"{result['reject_count']} rejected, {result['unchanged_count']} unchanged"
+    )
+    return RedirectResponse(
+        url=f"/admin/regulations/sources?msg={quote_plus(message)}&type=success",
+        status_code=302,
+    )
+
+
+@router.post("/regulations/refresh-all")
+async def admin_refresh_all_regulation_sources(request: Request, db: Session = Depends(get_db)):
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    result = crawl_active_regulation_sources(db, initiated_by="manual")
+    message = (
+        f"Refreshed {result['source_count']} sources: {result['accepted_count']} accepted, "
+        f"{result['reject_count']} rejected, {result['unchanged_count']} unchanged"
+    )
+    return RedirectResponse(
+        url=f"/admin/regulations/sources?msg={quote_plus(message)}&type=success",
+        status_code=302,
+    )
 
 
 @router.post("/trigger-scrape")
@@ -509,12 +605,14 @@ async def admin_trigger_scrape(request: Request, db: Session = Depends(get_db)):
         return redirect
 
     try:
-        from app.workers.scrape_task import run_fssai_scrape
-        run_fssai_scrape.delay()
-        msg = "Scrape+job+queued+—+results+will+appear+in+the+Regulations+feed"
+        result = crawl_active_regulation_sources(db, initiated_by="manual")
+        msg = quote_plus(
+            f"Regulation refresh complete: {result['accepted_count']} accepted, "
+            f"{result['reject_count']} rejected, {result['unchanged_count']} unchanged"
+        )
         t = "success"
     except Exception as e:
-        msg = f"Could+not+queue+scrape:+{str(e)[:80].replace(' ', '+')}"
+        msg = quote_plus(f"Could not run regulation refresh: {str(e)[:120]}")
         t = "error"
 
     return RedirectResponse(url=f"/admin/system?msg={msg}&type={t}", status_code=302)

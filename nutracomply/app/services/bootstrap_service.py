@@ -18,6 +18,8 @@ from app.models import (
     User,
 )
 from app.services.access_control import ensure_account_for_user, sync_user_role_flags
+from app.services.regulation_ingestion import build_change_backfill_payload, derive_source_freshness
+from app.services.scraper import get_default_source_config
 
 
 DEFAULT_REGULATION_SOURCES = [
@@ -26,36 +28,60 @@ DEFAULT_REGULATION_SOURCES = [
         "slug": "fssai-regulations",
         "base_url": "https://fssai.gov.in/cms/food-safety-and-standards-regulations.php",
         "doc_type": "regulation_page",
+        "parser_kind": "fssai_regulations",
+        "cadence": "daily",
+        "freshness_state": "never",
+        "discovery_config": get_default_source_config("fssai-regulations"),
     },
     {
         "name": "FSSAI Gazette Notifications",
         "slug": "fssai-gazette",
         "base_url": "https://fssai.gov.in/notifications.php?notification=gazette-notification",
         "doc_type": "gazette",
+        "parser_kind": "fssai_gazette",
+        "cadence": "daily",
+        "freshness_state": "never",
+        "discovery_config": get_default_source_config("fssai-gazette"),
     },
     {
         "name": "AYUSH Advisories",
         "slug": "ayush-advisories",
         "base_url": "https://ayush.gov.in/advisories",
         "doc_type": "advisory",
+        "parser_kind": "ayush_advisories",
+        "cadence": "daily",
+        "freshness_state": "never",
+        "discovery_config": get_default_source_config("ayush-advisories"),
     },
     {
         "name": "AYUSH Regulations",
         "slug": "ayush-regulations",
         "base_url": "https://ayush.gov.in/regulation-rules-and-acts",
         "doc_type": "regulation_page",
+        "parser_kind": "ayush_regulations",
+        "cadence": "daily",
+        "freshness_state": "never",
+        "discovery_config": get_default_source_config("ayush-regulations"),
     },
     {
         "name": "Legal Metrology Rules",
         "slug": "legal-metrology-rules",
         "base_url": "https://consumeraffairs.nic.in/policies-rules/legal-metrology-packaged-commodities-rules-2011",
         "doc_type": "rules",
+        "parser_kind": "legal_metrology_rules",
+        "cadence": "daily",
+        "freshness_state": "never",
+        "discovery_config": get_default_source_config("legal-metrology-rules"),
     },
     {
         "name": "Legal Metrology Act",
         "slug": "legal-metrology-act",
         "base_url": "https://consumeraffairs.gov.in/pages/legal-metrology-act",
         "doc_type": "act",
+        "parser_kind": "legal_metrology_act",
+        "cadence": "daily",
+        "freshness_state": "never",
+        "discovery_config": get_default_source_config("legal-metrology-act"),
     },
 ]
 
@@ -66,24 +92,44 @@ def seed_regulation_sources(db) -> None:
         for source in db.query(RegulationSource).all()
     }
     for source_data in DEFAULT_REGULATION_SOURCES:
-        if source_data["slug"] in existing:
+        source = existing.get(source_data["slug"])
+        if not source:
+            source = RegulationSource(**source_data)
+            db.add(source)
             continue
-        db.add(RegulationSource(**source_data))
+        source.name = source.name or source_data["name"]
+        source.base_url = source.base_url or source_data["base_url"]
+        source.doc_type = source.doc_type or source_data["doc_type"]
+        source.parser_kind = source.parser_kind or source_data["parser_kind"]
+        source.cadence = source.cadence or source_data["cadence"]
+        merged_config = dict(source_data["discovery_config"])
+        merged_config.update(source.discovery_config or {})
+        source.discovery_config = merged_config
+        source.freshness_state = derive_source_freshness(source)
     db.flush()
 
     all_sources = db.query(RegulationSource).all()
-    for change in db.query(RegulationChange).filter(RegulationChange.source_id.is_(None)).all():
-        url = (change.source_url or "").lower()
-        matched = None
-        for source in all_sources:
-            if source.base_url.lower() in url or source.slug.split("-")[0] in url:
-                matched = source
-                break
-        if not matched:
-            continue
-        change.source_id = matched.id
-        if not change.document_type:
-            change.document_type = matched.doc_type
+    for source in all_sources:
+        source.freshness_state = derive_source_freshness(source)
+
+    for change in db.query(RegulationChange).all():
+        payload = build_change_backfill_payload(change, all_sources)
+        if payload.get("source_id") and not change.source_id:
+            change.source_id = payload["source_id"]
+        if payload.get("document_type") and not change.document_type:
+            change.document_type = payload["document_type"]
+        if payload.get("source_document_key") and not change.source_document_key:
+            change.source_document_key = payload["source_document_key"]
+        if payload.get("crawl_status") and not change.crawl_status:
+            change.crawl_status = payload["crawl_status"]
+        if payload.get("review_state") and not change.review_state:
+            change.review_state = payload["review_state"]
+        if payload.get("published_at") and not change.published_at:
+            change.published_at = payload["published_at"]
+        if payload.get("total_page_count") and change.total_page_count is None:
+            change.total_page_count = payload["total_page_count"]
+        if payload.get("extracted_page_count") and change.extracted_page_count is None:
+            change.extracted_page_count = payload["extracted_page_count"]
 
 
 def backfill_account_ownership(db) -> None:

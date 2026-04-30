@@ -1,0 +1,209 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Source Registry{% endblock %}
+{% block page_title %}Regulation Source Registry{% endblock %}
+
+{% block content %}
+<style>
+.source-actions {
+  display:flex;
+  gap:0.6rem;
+  flex-wrap:wrap;
+  margin-bottom:1.2rem;
+}
+
+.source-grid {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:1rem;
+  margin-bottom:1.4rem;
+}
+
+.source-card {
+  background:#FFFFFF;
+  border:1px solid #EBEBEB;
+  border-radius:12px;
+  padding:1rem 1.1rem;
+}
+
+.source-meta {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:0.7rem;
+  margin-top:0.9rem;
+}
+
+.source-meta-item {
+  border:1px solid #F0F0F0;
+  border-radius:10px;
+  background:#FAFAFA;
+  padding:0.75rem 0.85rem;
+}
+
+.source-meta-label {
+  display:block;
+  font-size:0.7rem;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:#A3A3A3;
+  margin-bottom:0.2rem;
+}
+
+.source-meta-value {
+  font-size:0.84rem;
+  color:#262626;
+  line-height:1.45;
+}
+
+.fresh-badge {
+  display:inline-flex;
+  align-items:center;
+  border-radius:999px;
+  padding:0.15rem 0.55rem;
+  font-size:0.72rem;
+  font-weight:700;
+}
+
+.fresh-badge.fresh { background:#EAF2F0; color:#357266; }
+.fresh-badge.stale { background:#FEF9EC; color:#8F6314; }
+.fresh-badge.degraded { background:#FDEBEC; color:#DF2935; }
+.fresh-badge.never { background:#F5F5F5; color:#737373; }
+
+@media (max-width: 900px) {
+  .source-grid,
+  .source-meta {
+    grid-template-columns:1fr;
+  }
+}
+</style>
+
+<div class="adm-stat-grid">
+  <div class="adm-stat">
+    <div class="adm-stat-val">{{ summary.total }}</div>
+    <div class="adm-stat-lbl">Tracked Sources</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat-val">{{ summary.fresh }}</div>
+    <div class="adm-stat-lbl">Fresh</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat-val">{{ summary.stale }}</div>
+    <div class="adm-stat-lbl">Stale</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat-val">{{ summary.degraded }}</div>
+    <div class="adm-stat-lbl">Degraded</div>
+  </div>
+  <div class="adm-stat">
+    <div class="adm-stat-val">{{ summary.never }}</div>
+    <div class="adm-stat-lbl">Never Crawled</div>
+  </div>
+</div>
+
+<div class="source-actions">
+  <form method="post" action="/admin/regulations/refresh-all" style="margin:0;">
+    <button type="submit" class="adm-btn adm-btn-primary">Refresh All Sources</button>
+  </form>
+  <a href="/admin/system" class="adm-btn">Back to System Controls</a>
+</div>
+
+<div class="source-grid">
+  {% for source in sources %}
+  <section class="source-card">
+    <div style="display:flex;justify-content:space-between;gap:0.8rem;align-items:flex-start;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:0.98rem;font-weight:700;color:#111111;">{{ source.name }}</div>
+        <div style="margin-top:0.2rem;font-size:0.78rem;color:#737373;">{{ source.slug }}</div>
+      </div>
+      <span class="fresh-badge {{ source.freshness_state or 'never' }}">{{ (source.freshness_state or 'never').replace('_', ' ') | title }}</span>
+    </div>
+
+    <div class="source-meta">
+      <div class="source-meta-item">
+        <span class="source-meta-label">Last Checked</span>
+        <div class="source-meta-value">
+          {% if source.last_checked_at %}{{ source.last_checked_at.strftime('%d %b %Y, %I:%M %p') }}{% else %}Never{% endif %}
+        </div>
+      </div>
+      <div class="source-meta-item">
+        <span class="source-meta-label">Last Success</span>
+        <div class="source-meta-value">
+          {% if source.last_success_at %}{{ source.last_success_at.strftime('%d %b %Y, %I:%M %p') }}{% else %}No successful crawl yet{% endif %}
+        </div>
+      </div>
+      <div class="source-meta-item">
+        <span class="source-meta-label">Cadence</span>
+        <div class="source-meta-value">{{ source.cadence or 'daily' }}</div>
+      </div>
+      <div class="source-meta-item">
+        <span class="source-meta-label">Parser</span>
+        <div class="source-meta-value">{{ source.parser_kind or 'html_link_list' }}</div>
+      </div>
+      <div class="source-meta-item">
+        <span class="source-meta-label">Last Discovery</span>
+        <div class="source-meta-value">{{ source.last_discovery_count or 0 }} discovered · {{ source.last_reject_count or 0 }} rejected</div>
+      </div>
+      <div class="source-meta-item">
+        <span class="source-meta-label">Last Error</span>
+        <div class="source-meta-value">{{ source.last_error_message or 'None' }}</div>
+      </div>
+    </div>
+
+    <div style="margin-top:0.95rem;display:flex;gap:0.55rem;flex-wrap:wrap;">
+      <form method="post" action="/admin/regulations/sources/{{ source.id }}/refresh" style="margin:0;flex:1 1 160px;">
+        <button type="submit" class="adm-btn adm-btn-primary" style="width:100%;">Refresh This Source</button>
+      </form>
+      <a href="{{ source.base_url }}" target="_blank" rel="noopener" class="adm-btn" style="flex:1 1 160px;text-align:center;">Open Registry Page</a>
+    </div>
+  </section>
+  {% endfor %}
+</div>
+
+<section class="source-card">
+  <h4 class="adm-section-title">Recent Crawl Runs</h4>
+  {% if recent_runs %}
+  <div class="adm-table-wrap adm-desktop-only">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Started</th>
+          <th>Status</th>
+          <th>Discovered</th>
+          <th>Accepted</th>
+          <th>Rejected</th>
+          <th>Unchanged</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for run in recent_runs %}
+        <tr>
+          <td>{{ run.source.name if run.source else 'Unknown source' }}</td>
+          <td>{{ run.started_at.strftime('%d %b %Y, %I:%M %p') if run.started_at else '—' }}</td>
+          <td><span class="adm-badge {% if run.status == 'success' %}badge-green{% elif run.status == 'failed' %}badge-red{% else %}badge-yellow{% endif %}">{{ run.status | title }}</span></td>
+          <td>{{ run.discovery_count or 0 }}</td>
+          <td>{{ run.accepted_count or 0 }}</td>
+          <td>{{ run.reject_count or 0 }}</td>
+          <td>{{ run.unchanged_count or 0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="adm-mobile-list adm-mobile-only">
+    {% for run in recent_runs %}
+    <div class="adm-mobile-card">
+      <div class="adm-mobile-card-title">{{ run.source.name if run.source else 'Unknown source' }}</div>
+      <div class="adm-mobile-meta">
+        <div><strong>Started:</strong> {{ run.started_at.strftime('%d %b %Y, %I:%M %p') if run.started_at else '—' }}</div>
+        <div><strong>Status:</strong> {{ run.status | title }}</div>
+        <div><strong>Counts:</strong> {{ run.discovery_count or 0 }} discovered · {{ run.accepted_count or 0 }} accepted · {{ run.reject_count or 0 }} rejected · {{ run.unchanged_count or 0 }} unchanged</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="adm-empty">No crawl runs recorded yet.</div>
+  {% endif %}
+</section>
+{% endblock %}
