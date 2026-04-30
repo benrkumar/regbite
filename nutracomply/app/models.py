@@ -58,6 +58,8 @@ class CheckType(str, enum.Enum):
     VALUE_IN_LIST = "VALUE_IN_LIST"
     NOT_IN_LIST = "NOT_IN_LIST"
     FORMAT = "FORMAT"
+    # Backwards-compatibility for older seeded / production rows.
+    FORMAT_LLM = "FORMAT_LLM"
 
 
 class Severity(str, enum.Enum):

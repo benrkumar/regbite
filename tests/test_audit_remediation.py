@@ -1,6 +1,7 @@
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -9,9 +10,9 @@ if str(APP_ROOT) not in sys.path:
     sys.path.insert(0, str(APP_ROOT))
 
 
-from app.models import ComplianceRule, RuleFramework, User, UserRole  # noqa: E402
+from app.models import CheckResult, CheckType, ComplianceRule, RuleFramework, RuleCategory, Severity, User, UserRole  # noqa: E402
 from app.services.access_control import sync_user_role_flags  # noqa: E402
-from app.services.compliance_engine import _rule_applies  # noqa: E402
+from app.services.compliance_engine import _evaluate_rule, _rule_applies  # noqa: E402
 from app.services.onboarding_service import should_force_onboarding  # noqa: E402
 from app.services.report_service import _build_verdict  # noqa: E402
 
@@ -95,6 +96,29 @@ class AuditRemediationTests(unittest.TestCase):
         self.assertFalse(should_force_onboarding(incomplete_user, "/help", False))
         self.assertFalse(should_force_onboarding(viewer_demo, "/products", True))
         self.assertFalse(should_force_onboarding(super_admin, "/products", False))
+
+    def test_legacy_format_llm_rules_remain_loadable_and_use_format_handler(self):
+        self.assertEqual(CheckType("FORMAT_LLM"), CheckType.FORMAT_LLM)
+
+        rule = ComplianceRule(
+            rule_code="LEGACY-FORMAT-001",
+            category=RuleCategory.FORMAT_REQUIREMENT,
+            description="Legacy format rule",
+            check_type=CheckType.FORMAT_LLM,
+            check_config={"field": "license_number"},
+            severity=Severity.HIGH,
+        )
+
+        with patch(
+            "app.services.compliance_engine._check_format_llm",
+            return_value=(CheckResult.PASS, "formatted", "legacy format ok"),
+        ) as format_handler:
+            check = _evaluate_rule(rule, {"license_number": "123"}, label_version_id=99)
+
+        format_handler.assert_called_once()
+        self.assertEqual(check.result, CheckResult.PASS)
+        self.assertEqual(check.actual_value, "formatted")
+        self.assertEqual(check.message, "legacy format ok")
 
 
 if __name__ == "__main__":

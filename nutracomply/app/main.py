@@ -457,6 +457,7 @@ def _run_foundational_migrations():
             "UPDATE users SET role = 'viewer' WHERE role = 'VIEWER'",
             "UPDATE users SET role = 'consultant' WHERE role = 'CONSULTANT'",
             "UPDATE users SET role = 'account_admin' WHERE role IS NULL OR role = ''",
+            "UPDATE compliance_rules SET check_type = 'FORMAT' WHERE check_type = 'FORMAT_LLM'",
         ]
         for sql in normalization_sql:
             try:
