@@ -1,9 +1,12 @@
-# Design assets — not needed in the Docker build context
-*.jpg
-*.jpeg
-*.png
+# Design assets — not needed in the Railway upload context
+nutracomply/assets/images/
 *.psd
 *.pdf
+
+# Keep shipped app assets available at runtime
+!nutracomply/app/static/**/*.jpg
+!nutracomply/app/static/**/*.jpeg
+!nutracomply/app/static/**/*.png
 
 # Local dev artifacts
 nutracomply/nutracomply.db
