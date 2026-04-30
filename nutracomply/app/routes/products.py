@@ -133,15 +133,17 @@ async def add_product(
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    # Quota check
+    # Quota check — fail open on internal error but log so it can be detected
+    from app.services.quota_service import check_product_limit
+    import logging as _log
     try:
-        from app.services.quota_service import check_product_limit
-        allowed, quota_msg = check_product_limit(user, db)
-        if not allowed:
-            from urllib.parse import quote
-            return RedirectResponse(url=f"/products?msg={quote(quota_msg)}&type=error", status_code=302)
-    except Exception:
-        pass
+        quota_allowed, quota_msg = check_product_limit(user, db)
+    except Exception as _qe:
+        _log.getLogger(__name__).error("[quota] Product quota check failed for user %s: %s", user.id, _qe)
+        quota_allowed, quota_msg = True, ""
+    if not quota_allowed:
+        from urllib.parse import quote
+        return RedirectResponse(url=f"/products?msg={quote(quota_msg)}&type=error", status_code=302)
 
     # ── If a CSV/Excel file was uploaded, handle as bulk import ──
     if file and file.filename:

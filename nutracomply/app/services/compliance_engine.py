@@ -478,13 +478,16 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
         # Gemini
         if raw is None and settings.gemini_api_key:
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=settings.gemini_api_key)
-                model = genai.GenerativeModel("gemini-2.0-flash-lite")
-                response = model.generate_content(
-                    prompt,
-                    generation_config={"temperature": 0.1, "max_output_tokens": 256},
-                    request_options={"timeout": 20},
+                from google import genai as _genai
+                from google.genai import types as _genai_types
+                _client = _genai.Client(api_key=settings.gemini_api_key)
+                response = _client.models.generate_content(
+                    model="gemini-2.0-flash-lite",
+                    contents=prompt,
+                    config=_genai_types.GenerateContentConfig(
+                        temperature=0.1,
+                        max_output_tokens=256,
+                    ),
                 )
                 raw = response.text.strip()
                 try:
@@ -1022,13 +1025,16 @@ def _check_format_rules_batch(format_rules, extraction: dict, label_version_id: 
         if not settings.gemini_api_key:
             raise ValueError("No Gemini key")
 
-        import google.generativeai as genai
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash-lite")
-        response = model.generate_content(
-            prompt,
-            generation_config={"temperature": 0.1, "max_output_tokens": 2048},
-            request_options={"timeout": 60},
+        from google import genai as _genai
+        from google.genai import types as _genai_types
+        _client = _genai.Client(api_key=settings.gemini_api_key)
+        response = _client.models.generate_content(
+            model="gemini-2.0-flash-lite",
+            contents=prompt,
+            config=_genai_types.GenerateContentConfig(
+                temperature=0.1,
+                max_output_tokens=2048,
+            ),
         )
         raw = response.text.strip()
         raw = re.sub(r"^```(?:json)?\s*", "", raw)

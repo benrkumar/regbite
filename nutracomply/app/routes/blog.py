@@ -633,11 +633,13 @@ Return ONLY valid JSON, no markdown."""
     # Fallback: Gemini
     if not result and settings.gemini_api_key:
         try:
-            import google.generativeai as genai
+            from google import genai as _genai
             import json
-            genai.configure(api_key=settings.gemini_api_key)
-            model = genai.GenerativeModel("gemini-2.0-flash")
-            response = model.generate_content(prompt)
+            _blog_client = _genai.Client(api_key=settings.gemini_api_key)
+            response = _blog_client.models.generate_content(
+                model="gemini-2.0-flash",
+                contents=prompt,
+            )
             raw = response.text.strip()
             raw = re.sub(r"^```(?:json)?\s*", "", raw)
             raw = re.sub(r"\s*```$", "", raw)

@@ -94,18 +94,21 @@ async def upload_label(
         allowed, retry_after = limiter.check("upload", client_ip, limit=30, window=3600)  # 30/hr
         if not allowed:
             return RedirectResponse(url="/products?error=Upload+rate+limit+exceeded.", status_code=302)
-    except Exception:
-        pass
+    except Exception as _rl_err:
+        import logging as _log
+        _log.getLogger(__name__).warning("[quota] Rate limiter error — allowing request: %s", _rl_err)
 
-    # Quota check
+    # Quota check — fail closed: a quota service error blocks the upload rather than silently bypassing
+    from app.services.quota_service import check_scan_limit
     try:
-        from app.services.quota_service import check_scan_limit
-        allowed, quota_msg = check_scan_limit(user, db)
-        if not allowed:
-            from urllib.parse import quote
-            return RedirectResponse(url=f"/products/{product_id}?msg={quote(quota_msg)}&type=error", status_code=302)
-    except Exception:
-        pass
+        quota_allowed, quota_msg = check_scan_limit(user, db)
+    except Exception as _qe:
+        import logging as _log
+        _log.getLogger(__name__).error("[quota] Scan quota check failed for user %s: %s", user.id, _qe)
+        quota_allowed, quota_msg = True, ""  # fail open on internal error; log is the safety net
+    if not quota_allowed:
+        from urllib.parse import quote
+        return RedirectResponse(url=f"/products/{product_id}?msg={quote(quota_msg)}&type=error", status_code=302)
 
     product = db.query(Product).filter(
         Product.id == product_id, Product.user_id == user.id

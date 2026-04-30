@@ -43,12 +43,6 @@ from __future__ import annotations
 import logging
 import time
 import hashlib
-import warnings
-
-# google-generativeai 0.8.x is deprecated in favour of google-genai; suppress the
-# FutureWarning it emits on every import until we migrate.
-warnings.filterwarnings("ignore", message=".*google.generativeai.*", category=FutureWarning)
-warnings.filterwarnings("ignore", category=DeprecationWarning, module="google.generativeai")
 
 logger = logging.getLogger(__name__)
 
@@ -152,17 +146,18 @@ def _expand_query(query: str, kb_type: str, gemini_api_key: str = "") -> str:
     )
 
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=gemini_api_key)
-        model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
+        from google import genai as _genai
+        from google.genai import types as _genai_types
+        _client = _genai.Client(api_key=gemini_api_key)
         prompt = (
             f"Expand this short search query into a detailed search query for {domain}. "
             f"Return ONLY the expanded query (one sentence, max 25 words). No preamble.\n"
             f"Original query: {query}"
         )
-        response = model.generate_content(
-            prompt,
-            generation_config={"temperature": 0.1, "max_output_tokens": 60},
+        response = _client.models.generate_content(
+            model="gemini-3.1-flash-lite-preview",
+            contents=prompt,
+            config=_genai_types.GenerateContentConfig(temperature=0.1, max_output_tokens=60),
         )
         expanded = response.text.strip().strip('"').strip("'")
         if expanded and len(expanded) > len(query):
@@ -945,23 +940,33 @@ def _build_context(kb_type: str, query: str, db):
 def _call_gemini(model_name: str, system_prompt: str, user_message: str,
                  history: list, api_key: str) -> str:
     """Call Gemini and return the reply text. Raises on failure."""
-    import google.generativeai as genai
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        model_name,
-        system_instruction=system_prompt,
-    )
+    from google import genai as _genai
+    from google.genai import types as _genai_types
 
-    # Build Gemini history from last 20 turns (roles: "user" / "model")
-    gemini_history = [
-        {"role": msg["role"], "parts": [msg["content"]]}
+    _client = _genai.Client(api_key=api_key)
+
+    # Build multi-turn contents from last 20 history turns + current message.
+    # Using generate_content with full contents list is equivalent to start_chat
+    # but avoids the stateful chat object.
+    _contents = [
+        _genai_types.Content(
+            role=msg["role"],
+            parts=[_genai_types.Part(text=msg["content"])],
+        )
         for msg in history[-20:]
     ]
+    _contents.append(
+        _genai_types.Content(role="user", parts=[_genai_types.Part(text=user_message)])
+    )
 
-    chat = model.start_chat(history=gemini_history)
-    response = chat.send_message(
-        user_message,
-        generation_config={"temperature": 0.2, "max_output_tokens": 2048},
+    response = _client.models.generate_content(
+        model=model_name,
+        contents=_contents,
+        config=_genai_types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            temperature=0.2,
+            max_output_tokens=2048,
+        ),
     )
     return response.text.strip()
 

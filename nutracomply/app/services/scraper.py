@@ -291,11 +291,15 @@ Return ONLY valid JSON (no markdown):
 
 
 def _classify_with_gemini(name: str, text: str) -> dict:
-    import google.generativeai as genai
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
+    from google import genai as _genai
+    from google.genai import types as _genai_types
+    _client = _genai.Client(api_key=settings.gemini_api_key)
     prompt = CLASSIFICATION_PROMPT.format(name=name, text=text[:3000])
-    response = model.generate_content(prompt, generation_config={"temperature": 0.1})
+    response = _client.models.generate_content(
+        model="gemini-3.1-flash-lite-preview",
+        contents=prompt,
+        config=_genai_types.GenerateContentConfig(temperature=0.1),
+    )
     raw = re.sub(r"^```(?:json)?\s*", "", response.text.strip())
     raw = re.sub(r"\s*```$", "", raw)
     return json.loads(raw)
@@ -311,9 +315,9 @@ def suggest_rule_modifications(document_name: str, text_excerpt: str, existing_r
         return []
 
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
+        from google import genai as _genai
+        from google.genai import types as _genai_types
+        _suggest_client = _genai.Client(api_key=settings.gemini_api_key)
 
         rules_summary = "\n".join(
             f"- {r['rule_code']}: {r['description'][:100]}" for r in existing_rules[:30]
@@ -335,9 +339,10 @@ def suggest_rule_modifications(document_name: str, text_excerpt: str, existing_r
             "Return empty array [] if no changes needed."
         )
 
-        response = model.generate_content(
-            prompt,
-            generation_config={"temperature": 0.1, "max_output_tokens": 1024},
+        response = _suggest_client.models.generate_content(
+            model="gemini-3.1-flash-lite-preview",
+            contents=prompt,
+            config=_genai_types.GenerateContentConfig(temperature=0.1, max_output_tokens=1024),
         )
         raw = re.sub(r"^```(?:json)?\s*", "", response.text.strip())
         raw = re.sub(r"\s*```$", "", raw)

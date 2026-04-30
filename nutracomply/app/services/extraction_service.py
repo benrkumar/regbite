@@ -464,11 +464,19 @@ def _call_claude_text(ocr_text: str) -> tuple:
 
 def _call_gemini_vision(image_path: str) -> Optional[dict]:
     """Fallback: Gemini Vision for image/PDF extraction."""
-    import google.generativeai as genai
     import PIL.Image
+    from google import genai as _genai
+    from google.genai import types as _genai_types
 
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel("gemini-2.5-flash")
+    _client = _genai.Client(api_key=settings.gemini_api_key)
+
+    def _pil_to_part(pil_img: PIL.Image.Image) -> _genai_types.Part:
+        """Convert a PIL image to an inline-data Part (JPEG bytes)."""
+        buf = io.BytesIO()
+        pil_img.convert("RGB").save(buf, format="JPEG", quality=90)
+        return _genai_types.Part(
+            inline_data=_genai_types.Blob(mime_type="image/jpeg", data=buf.getvalue())
+        )
 
     img_path = Path(image_path)
     suffix = img_path.suffix.lower()
@@ -481,18 +489,26 @@ def _call_gemini_vision(image_path: str) -> Optional[dict]:
         pil_images = []
         for img_bytes, _ in pages:
             pil_images.append(PIL.Image.open(io.BytesIO(img_bytes)))
-        prompt = MULTI_PAGE_VISION_PROMPT if len(pil_images) > 1 else VISION_PROMPT
-        response = model.generate_content(
-            pil_images + [prompt],
-            generation_config={"temperature": 0.1, "max_output_tokens": 8192},
-            request_options={"timeout": 120},
+        prompt_text = MULTI_PAGE_VISION_PROMPT if len(pil_images) > 1 else VISION_PROMPT
+        _parts = [_pil_to_part(img) for img in pil_images]
+        _parts.append(_genai_types.Part(text=prompt_text))
+        response = _client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=_parts,
+            config=_genai_types.GenerateContentConfig(
+                temperature=0.1,
+                max_output_tokens=8192,
+            ),
         )
     else:
-        img = PIL.Image.open(image_path)
-        response = model.generate_content(
-            [VISION_PROMPT, img],
-            generation_config={"temperature": 0.1, "max_output_tokens": 8192},
-            request_options={"timeout": 120},
+        pil_img = PIL.Image.open(image_path)
+        response = _client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[_pil_to_part(pil_img), _genai_types.Part(text=VISION_PROMPT)],
+            config=_genai_types.GenerateContentConfig(
+                temperature=0.1,
+                max_output_tokens=8192,
+            ),
         )
 
     raw = response.text.strip()
@@ -503,17 +519,19 @@ def _call_gemini_vision(image_path: str) -> Optional[dict]:
 
 def _call_gemini_text(ocr_text: str) -> Optional[dict]:
     """Fallback: Gemini text for OCR-based extraction."""
-    import google.generativeai as genai
+    from google import genai as _genai
+    from google.genai import types as _genai_types
 
-    genai.configure(api_key=settings.gemini_api_key)
-    model = genai.GenerativeModel("gemini-2.5-flash")
-
+    _client = _genai.Client(api_key=settings.gemini_api_key)
     prompt = TEXT_PROMPT.replace("{label_text}", ocr_text[:12000])
 
-    response = model.generate_content(
-        prompt,
-        generation_config={"temperature": 0.1, "max_output_tokens": 8192},
-        request_options={"timeout": 120},
+    response = _client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+        config=_genai_types.GenerateContentConfig(
+            temperature=0.1,
+            max_output_tokens=8192,
+        ),
     )
 
     raw = response.text.strip()

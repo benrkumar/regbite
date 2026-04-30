@@ -168,10 +168,14 @@ async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
     # ── Test Gemini ───────────────────────────────────────────────────────────
     if settings.gemini_api_key:
         try:
-            import google.generativeai as _genai
-            _genai.configure(api_key=settings.gemini_api_key)
-            m = _genai.GenerativeModel("gemini-2.5-flash")
-            m.generate_content("Reply: OK", generation_config={"max_output_tokens": 5})
+            from google import genai as _genai
+            from google.genai import types as _genai_types
+            _test_client = _genai.Client(api_key=settings.gemini_api_key)
+            _test_client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents="Reply: OK",
+                config=_genai_types.GenerateContentConfig(max_output_tokens=5),
+            )
             result["gemini"] = {"status": "ok"}
         except Exception as exc:
             err_msg = str(exc) or repr(exc)
@@ -973,7 +977,8 @@ _EXTRACT_JOBS: dict = {}   # job_id → {status, rules, error, note}
 def _run_extract_job(job_id: str, content: str, doc_title: str, existing_codes: set):
     """Background thread: call Gemini to extract compliance rules from regulation text."""
     import json as _json
-    import google.generativeai as genai
+    from google import genai as _genai
+    from google.genai import types as _genai_types
     from app.config import get_settings
     settings = get_settings()
     try:
@@ -1009,9 +1014,11 @@ def _run_extract_job(job_id: str, content: str, doc_title: str, existing_codes: 
             "{\"rules\": [...]}"
         )
 
-        genai.configure(api_key=settings.gemini_api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash")
-        response = model.generate_content(prompt)
+        _extract_client = _genai.Client(api_key=settings.gemini_api_key)
+        response = _extract_client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+        )
 
         raw = response.text.strip()
         # Strip markdown code fences if present
