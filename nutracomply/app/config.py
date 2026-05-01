@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     # Local extraction (reduces Claude API calls)
     local_extraction_enabled: bool = True
     local_extraction_min_confidence: float = 0.72
+    label_scan_primary_timeout_seconds: int = 30
+    label_scan_fallback_timeout_seconds: int = 24
+    label_scan_local_min_completeness: float = 0.55
+    label_scan_local_min_critical_fields: int = 3
+    label_scan_review_confidence: float = 0.78
 
     class Config:
         env_file = ".env"

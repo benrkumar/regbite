@@ -28,6 +28,7 @@ from app.services.access_control import (
     sync_user_role_flags,
 )
 from app.services.alert_service import count_unread_alerts
+from app.services.activity_service import log_action
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -156,6 +157,17 @@ async def create_invite(
     except Exception:
         pass
 
+    log_action(
+        user.id,
+        "team_invite_created",
+        "team_invite",
+        invite.id,
+        detail=f"Invited {email} as {invite_role.value.replace('_', ' ')}",
+        request=request,
+        target_user_id=None,
+        context={"email": email, "role": invite_role.value},
+    )
+
     msg = f"Invite+sent+to+{email}"
     return RedirectResponse(url=f"/team?msg={msg}&type=success", status_code=302)
 
@@ -185,6 +197,16 @@ async def update_member_role(
     member.role = new_role
     sync_user_role_flags(member)
     db.commit()
+    log_action(
+        current_user.id,
+        "team_role_updated",
+        "user",
+        member.id,
+        detail=f"Updated {member.email} to {new_role.value}",
+        request=request,
+        target_user_id=member.id,
+        context={"role": new_role.value},
+    )
     return RedirectResponse(url="/team?msg=Role+updated+successfully&type=success", status_code=302)
 
 
@@ -200,6 +222,15 @@ async def remove_member(user_id: int, request: Request, db: Session = Depends(ge
 
     member.is_active = False
     db.commit()
+    log_action(
+        current_user.id,
+        "team_member_removed",
+        "user",
+        member.id,
+        detail=f"Removed team member {member.email}",
+        request=request,
+        target_user_id=member.id,
+    )
     return RedirectResponse(url="/team?msg=Team+member+removed&type=success", status_code=302)
 
 
@@ -220,8 +251,18 @@ async def revoke_invite(invite_id: int, request: Request, db: Session = Depends(
     if not invite:
         return RedirectResponse(url="/team?msg=Invite+not+found&type=error", status_code=302)
 
+    invite_email = invite.email
     db.delete(invite)
     db.commit()
+    log_action(
+        current_user.id,
+        "team_invite_revoked",
+        "team_invite",
+        invite_id,
+        detail=f"Revoked invite for {invite_email}",
+        request=request,
+        context={"email": invite_email},
+    )
     return RedirectResponse(url="/team?msg=Invite+revoked&type=success", status_code=302)
 
 
@@ -319,6 +360,16 @@ async def process_invite_accept(
     ensure_workspace_for_user(db, new_user)
     db.commit()
     db.refresh(new_user)
+    log_action(
+        new_user.id,
+        "team_invite_accepted",
+        "user",
+        new_user.id,
+        detail=f"Joined workspace via invite from user #{invite.invited_by}",
+        request=request,
+        target_user_id=new_user.id,
+        context={"invited_by": invite.invited_by, "role": new_user.role.value},
+    )
 
     try:
         from app.services.notify_service import push

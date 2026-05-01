@@ -25,10 +25,14 @@
 <div class="page-hdr">
   <div>
     <h2>Bulk Upload Products</h2>
-    <p>Add multiple products at once via CSV or label files</p>
+    <p>Add products via CSV or queue label scans in the background with estimated completion windows.</p>
   </div>
   <a href="/products" class="btn btn-ghost btn-sm">&larr; Back to Products</a>
 </div>
+
+{% if flash_message %}
+<div class="flash flash-{{ flash_type or 'info' }}">{{ flash_message }}</div>
+{% endif %}
 
 {% if result %}
   {% if result.added %}
@@ -61,8 +65,8 @@
 {% endif %}
 
 <div class="tab-bar">
-  <button class="tab-btn{% if not active_tab or active_tab == 'csv' %} active{% endif %}" onclick="switchTab('csv')">CSV Data</button>
-  <button class="tab-btn{% if active_tab == 'files' %} active{% endif %}" onclick="switchTab('files')">Label Files</button>
+  <button class="tab-btn{% if not active_tab or active_tab == 'csv' %} active{% endif %}" onclick="switchTab('csv', this)">CSV Data</button>
+  <button class="tab-btn{% if active_tab == 'files' %} active{% endif %}" onclick="switchTab('files', this)">Label Files</button>
 </div>
 
 {# ── CSV Tab ── #}
@@ -119,7 +123,7 @@ IronPro Syrup,IP-200ML,Nutraceutical,Iron and folic acid syrup"></textarea>
 <div id="tab-files" class="tab-panel{% if active_tab == 'files' %} active{% endif %}">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;">
     <div class="card no-hover">
-      <h4 style="margin-bottom:1rem;">Upload Label Images</h4>
+      <h4 style="margin-bottom:1rem;">Queue Background Label Analysis</h4>
       <form method="post" action="/products/bulk-upload-files" enctype="multipart/form-data" id="fileUploadForm">
         <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
           <div class="drop-zone-icon">+</div>
@@ -128,8 +132,11 @@ IronPro Syrup,IP-200ML,Nutraceutical,Iron and folic acid syrup"></textarea>
         </div>
         <input type="file" id="fileInput" name="files" multiple accept=".jpg,.jpeg,.png,.pdf,.webp,.tiff,.tif" style="display:none;" />
         <div class="file-list" id="fileList"></div>
+        <p style="font-size:0.8rem;color:#737373;line-height:1.6;margin:0.95rem 0 0;">
+          RegBite will queue each label in the background, return you to Products, and notify you when the batch finishes. Most image batches start returning results in about 2-4 min per label; PDFs can take longer.
+        </p>
         <button type="submit" id="fileSubmitBtn" class="btn btn-primary btn-full" style="margin-top:1rem;" disabled>
-          Upload &amp; Process Labels &rarr;
+          Queue Background Analysis &rarr;
         </button>
       </form>
     </div>
@@ -140,8 +147,8 @@ IronPro Syrup,IP-200ML,Nutraceutical,Iron and folic acid syrup"></textarea>
         <div style="font-size:0.83rem;color:#525252;line-height:1.7;">
           <p style="margin-bottom:0.5rem;"><strong>1.</strong> Upload one or more label images/PDFs</p>
           <p style="margin-bottom:0.5rem;"><strong>2.</strong> A product is created for each file (named from filename)</p>
-          <p style="margin-bottom:0.5rem;"><strong>3.</strong> AI extracts label data and runs compliance checks</p>
-          <p><strong>4.</strong> View results on each product's detail page</p>
+          <p style="margin-bottom:0.5rem;"><strong>3.</strong> Label analysis runs in the background with an estimated completion window</p>
+          <p><strong>4.</strong> Go back to Products and wait for an in-app notification when the batch is done</p>
         </div>
       </div>
 
@@ -150,7 +157,8 @@ IronPro Syrup,IP-200ML,Nutraceutical,Iron and folic acid syrup"></textarea>
         <ul style="font-size:0.82rem;color:#737373;padding-left:1.2rem;line-height:1.7;">
           <li>Name files descriptively &mdash; filenames become product names</li>
           <li>Use clear, high-resolution label images for best extraction</li>
-          <li>Processing happens in the background &mdash; check products list for results</li>
+          <li>You do not need to stay on this page after queueing the scans</li>
+          <li>RegBite will notify you when the labels are analyzed and ready to review</li>
           <li>Duplicate product names are automatically skipped</li>
         </ul>
       </div>
@@ -159,11 +167,13 @@ IronPro Syrup,IP-200ML,Nutraceutical,Iron and folic acid syrup"></textarea>
 </div>
 
 <script>
-function switchTab(tab) {
+function switchTab(tab, trigger) {
   document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
   document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
   document.getElementById('tab-' + tab).classList.add('active');
-  event.target.classList.add('active');
+  if (trigger) {
+    trigger.classList.add('active');
+  }
 }
 
 (function() {
@@ -186,7 +196,7 @@ function switchTab(tab) {
       fileList.appendChild(div);
     }
     if (files.length > 0) {
-      submitBtn.textContent = 'Upload & Process ' + files.length + ' Label' + (files.length > 1 ? 's' : '') + ' \u2192';
+      submitBtn.textContent = 'Queue ' + files.length + ' Background Scan' + (files.length > 1 ? 's' : '') + ' \u2192';
     }
   }
 

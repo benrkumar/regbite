@@ -12,6 +12,9 @@ nutracomply/assets/images/
 nutracomply/nutracomply.db
 nutracomply/uploads/
 nutracomply/.env
+dashboard_audit_*.log
+local-*.log
+bulk-live-crosscheck*.png
 
 # Python cache
 **/__pycache__/

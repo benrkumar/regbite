@@ -17,7 +17,9 @@ from app.models import ComplianceReport, LabelVersion, Product
 from app.routes.auth import get_current_user_from_cookie
 from app.services.access_control import can_mutate_products, can_share_reports, get_account_id
 from app.services.alert_service import count_unread_alerts
+from app.services.activity_service import log_action
 from app.services.report_service import generate_pdf_html, generate_share_token, get_or_create_report
+from app.services.verdict_service import build_verdict, count_critical_failures
 
 router = APIRouter(prefix="/reports")
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -47,6 +49,8 @@ async def reports_list(request: Request, db: Session = Depends(get_db)):
     reports = _report_query(db, user).order_by(ComplianceReport.created_at.desc()).all()
     for report in reports:
         _ = report.product
+        if not report.verdict:
+            report.verdict = build_verdict(report.score or 0, count_critical_failures(report.check_results or []))
 
     return templates.TemplateResponse("reports.html", {
         "request": request,
@@ -79,6 +83,15 @@ async def generate_report(label_version_id: int, request: Request, db: Session =
         user.id,
         product.id,
         label_version_id,
+    )
+    log_action(
+        user.id,
+        "report_generated",
+        "report",
+        report.id,
+        detail=f"Generated report {report.report_ref} for {product.name}",
+        request=request,
+        context={"product_id": product.id, "label_version_id": label_version_id},
     )
     return RedirectResponse(url=f"/reports/{report.id}", status_code=302)
 
@@ -144,6 +157,15 @@ async def download_report_pdf(report_id: int, request: Request, db: Session = De
     try:
         import weasyprint
         pdf_bytes = weasyprint.HTML(string=html_content).write_pdf()
+        log_action(
+            user.id,
+            "report_downloaded",
+            "report",
+            report.id,
+            detail=f"Downloaded PDF report {report.report_ref}",
+            request=request,
+            context={"format": "pdf", "product_id": product.id if product else None},
+        )
         return StreamingResponse(
             io.BytesIO(pdf_bytes),
             media_type="application/pdf",
@@ -152,6 +174,15 @@ async def download_report_pdf(report_id: int, request: Request, db: Session = De
     except ImportError:
         pass
 
+    log_action(
+        user.id,
+        "report_downloaded",
+        "report",
+        report.id,
+        detail=f"Downloaded HTML report {report.report_ref}",
+        request=request,
+        context={"format": "html", "product_id": product.id if product else None},
+    )
     return StreamingResponse(
         io.BytesIO(html_content.encode("utf-8")),
         media_type="text/html",
@@ -181,5 +212,15 @@ async def create_share_link(report_id: int, request: Request, db: Session = Depe
         send_report_shared_email(user, product_name, share_url, expires_at)
     except Exception:
         pass
+
+    log_action(
+        user.id,
+        "report_shared",
+        "report",
+        report.id,
+        detail=f"Created share link for {report.report_ref}",
+        request=request,
+        context={"share_url": share_url, "expires_at": report.share_expires_at},
+    )
 
     return RedirectResponse(url=f"/reports/{report_id}?shared=1", status_code=302)

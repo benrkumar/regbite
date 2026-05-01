@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
+import io
+import textwrap
 
 from fastapi import APIRouter, Request, Depends, Form
 from fastapi.responses import RedirectResponse
@@ -16,6 +18,7 @@ from app.models import (
 )
 from app.config import get_settings
 from app.services.access_control import ensure_workspace_for_user, sync_user_role_flags
+from app.services.activity_service import log_action
 
 router = APIRouter()
 settings = get_settings()
@@ -41,6 +44,95 @@ def _validate_password(password: str) -> str | None:
     if not any(c.isdigit() for c in password):
         return "Password must contain at least one digit."
     return None
+
+
+def _build_demo_label_artifacts(demo: dict) -> tuple[str, bytes | None]:
+    """Generate human-readable demo label text and a simple image fallback for rescans."""
+    extraction = demo.get("extraction") or {}
+    title = extraction.get("product_name") or demo.get("name") or "Demo Product"
+    nutrition_rows = extraction.get("nutritional_table") or []
+    warnings = extraction.get("warnings") or []
+    ingredients = extraction.get("ingredient_list") or []
+    allergens = extraction.get("allergen_declarations") or []
+    claims = extraction.get("health_claims") or []
+
+    lines = [
+        title,
+        extraction.get("product_type_declaration") or demo.get("category") or "HEALTH SUPPLEMENT",
+        "",
+        f"FSSAI Lic No: {extraction.get('fssai_license_number', 'NA')}",
+        f"Net Qty: {extraction.get('net_quantity', 'NA')}",
+        f"Serving Size: {extraction.get('serving_size', 'NA')}",
+        f"Batch No: {extraction.get('batch_number', 'NA')}",
+        f"Mfg Date: {extraction.get('manufacturing_date', 'NA')}",
+        f"Best Before: {extraction.get('expiry_date', 'NA')}",
+        f"Manufactured by: {extraction.get('manufacturer_details', 'NA')}",
+        f"Country of Origin: {extraction.get('country_of_origin', 'India')}",
+        f"Storage: {extraction.get('storage_conditions', 'Store in a cool, dry place.')}",
+        f"Target Consumer: {extraction.get('target_consumer', 'Adults')}",
+        f"Veg/Non-Veg: {extraction.get('veg_nonveg_mark', 'NA')}",
+    ]
+    if ingredients:
+        lines.append("Ingredients: " + ", ".join(str(item) for item in ingredients[:10]))
+    if allergens:
+        lines.append("Allergens: " + ", ".join(str(item) for item in allergens[:5]))
+    if nutrition_rows:
+        lines.append("Nutritional Information:")
+        for row in nutrition_rows[:6]:
+            nutrient = row.get("nutrient") or "Nutrient"
+            per_serving = row.get("per_serving") or "NA"
+            per_100g = row.get("per_100g") or "NA"
+            rda = row.get("rda_percent") or "NA"
+            lines.append(
+                f"{nutrient}: per serving {per_serving}, per 100g/ml {per_100g}, RDA {rda}"
+            )
+    if claims:
+        lines.append("Claims: " + "; ".join(str(item) for item in claims[:4]))
+    if warnings:
+        lines.append("Warnings:")
+        lines.extend(str(item) for item in warnings[:6])
+
+    label_text = "\n".join(str(line) for line in lines if line is not None)
+
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+
+        def load_font(path: str, size: int):
+            try:
+                return ImageFont.truetype(path, size)
+            except Exception:
+                return ImageFont.load_default()
+
+        title_font = load_font("C:/Windows/Fonts/arialbd.ttf", 40)
+        body_font = load_font("C:/Windows/Fonts/arial.ttf", 24)
+
+        image = Image.new("RGB", (1500, 1900), "white")
+        draw = ImageDraw.Draw(image)
+        x = 72
+        y = 60
+        max_width = 78
+
+        for raw_line in label_text.splitlines():
+            line = raw_line.strip()
+            if not line:
+                y += 18
+                continue
+            font = title_font if y < 140 else body_font
+            wrap_width = 34 if font is title_font else max_width
+            wrapped = textwrap.wrap(line, width=wrap_width) or [line]
+            for part in wrapped:
+                draw.text((x, y), part, fill="black", font=font)
+                bbox = draw.textbbox((x, y), part, font=font)
+                y = bbox[3] + 10
+            y += 6
+            if y > 1820:
+                break
+
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG", quality=90, optimize=True)
+        return label_text, buffer.getvalue()
+    except Exception:
+        return label_text, None
 
 
 def create_access_token(data: dict) -> str:
@@ -323,16 +415,23 @@ def _seed_demo_products(user: User, db: Session):
         db.add(product)
         db.flush()
 
+        demo_label_text, demo_label_bytes = _build_demo_label_artifacts(demo)
         label = LabelVersion(
             product_id=product.id,
             file_path=f"demo/{product.id}/synthetic_label.jpg",
             file_name="synthetic_label.jpg",
             file_type="image",
             uploaded_at=datetime.utcnow() - timedelta(days=2),
-            ocr_raw_text="[Demo product — synthetic label data]",
+            ocr_raw_text=demo_label_text,
             extraction_json=demo["extraction"],
             extraction_confidence=0.95,
+            processing_status="ready",
+            processing_step="complete",
+            processing_started_at=datetime.utcnow() - timedelta(days=2),
+            processing_finished_at=datetime.utcnow() - timedelta(days=2),
+            needs_review=False,
             is_current=True,
+            file_data=demo_label_bytes,
         )
         db.add(label)
         db.flush()
@@ -448,22 +547,25 @@ async def login(
     token = create_access_token({"sub": user.email})
     response = RedirectResponse(url="/dashboard", status_code=302)
     response.set_cookie("access_token", token, httponly=True, max_age=settings.access_token_expire_minutes * 60)
-    try:
-        from app.services.activity_service import log_action
-        log_action(user.id, "login", detail=f"User {user.email} logged in", ip_address=request.client.host if request.client else None)
-    except Exception:
-        pass
+    log_action(
+        user.id,
+        "login",
+        detail=f"User {user.email} logged in",
+        request=request,
+        context={"email": user.email},
+    )
     return response
 
 
 @router.get("/logout")
 async def logout(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
-    try:
-        from app.services.activity_service import log_action
-        log_action(user.id if user else None, "logout")
-    except Exception:
-        pass
+    log_action(
+        user.id if user else None,
+        "logout",
+        request=request,
+        context={"email": user.email if user else None},
+    )
     response = RedirectResponse(url="/login", status_code=302)
     response.delete_cookie("access_token")
     return response
@@ -543,4 +645,11 @@ async def register(
     token = create_access_token({"sub": user.email})
     response = RedirectResponse(url="/onboarding", status_code=302)
     response.set_cookie("access_token", token, httponly=True, max_age=settings.access_token_expire_minutes * 60)
+    log_action(
+        user.id,
+        "account_registered",
+        request=request,
+        detail=f"Registered workspace account for {user.email}",
+        context={"role": user.role.value if user.role else None},
+    )
     return response

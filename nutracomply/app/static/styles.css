@@ -635,7 +635,20 @@ details[open] summary::before { content: '\25BC  '; }
   min-height: 48px; touch-action: manipulation;
 }
 .mob-nav-item:hover, .mob-nav-item.active { color: var(--teal); text-decoration: none; }
-.mob-nav-icon { font-size: 1.1rem; line-height: 1; display: block; }
+.mob-nav-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+.mob-nav-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+}
 .mob-nav-lbl  { font-size: 0.65rem; font-weight: 500; letter-spacing: 0.02em; display: block; position: relative; }
 .mob-nav-badge {
   position: absolute; top: -6px; right: -8px;

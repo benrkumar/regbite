@@ -1,0 +1,478 @@
+{% extends "base.html" %}
+{% block title %}Activity & Audit{% endblock %}
+{% block page_subtitle %}Your account activity and audit trail{% endblock %}
+
+{% block content %}
+<style>
+.audit-layout { display:grid; gap:1rem; }
+.audit-hero,
+.audit-card {
+  background:#fff;
+  border:1px solid #ebebeb;
+  border-radius:18px;
+  padding:1.1rem 1.15rem;
+}
+.audit-hero {
+  display:grid;
+  grid-template-columns:minmax(0, 1.3fr) minmax(280px, 0.7fr);
+  gap:1rem;
+}
+.audit-eyebrow,
+.audit-label {
+  font-size:0.7rem;
+  color:#9a9a9a;
+  text-transform:uppercase;
+  letter-spacing:0.11em;
+}
+.audit-headline {
+  margin-top:0.35rem;
+  font-size:1.55rem;
+  line-height:1.12;
+  font-weight:900;
+  color:#111;
+}
+.audit-copy {
+  margin-top:0.45rem;
+  font-size:0.83rem;
+  color:#616161;
+  line-height:1.65;
+}
+.audit-chip-row,
+.audit-meta-row {
+  display:flex;
+  flex-wrap:wrap;
+  gap:0.55rem;
+}
+.audit-chip {
+  display:inline-flex;
+  align-items:center;
+  gap:0.35rem;
+  padding:0.32rem 0.68rem;
+  border-radius:999px;
+  font-size:0.72rem;
+  font-weight:700;
+  background:#f4f6fb;
+  color:#4561a8;
+  border:1px solid #dde6ff;
+}
+.audit-chip.good { background:#eaf4ef; border-color:#d8eadf; color:#2f6b4f; }
+.audit-chip.warn { background:#fff8e7; border-color:#f2e0ad; color:#8f6314; }
+.audit-chip.bad { background:#fdebec; border-color:#f5d1d4; color:#c53c45; }
+.audit-chip.neutral { background:#f7f7f7; border-color:#ececec; color:#5b5b5b; }
+.audit-grid { display:grid; grid-template-columns:repeat(12, minmax(0, 1fr)); gap:1rem; }
+.audit-span-4 { grid-column:span 4; }
+.audit-span-5 { grid-column:span 5; }
+.audit-span-6 { grid-column:span 6; }
+.audit-span-7 { grid-column:span 7; }
+.audit-span-8 { grid-column:span 8; }
+.audit-span-12 { grid-column:span 12; }
+.audit-title-row {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:0.75rem;
+}
+.audit-title {
+  font-size:1rem;
+  font-weight:850;
+  color:#111;
+}
+.audit-subcopy {
+  margin-top:0.2rem;
+  font-size:0.78rem;
+  color:#6d6d6d;
+  line-height:1.55;
+}
+.audit-soft-link {
+  font-size:0.77rem;
+  color:#4b65ca;
+  text-decoration:none;
+  font-weight:700;
+}
+.audit-soft-link:hover { text-decoration:underline; }
+.audit-stats {
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:0.75rem;
+}
+.audit-stat,
+.audit-kv-card,
+.audit-item {
+  background:#fafafa;
+  border:1px solid #efefef;
+  border-radius:14px;
+}
+.audit-stat,
+.audit-kv-card { padding:0.9rem; }
+.audit-stat-value {
+  margin-top:0.25rem;
+  font-size:1.45rem;
+  line-height:1;
+  font-weight:900;
+  color:#111;
+}
+.audit-note {
+  margin-top:0.22rem;
+  font-size:0.74rem;
+  color:#666;
+}
+.audit-kv {
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:0.75rem;
+  margin-top:0.8rem;
+}
+.audit-kv-value {
+  margin-top:0.14rem;
+  font-size:0.84rem;
+  color:#171717;
+  font-weight:750;
+  line-height:1.45;
+}
+.audit-stack {
+  display:grid;
+  gap:0.72rem;
+  margin-top:0.85rem;
+}
+.audit-item { padding:0.92rem; }
+.audit-row {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:0.7rem;
+}
+.audit-row-title {
+  font-size:0.88rem;
+  font-weight:800;
+  color:#111;
+}
+.audit-row-copy,
+.audit-row-meta {
+  font-size:0.77rem;
+  color:#666;
+  line-height:1.55;
+}
+.audit-row-copy { margin-top:0.18rem; }
+.audit-pill {
+  display:inline-flex;
+  align-items:center;
+  gap:0.3rem;
+  padding:0.22rem 0.58rem;
+  border-radius:999px;
+  font-size:0.68rem;
+  font-weight:750;
+  border:1px solid #ececec;
+  background:#f5f5f5;
+  color:#525252;
+}
+.audit-pill.good { background:#eaf4ef; border-color:#d8eadf; color:#2f6b4f; }
+.audit-pill.warn { background:#fff8e7; border-color:#f2e0ad; color:#8f6314; }
+.audit-pill.bad { background:#fdebec; border-color:#f5d1d4; color:#c53c45; }
+.audit-pill.info { background:#eef3ff; border-color:#dce5ff; color:#4561a8; }
+.audit-empty {
+  border:1px dashed #e5e5e5;
+  border-radius:14px;
+  padding:1rem;
+  background:#fcfcfc;
+  color:#666;
+  font-size:0.82rem;
+  line-height:1.6;
+}
+@media (max-width:1040px) {
+  .audit-hero { grid-template-columns:1fr; }
+  .audit-grid { grid-template-columns:repeat(6, minmax(0, 1fr)); }
+  .audit-span-4,
+  .audit-span-5,
+  .audit-span-6,
+  .audit-span-7,
+  .audit-span-8,
+  .audit-span-12 { grid-column:span 6; }
+  .audit-stats { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width:640px) {
+  .audit-grid,
+  .audit-stats,
+  .audit-kv { grid-template-columns:1fr; }
+  .audit-span-4,
+  .audit-span-5,
+  .audit-span-6,
+  .audit-span-7,
+  .audit-span-8,
+  .audit-span-12 { grid-column:span 1; }
+}
+</style>
+
+<div class="audit-layout">
+  <section class="audit-hero">
+    <div>
+      <div class="audit-eyebrow">Activity & Audit</div>
+      <div class="audit-headline">Everything important about this account, in one operational view.</div>
+      <p class="audit-copy">
+        This page is the running story of the user behind the workspace: access history, security changes,
+        scan activity, reports, notifications, API keys, and team access. It is meant to answer the
+        audit question directly: what happened to this user, and what can they touch right now?
+      </p>
+      <div class="audit-chip-row" style="margin-top:0.85rem;">
+        <span class="audit-chip neutral">{{ snapshot.workspace.name }}</span>
+        <span class="audit-chip {% if snapshot.counts.notifications_unread %}warn{% else %}good{% endif %}">{{ snapshot.counts.notifications_unread }} unread notifications</span>
+        <span class="audit-chip {% if snapshot.counts.security_events_30d %}warn{% else %}good{% endif %}">{{ snapshot.counts.security_events_30d }} security events in 30 days</span>
+        <span class="audit-chip {% if snapshot.counts.scan_events_30d %}info{% else %}neutral{% endif %}">{{ snapshot.counts.scan_events_30d }} scan events in 30 days</span>
+      </div>
+    </div>
+    <div class="audit-card" style="padding:0.95rem 1rem;">
+      <div class="audit-label">Latest High-Signal Moments</div>
+      <div class="audit-kv" style="margin-top:0.7rem;">
+        <div class="audit-kv-card">
+          <div class="audit-label">Last Login</div>
+          <div class="audit-kv-value">{% if snapshot.last_login_at %}{{ snapshot.last_login_at.strftime('%d %b %Y, %H:%M') }}{% else %}Not recorded{% endif %}</div>
+        </div>
+        <div class="audit-kv-card">
+          <div class="audit-label">Last Scan</div>
+          <div class="audit-kv-value">{% if snapshot.last_scan_at %}{{ snapshot.last_scan_at.strftime('%d %b %Y, %H:%M') }}{% else %}No scan yet{% endif %}</div>
+        </div>
+        <div class="audit-kv-card">
+          <div class="audit-label">Last Report Event</div>
+          <div class="audit-kv-value">{% if snapshot.last_report_at %}{{ snapshot.last_report_at.strftime('%d %b %Y, %H:%M') }}{% else %}No report event yet{% endif %}</div>
+        </div>
+        <div class="audit-kv-card">
+          <div class="audit-label">Last Security Event</div>
+          <div class="audit-kv-value">{% if snapshot.last_security_at %}{{ snapshot.last_security_at.strftime('%d %b %Y, %H:%M') }}{% else %}No recent change{% endif %}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="audit-stats">
+    <article class="audit-stat">
+      <div class="audit-label">Audit Events</div>
+      <div class="audit-stat-value">{{ snapshot.counts.activity_total }}</div>
+      <div class="audit-note">{{ snapshot.counts.access_events_30d }} access event{{ 's' if snapshot.counts.access_events_30d != 1 }} in 30 days</div>
+    </article>
+    <article class="audit-stat">
+      <div class="audit-label">Products</div>
+      <div class="audit-stat-value">{{ snapshot.counts.products }}</div>
+      <div class="audit-note">{{ snapshot.counts.labels }} tracked labels</div>
+    </article>
+    <article class="audit-stat">
+      <div class="audit-label">Reports</div>
+      <div class="audit-stat-value">{{ snapshot.counts.reports }}</div>
+      <div class="audit-note">{{ snapshot.counts.shared_reports }} shared link{{ 's' if snapshot.counts.shared_reports != 1 }}</div>
+    </article>
+    <article class="audit-stat">
+      <div class="audit-label">Workspace Access</div>
+      <div class="audit-stat-value">{{ snapshot.counts.team_members }}</div>
+      <div class="audit-note">{{ snapshot.counts.pending_invites }} pending invite{{ 's' if snapshot.counts.pending_invites != 1 }}</div>
+    </article>
+  </section>
+
+  <section class="audit-grid">
+    <article class="audit-card audit-span-5">
+      <div class="audit-title-row">
+        <div>
+          <div class="audit-title">Identity, Workspace & Profile</div>
+          <div class="audit-subcopy">Who this user is, where they belong, and how their account is configured.</div>
+        </div>
+      </div>
+      <div class="audit-kv">
+        <div class="audit-kv-card">
+          <div class="audit-label">Role</div>
+          <div class="audit-kv-value">{{ user.role.value.replace('_', ' ').title() if user.role else 'Account Admin' }}</div>
+        </div>
+        <div class="audit-kv-card">
+          <div class="audit-label">Plan</div>
+          <div class="audit-kv-value">{{ (user.plan.value if user.plan else 'free')|title }}</div>
+        </div>
+        <div class="audit-kv-card">
+          <div class="audit-label">Workspace</div>
+          <div class="audit-kv-value">{{ snapshot.workspace.name }}</div>
+        </div>
+        <div class="audit-kv-card">
+          <div class="audit-label">Company</div>
+          <div class="audit-kv-value">{{ snapshot.workspace.company_name or 'Not added yet' }}</div>
+        </div>
+        <div class="audit-kv-card">
+          <div class="audit-label">GSTIN</div>
+          <div class="audit-kv-value">{{ snapshot.workspace.company_gstin or 'Not added yet' }}</div>
+        </div>
+        <div class="audit-kv-card">
+          <div class="audit-label">Notification Recipients</div>
+          <div class="audit-kv-value">
+            {% if snapshot.workspace.notification_emails %}
+            {{ snapshot.workspace.notification_emails|join(', ') }}
+            {% else %}
+            Using only the primary account login
+            {% endif %}
+          </div>
+        </div>
+        <div class="audit-kv-card">
+          <div class="audit-label">Branding Name</div>
+          <div class="audit-kv-value">{{ snapshot.workspace.branding_name }}</div>
+        </div>
+        <div class="audit-kv-card">
+          <div class="audit-label">Active API Keys</div>
+          <div class="audit-kv-value">{{ snapshot.counts.active_api_keys }}</div>
+        </div>
+      </div>
+    </article>
+
+    <article class="audit-card audit-span-7">
+      <div class="audit-title-row">
+        <div>
+          <div class="audit-title">Access & Security Timeline</div>
+          <div class="audit-subcopy">The highest-signal account events: sign-ins, sign-outs, password changes, API-key changes, and other security-affecting actions.</div>
+        </div>
+      </div>
+      <div class="audit-stack">
+        {% for item in snapshot.access_activity %}
+        <div class="audit-item">
+          <div class="audit-row">
+            <div class="audit-row-title">{{ item.label }}</div>
+            <span class="audit-pill {{ item.tone if item.tone in ['good', 'warn', 'bad', 'info'] else 'info' }}">{{ item.group }}</span>
+          </div>
+          <div class="audit-row-copy">{% if item.entry.detail %}{{ item.entry.detail }}{% else %}{{ item.entry.action.replace('_', ' ').title() }}{% endif %}</div>
+          <div class="audit-row-meta">
+            {{ item.entry.created_at.strftime('%d %b %Y, %H:%M') if item.entry.created_at else '' }}
+            {% if item.entry.ip_address %} &middot; IP {{ item.entry.ip_address }}{% endif %}
+            {% if item.entry.user_agent %} &middot; {{ item.entry.user_agent[:90] }}{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% if not snapshot.access_activity %}
+        <div class="audit-empty">No access or security events have been recorded yet.</div>
+        {% endif %}
+      </div>
+    </article>
+
+    <article class="audit-card audit-span-4">
+      <div class="audit-title">Activity Mix</div>
+      <div class="audit-subcopy">What kinds of work this user has been doing most recently.</div>
+      <div class="audit-stack">
+        {% for item in snapshot.activity_mix %}
+        <div class="audit-item">
+          <div class="audit-row">
+            <div class="audit-row-title">{{ item.group }}</div>
+            <span class="audit-pill info">{{ item.count }}</span>
+          </div>
+          <div class="audit-row-meta">Recorded in the last 30 days.</div>
+        </div>
+        {% endfor %}
+        {% if not snapshot.activity_mix %}
+        <div class="audit-empty">No activity groups have been recorded in the last 30 days.</div>
+        {% endif %}
+      </div>
+    </article>
+
+    <article class="audit-card audit-span-8">
+      <div class="audit-title-row">
+        <div>
+          <div class="audit-title">Workspace Activity Timeline</div>
+          <div class="audit-subcopy">The broader operational story: scans, products, reports, settings, and team changes tied to this user.</div>
+        </div>
+      </div>
+      <div class="audit-stack">
+        {% for item in snapshot.recent_activity_display %}
+        <div class="audit-item">
+          <div class="audit-row">
+            <div class="audit-row-title">{{ item.label }}</div>
+            <span class="audit-pill {{ item.tone if item.tone in ['good', 'warn', 'bad', 'info'] else 'info' }}">{{ item.group }}</span>
+          </div>
+          <div class="audit-row-copy">{% if item.entry.detail %}{{ item.entry.detail }}{% else %}{{ item.entry.action.replace('_', ' ').title() }}{% endif %}</div>
+          <div class="audit-row-meta">
+            {{ item.entry.created_at.strftime('%d %b %Y, %H:%M') if item.entry.created_at else '' }}
+            {% if item.entry.ip_address %} &middot; IP {{ item.entry.ip_address }}{% endif %}
+            {% if item.resource_link %} &middot; <a href="{{ item.resource_link }}" class="audit-soft-link">Open related item</a>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% if not snapshot.recent_activity_display %}
+        <div class="audit-empty">No tracked activity has been recorded yet.</div>
+        {% endif %}
+      </div>
+    </article>
+
+    <article class="audit-card audit-span-6">
+      <div class="audit-title">Products & Labels</div>
+      <div class="audit-subcopy">The current product footprint and the newest labels connected to this account.</div>
+      <div class="audit-stack">
+        {% for product in snapshot.recent_products %}
+        <div class="audit-item">
+          <div class="audit-row">
+            <div class="audit-row-title">{{ product.name }}</div>
+            <span class="audit-pill info">{{ product.category or 'Health Supplement' }}</span>
+          </div>
+          <div class="audit-row-meta">Updated {{ product.updated_at.strftime('%d %b %Y, %H:%M') if product.updated_at else '' }}</div>
+        </div>
+        {% endfor %}
+        {% for label in snapshot.recent_labels %}
+        <div class="audit-item">
+          <div class="audit-row">
+            <div class="audit-row-title">{{ label.product.name if label.product else label.file_name }}</div>
+            <span class="audit-pill {% if label.processing_status == 'failed' %}bad{% elif label.processing_status in ['queued', 'processing'] %}info{% elif label.needs_review %}warn{% else %}good{% endif %}">
+              {% if label.needs_review %}Review Needed{% else %}{{ (label.processing_status or 'ready')|title }}{% endif %}
+            </span>
+          </div>
+          <div class="audit-row-meta">{{ label.file_name or 'Uploaded label' }} &middot; {{ label.uploaded_at.strftime('%d %b %Y, %H:%M') if label.uploaded_at else '' }}</div>
+        </div>
+        {% endfor %}
+        {% if not snapshot.recent_products and not snapshot.recent_labels %}
+        <div class="audit-empty">No products or labels have been recorded yet.</div>
+        {% endif %}
+      </div>
+    </article>
+
+    <article class="audit-card audit-span-6">
+      <div class="audit-title">Reports, Notifications & Access Artifacts</div>
+      <div class="audit-subcopy">Outputs generated by the user, plus the credentials and invitations that extend account access.</div>
+      <div class="audit-stack">
+        {% for report in snapshot.recent_reports %}
+        <div class="audit-item">
+          <div class="audit-row">
+            <div class="audit-row-title">{{ report.report_ref }}</div>
+            <span class="audit-pill {% if report.verdict == 'COMPLIANT' %}good{% elif report.verdict == 'PARTIAL' %}warn{% else %}bad{% endif %}">{{ report.verdict or 'Pending' }}</span>
+          </div>
+          <div class="audit-row-copy">{{ report.product.name if report.product else 'Compliance report' }} &middot; {{ report.score or 0 }}%</div>
+          <div class="audit-row-meta">{{ report.created_at.strftime('%d %b %Y, %H:%M') if report.created_at else '' }}</div>
+        </div>
+        {% endfor %}
+        {% for notif in snapshot.recent_notifications %}
+        <div class="audit-item">
+          <div class="audit-row">
+            <div class="audit-row-title">{{ notif.title }}</div>
+            <span class="audit-pill {% if notif.is_read %}good{% else %}warn{% endif %}">{{ 'Read' if notif.is_read else 'Unread' }}</span>
+          </div>
+          <div class="audit-row-copy">{{ notif.message or 'No detail provided.' }}</div>
+          <div class="audit-row-meta">{{ notif.created_at.strftime('%d %b %Y, %H:%M') if notif.created_at else '' }}</div>
+        </div>
+        {% endfor %}
+        {% for key in snapshot.recent_api_keys %}
+        <div class="audit-item">
+          <div class="audit-row">
+            <div class="audit-row-title">{{ key.name }}</div>
+            <span class="audit-pill {% if key.is_active %}warn{% else %}neutral{% endif %}">{{ key.key_prefix }}</span>
+          </div>
+          <div class="audit-row-meta">
+            Created {{ key.created_at.strftime('%d %b %Y, %H:%M') if key.created_at else '' }}
+            {% if key.last_used_at %} &middot; Last used {{ key.last_used_at.strftime('%d %b %Y, %H:%M') }}{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% for invite in snapshot.recent_team_invites %}
+        <div class="audit-item">
+          <div class="audit-row">
+            <div class="audit-row-title">{{ invite.email }}</div>
+            <span class="audit-pill {% if invite.is_accepted %}good{% else %}info{% endif %}">{{ invite.role.value.replace('_', ' ').title() }}</span>
+          </div>
+          <div class="audit-row-meta">
+            Invited {{ invite.created_at.strftime('%d %b %Y, %H:%M') if invite.created_at else '' }}
+            {% if invite.expires_at %} &middot; Expires {{ invite.expires_at.strftime('%d %b %Y, %H:%M') }}{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% if not snapshot.recent_reports and not snapshot.recent_notifications and not snapshot.recent_api_keys and not snapshot.recent_team_invites %}
+        <div class="audit-empty">No reports, notifications, API keys, or invites have been recorded yet.</div>
+        {% endif %}
+      </div>
+    </article>
+  </section>
+</div>
+{% endblock %}

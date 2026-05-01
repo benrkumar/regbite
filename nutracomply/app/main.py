@@ -392,6 +392,11 @@ def _run_foundational_migrations():
             ("products", "account_id", "INTEGER"),
             ("products", "is_temporary", "BOOLEAN DEFAULT FALSE"),
             ("products", "is_sample", "BOOLEAN DEFAULT FALSE"),
+            ("activity_logs", "account_id", "INTEGER"),
+            ("activity_logs", "target_user_id", "INTEGER"),
+            ("activity_logs", "status", "VARCHAR(20) DEFAULT 'success'"),
+            ("activity_logs", "user_agent", "VARCHAR(300)"),
+            ("activity_logs", "context_json", "JSON"),
             ("alerts", "account_id", "INTEGER"),
             ("kb_documents", "account_id", "INTEGER"),
             ("license_renewals", "account_id", "INTEGER"),
@@ -401,6 +406,12 @@ def _run_foundational_migrations():
             ("api_keys", "account_id", "INTEGER"),
             ("subscriptions", "account_id", "INTEGER"),
             ("payment_records", "account_id", "INTEGER"),
+            ("label_versions", "processing_status", "VARCHAR(20)"),
+            ("label_versions", "processing_step", "VARCHAR(50)"),
+            ("label_versions", "processing_error", "TEXT"),
+            ("label_versions", "processing_started_at", "TIMESTAMP"),
+            ("label_versions", "processing_finished_at", "TIMESTAMP"),
+            ("label_versions", "needs_review", "BOOLEAN DEFAULT FALSE"),
             ("regulation_changes", "source_id", "INTEGER"),
             ("regulation_changes", "document_type", "VARCHAR(100)"),
             ("regulation_changes", "crawl_status", "VARCHAR(50)"),
@@ -433,6 +444,8 @@ def _run_foundational_migrations():
         index_sql = [
             "CREATE INDEX IF NOT EXISTS ix_users_account_id ON users (account_id)",
             "CREATE INDEX IF NOT EXISTS ix_products_account_active ON products (account_id, is_active)",
+            "CREATE INDEX IF NOT EXISTS ix_activity_logs_account_id ON activity_logs (account_id)",
+            "CREATE INDEX IF NOT EXISTS ix_activity_logs_target_user_id ON activity_logs (target_user_id)",
             "CREATE INDEX IF NOT EXISTS ix_alerts_account_id ON alerts (account_id)",
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_alert_read_states_alert_user ON alert_read_states (alert_id, user_id)",
             "CREATE INDEX IF NOT EXISTS ix_kb_documents_account_id ON kb_documents (account_id)",
@@ -986,14 +999,30 @@ async def root(request: Request):
 
 @app.get("/dashboard")
 async def dashboard(request: Request):
-    from datetime import datetime
+    from collections import Counter
+    from datetime import datetime, timedelta
     from app.routes.auth import get_current_user_from_cookie
-    from app.database import get_db
-    from app.models import Product, Alert, AlertStatus, LabelVersion, LicenseRenewal, PublishedAlert, PublishedAlertStatus, Notification
+    from app.models import (
+        Product,
+        LabelVersion,
+        LicenseRenewal,
+        PublishedAlert,
+        PublishedAlertStatus,
+        Notification,
+        ComplianceCheck,
+        ComplianceReport,
+    )
     from sqlalchemy.orm import selectinload
 
-    from app.services.access_control import get_account_id
+    from app.services.access_control import can_run_checker, get_account_id
+    from app.services.activity_service import (
+        build_user_audit_snapshot,
+        decorate_logs,
+        query_account_activity,
+    )
     from app.services.alert_service import count_unread_alerts
+    from app.services.dashboard_service import build_product_risk_matrix
+    from app.services.verdict_service import summarize_checks, build_verdict, count_critical_failures
 
     db = SessionLocal()
     user = get_current_user_from_cookie(request, db)
@@ -1008,13 +1037,15 @@ async def dashboard(request: Request):
         return RedirectResponse(url="/onboarding")
 
     account_id = get_account_id(user)
+    audit_snapshot = build_user_audit_snapshot(db, user, limit=12)
+    workspace_activity = decorate_logs(query_account_activity(db, account_id, limit=12)) if account_id else audit_snapshot["recent_activity_display"]
 
-    # Eager-load label_versions→checks in 2 queries instead of N+1
     products_query = (
         db.query(Product)
         .options(
             selectinload(Product.label_versions)
             .selectinload(LabelVersion.checks)
+            .selectinload(ComplianceCheck.rule)
         )
         .filter(
             Product.is_active == True,
@@ -1027,17 +1058,80 @@ async def dashboard(request: Request):
         products_query = products_query.filter(Product.user_id == user.id)
     products_list = products_query.order_by(Product.created_at.desc()).all()
 
-    # Summary stats
-    total_products  = len(products_list)
-    compliant_list  = [p for p in products_list if p.compliance_score is not None and p.compliance_score >= 80]
-    flagged_list    = [p for p in products_list if p.compliance_score is not None and p.compliance_score < 80]
-    no_label_list   = [p for p in products_list if p.compliance_score is None]
+    def is_retry_allowed(label):
+        if not label:
+            return False
+        if label.processing_status == "failed":
+            return True
+        if label.processing_status in {"queued", "processing"} and label.processing_started_at:
+            age_secs = (datetime.utcnow() - label.processing_started_at).total_seconds()
+            return age_secs > 900
+        return False
 
-    # Category breakdown
-    categories: dict = defaultdict(list)
-    for p in products_list:
-        cat = p.category or "Nutraceutical"
-        categories[cat].append(p)
+    verdict_counts = Counter({"COMPLIANT": 0, "PARTIAL": 0, "NON_COMPLIANT": 0})
+    scan_counts = Counter({"queued": 0, "processing": 0, "failed": 0, "review": 0})
+    severity_counts = Counter({"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0})
+    product_cards = []
+    failed_scans = []
+    review_needed = []
+    missing_label_products = []
+    non_compliant_products = []
+    active_scans = []
+    recent_completed_scans = []
+
+    for product in products_list:
+        latest_label = product.latest_label
+        summary = summarize_checks(latest_label.checks if latest_label and latest_label.checks else [])
+        label_state = "missing"
+        if latest_label:
+            label_state = latest_label.processing_status or ("ready" if latest_label.checks else "queued")
+        retry_allowed = is_retry_allowed(latest_label)
+        card = {
+            "product": product,
+            "label": latest_label,
+            "summary": summary,
+            "verdict": summary["verdict"],
+            "tone": summary["tone"],
+            "label_state": label_state,
+            "needs_review": bool(latest_label and latest_label.needs_review),
+            "retry_allowed": retry_allowed,
+            "activity_at": (
+                latest_label.processing_finished_at
+                if latest_label and latest_label.processing_finished_at
+                else latest_label.uploaded_at if latest_label else product.created_at
+            ),
+        }
+        product_cards.append(card)
+
+        if latest_label:
+            if label_state in {"queued", "processing", "failed"}:
+                scan_counts[label_state] += 1
+            if latest_label.needs_review:
+                scan_counts["review"] += 1
+                review_needed.append(card)
+            if label_state == "failed":
+                failed_scans.append(card)
+            if label_state in {"queued", "processing"}:
+                active_scans.append(card)
+            if label_state == "ready":
+                recent_completed_scans.append(card)
+
+            if latest_label.checks:
+                for check in latest_label.checks:
+                    result_value = getattr(check.result, "value", check.result)
+                    if result_value == "PASS" or not check.rule:
+                        continue
+                    severity_counts[check.rule.severity.value] += 1
+                if summary["verdict"]:
+                    verdict_counts[summary["verdict"]] += 1
+                if summary["verdict"] == "NON_COMPLIANT":
+                    non_compliant_products.append(card)
+        else:
+            missing_label_products.append(card)
+
+    total_products = len(product_cards)
+    no_label_count = len(missing_label_products)
+    completed_count = verdict_counts["COMPLIANT"] + verdict_counts["PARTIAL"] + verdict_counts["NON_COMPLIANT"]
 
     unread_alerts = count_unread_alerts(db, user)
 
@@ -1046,10 +1140,26 @@ async def dashboard(request: Request):
         .filter(Notification.user_id == user.id, Notification.is_read == False)
         .count()
     )
+    recent_notifications = (
+        db.query(Notification)
+        .filter(Notification.user_id == user.id)
+        .order_by(Notification.created_at.desc())
+        .limit(5)
+        .all()
+    )
 
-    # Licenses expiring in the next 90 days
-    from datetime import timedelta
-    cutoff = datetime.utcnow() + timedelta(days=90)
+    reports_query = db.query(ComplianceReport)
+    if account_id:
+        reports_query = reports_query.filter(ComplianceReport.account_id == account_id)
+    else:
+        reports_query = reports_query.filter(ComplianceReport.user_id == user.id)
+    recent_reports = reports_query.order_by(ComplianceReport.created_at.desc()).limit(5).all()
+    for report in recent_reports:
+        _ = report.product
+        if not report.verdict:
+            report.verdict = build_verdict(report.score or 0, count_critical_failures(report.check_results or []))
+
+    cutoff = datetime.utcnow() + timedelta(days=30)
     expiring_query = (
         db.query(LicenseRenewal)
         .filter(
@@ -1063,14 +1173,35 @@ async def dashboard(request: Request):
         expiring_query = expiring_query.filter(LicenseRenewal.user_id == user.id)
     expiring_licenses = expiring_query.order_by(LicenseRenewal.expiry_date.asc()).all()
 
-    # Latest 3 published regulation alerts
     recent_reg_alerts = (
         db.query(PublishedAlert)
         .filter(PublishedAlert.status == PublishedAlertStatus.PUBLISHED)
         .order_by(PublishedAlert.published_at.desc())
-        .limit(3)
+        .limit(5)
         .all()
     )
+
+    failed_scans.sort(key=lambda item: item["activity_at"] or datetime.min, reverse=True)
+    review_needed.sort(key=lambda item: item["activity_at"] or datetime.min, reverse=True)
+    non_compliant_products.sort(key=lambda item: item["activity_at"] or datetime.min, reverse=True)
+    active_scans.sort(key=lambda item: item["activity_at"] or datetime.min, reverse=True)
+    recent_completed_scans.sort(key=lambda item: item["activity_at"] or datetime.min, reverse=True)
+    risk_matrix = build_product_risk_matrix(product_cards)
+
+    latest_scan_activity = recent_completed_scans[0] if recent_completed_scans else (active_scans[0] if active_scans else None)
+    workspace_status = (
+        f"{scan_counts['queued'] + scan_counts['processing']} scan(s) in flight, "
+        f"{scan_counts['failed']} failed, {len(expiring_licenses)} renewal(s) due in 30 days."
+    )
+    attention_total = (
+        len(failed_scans)
+        + len(review_needed)
+        + len(missing_label_products)
+        + len(non_compliant_products)
+        + len(expiring_licenses)
+        + len(recent_reg_alerts)
+    )
+    latest_report = recent_reports[0] if recent_reports else None
 
     db.expunge_all()
     db.close()
@@ -1078,16 +1209,35 @@ async def dashboard(request: Request):
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "user": user,
-        "products": products_list,
+        "product_cards": product_cards,
         "unread_alerts": unread_alerts,
         "unread_notifications": unread_notifications,
         "total_products": total_products,
-        "compliant_count": len(compliant_list),
-        "flagged_count": len(flagged_list),
-        "no_label_count": len(no_label_list),
-        "categories": dict(categories),
+        "compliant_count": verdict_counts["COMPLIANT"],
+        "partial_count": verdict_counts["PARTIAL"],
+        "non_compliant_count": verdict_counts["NON_COMPLIANT"],
+        "completed_count": completed_count,
+        "no_label_count": no_label_count,
+        "scan_counts": dict(scan_counts),
+        "severity_counts": dict(severity_counts),
+        "failed_scans": failed_scans[:5],
+        "review_needed": review_needed[:5],
+        "missing_label_products": missing_label_products[:5],
+        "non_compliant_products": non_compliant_products[:5],
+        "active_scans": active_scans[:5],
+        "recent_completed_scans": recent_completed_scans[:5],
+        "latest_scan_activity": latest_scan_activity,
+        "workspace_status": workspace_status,
+        "can_run_checker": can_run_checker(user),
         "expiring_licenses": expiring_licenses,
         "recent_reg_alerts": recent_reg_alerts,
+        "recent_notifications": recent_notifications,
+        "recent_reports": recent_reports,
+        "latest_report": latest_report,
+        "audit_snapshot": audit_snapshot,
+        "workspace_activity": workspace_activity,
+        "attention_total": attention_total,
+        "risk_matrix": risk_matrix,
     })
 
 

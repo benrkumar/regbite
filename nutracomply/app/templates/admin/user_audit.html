@@ -1,0 +1,472 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}User Audit - {{ target.name }}{% endblock %}
+{% block page_title %}User Audit{% endblock %}
+
+{% block content %}
+<style>
+.ua-layout { display:grid; gap:1rem; }
+.ua-hero,
+.ua-card {
+  background:#fff;
+  border:1px solid #ebebeb;
+  border-radius:18px;
+  padding:1.1rem 1.15rem;
+}
+.ua-hero {
+  display:grid;
+  grid-template-columns:minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  gap:1rem;
+}
+.ua-eyebrow,
+.ua-label {
+  font-size:0.7rem;
+  color:#9a9a9a;
+  text-transform:uppercase;
+  letter-spacing:0.11em;
+}
+.ua-headline {
+  margin-top:0.35rem;
+  font-size:1.5rem;
+  font-weight:900;
+  line-height:1.1;
+  color:#111;
+}
+.ua-copy {
+  margin-top:0.45rem;
+  font-size:0.83rem;
+  color:#646464;
+  line-height:1.65;
+}
+.ua-chip-row { display:flex; flex-wrap:wrap; gap:0.55rem; }
+.ua-chip {
+  display:inline-flex;
+  align-items:center;
+  gap:0.3rem;
+  padding:0.32rem 0.68rem;
+  border-radius:999px;
+  font-size:0.72rem;
+  font-weight:700;
+  border:1px solid #dde6ff;
+  background:#eef3ff;
+  color:#4561a8;
+}
+.ua-chip.good { background:#eaf4ef; border-color:#d8eadf; color:#2f6b4f; }
+.ua-chip.warn { background:#fff8e7; border-color:#f2e0ad; color:#8f6314; }
+.ua-chip.bad { background:#fdebec; border-color:#f5d1d4; color:#c53c45; }
+.ua-chip.neutral { background:#f7f7f7; border-color:#ececec; color:#5b5b5b; }
+.ua-grid { display:grid; grid-template-columns:repeat(12, minmax(0, 1fr)); gap:1rem; }
+.ua-span-4 { grid-column:span 4; }
+.ua-span-5 { grid-column:span 5; }
+.ua-span-6 { grid-column:span 6; }
+.ua-span-7 { grid-column:span 7; }
+.ua-span-8 { grid-column:span 8; }
+.ua-span-12 { grid-column:span 12; }
+.ua-title-row {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:0.75rem;
+}
+.ua-title {
+  font-size:1rem;
+  font-weight:850;
+  color:#111;
+}
+.ua-subcopy {
+  margin-top:0.2rem;
+  font-size:0.78rem;
+  color:#6d6d6d;
+  line-height:1.55;
+}
+.ua-soft-link {
+  font-size:0.77rem;
+  color:#4b65ca;
+  text-decoration:none;
+  font-weight:700;
+}
+.ua-soft-link:hover { text-decoration:underline; }
+.ua-stats {
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:0.75rem;
+}
+.ua-stat,
+.ua-kv-card,
+.ua-item {
+  background:#fafafa;
+  border:1px solid #efefef;
+  border-radius:14px;
+}
+.ua-stat,
+.ua-kv-card { padding:0.9rem; }
+.ua-stat-value {
+  margin-top:0.25rem;
+  font-size:1.45rem;
+  line-height:1;
+  font-weight:900;
+  color:#111;
+}
+.ua-note {
+  margin-top:0.22rem;
+  font-size:0.74rem;
+  color:#666;
+}
+.ua-kv {
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:0.75rem;
+  margin-top:0.8rem;
+}
+.ua-kv-value {
+  margin-top:0.14rem;
+  font-size:0.84rem;
+  color:#171717;
+  font-weight:750;
+  line-height:1.45;
+}
+.ua-stack {
+  display:grid;
+  gap:0.72rem;
+  margin-top:0.85rem;
+}
+.ua-item { padding:0.92rem; }
+.ua-row {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:0.7rem;
+}
+.ua-row-title {
+  font-size:0.88rem;
+  font-weight:800;
+  color:#111;
+}
+.ua-row-copy,
+.ua-row-meta {
+  font-size:0.77rem;
+  color:#666;
+  line-height:1.55;
+}
+.ua-row-copy { margin-top:0.18rem; }
+.ua-pill {
+  display:inline-flex;
+  align-items:center;
+  gap:0.3rem;
+  padding:0.22rem 0.58rem;
+  border-radius:999px;
+  font-size:0.68rem;
+  font-weight:750;
+  border:1px solid #ececec;
+  background:#f5f5f5;
+  color:#525252;
+}
+.ua-pill.good { background:#eaf4ef; border-color:#d8eadf; color:#2f6b4f; }
+.ua-pill.warn { background:#fff8e7; border-color:#f2e0ad; color:#8f6314; }
+.ua-pill.bad { background:#fdebec; border-color:#f5d1d4; color:#c53c45; }
+.ua-pill.info { background:#eef3ff; border-color:#dce5ff; color:#4561a8; }
+.ua-empty {
+  border:1px dashed #e5e5e5;
+  border-radius:14px;
+  padding:1rem;
+  background:#fcfcfc;
+  color:#666;
+  font-size:0.82rem;
+  line-height:1.6;
+}
+@media (max-width:1040px) {
+  .ua-hero { grid-template-columns:1fr; }
+  .ua-grid { grid-template-columns:repeat(6, minmax(0, 1fr)); }
+  .ua-span-4,
+  .ua-span-5,
+  .ua-span-6,
+  .ua-span-7,
+  .ua-span-8,
+  .ua-span-12 { grid-column:span 6; }
+  .ua-stats { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width:640px) {
+  .ua-grid,
+  .ua-stats,
+  .ua-kv { grid-template-columns:1fr; }
+  .ua-span-4,
+  .ua-span-5,
+  .ua-span-6,
+  .ua-span-7,
+  .ua-span-8,
+  .ua-span-12 { grid-column:span 1; }
+}
+</style>
+
+<div style="margin-bottom:1rem;font-size:0.84rem;color:#737373;">
+  <a href="/admin/users" style="color:#525252;text-decoration:none;">Users</a>
+  <span style="margin:0 0.4rem;color:#d4d4d4;">/</span>
+  <a href="/admin/users/{{ target.id }}" style="color:#525252;text-decoration:none;">{{ target.name }}</a>
+  <span style="margin:0 0.4rem;color:#d4d4d4;">/</span>
+  <span style="color:#262626;font-weight:600;">Audit</span>
+</div>
+
+<div class="ua-layout">
+  <section class="ua-hero">
+    <div>
+      <div class="ua-eyebrow">User 360 Audit View</div>
+      <div class="ua-headline">Everything important about {{ target.name }} in one operator-grade audit page.</div>
+      <p class="ua-copy">
+        This screen assembles the user's access history, security changes, workspace footprint,
+        scans, reports, notifications, API keys, and invitations. It is intended to answer both
+        "what has this user done?" and "what can this user influence right now?"
+      </p>
+      <div class="ua-chip-row" style="margin-top:0.85rem;">
+        <span class="ua-chip neutral">{{ snapshot.workspace.name }}</span>
+        <span class="ua-chip {% if target.is_active %}good{% else %}bad{% endif %}">{{ 'Active' if target.is_active else 'Suspended' }}</span>
+        <span class="ua-chip {% if snapshot.counts.security_events_30d %}warn{% else %}good{% endif %}">{{ snapshot.counts.security_events_30d }} security events in 30 days</span>
+        <span class="ua-chip {% if snapshot.counts.scan_events_30d %}info{% else %}neutral{% endif %}">{{ snapshot.counts.scan_events_30d }} scan events in 30 days</span>
+      </div>
+    </div>
+    <div class="ua-card" style="padding:0.95rem 1rem;">
+      <div class="ua-label">Latest High-Signal Moments</div>
+      <div class="ua-kv" style="margin-top:0.7rem;">
+        <div class="ua-kv-card">
+          <div class="ua-label">Last Login</div>
+          <div class="ua-kv-value">{% if snapshot.last_login_at %}{{ snapshot.last_login_at.strftime('%d %b %Y, %H:%M') }}{% else %}Not recorded{% endif %}</div>
+        </div>
+        <div class="ua-kv-card">
+          <div class="ua-label">Last Scan</div>
+          <div class="ua-kv-value">{% if snapshot.last_scan_at %}{{ snapshot.last_scan_at.strftime('%d %b %Y, %H:%M') }}{% else %}No scan yet{% endif %}</div>
+        </div>
+        <div class="ua-kv-card">
+          <div class="ua-label">Last Report Event</div>
+          <div class="ua-kv-value">{% if snapshot.last_report_at %}{{ snapshot.last_report_at.strftime('%d %b %Y, %H:%M') }}{% else %}No report event yet{% endif %}</div>
+        </div>
+        <div class="ua-kv-card">
+          <div class="ua-label">Last Security Event</div>
+          <div class="ua-kv-value">{% if snapshot.last_security_at %}{{ snapshot.last_security_at.strftime('%d %b %Y, %H:%M') }}{% else %}No recent change{% endif %}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="ua-stats">
+    <article class="ua-stat">
+      <div class="ua-label">Audit Events</div>
+      <div class="ua-stat-value">{{ snapshot.counts.activity_total }}</div>
+      <div class="ua-note">{{ snapshot.counts.access_events_30d }} access event{{ 's' if snapshot.counts.access_events_30d != 1 }} in 30 days</div>
+    </article>
+    <article class="ua-stat">
+      <div class="ua-label">Products</div>
+      <div class="ua-stat-value">{{ snapshot.counts.products }}</div>
+      <div class="ua-note">{{ snapshot.counts.labels }} tracked labels</div>
+    </article>
+    <article class="ua-stat">
+      <div class="ua-label">Reports</div>
+      <div class="ua-stat-value">{{ snapshot.counts.reports }}</div>
+      <div class="ua-note">{{ snapshot.counts.shared_reports }} shared link{{ 's' if snapshot.counts.shared_reports != 1 }}</div>
+    </article>
+    <article class="ua-stat">
+      <div class="ua-label">Workspace Access</div>
+      <div class="ua-stat-value">{{ snapshot.counts.team_members }}</div>
+      <div class="ua-note">{{ snapshot.counts.pending_invites }} pending invite{{ 's' if snapshot.counts.pending_invites != 1 }}</div>
+    </article>
+  </section>
+
+  <section class="ua-grid">
+    <article class="ua-card ua-span-5">
+      <div class="ua-title">Identity, Workspace & Profile</div>
+      <div class="ua-subcopy">The user's role, workspace assignment, and the profile configuration that shapes their surface area.</div>
+      <div class="ua-kv">
+        <div class="ua-kv-card">
+          <div class="ua-label">Email</div>
+          <div class="ua-kv-value">{{ target.email }}</div>
+        </div>
+        <div class="ua-kv-card">
+          <div class="ua-label">Role</div>
+          <div class="ua-kv-value">{{ target.role.value.replace('_', ' ').title() if target.role else 'Account Admin' }}</div>
+        </div>
+        <div class="ua-kv-card">
+          <div class="ua-label">Status</div>
+          <div class="ua-kv-value">{{ 'Active' if target.is_active else 'Suspended' }}</div>
+        </div>
+        <div class="ua-kv-card">
+          <div class="ua-label">Created</div>
+          <div class="ua-kv-value">{{ target.created_at.strftime('%d %b %Y') if target.created_at else '' }}</div>
+        </div>
+        <div class="ua-kv-card">
+          <div class="ua-label">Workspace</div>
+          <div class="ua-kv-value">{{ snapshot.workspace.name }}</div>
+        </div>
+        <div class="ua-kv-card">
+          <div class="ua-label">Company</div>
+          <div class="ua-kv-value">{{ snapshot.workspace.company_name or 'Not added yet' }}</div>
+        </div>
+        <div class="ua-kv-card">
+          <div class="ua-label">GSTIN</div>
+          <div class="ua-kv-value">{{ snapshot.workspace.company_gstin or 'Not added yet' }}</div>
+        </div>
+        <div class="ua-kv-card">
+          <div class="ua-label">Branding Name</div>
+          <div class="ua-kv-value">{{ snapshot.workspace.branding_name }}</div>
+        </div>
+      </div>
+    </article>
+
+    <article class="ua-card ua-span-7">
+      <div class="ua-title-row">
+        <div>
+          <div class="ua-title">Access & Security Timeline</div>
+          <div class="ua-subcopy">The most sensitive actions tied to this user: sign-ins, sign-outs, password changes, and API-key events.</div>
+        </div>
+      </div>
+      <div class="ua-stack">
+        {% for item in snapshot.access_activity %}
+        <div class="ua-item">
+          <div class="ua-row">
+            <div class="ua-row-title">{{ item.label }}</div>
+            <span class="ua-pill {{ item.tone if item.tone in ['good', 'warn', 'bad', 'info'] else 'info' }}">{{ item.group }}</span>
+          </div>
+          <div class="ua-row-copy">{% if item.entry.detail %}{{ item.entry.detail }}{% else %}{{ item.entry.action.replace('_', ' ').title() }}{% endif %}</div>
+          <div class="ua-row-meta">
+            {{ item.entry.created_at.strftime('%d %b %Y, %H:%M') if item.entry.created_at else '' }}
+            {% if item.entry.ip_address %} &middot; IP {{ item.entry.ip_address }}{% endif %}
+            {% if item.entry.user_agent %} &middot; {{ item.entry.user_agent[:90] }}{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% if not snapshot.access_activity %}
+        <div class="ua-empty">No access or security activity has been recorded yet for this user.</div>
+        {% endif %}
+      </div>
+    </article>
+
+    <article class="ua-card ua-span-4">
+      <div class="ua-title">Activity Mix</div>
+      <div class="ua-subcopy">The distribution of work this user has performed in the last 30 days.</div>
+      <div class="ua-stack">
+        {% for item in snapshot.activity_mix %}
+        <div class="ua-item">
+          <div class="ua-row">
+            <div class="ua-row-title">{{ item.group }}</div>
+            <span class="ua-pill info">{{ item.count }}</span>
+          </div>
+          <div class="ua-row-meta">Recorded in the last 30 days.</div>
+        </div>
+        {% endfor %}
+        {% if not snapshot.activity_mix %}
+        <div class="ua-empty">No activity groups have been recorded in the last 30 days.</div>
+        {% endif %}
+      </div>
+    </article>
+
+    <article class="ua-card ua-span-8">
+      <div class="ua-title-row">
+        <div>
+          <div class="ua-title">Operational Timeline</div>
+          <div class="ua-subcopy">The broader story across products, scans, reports, settings, and team actions touching this user.</div>
+        </div>
+      </div>
+      <div class="ua-stack">
+        {% for item in snapshot.recent_activity_display %}
+        <div class="ua-item">
+          <div class="ua-row">
+            <div class="ua-row-title">{{ item.label }}</div>
+            <span class="ua-pill {{ item.tone if item.tone in ['good', 'warn', 'bad', 'info'] else 'info' }}">{{ item.group }}</span>
+          </div>
+          <div class="ua-row-copy">{% if item.entry.detail %}{{ item.entry.detail }}{% else %}{{ item.entry.action.replace('_', ' ').title() }}{% endif %}</div>
+          <div class="ua-row-meta">
+            {{ item.entry.created_at.strftime('%d %b %Y, %H:%M') if item.entry.created_at else '' }}
+            {% if item.entry.ip_address %} &middot; IP {{ item.entry.ip_address }}{% endif %}
+            {% if item.entry.user and item.entry.user.id != target.id %} &middot; Actor {{ item.entry.user.name }}{% endif %}
+            {% if item.resource_link %} &middot; <a href="{{ item.resource_link }}" class="ua-soft-link">Open related item</a>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% if not snapshot.recent_activity_display %}
+        <div class="ua-empty">No tracked activity has been recorded yet for this user.</div>
+        {% endif %}
+      </div>
+    </article>
+
+    <article class="ua-card ua-span-6">
+      <div class="ua-title">Products & Labels</div>
+      <div class="ua-subcopy">The newest products and latest label states currently associated with this user.</div>
+      <div class="ua-stack">
+        {% for product in snapshot.recent_products %}
+        <div class="ua-item">
+          <div class="ua-row">
+            <div class="ua-row-title">{{ product.name }}</div>
+            <span class="ua-pill info">{{ product.category or 'Health Supplement' }}</span>
+          </div>
+          <div class="ua-row-meta">Updated {{ product.updated_at.strftime('%d %b %Y, %H:%M') if product.updated_at else '' }}</div>
+        </div>
+        {% endfor %}
+        {% for label in snapshot.recent_labels %}
+        <div class="ua-item">
+          <div class="ua-row">
+            <div class="ua-row-title">{{ label.product.name if label.product else label.file_name }}</div>
+            <span class="ua-pill {% if label.processing_status == 'failed' %}bad{% elif label.processing_status in ['queued', 'processing'] %}info{% elif label.needs_review %}warn{% else %}good{% endif %}">
+              {% if label.needs_review %}Review Needed{% else %}{{ (label.processing_status or 'ready')|title }}{% endif %}
+            </span>
+          </div>
+          <div class="ua-row-meta">{{ label.file_name or 'Uploaded label' }} &middot; {{ label.uploaded_at.strftime('%d %b %Y, %H:%M') if label.uploaded_at else '' }}</div>
+        </div>
+        {% endfor %}
+        {% if not snapshot.recent_products and not snapshot.recent_labels %}
+        <div class="ua-empty">No products or labels are associated with this user yet.</div>
+        {% endif %}
+      </div>
+    </article>
+
+    <article class="ua-card ua-span-6">
+      <div class="ua-title">Reports, Notifications & Access Artifacts</div>
+      <div class="ua-subcopy">Generated outputs and the access-enabling artifacts around this user, including keys and invites.</div>
+      <div class="ua-stack">
+        {% for report in snapshot.recent_reports %}
+        <div class="ua-item">
+          <div class="ua-row">
+            <div class="ua-row-title">{{ report.report_ref }}</div>
+            <span class="ua-pill {% if report.verdict == 'COMPLIANT' %}good{% elif report.verdict == 'PARTIAL' %}warn{% else %}bad{% endif %}">{{ report.verdict or 'Pending' }}</span>
+          </div>
+          <div class="ua-row-copy">{{ report.product.name if report.product else 'Compliance report' }} &middot; {{ report.score or 0 }}%</div>
+          <div class="ua-row-meta">{{ report.created_at.strftime('%d %b %Y, %H:%M') if report.created_at else '' }}</div>
+        </div>
+        {% endfor %}
+        {% for notif in snapshot.recent_notifications %}
+        <div class="ua-item">
+          <div class="ua-row">
+            <div class="ua-row-title">{{ notif.title }}</div>
+            <span class="ua-pill {% if notif.is_read %}good{% else %}warn{% endif %}">{{ 'Read' if notif.is_read else 'Unread' }}</span>
+          </div>
+          <div class="ua-row-copy">{{ notif.message or 'No detail provided.' }}</div>
+          <div class="ua-row-meta">{{ notif.created_at.strftime('%d %b %Y, %H:%M') if notif.created_at else '' }}</div>
+        </div>
+        {% endfor %}
+        {% for key in snapshot.recent_api_keys %}
+        <div class="ua-item">
+          <div class="ua-row">
+            <div class="ua-row-title">{{ key.name }}</div>
+            <span class="ua-pill {% if key.is_active %}warn{% else %}neutral{% endif %}">{{ key.key_prefix }}</span>
+          </div>
+          <div class="ua-row-meta">
+            Created {{ key.created_at.strftime('%d %b %Y, %H:%M') if key.created_at else '' }}
+            {% if key.last_used_at %} &middot; Last used {{ key.last_used_at.strftime('%d %b %Y, %H:%M') }}{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% for invite in snapshot.recent_team_invites %}
+        <div class="ua-item">
+          <div class="ua-row">
+            <div class="ua-row-title">{{ invite.email }}</div>
+            <span class="ua-pill {% if invite.is_accepted %}good{% else %}info{% endif %}">{{ invite.role.value.replace('_', ' ').title() }}</span>
+          </div>
+          <div class="ua-row-meta">
+            Invited {{ invite.created_at.strftime('%d %b %Y, %H:%M') if invite.created_at else '' }}
+            {% if invite.expires_at %} &middot; Expires {{ invite.expires_at.strftime('%d %b %Y, %H:%M') }}{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        {% if not snapshot.recent_reports and not snapshot.recent_notifications and not snapshot.recent_api_keys and not snapshot.recent_team_invites %}
+        <div class="ua-empty">No reports, notifications, API keys, or invites have been recorded yet.</div>
+        {% endif %}
+      </div>
+    </article>
+  </section>
+</div>
+{% endblock %}

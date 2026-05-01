@@ -7,6 +7,9 @@
     <h2>Account Settings</h2>
     <p>Manage your notification preferences and account details</p>
   </div>
+  <div>
+    <a href="/settings/activity" class="btn btn-outline btn-sm">View Activity &amp; Audit</a>
+  </div>
 </div>
 
 {% if flash_message %}
@@ -177,4 +180,10 @@
   <a href="/settings/api-keys" class="btn btn-ghost">&#x1F511; Manage API Keys &rarr;</a>
 </div>
 {% endif %}
+
+<div class="card" style="max-width:640px;margin-top:1.5rem;">
+  <h3 style="margin-top:0;">Activity &amp; Audit Trail</h3>
+  <p style="margin-bottom:0.8rem;color:var(--gray-500);">See the running history for this account: sign-ins, label uploads, reports, notifications, and security changes.</p>
+  <a href="/settings/activity" class="btn btn-primary">Open Activity &amp; Audit</a>
+</div>
 {% endblock %}

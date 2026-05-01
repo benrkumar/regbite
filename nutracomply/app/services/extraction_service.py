@@ -301,9 +301,10 @@ def _claude_request(messages: list, max_tokens: int = 8192, extra_headers: dict 
     }
 
     _log(f"[claude-api] Sending request to Claude ({CLAUDE_MODEL})...")
+    request_timeout = max(10, int(getattr(settings, "label_scan_primary_timeout_seconds", 30)))
     resp = httpx.post(
         CLAUDE_API_URL, headers=headers, json=payload,
-        timeout=httpx.Timeout(connect=10.0, write=30.0, read=60.0, pool=5.0),
+        timeout=httpx.Timeout(connect=10.0, write=min(request_timeout, 20), read=request_timeout, pool=5.0),
     )
     if resp.status_code != 200:
         _log(f"[claude-api] HTTP {resp.status_code}: {resp.text[:500]}")
@@ -469,6 +470,7 @@ def _call_gemini_vision(image_path: str) -> Optional[dict]:
 
     genai.configure(api_key=settings.gemini_api_key)
     model = genai.GenerativeModel("gemini-2.5-flash")
+    request_timeout = max(10, int(getattr(settings, "label_scan_fallback_timeout_seconds", 24)))
 
     img_path = Path(image_path)
     suffix = img_path.suffix.lower()
@@ -485,14 +487,14 @@ def _call_gemini_vision(image_path: str) -> Optional[dict]:
         response = model.generate_content(
             pil_images + [prompt],
             generation_config={"temperature": 0.1, "max_output_tokens": 8192},
-            request_options={"timeout": 120},
+            request_options={"timeout": request_timeout},
         )
     else:
         img = PIL.Image.open(image_path)
         response = model.generate_content(
             [VISION_PROMPT, img],
             generation_config={"temperature": 0.1, "max_output_tokens": 8192},
-            request_options={"timeout": 120},
+            request_options={"timeout": request_timeout},
         )
 
     raw = response.text.strip()
@@ -507,13 +509,14 @@ def _call_gemini_text(ocr_text: str) -> Optional[dict]:
 
     genai.configure(api_key=settings.gemini_api_key)
     model = genai.GenerativeModel("gemini-2.5-flash")
+    request_timeout = max(10, int(getattr(settings, "label_scan_fallback_timeout_seconds", 24)))
 
     prompt = TEXT_PROMPT.replace("{label_text}", ocr_text[:12000])
 
     response = model.generate_content(
         prompt,
         generation_config={"temperature": 0.1, "max_output_tokens": 8192},
-        request_options={"timeout": 120},
+        request_options={"timeout": request_timeout},
     )
 
     raw = response.text.strip()

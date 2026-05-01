@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import ComplianceCheck, ComplianceReport, Product
+from app.services.verdict_service import build_verdict, count_critical_failures
 
 
 def _generate_report_ref(db: Session) -> str:
@@ -31,19 +32,11 @@ def _generate_report_ref(db: Session) -> str:
 
 
 def _critical_failures(check_results: list[dict]) -> int:
-    return sum(
-        1
-        for result in check_results
-        if result.get("result") == "FAIL" and result.get("severity") == "CRITICAL"
-    )
+    return count_critical_failures(check_results)
 
 
 def _build_verdict(score: int, critical_failures: int) -> str:
-    if critical_failures == 0 and score >= 90:
-        return "COMPLIANT"
-    if critical_failures == 0 and score >= 60:
-        return "PARTIAL"
-    return "NON_COMPLIANT"
+    return build_verdict(score, critical_failures)
 
 
 def get_or_create_report(

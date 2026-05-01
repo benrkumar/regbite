@@ -126,9 +126,9 @@
 }
 </style>
 
-{% set compliant_reports = reports | selectattr('score', 'ge', 90) | list %}
-{% set partial_reports = reports | selectattr('score', 'ge', 60) | selectattr('score', 'lt', 90) | list %}
-{% set non_compliant_reports = reports | selectattr('score', 'lt', 60) | list %}
+{% set compliant_reports = reports | selectattr('verdict', 'equalto', 'COMPLIANT') | list %}
+{% set partial_reports = reports | selectattr('verdict', 'equalto', 'PARTIAL') | list %}
+{% set non_compliant_reports = reports | rejectattr('verdict', 'equalto', 'COMPLIANT') | rejectattr('verdict', 'equalto', 'PARTIAL') | list %}
 {% set can_run_checks = user.role.value not in ['viewer', 'consultant'] %}
 
 <div class="reports-header">
@@ -180,16 +180,17 @@
           <th style="padding:10px 16px;text-align:right;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.07em;color:#737373;font-weight:700;border-bottom:1px solid #EBEBEB;">Actions</th>
         </tr>
       </thead>
-      <tbody>
-        {% for report in reports %}
+        <tbody>
+          {% for report in reports %}
         {% set score = report.score or 0 %}
-        {% if score >= 90 %}
+        {% set verdict = report.verdict or 'NON_COMPLIANT' %}
+        {% if verdict == 'COMPLIANT' %}
           {% set score_color = '#262626' %}
           {% set score_bg = '#F5F5F5' %}
           {% set verdict_label = 'COMPLIANT' %}
           {% set verdict_bg = '#F5F5F5' %}
           {% set verdict_color = '#262626' %}
-        {% elif score >= 60 %}
+        {% elif verdict == 'PARTIAL' %}
           {% set score_color = '#525252' %}
           {% set score_bg = '#F5F5F5' %}
           {% set verdict_label = 'PARTIAL' %}
@@ -237,13 +238,14 @@
     <div class="mobile-card-list report-mobile-grid">
       {% for report in reports %}
       {% set score = report.score or 0 %}
-      {% if score >= 90 %}
+      {% set verdict = report.verdict or 'NON_COMPLIANT' %}
+      {% if verdict == 'COMPLIANT' %}
         {% set score_color = '#262626' %}
         {% set score_bg = '#F5F5F5' %}
         {% set verdict_label = 'Compliant' %}
         {% set verdict_bg = '#F5F5F5' %}
         {% set verdict_color = '#262626' %}
-      {% elif score >= 60 %}
+      {% elif verdict == 'PARTIAL' %}
         {% set score_color = '#525252' %}
         {% set score_bg = '#F5F5F5' %}
         {% set verdict_label = 'Partial' %}

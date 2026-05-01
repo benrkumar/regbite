@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -15,7 +15,7 @@ from app.config import get_settings
 from app.database import get_db
 from app.models import CheckerSession, ComplianceCheck, ComplianceRule, LabelVersion, Product, CheckResult
 from app.routes.auth import get_current_user_from_cookie
-from app.routes.labels import _process_label
+from app.routes.labels import _prime_label_processing, _process_label_balanced
 from app.services.access_control import can_mutate_products, can_run_checker, get_account_id
 from app.services.alert_service import count_unread_alerts
 from app.services.quota_service import check_product_limit, check_scan_limit
@@ -200,6 +200,9 @@ async def run_check(
         ocr_raw_text="[Manual input via Compliance Checker]",
         extraction_json=extraction_json,
         extraction_confidence=1.0,
+        processing_status="ready",
+        processing_step="manual",
+        processing_finished_at=datetime.utcnow(),
         is_current=True,
     )
     db.add(label)
@@ -238,6 +241,7 @@ async def run_check(
 @router.post("/upload")
 async def upload_check(
     request: Request,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     category: str = Form("Health Supplement"),
     db: Session = Depends(get_db),
@@ -286,6 +290,9 @@ async def upload_check(
         file_path=str(file_path),
         file_name=file.filename,
         file_type="pdf" if suffix == ".pdf" else "image",
+        processing_status="queued",
+        processing_step="queued",
+        needs_review=False,
         is_current=True,
         file_data=content,
     )
@@ -295,23 +302,9 @@ async def upload_check(
     session = _create_session_record(db, user, product, label, "upload", {"filename": file.filename, "category": category})
     db.commit()
     db.refresh(label)
-
-    try:
-        _process_label(label.id)
-    except Exception as exc:
-        print(f"[checker/upload] Processing error: {exc}")
-
-    try:
-        db.refresh(label)
-        from app.services.report_service import get_or_create_report
-        _ = label.checks
-        for check in label.checks:
-            _ = check.rule
-        report = get_or_create_report(db, user.id, product.id, label.id, checker_session_id=session.id)
-        return RedirectResponse(url=f"/reports/{report.id}", status_code=302)
-    except Exception as exc:
-        print(f"[checker/upload] Report error: {exc}")
-        return RedirectResponse(url=f"/labels/{label.id}", status_code=302)
+    _prime_label_processing(label, db)
+    background_tasks.add_task(_process_label_balanced, label.id)
+    return RedirectResponse(url=f"/labels/{label.id}?processing=1&checker=1", status_code=302)
 
 
 @router.post("/sessions/{session_id}/promote")

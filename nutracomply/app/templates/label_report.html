@@ -187,41 +187,80 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
 </div>
 <script>
 (function(){
-  var stages=[
-    {pct:12, label:"Reading label...",                   delay:0},
-    {pct:35, label:"Extracting product information...",  delay:5000},
-    {pct:62, label:"Running AI analysis...",             delay:15000},
-    {pct:78, label:"Checking compliance rules...",       delay:40000},
-    {pct:90, label:"Scoring &amp; building report...",  delay:90000},
-    {pct:96, label:"Finalising...",                      delay:180000},
-    {pct:98, label:"Almost done...",                     delay:300000},
-  ];
+  var stepMap = {
+    queued: {pct: 10, label: "Queued for processing..."},
+    loading: {pct: 16, label: "Preparing label file..."},
+    text_fastpath: {pct: 26, label: "Reading label text..."},
+    local_extraction: {pct: 40, label: "Running fast local extraction..."},
+    text_ai: {pct: 54, label: "Structuring extracted text..."},
+    ai_vision: {pct: 68, label: "Checking with vision AI..."},
+    ocr_fallback: {pct: 76, label: "Retrying OCR extraction..."},
+    text_fallback: {pct: 84, label: "Using text fallback..."},
+    saving: {pct: 90, label: "Saving extracted data..."},
+    compliance: {pct: 96, label: "Running compliance rules..."},
+    done: {pct: 100, label: "Done! Loading report..."}
+  };
   var bar=document.getElementById('scan-bar');
   var pctEl=document.getElementById('scan-pct');
   var stageEl=document.getElementById('scan-stage');
   var titleEl=document.getElementById('scan-title');
   var iconEl=document.getElementById('scan-icon');
   var footer=document.getElementById('scan-footer');
-  stages.forEach(function(s){ setTimeout(function(){ bar.style.width=s.pct+'%'; pctEl.textContent=s.pct+'%'; stageEl.innerHTML=s.label; }, s.delay); });
   var labelId=window.location.pathname.split('/')[2];
   var pollCount=0, MAX_POLLS=180, POLL_MS=2000, pollTimer=null;
-  function showError(){
-    iconEl.textContent='⚠'; titleEl.textContent='Processing took longer than expected';
-    stageEl.innerHTML='This can happen with large or complex labels.';
+  var params = new URLSearchParams(window.location.search);
+  var checkerRedirect = params.get('checker') === '1';
+  function showState(step){
+    var meta = stepMap[step] || stepMap.queued;
+    bar.style.width = meta.pct + '%';
+    pctEl.textContent = meta.pct + '%';
+    stageEl.textContent = meta.label;
+  }
+  function showError(message, retryAllowed){
+    iconEl.innerHTML='&#9888;'; titleEl.textContent='Processing took longer than expected';
+    stageEl.textContent=message || 'This label scan did not finish cleanly.';
     bar.style.background='#E57373'; bar.style.width='100%'; pctEl.style.display='none';
-    footer.innerHTML='<a href="javascript:location.reload()" style="color:#111111;font-weight:600;">Refresh page</a> &nbsp;·&nbsp; <a href="/products" style="color:#A3A3A3;">Back to Products</a>';
+    footer.innerHTML = retryAllowed
+      ? '<form method="post" action="/labels/' + labelId + '/retry" style="display:inline-flex;gap:0.45rem;align-items:center;flex-wrap:wrap;justify-content:center;"><button type="submit" style="background:#111111;color:#fff;border:none;border-radius:999px;padding:0.45rem 0.9rem;font-size:0.76rem;font-weight:700;cursor:pointer;">Retry scan</button><a href="/products" style="color:#737373;">Back to Products</a></form>'
+      : '<a href="javascript:location.reload()" style="color:#111111;font-weight:600;">Refresh page</a> &nbsp;|&nbsp; <a href="/products" style="color:#A3A3A3;">Back to Products</a>';
   }
   function poll(){
     pollCount++;
     fetch('/labels/'+labelId+'/status').then(function(r){return r.json();}).then(function(d){
-      if(d.ready){ bar.style.width='100%'; pctEl.textContent='100%'; stageEl.innerHTML='Done! Loading report...'; clearTimeout(pollTimer); setTimeout(function(){ window.location.href='/labels/'+labelId; },600); return; }
-      if(d.failed||pollCount>=MAX_POLLS){ showError(); return; }
+      if(d.ready){
+        showState('done');
+        clearTimeout(pollTimer);
+        setTimeout(function(){
+          window.location.href = checkerRedirect ? ('/labels/' + labelId + '?checker_done=1') : ('/labels/' + labelId);
+        }, 600);
+        return;
+      }
+      if(d.failed||pollCount>=MAX_POLLS){ showError(d.error, d.retry_allowed); return; }
+      showState(d.step || d.status || 'queued');
       pollTimer=setTimeout(poll, POLL_MS);
     }).catch(function(){ if(pollCount>=MAX_POLLS){showError();return;} pollTimer=setTimeout(poll,POLL_MS); });
   }
+  showState(({{ scan_status.step|tojson if scan_status is defined else '"queued"' }}) || 'queued');
   pollTimer=setTimeout(poll, POLL_MS);
 })();
 </script>
+
+{% elif scan_failed %}
+<div class="card no-hover" style="text-align:center;padding:3rem 1.5rem;max-width:520px;margin:0 auto;">
+  <div style="font-size:1.8rem;margin-bottom:0.65rem;">&#9888;</div>
+  <h3 style="margin-bottom:0.35rem;font-size:1rem;">Label scan needs attention</h3>
+  <p style="color:#737373;font-size:0.82rem;margin-bottom:1.2rem;">
+    {{ scan_status.error or 'This scan did not finish cleanly. Retry the scan to rebuild the extraction and compliance report.' }}
+  </p>
+  <div style="display:flex;gap:0.55rem;justify-content:center;flex-wrap:wrap;">
+    {% if scan_status.retry_allowed %}
+    <form method="post" action="/labels/{{ label.id }}/retry" style="margin:0;">
+      <button type="submit" class="btn btn-primary btn-sm">Retry Scan</button>
+    </form>
+    {% endif %}
+    <a href="/products/{{ product.id }}" class="btn btn-outline btn-sm">Back to Product</a>
+  </div>
+</div>
 
 {% else %}
 
@@ -238,12 +277,16 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
     <button onclick="window.print()" class="btn btn-outline btn-sm" style="display:flex;align-items:center;gap:0.4rem;">
       <span style="display:inline-flex;align-items:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span> Export PDF
     </button>
+    {% if can_rescan %}
     <form method="post" action="/labels/{{ label.id }}/reanalyze" style="margin:0;">
       <button type="submit" class="btn btn-outline btn-sm">Re-analyze</button>
     </form>
     <form method="post" action="/labels/{{ label.id }}/reanalyze?force_extract=1" style="margin:0;">
       <button type="submit" class="btn btn-outline btn-sm">Re-extract</button>
     </form>
+    {% else %}
+    <span class="btn btn-outline btn-sm" aria-disabled="true" style="opacity:0.6;cursor:not-allowed;">Original label content unavailable</span>
+    {% endif %}
   </div>
 </div>
 
@@ -252,17 +295,20 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
 <div class="rpt-col-main">
 
 {# ── Verdict banner ── #}
-{% if score is not none %}
-  {% if score >= 80 %}
-    <div class="rpt-verdict verdict-good">&#x2714; Good standing — score {{ score }}%. Label meets most FSSAI requirements.</div>
-  {% elif score >= 50 %}
-    <div class="rpt-verdict verdict-warn">&#9888; Partial compliance — score {{ score }}%. Several issues need attention before market.</div>
+{% set display_score = score %}
+{% if display_score is not none %}
+  {% if verdict == 'COMPLIANT' %}
+    <div class="rpt-verdict verdict-good">&#x2714; Compliant - score {{ display_score }}% with zero critical failures.</div>
+  {% elif verdict == 'PARTIAL' %}
+    <div class="rpt-verdict verdict-warn">&#9888; Partial compliance - score {{ display_score }}% and no critical failures, but medium/high issues remain.</div>
   {% else %}
-    <div class="rpt-verdict verdict-bad">&#x2716; Non-compliant — score {{ score }}%. Critical issues must be resolved.</div>
+    <div class="rpt-verdict verdict-bad">&#x2716; Non-compliant - score {{ display_score }}% or critical failures are still present.</div>
   {% endif %}
 {% endif %}
-
-{# ── Summary card ── #}
+{% if label.needs_review %}
+  <div class="rpt-verdict verdict-warn" style="margin-top:-0.65rem;">Review needed - extraction confidence is lower or key fields need manual confirmation before relying on this result.</div>
+{% endif %}
+{% set score = display_score %}
 <div class="rpt-summary">
   {% if label.file_path %}
     <img src="/labels/{{ label.id }}/image" alt="{{ product.name }}" class="rpt-label-img" style="max-width:160px;" onerror="this.style.display='none'" />
@@ -283,7 +329,7 @@ details[open] > .rpt-sev-header .sev-arrow { transform:rotate(90deg); }
   <div class="rpt-score-ring">
     {% set circumference = 2 * 3.14159 * 46 %}
     {% set offset = circumference - (circumference * score / 100) %}
-    {% set sc_class = 'sc-good' if score >= 80 else ('sc-warn' if score >= 50 else 'sc-bad') %}
+    {% set sc_class = 'sc-good' if verdict == 'COMPLIANT' else ('sc-warn' if verdict == 'PARTIAL' else 'sc-bad') %}
     <svg viewBox="0 0 110 110">
       <circle class="ring-bg" cx="55" cy="55" r="46" />
       <circle class="ring-fg {{ sc_class }}" cx="55" cy="55" r="46"

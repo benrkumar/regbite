@@ -217,6 +217,9 @@
             <div id="file-name-display" style="margin-top:0.5rem;font-size:0.8rem;font-weight:600;color:#111111;display:none;"></div>
           </div>
           <input type="file" id="product-file" name="file" accept=".jpg,.jpeg,.png,.webp,.tiff,.tif,.pdf,.csv,.xlsx,.xls" style="display:none;" onchange="showFileName()" />
+          <div style="margin-top:0.55rem;font-size:0.77rem;color:#737373;line-height:1.55;">
+            If you attach a label now, RegBite will queue the scan in the background, return you to Products, and notify you when analysis is done. Most single scans finish in about 2-4 min.
+          </div>
         </div>
       </div>
       <div style="display:flex;gap:0.75rem;margin-top:1rem;align-items:center;">
@@ -270,8 +273,11 @@
     </thead>
     <tbody>
     {% for p in products %}
-      {% set score = p.compliance_score %}
+      {% set summary = p.compliance_summary %}
+      {% set score = summary.score %}
+      {% set verdict = summary.verdict %}
       {% set latest = p.latest_label %}
+      {% set label_state = latest.processing_status if latest and latest.processing_status else ('ready' if latest and latest.checks else 'missing') %}
       <tr data-id="{{ p.id }}" data-name="{{ p.name|lower }}" data-sku="{{ (p.sku or '')|lower }}" data-desc="{{ (p.description or '')|lower }}" data-category="{{ p.category }}">
         <td style="padding:0.5rem 0.5rem 0.5rem 0.75rem;">
           <input type="checkbox" class="tbl-check row-check" onchange="onRowCheck()" data-id="{{ p.id }}" />
@@ -300,23 +306,45 @@
         <td><span class="pill pill-primary" style="font-size:0.7rem;">{{ p.category }}</span></td>
         <td>
           {% if score is not none %}
-            <span class="pill {% if score >= 80 %}pill-good{% elif score >= 50 %}pill-warn{% else %}pill-bad{% endif %}">{{ score }}%</span>
+            <div style="display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center;">
+              <span class="pill {% if verdict == 'COMPLIANT' %}pill-good{% elif verdict == 'PARTIAL' %}pill-warn{% else %}pill-bad{% endif %}">{{ score }}%</span>
+              <span class="pill" style="font-size:0.68rem;background:#F5F5F5;color:#525252;">{{ summary.label }}</span>
+              {% if latest and latest.needs_review %}
+              <span class="pill pill-warn" style="font-size:0.68rem;">Review</span>
+              {% endif %}
+            </div>
+          {% elif label_state in ['queued', 'processing'] %}
+            <span class="pill" style="background:#F5F5F5;color:#525252;">{{ label_state|replace('_', ' ')|title }}</span>
+          {% elif label_state == 'failed' %}
+            <span class="pill pill-bad">Scan failed</span>
           {% else %}
             <span style="color:var(--gray-300);">&mdash;</span>
           {% endif %}
         </td>
         <td>
-          {% if latest %}<small>{{ latest.uploaded_at.strftime('%d %b %Y') }}</small>
-          {% else %}<small style="color:var(--gray-300);">No label</small>{% endif %}
+          {% if latest %}
+            <small>{{ latest.uploaded_at.strftime('%d %b %Y') }}</small>
+            {% if label_state in ['queued', 'processing'] %}
+            <br/><small style="color:#737373;">{{ latest.processing_step|default('processing')|replace('_', ' ')|title }}</small>
+            {% elif label_state == 'failed' %}
+            <br/><small style="color:#DF2935;">{{ latest.processing_error or 'Needs retry' }}</small>
+            {% endif %}
+          {% else %}
+            <small style="color:var(--gray-300);">No label</small>
+          {% endif %}
         </td>
         <td class="td-actions">
+          {% if can_mutate_products %}
           <a href="/products/{{ p.id }}/upload" class="btn btn-outline btn-sm">Upload</a>
-          {% if latest %}
-            <a href="/labels/{{ latest.id }}" class="btn btn-primary btn-sm" style="margin-left:0.3rem;">Report</a>
           {% endif %}
+          {% if latest %}
+            <a href="/labels/{{ latest.id }}" class="btn btn-primary btn-sm" style="margin-left:0.3rem;">{% if label_state in ['queued', 'processing', 'failed'] %}Scan{% else %}Report{% endif %}</a>
+          {% endif %}
+          {% if can_mutate_products %}
           <form method="post" action="/products/{{ p.id }}/archive" style="display:inline;" onsubmit="return confirm('Archive {{ p.name }}? You can restore it later.')">
             <button type="submit" class="btn-archive-row" title="Archive product"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></button>
           </form>
+          {% endif %}
         </td>
       </tr>
     {% endfor %}
@@ -325,8 +353,11 @@
 </div>
 <div class="mobile-products-grid" id="products-mobile-grid">
   {% for p in products %}
-    {% set score = p.compliance_score %}
+    {% set summary = p.compliance_summary %}
+    {% set score = summary.score %}
+    {% set verdict = summary.verdict %}
     {% set latest = p.latest_label %}
+    {% set label_state = latest.processing_status if latest and latest.processing_status else ('ready' if latest and latest.checks else 'missing') %}
     <article class="product-card js-product-card"
              data-id="{{ p.id }}"
              data-name="{{ p.name|lower }}"
@@ -357,27 +388,55 @@
       <div class="mobile-chip-row">
         <span class="pill pill-primary" style="font-size:0.7rem;">{{ p.category }}</span>
         {% if score is not none %}
-          <span class="pill {% if score >= 80 %}pill-good{% elif score >= 50 %}pill-warn{% else %}pill-bad{% endif %}">{{ score }}%</span>
+          <span class="pill {% if verdict == 'COMPLIANT' %}pill-good{% elif verdict == 'PARTIAL' %}pill-warn{% else %}pill-bad{% endif %}">{{ summary.label }} {{ score }}%</span>
+        {% elif label_state in ['queued', 'processing'] %}
+          <span class="pill" style="font-size:0.7rem;background:#F5F5F5;color:#525252;">{{ label_state|replace('_', ' ')|title }}</span>
+        {% elif label_state == 'failed' %}
+          <span class="pill pill-bad">Scan failed</span>
         {% else %}
           <span class="pill" style="font-size:0.7rem;background:#F5F5F5;color:#737373;">No score yet</span>
+        {% endif %}
+        {% if latest and latest.needs_review %}
+          <span class="pill pill-warn" style="font-size:0.7rem;">Review needed</span>
         {% endif %}
       </div>
       <div class="product-card-meta">
         <div class="product-meta-block">
           <span class="product-meta-label">Latest label</span>
-          <span class="product-meta-value">{% if latest %}{{ latest.uploaded_at.strftime('%d %b %Y') }}{% else %}No label uploaded{% endif %}</span>
+          <span class="product-meta-value">
+            {% if latest %}
+              {{ latest.uploaded_at.strftime('%d %b %Y') }}
+              {% if label_state in ['queued', 'processing'] %}
+              <br />{{ latest.processing_step|default('processing')|replace('_', ' ')|title }}
+              {% elif label_state == 'failed' %}
+              <br />{{ latest.processing_error or 'Needs retry' }}
+              {% endif %}
+            {% else %}
+              No label uploaded
+            {% endif %}
+          </span>
         </div>
         <div class="product-meta-block">
           <span class="product-meta-label">Next step</span>
           <span class="product-meta-value">
-            {% if latest %}Review latest report{% elif can_mutate_products %}Upload a label{% else %}Await label upload{% endif %}
+            {% if label_state in ['queued', 'processing'] %}
+              Monitor scan progress
+            {% elif label_state == 'failed' %}
+              Retry the failed scan
+            {% elif latest %}
+              Review latest report
+            {% elif can_mutate_products %}
+              Upload a label
+            {% else %}
+              Await label upload
+            {% endif %}
           </span>
         </div>
       </div>
       <div class="product-card-actions">
         <a href="/products/{{ p.id }}" class="btn btn-outline btn-sm">Open Product</a>
         {% if latest %}
-          <a href="/labels/{{ latest.id }}" class="btn btn-primary btn-sm">Latest Report</a>
+          <a href="/labels/{{ latest.id }}" class="btn btn-primary btn-sm">{% if label_state in ['queued', 'processing', 'failed'] %}Open Scan{% else %}Latest Report{% endif %}</a>
         {% elif can_mutate_products %}
           <a href="/products/{{ p.id }}/upload" class="btn btn-primary btn-sm">Upload Label</a>
         {% endif %}
@@ -409,15 +468,18 @@
 function showFileName(){
   var f=document.getElementById('product-file');
   var d=document.getElementById('file-name-display');
-  if(f.files&&f.files.length>0){d.textContent='✓ '+f.files[0].name;d.style.display='block';}
+  var btn=document.getElementById('add-submit-btn');
+  if(f.files&&f.files.length>0){d.textContent='[queued] '+f.files[0].name;d.style.display='block';}
   else{d.style.display='none';}
+  if(f.files&&f.files.length>0){btn.textContent='Add Product & Queue Analysis ->';}
+  else{btn.textContent='Add Product ->';}
 }
 
 /* ── Submit guard ── */
 document.getElementById('add-product-form').addEventListener('submit', function(){
   var btn = document.getElementById('add-submit-btn');
   btn.disabled = true;
-  btn.textContent = 'Adding…';
+  btn.textContent = document.getElementById('product-file').files.length ? 'Queueing...' : 'Adding...';
 });
 
 /* ── Filter & sort ── */

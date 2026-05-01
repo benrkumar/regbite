@@ -212,26 +212,33 @@ class Product(Base):
 
     @property
     def compliance_score(self):
-        """Severity-weighted compliance score matching the compliance engine."""
-        if not self.label_versions:
-            return None
-        latest = self.label_versions[0]
-        if not latest.checks:
-            return None
-        severity_weights = {
-            Severity.CRITICAL: 4, Severity.HIGH: 3,
-            Severity.MEDIUM: 2, Severity.LOW: 1,
-        }
-        weighted_earned = 0
-        weighted_total = 0
-        for check in latest.checks:
-            weight = severity_weights.get(check.rule.severity, 1) if check.rule else 1
-            weighted_total += weight
-            if check.result == CheckResult.PASS:
-                weighted_earned += weight
-            elif check.result == CheckResult.WARNING:
-                weighted_earned += weight * 0.5
-        return round((weighted_earned / weighted_total) * 100) if weighted_total else 0
+        return self.compliance_summary["score"]
+
+    @property
+    def compliance_summary(self):
+        latest = self.latest_label
+        if not latest or not latest.checks:
+            return {
+                "score": None,
+                "critical_failures": 0,
+                "verdict": None,
+                "tone": "none",
+                "label": "No label",
+                "passed_count": 0,
+                "failed_count": 0,
+                "warning_count": 0,
+                "total_checks": 0,
+            }
+        from app.services.verdict_service import summarize_checks
+        return summarize_checks(latest.checks)
+
+    @property
+    def compliance_verdict(self):
+        return self.compliance_summary["verdict"]
+
+    @property
+    def critical_failures(self):
+        return self.compliance_summary["critical_failures"]
 
 
 class LabelVersion(Base):
@@ -249,6 +256,12 @@ class LabelVersion(Base):
     extraction_source = Column(String(20), nullable=True)   # "claude", "gemma", "gemini", "local", "fallback"
     tokens_input = Column(Integer, nullable=True)
     tokens_output = Column(Integer, nullable=True)
+    processing_status = Column(String(20), nullable=True)
+    processing_step = Column(String(50), nullable=True)
+    processing_error = Column(Text, nullable=True)
+    processing_started_at = Column(DateTime, nullable=True)
+    processing_finished_at = Column(DateTime, nullable=True)
+    needs_review = Column(Boolean, default=False)
     is_current = Column(Boolean, default=True)
     file_data = Column(LargeBinary, nullable=True)
 
@@ -262,6 +275,14 @@ class LabelVersion(Base):
         cascade="all, delete-orphan"
     )
     alerts = relationship("Alert", back_populates="label_version")
+
+    @property
+    def scan_ready(self):
+        return self.processing_status == "ready"
+
+    @property
+    def scan_failed(self):
+        return self.processing_status == "failed"
 
 
 class ComplianceRule(Base):
@@ -682,14 +703,21 @@ class TeamInvite(Base):
 class ActivityLog(Base):
     __tablename__ = "activity_logs"
     id            = Column(Integer, primary_key=True, index=True)
+    account_id    = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
     user_id       = Column(Integer, ForeignKey("users.id"), nullable=True)  # nullable for system events
+    target_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     action        = Column(String(100), nullable=False, index=True)
     resource_type = Column(String(50), nullable=True)   # "product", "label", "report", "rule", etc.
     resource_id   = Column(Integer, nullable=True)
     detail        = Column(String(500), nullable=True)  # human-readable description
+    status        = Column(String(20), nullable=True, default="success")
     ip_address    = Column(String(45), nullable=True)
+    user_agent    = Column(String(300), nullable=True)
+    context_json  = Column(JSON, default=dict)
     created_at    = Column(DateTime, default=datetime.utcnow, index=True)
+    account       = relationship("Account", foreign_keys=[account_id])
     user          = relationship("User", foreign_keys=[user_id])
+    target_user   = relationship("User", foreign_keys=[target_user_id])
 
 
 # ─── API Keys ─────────────────────────────────────────────────────────────────

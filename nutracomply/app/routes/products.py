@@ -14,11 +14,13 @@ from app.config import get_settings
 from app.database import get_db
 from app.models import Product, LabelVersion
 from app.routes.auth import get_current_user_from_cookie
-from app.routes.labels import _process_label
+from app.routes.labels import _prime_label_processing, _process_label_balanced
 from app.services.access_control import can_mutate_products, get_account_id
 from app.services.alert_service import count_unread_alerts
+from app.services.activity_service import log_action
 from app.services.billing_service import PLANS
 from app.services.quota_service import check_product_limit, check_scan_limit, get_user_plan
+from app.services.scan_eta_service import format_eta_window
 from app.services.upload_service import (
     ALLOWED_LABEL_EXTENSIONS,
     persist_upload_bytes,
@@ -103,6 +105,8 @@ async def add_product(
     file: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
+    from urllib.parse import quote
+
     user = require_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
@@ -134,22 +138,40 @@ async def add_product(
     db.add(product)
     db.commit()
     db.refresh(product)
+    log_action(
+        user.id,
+        "product_created",
+        "product",
+        product.id,
+        detail=f"Created product {product.name}",
+        request=request,
+        context={"category": product.category, "sku": product.sku},
+    )
 
     if file and file.filename:
         allowed_scan, quota_msg = check_scan_limit(user, db)
         if not allowed_scan:
-            from urllib.parse import quote
             product.is_active = False
             db.commit()
             return RedirectResponse(url=f"/products?msg={quote(quota_msg)}&type=error", status_code=302)
         label_version = await _save_label_file(file, product, db)
-        background_tasks.add_task(_process_label, label_version.id)
-        try:
-            from app.services.activity_service import log_action
-            log_action(user.id, "label_uploaded", "label", label_version.id, detail=f"Uploaded label for {product.name}")
-        except Exception:
-            pass
-        return RedirectResponse(url=f"/labels/{label_version.id}?processing=1", status_code=302)
+        _prime_label_processing(label_version, db)
+        background_tasks.add_task(_process_label_balanced, label_version.id)
+        log_action(
+            user.id,
+            "label_uploaded",
+            "label",
+            label_version.id,
+            detail=f"Uploaded label for {product.name}",
+            request=request,
+            context={"product_id": product.id, "file_name": file.filename},
+        )
+        eta_text = format_eta_window([label_version.file_type or "image"])
+        msg = (
+            f"Queued background analysis for {product.name}. Go to Products - "
+            f"we'll notify you when the label is ready. Estimated {eta_text}."
+        )
+        return RedirectResponse(url=f"/products?msg={quote(msg)}&type=success", status_code=302)
 
     return RedirectResponse(url=f"/products/{product.id}", status_code=302)
 
@@ -169,6 +191,9 @@ async def _save_label_file(file: UploadFile, product: Product, db: Session) -> L
         file_path=str(file_path),
         file_name=file.filename,
         file_type="pdf" if suffix == ".pdf" else "image",
+        processing_status="queued",
+        processing_step="queued",
+        needs_review=False,
         is_current=True,
         file_data=content,
     )
@@ -322,6 +347,15 @@ async def _handle_spreadsheet_upload(request: Request, user, file: UploadFile, s
             remaining_slots -= 1
 
     db.commit()
+    if added:
+        log_action(
+            user.id,
+            "product_bulk_imported",
+            "product",
+            detail=f"Imported {added} products from {file.filename}",
+            request=request,
+            context={"added": added, "source_file": file.filename, "rows_seen": len(rows)},
+        )
     msg = f"Imported {added} product(s) from {file.filename}"
     if remaining_slots == 0 and added < len(rows):
         msg += ". Workspace product limit reached; some rows were skipped."
@@ -338,6 +372,8 @@ async def bulk_upload_page(request: Request, db: Session = Depends(get_db)):
         "request": request,
         "user": user,
         "unread_alerts": count_unread_alerts(db, user),
+        "flash_message": request.query_params.get("msg"),
+        "flash_type": request.query_params.get("type", "info"),
         "result": None,
         "can_mutate_products": can_mutate_products(user),
     })
@@ -395,6 +431,15 @@ async def bulk_upload_post(request: Request, csv_data: str = Form(...), db: Sess
             remaining_slots -= 1
 
     db.commit()
+    if added or skipped:
+        log_action(
+            user.id,
+            "product_bulk_imported",
+            "product",
+            detail=f"Bulk pasted {len(added)} products with {len(skipped)} skipped",
+            request=request,
+            context={"added": len(added), "skipped": len(skipped), "errors": len(errors)},
+        )
     return templates.TemplateResponse("bulk_upload.html", {
         "request": request,
         "user": user,
@@ -411,6 +456,8 @@ async def bulk_upload_files(
     files: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
 ):
+    from urllib.parse import quote
+
     user = require_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
@@ -418,6 +465,7 @@ async def bulk_upload_files(
         return RedirectResponse(url="/products?msg=Read-only+role&type=error", status_code=302)
 
     added, skipped, errors = [], [], []
+    queued_file_types = []
     remaining_slots = _remaining_product_slots(user, db)
 
     for upload in files:
@@ -455,21 +503,64 @@ async def bulk_upload_files(
             db.refresh(product)
 
             label_version = await _save_label_file(upload, product, db)
-            background_tasks.add_task(_process_label, label_version.id)
+            _prime_label_processing(label_version, db)
+            background_tasks.add_task(_process_label_balanced, label_version.id)
+            queued_file_types.append(label_version.file_type or ("pdf" if suffix == ".pdf" else "image"))
+            log_action(
+                user.id,
+                "product_created",
+                "product",
+                product.id,
+                detail=f"Created product {product.name} from bulk label upload",
+                request=request,
+                context={"source_file": upload.filename},
+            )
+            log_action(
+                user.id,
+                "label_uploaded",
+                "label",
+                label_version.id,
+                detail=f"Queued bulk label upload for {product.name}",
+                request=request,
+                context={"product_id": product.id, "file_name": upload.filename},
+            )
             added.append(product_name)
             if remaining_slots is not None:
                 remaining_slots -= 1
         except Exception as exc:
             errors.append(f"'{upload.filename}' - {exc}")
 
-    return templates.TemplateResponse("bulk_upload.html", {
-        "request": request,
-        "user": user,
-        "unread_alerts": count_unread_alerts(db, user),
-        "result": {"added": added, "skipped": skipped, "errors": errors},
-        "active_tab": "files",
-        "can_mutate_products": can_mutate_products(user),
-    })
+    if added or skipped or errors:
+        log_action(
+            user.id,
+            "product_bulk_imported",
+            "product",
+            detail=f"Bulk file upload queued {len(added)} labels with {len(skipped)} skipped and {len(errors)} errors",
+            request=request,
+            context={"added": len(added), "skipped": len(skipped), "errors": len(errors)},
+        )
+
+    if added:
+        eta_text = format_eta_window(queued_file_types, default_count=len(added))
+        msg = (
+            f"Queued {len(added)} label scan{'s' if len(added) != 1 else ''} in the background. "
+            f"Go to Products - we'll notify you when analysis is done. Estimated {eta_text}."
+        )
+        details = []
+        if skipped:
+            details.append(f"{len(skipped)} skipped")
+        if errors:
+            details.append(f"{len(errors)} error{'s' if len(errors) != 1 else ''}")
+        if details:
+            msg += " " + ", ".join(details) + "."
+        return RedirectResponse(url=f"/products?msg={quote(msg)}&type=success", status_code=302)
+
+    msg = "No label scans were queued."
+    if errors:
+        msg += f" {errors[0]}"
+    elif skipped:
+        msg += f" {skipped[0]}"
+    return RedirectResponse(url=f"/products/bulk-upload?msg={quote(msg)}&type=error", status_code=302)
 
 
 @router.get("/products/archived")
@@ -530,6 +621,14 @@ async def delete_product(product_id: int, request: Request, db: Session = Depend
     if product:
         product.is_active = False
         db.commit()
+        log_action(
+            user.id,
+            "product_deleted",
+            "product",
+            product.id,
+            detail=f"Removed product {product.name}",
+            request=request,
+        )
     return RedirectResponse(url="/products", status_code=302)
 
 
@@ -545,6 +644,14 @@ async def archive_product(product_id: int, request: Request, db: Session = Depen
     if product:
         product.is_active = False
         db.commit()
+        log_action(
+            user.id,
+            "product_archived",
+            "product",
+            product.id,
+            detail=f"Archived product {product.name}",
+            request=request,
+        )
     return RedirectResponse(url="/products", status_code=302)
 
 
@@ -560,6 +667,14 @@ async def restore_product(product_id: int, request: Request, db: Session = Depen
     if product:
         product.is_active = True
         db.commit()
+        log_action(
+            user.id,
+            "product_restored",
+            "product",
+            product.id,
+            detail=f"Restored product {product.name}",
+            request=request,
+        )
     return RedirectResponse(url="/products/archived", status_code=302)
 
 

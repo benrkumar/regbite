@@ -15,6 +15,7 @@ from sqlalchemy import func
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
 from app.services.access_control import ensure_workspace_for_user, is_platform_admin, sync_user_role_flags
+from app.services.activity_service import build_user_audit_snapshot, log_action
 from app.services.regulation_ingestion import crawl_active_regulation_sources, derive_source_freshness
 from app.models import (
     User, Product, LabelVersion, ComplianceCheck, ComplianceRule,
@@ -819,6 +820,27 @@ async def admin_user_detail(user_id: int, request: Request, db: Session = Depend
     })
 
 
+@router.get("/users/{user_id}/audit")
+async def admin_user_audit(user_id: int, request: Request, db: Session = Depends(get_db)):
+    user, redir = _require_admin(request, db)
+    if redir:
+        return redir
+
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        return RedirectResponse(url="/admin/users?msg=User+not+found&type=error")
+
+    snapshot = build_user_audit_snapshot(db, target, limit=40)
+    unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
+    return templates.TemplateResponse("admin/user_audit.html", {
+        "request": request,
+        "user": user,
+        "target": target,
+        "snapshot": snapshot,
+        "unread_alerts": unread_alerts,
+    })
+
+
 @router.post("/users/{user_id}/toggle-admin-detail")
 async def admin_toggle_admin(user_id: int, request: Request, db: Session = Depends(get_db)):
     user, redir = _require_admin(request, db)
@@ -826,14 +848,25 @@ async def admin_toggle_admin(user_id: int, request: Request, db: Session = Depen
         return redir
     target = db.query(User).filter(User.id == user_id).first()
     if target and target.id != user.id:  # can't demote yourself
-        target.role = (
+        new_role = (
             UserRole.ACCOUNT_ADMIN
             if target.role == UserRole.SUPER_ADMIN
             else UserRole.SUPER_ADMIN
         )
+        target.role = new_role
         sync_user_role_flags(target)
         ensure_workspace_for_user(db, target)
         db.commit()
+        log_action(
+            user.id,
+            "admin_role_updated",
+            "user",
+            target.id,
+            detail=f"Changed admin role for {target.email} to {new_role.value}",
+            request=request,
+            target_user_id=target.id,
+            context={"new_role": new_role.value},
+        )
     return RedirectResponse(url=f"/admin/users/{user_id}?msg=Updated&type=success", status_code=302)
 
 
@@ -846,6 +879,16 @@ async def admin_toggle_active(user_id: int, request: Request, db: Session = Depe
     if target and target.id != user.id:  # can't deactivate yourself
         target.is_active = not target.is_active
         db.commit()
+        log_action(
+            user.id,
+            "admin_status_updated",
+            "user",
+            target.id,
+            detail=f"{'Activated' if target.is_active else 'Suspended'} {target.email}",
+            request=request,
+            target_user_id=target.id,
+            context={"is_active": target.is_active},
+        )
     return RedirectResponse(url=f"/admin/users/{user_id}?msg=Updated&type=success", status_code=302)
 
 

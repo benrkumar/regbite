@@ -26,6 +26,7 @@ from app.services.access_control import (
     get_account_id,
 )
 from app.services.alert_service import count_unread_alerts
+from app.services.activity_service import build_user_audit_snapshot, log_action
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -86,6 +87,23 @@ async def settings_page(request: Request, db: Session = Depends(get_db)):
     })
 
 
+@router.get("/settings/activity")
+async def settings_activity_page(request: Request, db: Session = Depends(get_db)):
+    user = _require_user(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+
+    snapshot = build_user_audit_snapshot(db, user, limit=30)
+    return templates.TemplateResponse("settings_activity.html", {
+        "request": request,
+        "user": user,
+        "snapshot": snapshot,
+        "unread_alerts": count_unread_alerts(db, user),
+        "flash_message": request.query_params.get("msg"),
+        "flash_type": request.query_params.get("type", "info"),
+    })
+
+
 @router.post("/settings/notifications")
 async def save_notification_emails(request: Request, db: Session = Depends(get_db)):
     user = _require_user(request, db)
@@ -115,6 +133,13 @@ async def save_notification_emails(request: Request, db: Session = Depends(get_d
 
     user.notification_emails = unique_emails[:5]
     db.commit()
+    log_action(
+        user.id,
+        "notification_preferences_updated",
+        detail="Updated notification email preferences",
+        request=request,
+        context={"email_count": len(unique_emails[:5])},
+    )
     return RedirectResponse(
         url="/settings?msg=Notification+emails+saved+successfully&type=success",
         status_code=302,
@@ -145,6 +170,13 @@ async def save_profile(
 
     user.name = name
     db.commit()
+    log_action(
+        user.id,
+        "profile_updated",
+        detail=f"Updated profile name to {name}",
+        request=request,
+        context={"name": name},
+    )
     return RedirectResponse(
         url="/settings?msg=Profile+updated+successfully&type=success",
         status_code=302,
@@ -197,6 +229,13 @@ async def change_password(
     except Exception:
         pass
 
+    log_action(
+        user.id,
+        "password_changed",
+        detail="Changed account password",
+        request=request,
+    )
+
     return RedirectResponse(
         url="/settings?msg=Password+updated+successfully&type=success",
         status_code=302,
@@ -227,6 +266,13 @@ async def save_branding(request: Request, db: Session = Depends(get_db)):
     user.report_brand_name = brand_name or None
     user.report_brand_color = brand_color or None
     db.commit()
+    log_action(
+        user.id,
+        "branding_updated",
+        detail="Updated report branding",
+        request=request,
+        context={"brand_name": brand_name or None, "brand_color": brand_color or None},
+    )
 
     return RedirectResponse(
         url="/settings?msg=Report+branding+saved&type=success",
@@ -298,12 +344,15 @@ async def create_api_key(request: Request, db: Session = Depends(get_db)):
     db.add(api_key)
     db.commit()
     db.refresh(api_key)
-
-    try:
-        from app.services.activity_service import log_action
-        log_action(user.id, "api_key_created", "api_key", api_key.id, detail=f"Created API key '{name}'")
-    except Exception:
-        pass
+    log_action(
+        user.id,
+        "api_key_created",
+        "api_key",
+        api_key.id,
+        detail=f"Created API key '{name}'",
+        request=request,
+        context={"key_name": name, "key_prefix": api_key.key_prefix},
+    )
 
     return _render_api_keys_page(
         request,
@@ -330,6 +379,15 @@ async def revoke_api_key(key_id: int, request: Request, db: Session = Depends(ge
     if key:
         key.is_active = False
         db.commit()
+        log_action(
+            user.id,
+            "api_key_revoked",
+            "api_key",
+            key.id,
+            detail=f"Revoked API key '{key.name}'",
+            request=request,
+            context={"key_name": key.name, "key_prefix": key.key_prefix},
+        )
 
     return RedirectResponse(
         url="/settings/api-keys?msg=API+key+revoked&type=success",

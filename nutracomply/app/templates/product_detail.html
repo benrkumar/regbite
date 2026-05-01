@@ -57,17 +57,51 @@
 
 {% set latest = product.latest_label %}
 {% if latest %}
-  {% set score = product.compliance_score or 0 %}
+  {% set summary = product.compliance_summary %}
+  {% set score = summary.score %}
+  {% set verdict = summary.verdict %}
+  {% set label_state = latest.processing_status if latest.processing_status else ('ready' if latest.checks else 'queued') %}
   <div class="card" style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
-    <div class="score-circle {% if score >= 80 %}sc-good{% elif score >= 50 %}sc-warn{% else %}sc-bad{% endif %}" style="width:80px;height:80px;font-size:1.35rem;">{{ score }}%</div>
+    <div class="score-circle {% if verdict == 'COMPLIANT' %}sc-good{% elif verdict == 'PARTIAL' %}sc-warn{% elif verdict == 'NON_COMPLIANT' %}sc-bad{% else %}sc-warn{% endif %}" style="width:80px;height:80px;font-size:1.2rem;">
+      {% if score is not none %}
+        {{ score }}%
+      {% elif label_state == 'failed' %}
+        FAIL
+      {% else %}
+        {{ label_state|replace('_', ' ')|title }}
+      {% endif %}
+    </div>
     <div style="flex:1;min-width:180px;">
       <strong style="font-size:1.05rem;">Current Label</strong>
       <p style="margin:0.2rem 0;font-size:0.87rem;">Uploaded {{ latest.uploaded_at.strftime('%d %b %Y, %H:%M') }} &middot; {{ latest.file_name }}</p>
+      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin:0.25rem 0 0.2rem;">
+        {% if score is not none %}
+        <span class="pill {% if verdict == 'COMPLIANT' %}pill-good{% elif verdict == 'PARTIAL' %}pill-warn{% else %}pill-bad{% endif %}">{{ summary.label }}</span>
+        {% elif label_state in ['queued', 'processing'] %}
+        <span class="pill pill-neutral">{{ label_state|replace('_', ' ')|title }}</span>
+        {% elif label_state == 'failed' %}
+        <span class="pill pill-bad">Scan failed</span>
+        {% endif %}
+        {% if latest.needs_review %}
+        <span class="pill pill-warn">Review needed</span>
+        {% endif %}
+      </div>
       {% if latest.extraction_confidence %}
       <p style="font-size:0.82rem;color:var(--gray-400);">Extraction confidence: {{ (latest.extraction_confidence * 100)|round|int }}%</p>
+      {% elif label_state == 'failed' and latest.processing_error %}
+      <p style="font-size:0.82rem;color:#DF2935;">{{ latest.processing_error }}</p>
       {% endif %}
     </div>
-    <a href="/labels/{{ latest.id }}" class="btn btn-primary">Full Compliance Report &rarr;</a>
+    {% if label_state == 'failed' %}
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+        <form method="post" action="/labels/{{ latest.id }}/retry" style="margin:0;">
+          <button type="submit" class="btn btn-primary">Retry Scan</button>
+        </form>
+        <a href="/labels/{{ latest.id }}" class="btn btn-outline">Open Scan</a>
+      </div>
+    {% else %}
+    <a href="/labels/{{ latest.id }}" class="btn btn-primary">{% if label_state in ['queued', 'processing'] %}Open Scan &rarr;{% else %}Full Compliance Report &rarr;{% endif %}</a>
+    {% endif %}
   </div>
 
   {# ── Extracted Label Fields (Editable) ── #}
@@ -276,14 +310,20 @@
     <thead><tr><th>Uploaded</th><th>File</th><th>Score</th><th></th></tr></thead>
     <tbody>
     {% for lv in product.label_versions %}
+      {% set is_latest = lv.id == latest.id %}
+      {% set lv_state = lv.processing_status if lv.processing_status else ('ready' if lv.checks else 'queued') %}
       <tr>
         <td><small>{{ lv.uploaded_at.strftime('%d %b %Y') }}</small></td>
         <td><small>{{ lv.file_name }}</small></td>
         <td>
           {% if lv.checks|length > 0 %}
-            <span class="pill {% if lv.id == latest.id %}{% if score >= 80 %}pill-good{% elif score >= 50 %}pill-warn{% else %}pill-bad{% endif %}{% else %}pill-neutral{% endif %}">
-              {% if lv.id == latest.id %}{{ score }}%{% else %}{{ lv.checks|length }} checks{% endif %}
+            <span class="pill {% if is_latest and verdict == 'COMPLIANT' %}pill-good{% elif is_latest and verdict == 'PARTIAL' %}pill-warn{% elif is_latest %}pill-bad{% else %}pill-neutral{% endif %}">
+              {% if is_latest and score is not none %}{{ summary.label }} {{ score }}%{% else %}{{ lv.checks|length }} checks{% endif %}
             </span>
+          {% elif lv_state in ['queued', 'processing'] %}
+            <span class="pill pill-neutral">{{ lv_state|replace('_', ' ')|title }}</span>
+          {% elif lv_state == 'failed' %}
+            <span class="pill pill-bad">Failed</span>
           {% else %}&mdash;{% endif %}
         </td>
         <td><a href="/labels/{{ lv.id }}" class="btn btn-outline btn-sm">View</a></td>

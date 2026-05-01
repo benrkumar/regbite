@@ -18,7 +18,7 @@ import io
 from pathlib import Path
 
 
-def extract_text_from_file(file_path: str) -> tuple[str, float]:
+def extract_text_from_file(file_path: str, *, allow_ocr_fallback: bool = True) -> tuple[str, float]:
     """
     Returns (raw_text, confidence_score 0-1).
     """
@@ -26,12 +26,12 @@ def extract_text_from_file(file_path: str) -> tuple[str, float]:
     suffix = path.suffix.lower()
 
     if suffix == ".pdf":
-        return _extract_from_pdf(file_path)
+        return _extract_from_pdf(file_path, allow_ocr_fallback=allow_ocr_fallback)
     else:
         return _extract_from_image(file_path)
 
 
-def _extract_from_pdf(file_path: str) -> tuple[str, float]:
+def _extract_from_pdf(file_path: str, *, allow_ocr_fallback: bool = True) -> tuple[str, float]:
     # pdfplumber — instant for digital PDFs (most regulation/supplement label PDFs)
     try:
         import pdfplumber
@@ -46,6 +46,9 @@ def _extract_from_pdf(file_path: str) -> tuple[str, float]:
             return text, 0.95
     except Exception as e:
         print(f"[ocr] pdfplumber failed: {e}")
+
+    if not allow_ocr_fallback:
+        return "", 0.0
 
     # Fallback: convert PDF pages to images and run pytesseract
     try:
