@@ -2,9 +2,8 @@
 LLM Studio — Admin routes
 =========================
 All routes require is_admin=True.
-Provides knowledge-base management (train) and chat test interfaces for
-the Regulations LLM (gemini-2.5-pro) and Products LLM (gemini-3.1-flash-lite-preview),
-with Claude (Anthropic) as automatic fallback.
+Provides knowledge-base management (train) and chat test interfaces.
+Primary: Gemma 4 via OpenRouter. Fallback: Claude Sonnet (Anthropic).
 """
 from pathlib import Path
 import uuid
@@ -79,7 +78,6 @@ async def llm_dashboard(request: Request, db: Session = Depends(get_db)):
         "prod_stats":         prod_stats,
         "gemma_configured":   bool(settings.gemma_enabled and settings.openrouter_api_key),
         "gemma_model":        settings.gemma_model_name,
-        "gemini_configured":  bool(settings.gemini_api_key),
         "claude_configured":  bool(settings.anthropic_api_key),
     })
 
@@ -165,24 +163,6 @@ async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
     else:
         result["claude"] = {"status": "not_configured"}
 
-    # ── Test Gemini ───────────────────────────────────────────────────────────
-    if settings.gemini_api_key:
-        try:
-            from google import genai as _genai
-            from google.genai import types as _genai_types
-            _test_client = _genai.Client(api_key=settings.gemini_api_key)
-            _test_client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents="Reply: OK",
-                config=_genai_types.GenerateContentConfig(max_output_tokens=5),
-            )
-            result["gemini"] = {"status": "ok"}
-        except Exception as exc:
-            err_msg = str(exc) or repr(exc)
-            result["gemini"] = {"status": "error", "error": err_msg[:300]}
-    else:
-        result["gemini"] = {"status": "not_configured"}
-
     return JSONResponse(result)
 
 
@@ -245,13 +225,6 @@ async def llm_api_key_stats(request: Request, db: Session = Depends(get_db)):
         "status":    "configured" if settings.anthropic_api_key else "not_configured",
         "model":     "claude-sonnet-4-6",
         "key_hint":  ("sk-ant-..." + settings.anthropic_api_key[-4:]) if settings.anthropic_api_key else None,
-    }
-
-    # ── Gemini (Google) ───────────────────────────────────────────────────────
-    out["gemini"] = {
-        "status":    "configured" if settings.gemini_api_key else "not_configured",
-        "models":    "gemini-2.5-flash / gemini-2.5-pro",
-        "key_hint":  ("AIza..." + settings.gemini_api_key[-4:]) if settings.gemini_api_key else None,
     }
 
     return JSONResponse(out)
@@ -975,16 +948,15 @@ _EXTRACT_JOBS: dict = {}   # job_id → {status, rules, error, note}
 
 
 def _run_extract_job(job_id: str, content: str, doc_title: str, existing_codes: set):
-    """Background thread: call Gemini to extract compliance rules from regulation text."""
+    """Background thread: call Claude Haiku to extract compliance rules from regulation text."""
     import json as _json
-    from google import genai as _genai
-    from google.genai import types as _genai_types
+    import anthropic as _anthropic
     from app.config import get_settings
     settings = get_settings()
     try:
-        _EXTRACT_JOBS[job_id]["note"] = "Calling Gemini…"
-        if not settings.gemini_api_key:
-            _EXTRACT_JOBS[job_id] = {"status": "error", "error": "Gemini API key not configured"}
+        _EXTRACT_JOBS[job_id]["note"] = "Calling Claude…"
+        if not settings.anthropic_api_key:
+            _EXTRACT_JOBS[job_id] = {"status": "error", "error": "Anthropic API key not configured"}
             return
 
         prompt = (
@@ -1014,13 +986,14 @@ def _run_extract_job(job_id: str, content: str, doc_title: str, existing_codes: 
             "{\"rules\": [...]}"
         )
 
-        _extract_client = _genai.Client(api_key=settings.gemini_api_key)
-        response = _extract_client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt,
+        _extract_client = _anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        response = _extract_client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=4096,
+            messages=[{"role": "user", "content": prompt}],
         )
 
-        raw = response.text.strip()
+        raw = response.content[0].text.strip()
         # Strip markdown code fences if present
         if "```" in raw:
             parts = raw.split("```")
@@ -1315,7 +1288,7 @@ async def llm_chat_page(kb_type: str, request: Request, db: Session = Depends(ge
         "unread_alerts": _unread_alerts(db),
         "kb_type":       kb_type,
         "messages":      conv.messages or [],
-        "model_name":    MODELS.get(kb_type, "gemini-3.1-flash-lite-preview"),
+        "model_name":    MODELS.get(kb_type, "google/gemma-4-31b-it"),
     })
 
 
@@ -1428,9 +1401,7 @@ async def label_extractor_page(request: Request, db: Session = Depends(get_db)):
         "conf_stats":               conf_stats,
         "pattern_count":            pattern_count,
         "field_patterns":           field_patterns,
-        "gemini_model":             "gemini-3.1-flash-lite-preview",
-        "claude_model":             "claude-sonnet-4-6",
-        "gemini_available":         bool(settings.gemini_api_key),
+        "claude_model":             "claude-haiku-4-5",
         "claude_available":         bool(settings.anthropic_api_key),
         "local_enabled":            settings.local_extraction_enabled,
         "local_min_confidence":     settings.local_extraction_min_confidence,
@@ -1568,25 +1539,6 @@ def _run_benchmark_job(job_id: str, tmp_path: str, filename: str, file_size_kb: 
             job["current"] = "Claude Vision…"
             run_provider("Claude Vision", "claude", _call_claude_vision, tmp_path)
 
-        if cfg.gemini_api_key:
-            job["current"] = "Gemini Vision…"
-            try:
-                from app.services.extraction_service import _call_gemini_vision
-                start = _t.time()
-                r = _call_gemini_vision(tmp_path)
-                if r:
-                    r = _normalize_extraction(r)
-                    conf = _calculate_confidence(r, "vision")
-                    fc = sum(1 for v in r.values() if v)
-                else:
-                    conf, fc = 0.0, 0
-                elapsed = round(_t.time() - start, 2)
-                results.append({"provider": "Gemini Vision", "status": "success", "elapsed": elapsed,
-                    "confidence": round(conf, 3), "field_count": fc, "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0, "error": None})
-            except Exception as e:
-                results.append({"provider": "Gemini Vision", "status": "error", "elapsed": 0, "confidence": 0,
-                    "field_count": 0, "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0, "error": str(e)[:120]})
-
         job["done"] = True
         job["results"] = results
     except Exception as e:
@@ -1654,7 +1606,7 @@ def _run_extraction_job(job_id: str, tmp_path: str, filename: str, file_size_kb:
 
         # Step 2 — Claude Vision
         if cfg.anthropic_api_key:
-            step("claude_vision", "Running Claude Vision (claude-sonnet-4-6)…")
+            step("claude_vision", "Running Claude Vision (claude-haiku-4-5)…")
             try:
                 import os
                 os.environ.setdefault("ANTHROPIC_API_KEY", cfg.anthropic_api_key)
@@ -1677,19 +1629,7 @@ def _run_extraction_job(job_id: str, tmp_path: str, filename: str, file_size_kb:
             except Exception:
                 pass
 
-        # Step 4 — Gemini
-        if cfg.gemini_api_key:
-            step("gemini", "Running Gemini (gemini-3.1-flash-lite-preview)…")
-            try:
-                from app.services.extraction_service import _call_gemini_vision
-                result = _call_gemini_vision(tmp_path)
-                if result:
-                    finish("gemini", "Gemini Vision", result, 0, 0)
-                    return
-            except Exception:
-                pass
-
-        # Step 5 — nothing worked
+        # Step 4 — nothing worked
         step("done", "Extraction complete (fallback)")
         job["done"] = True
         job["result"] = {
@@ -1891,13 +1831,11 @@ async def compliance_coverage(request: Request, db: Session = Depends(get_db)):
     }
 
     # ── 2. FORMAT_LLM health ─────────────────────────────────────────────────
-    gemini_available = bool(cfg.gemini_api_key)
     claude_available = bool(cfg.anthropic_api_key)
     format_llm_health = {
         "rules_at_risk":    len(format_llm_rules),
-        "gemini_available": gemini_available,
         "claude_available": claude_available,
-        "any_llm_available": gemini_available or claude_available,
+        "any_llm_available": claude_available,
         "rule_codes":       [r.rule_code for r in format_llm_rules[:20]],
     }
 

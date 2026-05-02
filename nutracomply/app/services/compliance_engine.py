@@ -405,14 +405,31 @@ def _check_value_in_list(rule: ComplianceRule, config: dict, extraction: dict):
     return CheckResult.FAIL, str(value), f"'{field}' value not in allowed list: {allowed}"
 
 
+# Rules that require physical label inspection — auto-WARNING, no LLM call possible.
+_FORMAT_VISUAL_WARNING_RULES: frozenset[str] = frozenset({
+    "FSSAI-NUTRA-FORMAT-002",  # minimum font size — visual only
+    "FSSAI-NUTRA-FORMAT-003",  # colour/contrast — visual only
+    "FSSAI-NUTRA-FORMAT-004",  # prominence placement — visual only
+    "FSSAI-LIC-002",           # street vendor registration — unverifiable from label text
+})
+
+
 def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
     """
-    LLM-assisted format verification — uses Gemini to evaluate whether
+    LLM-assisted format verification — uses Claude Haiku to evaluate whether
     the extracted label data meets a format/layout requirement that can't
-    be checked with simple regex (e.g. font size, prominence, bilingual text).
+    be checked with simple regex.
 
-    Falls back to WARNING if Gemini is unavailable.
+    Purely visual rules (font size, colour, placement) are auto-WARNING since
+    they require physical inspection. Falls back to WARNING if Claude unavailable.
     """
+    # Visual rules: cannot be assessed from extracted text
+    if rule.rule_code in _FORMAT_VISUAL_WARNING_RULES:
+        description = config.get("description", rule.description)
+        return (
+            CheckResult.WARNING, None,
+            f"Manual visual inspection required: {description}"
+        )
     field = config.get("field")
     description = config.get("description", rule.description)
 
@@ -475,31 +492,25 @@ def _check_format_llm(rule: ComplianceRule, config: dict, extraction: dict):
 
         raw = None
 
-        # Gemini
-        if raw is None and settings.gemini_api_key:
+        # Claude Haiku — fast, cheap, no Gemini dependency
+        if raw is None and settings.anthropic_api_key:
             try:
-                from google import genai as _genai
-                from google.genai import types as _genai_types
-                _client = _genai.Client(api_key=settings.gemini_api_key)
-                response = _client.models.generate_content(
-                    model="gemini-2.0-flash-lite",
-                    contents=prompt,
-                    config=_genai_types.GenerateContentConfig(
-                        temperature=0.1,
-                        max_output_tokens=256,
-                    ),
+                import anthropic as _anthropic
+                _client = _anthropic.Anthropic(api_key=settings.anthropic_api_key)
+                response = _client.messages.create(
+                    model="claude-haiku-4-5",
+                    max_tokens=256,
+                    messages=[{"role": "user", "content": prompt}],
                 )
-                raw = response.text.strip()
+                raw = response.content[0].text.strip()
                 try:
                     from app.services.api_logger import log_api_call
-                    _usage = getattr(response, "usage_metadata", None)
-                    _inp = getattr(_usage, "prompt_token_count", None) if _usage else None
-                    _out = getattr(_usage, "candidates_token_count", None) if _usage else None
-                    log_api_call("compliance_format", "gemini", "gemini-2.0-flash-lite", _inp, _out)
+                    log_api_call("compliance_format", "claude", "claude-haiku-4-5",
+                                 response.usage.input_tokens, response.usage.output_tokens)
                 except Exception:
                     pass
-            except Exception as ge:
-                logger.warning("[compliance] Gemini format check failed for %s: %s", rule.rule_code, ge)
+            except Exception as ce:
+                logger.warning("[compliance] Claude format check failed for %s: %s", rule.rule_code, ce)
 
         if raw is None:
             raise ValueError("No LLM provider available for format check")
@@ -923,6 +934,161 @@ def _handle_fsmp_osm_001(extraction: dict):
     )
 
 
+# ─── Additional deterministic FORMAT handlers ────────────────────────────────
+# FSSAI-NUTRA-LBL-019 — Front-of-Pack Nutrition Labelling (FOPNL)
+def _handle_nutra_lbl_019(extraction: dict):
+    nt = extraction.get("nutritional_table") or []
+    if not nt:
+        return CheckResult.WARNING, None, (
+            "No nutritional table found — cannot verify FOPNL threshold requirements"
+        )
+    _THRESHOLDS = {
+        "sugar": 10.0, "sugars": 10.0,
+        "sodium": 0.6,  # g/100g (600 mg)
+        "saturated fat": 4.0, "saturated fatty acid": 4.0,
+        "trans fat": 0.5, "trans fatty acid": 0.5,
+    }
+    breached = []
+    for row in nt:
+        nutrient = _norm(row.get("nutrient", ""))
+        per_100 = row.get("per_100g") or row.get("per_100ml") or ""
+        if not per_100:
+            continue
+        num = re.search(r"[\d.]+", str(per_100))
+        if not num:
+            continue
+        val = float(num.group())
+        for key, threshold in _THRESHOLDS.items():
+            if key in nutrient and val > threshold:
+                breached.append(f"{nutrient}: {val}")
+    if breached:
+        return CheckResult.WARNING, str(breached[:3]), (
+            f"Nutritional values exceed FOPNL thresholds: {breached[:3]}. "
+            "Front-of-pack health star rating or warning symbol may be required."
+        )
+    return CheckResult.PASS, None, "No FOPNL threshold breaches detected in nutritional table"
+
+
+# FSSAI-NUTRA-LBL-020 — QR code for complex formulations (>50 ingredients)
+def _handle_nutra_lbl_020(extraction: dict):
+    ing = extraction.get("ingredient_list") or []
+    count = len(ing) if isinstance(ing, list) else 0
+    if count > 50:
+        return CheckResult.WARNING, str(count), (
+            f"Product has {count} ingredients (>50). A QR code linking to FSSAI-registered "
+            "product page with batch details and full ingredient information is required."
+        )
+    return CheckResult.PASS, str(count), f"Ingredient count ({count}) is below the 50-ingredient QR code threshold"
+
+
+# FSSAI-LIC-001 — FSSAI license type verification
+def _handle_lic_001(extraction: dict):
+    lic = extraction.get("fssai_license_number")
+    if not lic:
+        return CheckResult.FAIL, None, "FSSAI license number not found on label"
+    lic_str = str(lic).strip()
+    if not re.match(r"^\d{14}$", lic_str):
+        return CheckResult.WARNING, lic_str, (
+            f"FSSAI license '{lic_str}' does not match expected 14-digit format"
+        )
+    return CheckResult.PASS, lic_str, f"FSSAI license number present: {lic_str}"
+
+
+# LM-PKG-008 — Bilingual (Hindi + English) mandatory declarations
+def _handle_lm_pkg_008(extraction: dict):
+    # Check for Devanagari Unicode characters in any extracted text field
+    devanagari_range = re.compile(r"[ऀ-ॿ]")
+    all_text_fields = [
+        extraction.get("product_name") or "",
+        extraction.get("manufacturer_details") or "",
+        str(extraction.get("warnings") or ""),
+        str(extraction.get("ingredient_list") or ""),
+        extraction.get("storage_conditions") or "",
+    ]
+    combined = " ".join(all_text_fields)
+    if devanagari_range.search(combined):
+        return CheckResult.PASS, None, "Hindi (Devanagari) text detected — bilingual declarations appear present"
+    return CheckResult.WARNING, None, (
+        "No Hindi/Devanagari text detected in extracted fields. "
+        "Legal Metrology rules require bilingual (Hindi + English or regional language) declarations. "
+        "Verify the label carries Hindi text — OCR may have missed Devanagari characters."
+    )
+
+
+# BIS-NUTRA-001 — BIS/ISI certification mark
+def _handle_bis_nutra_001(extraction: dict):
+    _BIS_MARKERS = {"isi", "bis", "cm/l", "is 4926", "is 7022", "bis certified", "bis certification"}
+    _fields = [k for k in extraction if k != "_extraction_warnings"]
+    all_text = _concat(extraction, *_fields)
+    if any(marker in all_text for marker in _BIS_MARKERS):
+        return CheckResult.PASS, None, "BIS/ISI certification marker found on label"
+    return CheckResult.WARNING, None, (
+        "No BIS/ISI certification mark detected. If this product claims BIS certification, "
+        "verify ISI mark with CM/L license number is displayed on the label."
+    )
+
+
+# BIS-NUTRA-002 — Protein supplement BIS quality standards
+def _handle_bis_nutra_002(extraction: dict):
+    _PROTEIN_CLAIMS = {"protein", "whey", "casein", "bcaa", "amino acid", "pdcaas", "diaas"}
+    claims = _concat(extraction, "health_claims", "product_name", "product_type_declaration")
+    if not any(p in claims for p in _PROTEIN_CLAIMS):
+        return CheckResult.PASS, None, "No protein supplement claims detected — BIS IS 7022 not applicable"
+    _bis_fields = [k for k in extraction if k != "_extraction_warnings"]
+    all_text = _concat(extraction, *_bis_fields)
+    _BIS_MARKERS = {"is 7022", "bis", "isi", "cm/l"}
+    if any(m in all_text for m in _BIS_MARKERS):
+        return CheckResult.PASS, None, "Protein product with BIS/ISI certification marker found"
+    return CheckResult.WARNING, None, (
+        "Protein supplement claims detected but no BIS IS 7022:2023 certification marker found. "
+        "Verify protein quality parameters (PDCAAS/DIAAS, heavy metal limits) if claiming BIS certification."
+    )
+
+
+# DGFT-IMP-001 — Imported supplement IEC + FSSAI import clearance
+def _handle_dgft_imp_001(extraction: dict):
+    coo = extraction.get("country_of_origin")
+    if not coo:
+        return CheckResult.WARNING, None, (
+            "Country of origin not declared. If this is an imported product, "
+            "IEC (Import Export Code) and FSSAI import clearance are mandatory."
+        )
+    coo_norm = _norm(str(coo))
+    if "india" in coo_norm or "भारत" in coo_norm:
+        return CheckResult.PASS, coo, "Product is domestic (India) — DGFT import rules not applicable"
+    # Imported product — check for IEC/import references
+    all_text = _concat(extraction, "warnings", "manufacturer_details", "customer_care_details")
+    if "iec" in all_text or "import" in all_text:
+        return CheckResult.PASS, coo, f"Imported product from {coo} with import declaration found"
+    return CheckResult.WARNING, coo, (
+        f"Imported product (Country of Origin: {coo}) — verify IEC and FSSAI import clearance "
+        "certificate are obtained. Label should reference importer's FSSAI license number."
+    )
+
+
+# DGFT-IMP-002 — CITES-restricted botanical import restrictions
+_CITES_RESTRICTED_HERBS = frozenset({
+    "hoodia", "hoodia gordonii", "prunus africana", "pygeum", "nardostachys",
+    "spikenard", "aquilaria", "agarwood", "guggul", "commiphora wightii",
+    "cycas", "cycad", "taxus", "himalayan yew", "coptis teeta",
+    "swertia chirayita", "chirata", "rauvolfia serpentina", "sarpagandha",
+    "podophyllum hexandrum", "may apple", "dactylorhiza", "orchid",
+})
+
+def _handle_dgft_imp_002(extraction: dict):
+    coo = _norm(extraction.get("country_of_origin") or "")
+    if "india" in coo or "भारत" in coo:
+        return CheckResult.PASS, None, "Domestic product — CITES import restrictions not applicable"
+    ing = _concat(extraction, "ingredient_list")
+    found = [h for h in _CITES_RESTRICTED_HERBS if h in ing]
+    if not found:
+        return CheckResult.PASS, None, "No CITES-restricted botanical ingredients detected"
+    return CheckResult.WARNING, str(found[:3]), (
+        f"Potentially CITES-restricted botanical(s) detected: {found[:3]}. "
+        "Verify DGFT clearance for import of restricted herbs under CITES Appendix II."
+    )
+
+
 # ─── Registry: rule_code → deterministic handler ─────────────────────────────
 # Rules NOT in this dict fall through to the LLM batch call.
 
@@ -947,20 +1113,29 @@ _DETERMINISTIC_FORMAT_HANDLERS: dict[str, object] = {
     "FSSAI-FRT-WARN-001":  _handle_frt_warn_001,
     "FSSAI-VGN-LBL-001":         _handle_vgn_lbl_001,
     "FSSAI-PROB-LBL-001":        _handle_prob_lbl_001,
-    # New rules — deterministic handlers (no Gemini call needed)
+    # New rules — deterministic handlers (no LLM call needed)
     "FSSAI-NUTRA-NOVL-001":      _handle_nutra_novl_001,
     "FSSAI-NUTRA-PREBIOTIC-001": _handle_nutra_prebiotic_001,
     "FSSAI-NUTRA-PIF-001":       _handle_nutra_pif_001,
     "FSSAI-FSMP-OSM-001":        _handle_fsmp_osm_001,
+    # FORMAT rules — deterministic (replaces LLM batch for these)
+    "FSSAI-NUTRA-LBL-019":       _handle_nutra_lbl_019,
+    "FSSAI-NUTRA-LBL-020":       _handle_nutra_lbl_020,
+    "FSSAI-LIC-001":              _handle_lic_001,
+    "LM-PKG-008":                 _handle_lm_pkg_008,
+    "BIS-NUTRA-001":              _handle_bis_nutra_001,
+    "BIS-NUTRA-002":              _handle_bis_nutra_002,
+    "DGFT-IMP-001":               _handle_dgft_imp_001,
+    "DGFT-IMP-002":               _handle_dgft_imp_002,
 }
 
 
 def _check_format_rules_batch(format_rules, extraction: dict, label_version_id: int) -> list:
     """
-    Run ALL FORMAT / FORMAT_LLM rules in a single Gemini call instead of one
-    call per rule.  Reduces ~43 sequential API calls (≈172 s) to 1 call (≈5 s).
+    Run remaining FORMAT / FORMAT_LLM rules in a single Claude Haiku call.
+    Most rules are already handled deterministically before reaching here.
 
-    Falls back gracefully: if the LLM is unavailable every rule becomes WARNING.
+    Falls back gracefully: if Claude is unavailable every rule becomes WARNING.
     """
     import json as _json
 
@@ -1017,26 +1192,22 @@ def _check_format_rules_batch(format_rules, extraction: dict, label_version_id: 
         '[{"rule_code":"X","verdict":"PASS","reason":"..."},...]'
     )
 
-    # ── Call Gemini once ──────────────────────────────────────────────────────
+    # ── Call Claude Haiku once ────────────────────────────────────────────────
     results_map: dict[str, tuple[str, str]] = {}
     try:
         from app.config import get_settings
         settings = get_settings()
-        if not settings.gemini_api_key:
-            raise ValueError("No Gemini key")
+        if not settings.anthropic_api_key:
+            raise ValueError("No Anthropic key configured")
 
-        from google import genai as _genai
-        from google.genai import types as _genai_types
-        _client = _genai.Client(api_key=settings.gemini_api_key)
-        response = _client.models.generate_content(
-            model="gemini-2.0-flash-lite",
-            contents=prompt,
-            config=_genai_types.GenerateContentConfig(
-                temperature=0.1,
-                max_output_tokens=2048,
-            ),
+        import anthropic as _anthropic
+        _client = _anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        response = _client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}],
         )
-        raw = response.text.strip()
+        raw = response.content[0].text.strip()
         raw = re.sub(r"^```(?:json)?\s*", "", raw)
         raw = re.sub(r"\s*```$", "", raw)
         for item in _json.loads(raw):
@@ -1046,13 +1217,11 @@ def _check_format_rules_batch(format_rules, extraction: dict, label_version_id: 
             )
         try:
             from app.services.api_logger import log_api_call
-            _usage = getattr(response, "usage_metadata", None)
-            _inp = getattr(_usage, "prompt_token_count", None) if _usage else None
-            _out = getattr(_usage, "candidates_token_count", None) if _usage else None
-            log_api_call("compliance_format_batch", "gemini", "gemini-2.0-flash-lite", _inp, _out)
+            log_api_call("compliance_format_batch", "claude", "claude-haiku-4-5",
+                         response.usage.input_tokens, response.usage.output_tokens)
         except Exception:
             pass
-        logger.debug("[compliance] Batch FORMAT: %d rules → 1 Gemini call", len(pending_rules))
+        logger.debug("[compliance] Batch FORMAT: %d rules → 1 Claude call", len(pending_rules))
     except Exception as exc:
         logger.warning("[compliance] Batch FORMAT check failed: %s — falling back to WARNING", exc)
 

@@ -17,9 +17,6 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 120
 
-    # Gemini
-    gemini_api_key: str = ""
-
     # Anthropic (Claude) — used for label extraction
     anthropic_api_key: str = ""
 

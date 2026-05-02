@@ -1,42 +1,19 @@
 """
 LLM Studio — RAG service layer
 ================================
-Two knowledge bases (Regulations + Products), each backed by Gemini via
-Retrieval-Augmented Generation with Claude (Anthropic) as automatic fallback.
+Two knowledge bases (Regulations + Products) served via Retrieval-Augmented
+Generation with PostgreSQL LIKE-based full-text scoring (no pgvector required).
 
-Retrieval uses PostgreSQL LIKE-based full-text scoring with stopword filtering
-and title boosting — no pgvector required.
+Provider priority for KB chat:
+  1. Gemma 4 via OpenRouter — primary (fast, cheap)
+  2. Claude Sonnet (Anthropic) — fallback if Gemma unavailable
 
-v3 improvements:
-  - Stable Gemini model names (gemini-2.5-pro, gemini-3.1-flash-lite-preview)
-  - Claude fallback: if Gemini API fails, automatically retries with Anthropic
-  - Better error reporting surfaced to the chat UI
-
-v4 improvements:
-  - Fixed Claude model name: claude-sonnet-4-6 (was invalid claude-sonnet-4-20250514)
-  - STOPWORDS no longer strips "not", "is", "for", "about", "why" — critical regulatory terms
-  - chunk_text max_chars: 800 → 1200 (avoids mid-sentence cuts in long rule descriptions)
-  - chunk_text max_chars: 1200 → 2000 (capture more regulatory context per chunk)
-  - chunk_text max_chars: 2000 → 600 (optimal RAG size; fixes 373 thin 1-chunk docs)
-  - retrieve_context top_k: 10 → 15 (more context for multi-rule queries)
-  - Anti-hallucination guardrails in both system prompts (no invented rule codes)
-
-v5 improvements:
-  - In-memory query result cache (TTL=1 hour, up to 500 entries) — avoids redundant LLM calls
-  - Query expansion: short queries (< 6 meaningful words) expanded via Gemini Flash for better retrieval
-  - Chunk-level deduplication in _ingest_document — skips exact-duplicate chunks
-  - seed_products_kb supports force_update_product_id for targeted re-ingest
-  - Phrase-level matching boost in retrieve_context (+3 per bigram match)
-  - _build_context merges expanded + original query results for broader coverage
-  - ask_llm checks cache before calling LLM; stores successful results in cache
-  - History window increased: 10 → 20 turns for both Gemini and Claude
-  - Citation format improved: includes section/clause and Sources used section
-  - Auto-reseed hook in labels.py refreshes Products KB after each label scan
+Query expansion for short queries uses a static regulatory vocabulary lookup
+(no API call needed).
 
 Models used:
-  regulations → gemini-2.5-pro (precision for legal/regulatory reasoning)
-  products    → gemini-3.1-flash-lite-preview (fast for structured product/label data)
-  fallback    → claude-sonnet-4-6 (Anthropic) when Gemini unavailable
+  primary  → google/gemma-4-31b-it via OpenRouter
+  fallback → claude-sonnet-4-6 (Anthropic)
 """
 from __future__ import annotations
 
@@ -93,12 +70,6 @@ def invalidate_cache(kb_type: str | None = None) -> int:
 
 # ─── Model name constants ─────────────────────────────────────────────────────
 
-# Gemini model names (used when Gemma/OpenRouter is unavailable)
-_GEMINI_MODELS: dict[str, str] = {
-    "regulations": "gemini-3.1-flash-lite-preview",
-    "products":    "gemini-3.1-flash-lite-preview",
-}
-
 # Display names shown in the chat UI header (reflects primary provider = Gemma 4)
 MODELS: dict[str, str] = {
     "regulations": "google/gemma-4-31b-it",
@@ -129,48 +100,51 @@ STOPWORDS = frozenset({
 
 # ─── Query expansion ──────────────────────────────────────────────────────────
 
-def _expand_query(query: str, kb_type: str, gemini_api_key: str = "") -> str:
+# Static regulatory vocabulary for zero-API query expansion.
+# Maps short domain keywords to richer phrase clusters for better retrieval.
+_REG_VOCAB: dict[str, str] = {
+    "fssai":       "FSSAI food safety standards authority India regulations labelling",
+    "ayush":       "AYUSH ayurvedic siddha unani drugs cosmetics act regulations",
+    "lm":          "legal metrology packaged commodities rules declarations",
+    "bis":         "BIS ISI bureau of indian standards IS 4926 IS 7022",
+    "mrp":         "maximum retail price MRP declaration legal metrology",
+    "ingredient":  "ingredient list declaration labelling requirements FSSAI",
+    "warning":     "warning advisory safety statements labelling declarations",
+    "allergen":    "allergen declarations contains may contain cross contamination",
+    "caffeine":    "caffeine guarana contains caffeine declaration warning",
+    "aspartame":   "aspartame INS 951 phenylketonuric sweetener warning",
+    "gluten":      "gluten free claim wheat barley rye declaration",
+    "probiotic":   "probiotic CFU colony forming units Lactobacillus Bifidobacterium",
+    "vegan":       "vegan plant based veg nonveg mark declaration",
+    "bilingual":   "Hindi English bilingual Devanagari declarations legal metrology",
+    "license":     "FSSAI license number 14 digit registration state central",
+    "nutrition":   "nutritional information table per serving per 100g RDA",
+    "claim":       "health claims benefit function structure claims FSSAI",
+    "sports":      "sports nutrition sportsperson WADA banned substances",
+    "botanical":   "botanical herbal Latin binomial Schedule IV herbs extract",
+    "fsmp":        "FSMP food for special medical purposes dietary management",
+    "import":      "import IEC DGFT CITES restricted herbs foreign trade",
+    "penalty":     "penalty violation non-compliance legal action FSSAI",
+    "renewal":     "license renewal FSSAI perpetual registration expiry",
+    "score":       "compliance score violations failing rules remediation",
+    "scan":        "label scan extraction analysis compliance check results",
+}
+
+
+def _expand_query(query: str, kb_type: str) -> str:
     """
-    Expand a short query (< 6 words) into a richer form for better retrieval.
-    Uses Gemini Flash (cheap/fast). Falls back to original query on any failure.
-    Only expands queries with fewer than 6 meaningful (non-stopword) words.
+    Expand a short query (< 6 meaningful words) using static regulatory vocabulary.
+    Zero API calls — instant lookup from a curated domain dictionary.
     """
-    meaningful_words = [w for w in query.split() if w.lower() not in STOPWORDS and len(w) >= 3]
-    if len(meaningful_words) >= 6 or not gemini_api_key:
+    meaningful_words = [w for w in query.lower().split()
+                        if w not in STOPWORDS and len(w) >= 3]
+    if len(meaningful_words) >= 6:
         return query
-
-    domain = (
-        "Indian food and supplement regulations (FSSAI, Legal Metrology, AYUSH, BIS)"
-        if kb_type == "regulations"
-        else "nutraceutical product compliance data and label analysis results"
-    )
-
-    try:
-        from google import genai as _genai
-        from google.genai import types as _genai_types
-        _client = _genai.Client(api_key=gemini_api_key)
-        prompt = (
-            f"Expand this short search query into a detailed search query for {domain}. "
-            f"Return ONLY the expanded query (one sentence, max 25 words). No preamble.\n"
-            f"Original query: {query}"
-        )
-        response = _client.models.generate_content(
-            model="gemini-3.1-flash-lite-preview",
-            contents=prompt,
-            config=_genai_types.GenerateContentConfig(temperature=0.1, max_output_tokens=60),
-        )
-        expanded = response.text.strip().strip('"').strip("'")
-        if expanded and len(expanded) > len(query):
-            logger.info("[llm-expand] %r → %r", query[:60], expanded[:80])
-            try:
-                from app.services.api_logger import log_api_call
-                log_api_call("query_expansion", "gemini", "gemini-3.1-flash-lite-preview",
-                             len(query) // 4, len(expanded) // 4)
-            except Exception:
-                pass
-            return expanded
-    except Exception as exc:
-        logger.debug("[llm-expand] failed: %s", exc)
+    extras = [_REG_VOCAB[w] for w in meaningful_words if w in _REG_VOCAB][:2]
+    if extras:
+        expanded = query + " " + " ".join(extras)
+        logger.debug("[llm-expand] static: %r → %r", query[:60], expanded[:80])
+        return expanded
     return query
 
 
@@ -882,7 +856,7 @@ def _build_context(kb_type: str, query: str, db):
     """
     from app.config import get_settings as _get_settings
     _settings = _get_settings()
-    expanded_query = _expand_query(query, kb_type, _settings.gemini_api_key or "")
+    expanded_query = _expand_query(query, kb_type)
 
     # For the products KB, use a much higher top_k so broad "list all" queries
     # return every product document rather than just the top 15 chunks.
@@ -933,42 +907,6 @@ def _build_context(kb_type: str, query: str, db):
     )
 
     return context_chunks, system_prompt, user_message
-
-
-# ─── Gemini call ──────────────────────────────────────────────────────────────
-
-def _call_gemini(model_name: str, system_prompt: str, user_message: str,
-                 history: list, api_key: str) -> str:
-    """Call Gemini and return the reply text. Raises on failure."""
-    from google import genai as _genai
-    from google.genai import types as _genai_types
-
-    _client = _genai.Client(api_key=api_key)
-
-    # Build multi-turn contents from last 20 history turns + current message.
-    # Using generate_content with full contents list is equivalent to start_chat
-    # but avoids the stateful chat object.
-    _contents = [
-        _genai_types.Content(
-            role=msg["role"],
-            parts=[_genai_types.Part(text=msg["content"])],
-        )
-        for msg in history[-20:]
-    ]
-    _contents.append(
-        _genai_types.Content(role="user", parts=[_genai_types.Part(text=user_message)])
-    )
-
-    response = _client.models.generate_content(
-        model=model_name,
-        contents=_contents,
-        config=_genai_types.GenerateContentConfig(
-            system_instruction=system_prompt,
-            temperature=0.2,
-            max_output_tokens=2048,
-        ),
-    )
-    return response.text.strip()
 
 
 # ─── Gemma 4 via OpenRouter ──────────────────────────────────────────────────
@@ -1076,14 +1014,13 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
     settings = get_settings()
 
     has_gemma  = bool(settings.gemma_enabled and settings.openrouter_api_key)
-    has_gemini = bool(settings.gemini_api_key)
     has_claude = bool(settings.anthropic_api_key)
 
-    if not has_gemma and not has_gemini and not has_claude:
+    if not has_gemma and not has_claude:
         return {
             "reply": (
                 "No LLM provider is configured. "
-                "Set OPENROUTER_API_KEY, GEMINI_API_KEY, or ANTHROPIC_API_KEY in your environment."
+                "Set OPENROUTER_API_KEY or ANTHROPIC_API_KEY in your environment."
             ),
             "context_used": [],
             "error": "no_api_key",
@@ -1099,17 +1036,14 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
     # Build RAG context
     context_chunks, system_prompt, user_message = _build_context(kb_type, query, db)
     context_titles = [c["document_title"] for c in context_chunks]
-    gemini_model = _GEMINI_MODELS.get(kb_type, "gemini-3.1-flash-lite-preview")
 
     # ─── Provider priority (same for ALL kb_types): ───────────────────────────
     #   1. Gemma 4 via OpenRouter  — primary (self-hosted economics)
     #   2. Claude (Anthropic)      — paid fallback
-    #   3. Gemini                  — last resort
     # ─────────────────────────────────────────────────────────────────────────
 
     gemma_error  = None
     claude_error = None
-    gemini_error = None
 
     # ── Step 1: Gemma 4 via OpenRouter ───────────────────────────────────────
     if has_gemma:
@@ -1169,48 +1103,12 @@ def ask_llm(kb_type: str, query: str, history: list, db) -> dict:
             claude_error = str(exc)
             logger.error("[llm] Claude failed for %s chat: %s", kb_type, claude_error[:200])
 
-    # ── Step 3: Gemini last resort ────────────────────────────────────────────
-    if has_gemini:
-        try:
-            reply = _call_gemini(gemini_model, system_prompt, user_message,
-                                 history, settings.gemini_api_key)
-            notes = []
-            if gemma_error:
-                notes.append(f"Gemma: {gemma_error[:120]}")
-            if claude_error:
-                notes.append(f"Claude: {claude_error[:120]}")
-            fallback_note = (
-                "\n\n---\n*⚠️ Gemini answered as last resort. " + " | ".join(notes) + "*"
-                if notes else ""
-            )
-            result = {
-                "reply":        reply + fallback_note,
-                "context_used": context_titles,
-                "provider":     "gemini",
-                "model":        gemini_model,
-            }
-            _set_cache(kb_type, query, result)
-            # Log the call (best-effort)
-            try:
-                from app.services.api_logger import log_api_call
-                _est_in = len(user_message) // 4
-                _est_out = len(reply) // 4
-                log_api_call("kb_chat", "gemini", gemini_model, _est_in, _est_out)
-            except Exception:
-                pass
-            return result
-        except Exception as exc:
-            gemini_error = str(exc)
-            logger.error("[llm] Gemini failed for %s chat: %s", kb_type, gemini_error[:200])
-
     # All providers failed
     errors = []
     if gemma_error:
         errors.append(f"Gemma ({settings.gemma_model_name}): {gemma_error[:150]}")
     if claude_error:
         errors.append(f"Claude ({CLAUDE_MODEL}): {claude_error[:150]}")
-    if gemini_error:
-        errors.append(f"Gemini ({gemini_model}): {gemini_error[:150]}")
     return {
         "reply": "All LLM providers failed.\n\n" + "\n\n".join(errors) if errors else "No LLM provider available.",
         "context_used": [],

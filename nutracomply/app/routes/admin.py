@@ -552,7 +552,7 @@ async def admin_system(request: Request, db: Session = Depends(get_db)):
         "debug":                 cfg.debug,
         "upload_dir":            cfg.upload_dir,
         "brevo_configured":      bool(cfg.brevo_smtp_user),
-        "gemini_configured":     bool(cfg.gemini_api_key),
+        "gemini_configured":     False,  # Gemini removed; Claude Haiku used instead
         "admin_email_set":       bool(cfg.admin_email),
         "scrape_schedule":       "Daily at 6:00 AM IST",
     }

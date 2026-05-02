@@ -618,7 +618,7 @@ Return ONLY valid JSON, no markdown."""
             import anthropic
             client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
             response = client.messages.create(
-                model="claude-sonnet-4-6",
+                model="claude-haiku-4-5",
                 max_tokens=1024,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -629,23 +629,6 @@ Return ONLY valid JSON, no markdown."""
             result = json.loads(raw)
         except Exception as e:
             print(f"[blog-seo] Claude failed: {e}")
-
-    # Fallback: Gemini
-    if not result and settings.gemini_api_key:
-        try:
-            from google import genai as _genai
-            import json
-            _blog_client = _genai.Client(api_key=settings.gemini_api_key)
-            response = _blog_client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=prompt,
-            )
-            raw = response.text.strip()
-            raw = re.sub(r"^```(?:json)?\s*", "", raw)
-            raw = re.sub(r"\s*```$", "", raw)
-            result = json.loads(raw)
-        except Exception as e:
-            print(f"[blog-seo] Gemini failed: {e}")
 
     if not result:
         return JSONResponse({"error": "AI generation failed. Check API keys."}, status_code=500)

@@ -255,14 +255,14 @@ def _extract_pdf_text_from_bytes(content: bytes) -> str:
 
 def classify_regulation_change(document_name: str, text_excerpt: str) -> dict:
     """
-    Uses Gemini to classify the type and severity of a regulation change.
-    Falls back to keyword heuristics if Gemini is unavailable.
+    Uses Claude Haiku to classify the type and severity of a regulation change.
+    Falls back to keyword heuristics if Claude is unavailable.
     """
-    if settings.gemini_api_key:
+    if settings.anthropic_api_key:
         try:
-            return _classify_with_gemini(document_name, text_excerpt)
+            return _classify_with_claude(document_name, text_excerpt)
         except Exception as e:
-            print(f"[scraper] Gemini classification failed: {e}")
+            print(f"[scraper] Claude classification failed: {e}")
 
     return _classify_with_keywords(document_name, text_excerpt)
 
@@ -290,34 +290,32 @@ Return ONLY valid JSON (no markdown):
 """
 
 
-def _classify_with_gemini(name: str, text: str) -> dict:
-    from google import genai as _genai
-    from google.genai import types as _genai_types
-    _client = _genai.Client(api_key=settings.gemini_api_key)
+def _classify_with_claude(name: str, text: str) -> dict:
+    import anthropic as _anthropic
+    _client = _anthropic.Anthropic(api_key=settings.anthropic_api_key)
     prompt = CLASSIFICATION_PROMPT.format(name=name, text=text[:3000])
-    response = _client.models.generate_content(
-        model="gemini-3.1-flash-lite-preview",
-        contents=prompt,
-        config=_genai_types.GenerateContentConfig(temperature=0.1),
+    response = _client.messages.create(
+        model="claude-haiku-4-5",
+        max_tokens=512,
+        messages=[{"role": "user", "content": prompt}],
     )
-    raw = re.sub(r"^```(?:json)?\s*", "", response.text.strip())
+    raw = re.sub(r"^```(?:json)?\s*", "", response.content[0].text.strip())
     raw = re.sub(r"\s*```$", "", raw)
     return json.loads(raw)
 
 
 def suggest_rule_modifications(document_name: str, text_excerpt: str, existing_rules: list[dict]) -> list[dict]:
     """
-    When a CRITICAL regulation change is detected, use LLM to suggest
+    When a CRITICAL regulation change is detected, use Claude Haiku to suggest
     rule modifications or new rules that should be added to the compliance engine.
     Returns list of suggested rule changes.
     """
-    if not settings.gemini_api_key:
+    if not settings.anthropic_api_key:
         return []
 
     try:
-        from google import genai as _genai
-        from google.genai import types as _genai_types
-        _suggest_client = _genai.Client(api_key=settings.gemini_api_key)
+        import anthropic as _anthropic
+        _suggest_client = _anthropic.Anthropic(api_key=settings.anthropic_api_key)
 
         rules_summary = "\n".join(
             f"- {r['rule_code']}: {r['description'][:100]}" for r in existing_rules[:30]
@@ -339,12 +337,12 @@ def suggest_rule_modifications(document_name: str, text_excerpt: str, existing_r
             "Return empty array [] if no changes needed."
         )
 
-        response = _suggest_client.models.generate_content(
-            model="gemini-3.1-flash-lite-preview",
-            contents=prompt,
-            config=_genai_types.GenerateContentConfig(temperature=0.1, max_output_tokens=1024),
+        response = _suggest_client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
         )
-        raw = re.sub(r"^```(?:json)?\s*", "", response.text.strip())
+        raw = re.sub(r"^```(?:json)?\s*", "", response.content[0].text.strip())
         raw = re.sub(r"\s*```$", "", raw)
         return json.loads(raw)
     except Exception as e:

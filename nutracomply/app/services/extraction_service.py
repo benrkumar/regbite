@@ -5,12 +5,11 @@ a structured JSON representation of the label.
 Supports FSSAI, Legal Metrology, and AYUSH regulation fields.
 
 Pipeline (fast path — no OCR needed):
-  1. Claude Vision — reads image/PDF directly, ~20-25s, highest accuracy
-  2. Gemini Vision — fallback if Claude unavailable
+  1. Claude Vision (claude-haiku-4-5) — reads image/PDF directly, ~5-8s
 
 Pipeline (text fallback — only if Vision fails):
   1. Claude Text — sends OCR text to Claude
-  2. Gemini Text  — last resort
+  2. Rule-based extraction — zero-API fallback
 
 Other features:
   - Dynamic confidence scoring based on field completeness
@@ -272,7 +271,7 @@ def _pdf_to_images(pdf_path: str, dpi: int = 150) -> list[tuple[bytes, str]]:
 # ─── Claude (Anthropic) via direct HTTP ───────────────────────────────────
 
 CLAUDE_API_URL = "https://api.anthropic.com/v1/messages"
-CLAUDE_MODEL   = "claude-sonnet-4-6"            # best speed/intelligence balance ($3/$15 MTok)
+CLAUDE_MODEL   = "claude-haiku-4-5"             # 3-4x faster than Sonnet for structured extraction
 CLAUDE_VERSION = "2023-06-01"
 
 
@@ -460,92 +459,12 @@ def _call_claude_text(ocr_text: str) -> tuple:
     return _parse_json_response(raw), inp, out
 
 
-# ─── Gemini fallback ────────────────────────────────────────────────────────
-
-def _call_gemini_vision(image_path: str) -> Optional[dict]:
-    """Fallback: Gemini Vision for image/PDF extraction."""
-    import PIL.Image
-    from google import genai as _genai
-    from google.genai import types as _genai_types
-
-    _client = _genai.Client(api_key=settings.gemini_api_key)
-
-    def _pil_to_part(pil_img: PIL.Image.Image) -> _genai_types.Part:
-        """Convert a PIL image to an inline-data Part (JPEG bytes)."""
-        buf = io.BytesIO()
-        pil_img.convert("RGB").save(buf, format="JPEG", quality=90)
-        return _genai_types.Part(
-            inline_data=_genai_types.Blob(mime_type="image/jpeg", data=buf.getvalue())
-        )
-
-    img_path = Path(image_path)
-    suffix = img_path.suffix.lower()
-
-    if suffix == ".pdf":
-        # Convert PDF to images for Gemini
-        pages = _pdf_to_images(image_path, dpi=200)
-        if not pages:
-            return None
-        pil_images = []
-        for img_bytes, _ in pages:
-            pil_images.append(PIL.Image.open(io.BytesIO(img_bytes)))
-        prompt_text = MULTI_PAGE_VISION_PROMPT if len(pil_images) > 1 else VISION_PROMPT
-        _parts = [_pil_to_part(img) for img in pil_images]
-        _parts.append(_genai_types.Part(text=prompt_text))
-        response = _client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=_parts,
-            config=_genai_types.GenerateContentConfig(
-                temperature=0.1,
-                max_output_tokens=8192,
-            ),
-        )
-    else:
-        pil_img = PIL.Image.open(image_path)
-        response = _client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[_pil_to_part(pil_img), _genai_types.Part(text=VISION_PROMPT)],
-            config=_genai_types.GenerateContentConfig(
-                temperature=0.1,
-                max_output_tokens=8192,
-            ),
-        )
-
-    raw = response.text.strip()
-    raw = re.sub(r"^```(?:json)?\s*", "", raw)
-    raw = re.sub(r"\s*```$", "", raw)
-    return json.loads(raw)
-
-
-def _call_gemini_text(ocr_text: str) -> Optional[dict]:
-    """Fallback: Gemini text for OCR-based extraction."""
-    from google import genai as _genai
-    from google.genai import types as _genai_types
-
-    _client = _genai.Client(api_key=settings.gemini_api_key)
-    prompt = TEXT_PROMPT.replace("{label_text}", ocr_text[:12000])
-
-    response = _client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-        config=_genai_types.GenerateContentConfig(
-            temperature=0.1,
-            max_output_tokens=8192,
-        ),
-    )
-
-    raw = response.text.strip()
-    raw = re.sub(r"^```(?:json)?\s*", "", raw)
-    raw = re.sub(r"\s*```$", "", raw)
-    return json.loads(raw)
-
-
 # ─── Public API ─────────────────────────────────────────────────────────────
 
 def extract_label_data_from_image(image_path: str) -> tuple:
     """
     Extract structured label data from an image file.
-    Priority: Claude Vision → Gemini Vision
+    Uses Claude Vision (claude-haiku-4-5) — ~5-8s per label.
 
     Returns:
         (extraction_dict, confidence, source, input_tokens, output_tokens)
@@ -571,29 +490,13 @@ def extract_label_data_from_image(image_path: str) -> tuple:
         except Exception as e:
             _log(f"[extraction] Claude Vision failed: {e}")
 
-    # Fallback: Gemini Vision (API)
-    if settings.gemini_api_key:
-        try:
-            result = _call_gemini_vision(image_path)
-            if result:
-                result = _normalize_extraction(result)
-                confidence = _calculate_confidence(result, "vision")
-                warnings = _validate_extraction(result)
-                if warnings:
-                    result["_extraction_warnings"] = warnings
-                    _log(f"[extraction] Gemini Vision warnings: {warnings}")
-                _log(f"[extraction] Gemini Vision fallback succeeded (confidence={confidence})")
-                return result, confidence, "gemini", 0, 0
-        except Exception as e:
-            _log(f"[extraction] Gemini Vision fallback failed: {e}")
-
     return {}, 0.0, "none", 0, 0
 
 
 def extract_label_data(ocr_text: str) -> tuple:
     """
     Extract structured label data from OCR text.
-    Priority: Claude Text → Gemini Text → Rule-based
+    Priority: Claude Text → Rule-based
 
     Returns:
         (extraction_dict, confidence, source, input_tokens, output_tokens)
@@ -620,23 +523,7 @@ def extract_label_data(ocr_text: str) -> tuple:
         except Exception as e:
             _log(f"[extraction] Claude text failed: {e}")
 
-    # Fallback: Gemini (API)
-    if settings.gemini_api_key:
-        try:
-            result = _call_gemini_text(ocr_text)
-            if result:
-                result = _normalize_extraction(result)
-                result = _cross_check_with_ocr(result, ocr_text)
-                confidence = _calculate_confidence(result, "text")
-                warnings = _validate_extraction(result)
-                if warnings:
-                    result["_extraction_warnings"] = warnings
-                    _log(f"[extraction] Gemini text warnings: {warnings}")
-                return result, confidence, "gemini", 0, 0
-        except Exception as e:
-            _log(f"[extraction] Gemini text failed: {e}")
-
-    # Final fallback: rule-based extraction
+    # Fallback: rule-based extraction
     fallback = _rule_based_extraction(ocr_text)
     confidence = _calculate_confidence(fallback, "fallback")
     return fallback, confidence, "fallback", 0, 0
