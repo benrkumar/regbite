@@ -272,7 +272,7 @@
     "affected_rule_codes": ["FSSAI-NUTRA-LBL-001", "FSSAI-NUTRA-LBL-003"],
     "summary_text": "The Legal Metrology (Packaged Commodities) Rules 2011 establish mandatory pre-packaging declarations for all packaged food products sold in India, including health supplements and nutraceuticals. Mandates net content declaration in metric units, MRP inclusive of all taxes, manufacturer/packer name and address, month and year of manufacture/expiry, and consumer care details. Applies to all packaged commodities sold by weight, volume, or count.",
     "diff_text": "Mandatory declarations under PC Rules 2011 (Rule 6):\n\n1. Name and address of the manufacturer/packer/importer\n2. Net quantity (weight in grams/kg for solids; volume in ml/litres for liquids; count for unit packs)\n3. Month and year of manufacture (or 'Best before' date)\n4. Maximum Retail Price (MRP): Rs. X.XX inclusive of all taxes\n   Format: 'MRP Rs. X (Incl. of all taxes)'\n5. Consumer Care details: name and address/phone number\n6. Country of origin for imported goods\n7. For multi-piece packs: total number of pieces + price per piece\n\nPenalty: Fine up to Rs. 25,000 for first offence; Rs. 50,000 and imprisonment for repeat offences\nEnforcement: State Weights & Measures departments; Legal Metrology officers",
-    "document_hash": "c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6aa"
+    "document_hash": "7c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d"
   },
   {
     "document_name": "Legal Metrology (Packaged Commodities) Amendment Rules 2017 — E-Commerce and Online Marketplace Labelling",
@@ -285,7 +285,7 @@
     "affected_rule_codes": ["FSSAI-NUTRA-LBL-001", "FSSAI-NUTRA-FMT-001"],
     "summary_text": "Amendment extends PC Rules 2011 obligations to e-commerce platforms. Online product listings must display all mandatory label declarations (MRP, net weight, manufacturer details, expiry date) on the product detail page before purchase. E-commerce entities are jointly liable for non-compliant listings. Marketplaces must maintain seller compliance records.",
     "diff_text": "E-commerce specific requirements (new Rule 18):\n\nOnline product listing must display:\n- MRP (inclusive of taxes) prominently\n- Net quantity\n- Best before / expiry date\n- Name and address of manufacturer/packer\n- Country of origin\n\nE-commerce platform obligations:\n- Must not list products without complete mandatory declarations\n- Responsible for ensuring seller-uploaded information is accurate\n- Must have grievance redressal mechanism for mislabelled products\n- Annual compliance report to be submitted to DPIIT\n\nPenalty: E-commerce platforms face same penalties as manufacturers for non-compliance\nGrace period: 6 months for existing listings to comply",
-    "document_hash": "d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7aa"
+    "document_hash": "7d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e"
   },
   {
     "document_name": "Legal Metrology Amendment 2022 — Digital Price Display and QR Code Integration for Packaged Commodities",
@@ -298,7 +298,7 @@
     "affected_rule_codes": ["FSSAI-NUTRA-FMT-002"],
     "summary_text": "Amendment permits MRP and mandatory declarations to be displayed via QR code in addition to physical label printing, subject to conditions. Physical MRP declaration remains mandatory. QR code may supplement but not replace physical declarations. Applicable to packaged commodities including health supplements, with specific size and readability requirements for digital content.",
     "diff_text": "QR code supplementary declarations:\n\nPermitted:\n- QR code may link to a page showing all mandatory PC Rules declarations in digital format\n- Useful for multi-language compliance (Hindi + regional language via QR)\n- Batch-specific information (MRP changes, promotional pricing) may be updated digitally\n\nNOT permitted:\n- QR code cannot substitute for physically printed MRP, net weight, or manufacturer name\n- Physical label must remain the primary compliance vehicle\n\nQR code specifications:\n- Minimum size: 10mm x 10mm (same as FSSAI Digital Labelling guidance)\n- Must be scannable without app download\n- Content must be in English + Hindi minimum\n- URL must remain live for at least 3 years post manufacturing date",
-    "document_hash": "e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8aa"
+    "document_hash": "7e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f"
   },
   {
     "document_name": "Legal Metrology Circular: Unit Sale Price Declaration Mandatory for Multi-Unit Health Supplement Packs",
@@ -311,7 +311,7 @@
     "affected_rule_codes": ["FSSAI-NUTRA-LBL-001"],
     "summary_text": "Legal Metrology circular requires 'Unit Sale Price' (price per unit of measurement: per tablet, per capsule, per gram, per 100ml) to be declared on all health supplement multi-count packs of 30 units or more. The unit sale price must appear adjacent to MRP to enable consumer price comparison. Applicable to protein powders (price per 100g), multivitamins (price per tablet), and supplement liquids (price per serving).",
     "diff_text": "Unit Sale Price declaration requirements:\n\nApplicable to:\n- Multi-count packs: ≥30 capsules/tablets/softgels\n- Powders: any size pack\n- Liquid supplements: any volume pack\n\nFormat:\n  'MRP Rs. XXX (Incl. of all taxes)\n   Unit Price: Rs. X.XX per capsule' (or per gram, per 100ml, etc.)\n\nPlacement:\n- Must appear within 5mm of MRP declaration\n- Same font size as MRP or larger\n- Not required for samples or single-serve packs (<30 units)\n\nExemptions:\n- Promotional combo packs with different SKUs\n- Gift packs with non-standard configurations\n\nEnforcement: State Legal Metrology officers; applicable from January 2025",
-    "document_hash": "f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3aa"
+    "document_hash": "7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a3b4c5d6e7f8a"
   },
 
   {
