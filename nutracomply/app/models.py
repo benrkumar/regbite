@@ -192,25 +192,28 @@ class Product(Base):
     @property
     def compliance_score(self):
         """Severity-weighted compliance score matching the compliance engine."""
-        if not self.label_versions:
+        try:
+            if not self.label_versions:
+                return None
+            latest = self.label_versions[0]
+            if not latest.checks:
+                return None
+            severity_weights = {
+                Severity.CRITICAL: 4, Severity.HIGH: 3,
+                Severity.MEDIUM: 2, Severity.LOW: 1,
+            }
+            weighted_earned = 0
+            weighted_total = 0
+            for check in latest.checks:
+                weight = severity_weights.get(check.rule.severity, 1) if check.rule else 1
+                weighted_total += weight
+                if check.result == CheckResult.PASS:
+                    weighted_earned += weight
+                elif check.result == CheckResult.WARNING:
+                    weighted_earned += weight * 0.5
+            return round((weighted_earned / weighted_total) * 100) if weighted_total else 0
+        except Exception:
             return None
-        latest = self.label_versions[0]
-        if not latest.checks:
-            return None
-        severity_weights = {
-            Severity.CRITICAL: 4, Severity.HIGH: 3,
-            Severity.MEDIUM: 2, Severity.LOW: 1,
-        }
-        weighted_earned = 0
-        weighted_total = 0
-        for check in latest.checks:
-            weight = severity_weights.get(check.rule.severity, 1) if check.rule else 1
-            weighted_total += weight
-            if check.result == CheckResult.PASS:
-                weighted_earned += weight
-            elif check.result == CheckResult.WARNING:
-                weighted_earned += weight * 0.5
-        return round((weighted_earned / weighted_total) * 100) if weighted_total else 0
 
 
 class LabelVersion(Base):

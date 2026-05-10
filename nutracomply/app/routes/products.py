@@ -6,10 +6,10 @@ from pathlib import Path
 from fastapi import APIRouter, Request, Depends, Form, UploadFile, File, BackgroundTasks
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload, joinedload
 
 from app.database import get_db
-from app.models import Product, LabelVersion
+from app.models import Product, LabelVersion, ComplianceCheck
 from app.routes.auth import get_current_user_from_cookie
 from app.routes.labels import _process_label  # single shared scan pipeline
 from app.config import get_settings
@@ -603,15 +603,18 @@ async def product_detail(product_id: int, request: Request, db: Session = Depend
     if not user:
         return RedirectResponse(url="/login", status_code=302)
 
-    product = db.query(Product).filter(
-        Product.id == product_id, Product.user_id == user.id
-    ).first()
+    product = (
+        db.query(Product)
+        .filter(Product.id == product_id, Product.user_id == user.id)
+        .options(
+            selectinload(Product.label_versions)
+            .selectinload(LabelVersion.checks)
+            .joinedload(ComplianceCheck.rule)
+        )
+        .first()
+    )
     if not product:
         return RedirectResponse(url="/products")
-
-    _ = product.label_versions
-    for lv in product.label_versions:
-        _ = lv.checks
 
     return templates.TemplateResponse("product_detail.html", {
         "request": request,

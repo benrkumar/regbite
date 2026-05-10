@@ -161,6 +161,42 @@ def run_compliance_check(label_version: LabelVersion, db: Session) -> list[Compl
             db.add(check)
         checks.extend(batch_checks)
 
+    # ── Deduplicate: when multiple PRESENCE rules FAIL for the same field, ──────
+    # ── keep only the highest-severity check — avoids showing the same       ──────
+    # ── "manufacturing_date missing" violation three times (FSSAI + LM + ...) ───
+    _rule_by_id: dict[int, ComplianceRule] = {r.id: r for r in rules}
+    _field_winner: dict[str, tuple] = {}   # field_name -> (check, rule)
+    _to_expunge: list[ComplianceCheck] = []
+
+    for check in checks:
+        if check.result != CheckResult.FAIL:
+            continue
+        rule = _rule_by_id.get(check.rule_id)
+        if not rule or rule.check_type != CheckType.PRESENCE:
+            continue
+        field = (rule.check_config or {}).get("field")
+        if not field:
+            continue
+        if field not in _field_winner:
+            _field_winner[field] = (check, rule)
+        else:
+            _winner_check, _winner_rule = _field_winner[field]
+            # Lower rank = higher severity (CRITICAL=0, HIGH=1, MEDIUM=2, LOW=3)
+            _RANK = {Severity.CRITICAL: 0, Severity.HIGH: 1, Severity.MEDIUM: 2, Severity.LOW: 3}
+            if _RANK.get(rule.severity, 3) < _RANK.get(_winner_rule.severity, 3):
+                # Current rule has higher severity — evict the old winner
+                _to_expunge.append(_winner_check)
+                _field_winner[field] = (check, rule)
+            else:
+                # Existing winner is higher/equal severity — drop this duplicate
+                _to_expunge.append(check)
+
+    for _dup in _to_expunge:
+        db.expunge(_dup)
+        checks.remove(_dup)
+    if _to_expunge:
+        logger.debug("[compliance] Deduplicated %d duplicate PRESENCE-field checks", len(_to_expunge))
+
     db.commit()
     return checks
 
