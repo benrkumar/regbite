@@ -145,7 +145,7 @@
         <td class="ext-field-name">Ingredient List<span class="ext-field-tag ext-tag-critical">CRITICAL</span></td>
         <td>
           <div id="ingredients-list">
-          {% for ing in ext.get('ingredient_list', []) %}
+          {% for ing in (ext.get('ingredient_list') or []) %}
             <div class="ext-list-item">
               <input class="ext-input" name="ingredient_list[]" value="{{ ing }}" />
               <button type="button" class="remove-item" onclick="this.parentElement.remove()">&times;</button>
@@ -164,7 +164,8 @@
           <table class="nt-table" id="nutrition-table">
             <thead><tr><th>Nutrient</th><th>Per Serving</th><th>Per 100g</th><th>%RDA</th><th style="width:30px;"></th></tr></thead>
             <tbody>
-            {% for row in ext.get('nutritional_table', []) %}
+            {% for row in (ext.get('nutritional_table') or []) %}
+            {% if row %}
               <tr>
                 <td><input name="nt_nutrient[]" value="{{ row.get('nutrient', '') }}" /></td>
                 <td><input name="nt_per_serving[]" value="{{ row.get('per_serving', '') }}" /></td>
@@ -172,6 +173,7 @@
                 <td><input name="nt_rda[]" value="{{ row.get('rda_percent', '') or '' }}" /></td>
                 <td><button type="button" class="remove-item" onclick="this.closest('tr').remove()" style="padding:0.1rem 0.3rem;">&times;</button></td>
               </tr>
+            {% endif %}
             {% endfor %}
             </tbody>
           </table>
@@ -190,7 +192,7 @@
         <td class="ext-field-name">Health Claims<span class="ext-field-tag ext-tag-important">IMPORTANT</span></td>
         <td>
           <div id="claims-list">
-          {% for claim in ext.get('health_claims', []) %}
+          {% for claim in (ext.get('health_claims') or []) %}
             <div class="ext-list-item">
               <input class="ext-input" name="health_claims[]" value="{{ claim }}" />
               <button type="button" class="remove-item" onclick="this.parentElement.remove()">&times;</button>
@@ -204,7 +206,7 @@
         <td class="ext-field-name">Warnings<span class="ext-field-tag ext-tag-important">IMPORTANT</span></td>
         <td>
           <div id="warnings-list">
-          {% for w in ext.get('warnings', []) %}
+          {% for w in (ext.get('warnings') or []) %}
             <div class="ext-list-item">
               <input class="ext-input" name="warnings[]" value="{{ w }}" />
               <button type="button" class="remove-item" onclick="this.parentElement.remove()">&times;</button>
@@ -218,7 +220,7 @@
         <td class="ext-field-name">Allergen Declarations<span class="ext-field-tag ext-tag-info">INFO</span></td>
         <td>
           <div id="allergens-list">
-          {% for a in ext.get('allergen_declarations', []) %}
+          {% for a in (ext.get('allergen_declarations') or []) %}
             <div class="ext-list-item">
               <input class="ext-input" name="allergen_declarations[]" value="{{ a }}" />
               <button type="button" class="remove-item" onclick="this.parentElement.remove()">&times;</button>
