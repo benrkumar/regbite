@@ -119,6 +119,9 @@ body {
   border-bottom: 1px solid #173558;
   flex-shrink: 0;
 }
+.sidebar-logo {
+  filter: brightness(0) invert(1);
+}
 
 .sidebar-nav {
   padding: 0.75rem 0;
