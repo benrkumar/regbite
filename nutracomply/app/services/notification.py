@@ -490,3 +490,54 @@ def send_report_shared_email(user, product_name: str, share_url: str, expires_at
     </p>
     """
     _send_email(subject, body, _send_to([user.email]))
+
+
+# ── 11. Bulk Upload Complete ─────────────────────────────────────────────────
+
+def send_bulk_complete_email(user, results: list):
+    """Send a summary email when all labels in a bulk upload batch are analyzed."""
+    recipients = _get_recipients(user)
+    if not recipients:
+        return
+
+    total = len(results)
+    label_word = "labels" if total != 1 else "label"
+    have_word = "have" if total != 1 else "has"
+    subject = f"[RegBite] Bulk analysis complete — {total} {label_word} ready"
+
+    rows_html = ""
+    for r in results:
+        score = r.get("score", 0)
+        name  = r.get("product_name", "Unknown")
+        lid   = r.get("label_id")
+        color = "#16a34a" if score >= 80 else "#dc2626" if score < 50 else "#ea580c"
+        url   = f"{_BASE}/labels/{lid}"
+        rows_html += (
+            "<tr>"
+            f"<td style='padding:8px 12px;border-bottom:1px solid #f3f4f6;'>{name}</td>"
+            "<td style='padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:center;'>"
+            f"<span style='color:{color};font-weight:600;'>{score}%</span></td>"
+            "<td style='padding:8px 12px;border-bottom:1px solid #f3f4f6;text-align:center;'>"
+            f"<a href='{url}' style='color:#2B4874;text-decoration:none;'>View Report →</a></td>"
+            "</tr>"
+        )
+
+    body = (
+        "<h2 style='color:#111827;margin:0 0 8px;'>Bulk Analysis Complete</h2>"
+        f"<p style='color:#6b7280;margin:0 0 20px;'>Your {total} {label_word} {have_word} been analyzed "
+        "and compliance reports are ready.</p>"
+        "<table style='width:100%;border-collapse:collapse;font-size:0.9em;'>"
+        "<thead><tr style='background:#f9fafb;'>"
+        "<th style='padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb;"
+        "font-weight:600;color:#374151;'>Product</th>"
+        "<th style='padding:8px 12px;text-align:center;border-bottom:2px solid #e5e7eb;"
+        "font-weight:600;color:#374151;'>Score</th>"
+        "<th style='padding:8px 12px;text-align:center;border-bottom:2px solid #e5e7eb;"
+        "font-weight:600;color:#374151;'>Report</th>"
+        f"</tr></thead><tbody>{rows_html}</tbody></table>"
+        "<p style='margin-top:24px;'>"
+        f"<a href='{_BASE}/products' style='background:#2B4874;color:white;"
+        "padding:10px 20px;border-radius:6px;text-decoration:none;"
+        "display:inline-block;font-size:0.9em;font-weight:500;'>View All Products →</a></p>"
+    )
+    _send_email(subject, body, recipients)

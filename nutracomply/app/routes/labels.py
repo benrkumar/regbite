@@ -41,6 +41,57 @@ SCAN_STALE_SECS     = 900   # 15 min: prune completed entries from _SCAN_JOBS
 # --workers 1 ensures this dict is shared by all requests.
 _SCAN_JOBS: dict[int, dict] = {}
 
+# Bulk-upload batch tracker — keyed by UUID generated in products.py bulk_upload_files().
+# Entry: {user_id, total, remaining, results:[{product_name, score, label_id}]}
+_BULK_BATCHES: dict[str, dict] = {}
+
+
+def register_bulk_batch(batch_id: str, user_id: int, label_ids: list, product_names: list) -> None:
+    """Register a bulk upload batch so _process_label can fire a summary notification when done."""
+    _BULK_BATCHES[batch_id] = {
+        "user_id": user_id,
+        "total": len(label_ids),
+        "remaining": len(label_ids),
+        "results": [],
+    }
+
+
+def _send_bulk_complete_notification(batch: dict, db) -> None:
+    """Fire the single in-app notification + summary email when the last label in a batch finishes."""
+    total = batch["total"]
+    user_id = batch["user_id"]
+    results = batch["results"]
+    label_word = "labels" if total != 1 else "label"
+
+    # In-app notification
+    try:
+        from app.models import Notification, NotificationType
+        notif = Notification(
+            user_id=user_id,
+            title=f"Bulk analysis complete — {total} {label_word} ready",
+            message=(
+                f"All {total} {label_word} have been analyzed. "
+                "View your products for compliance reports."
+            ),
+            ntype=NotificationType.SUCCESS,
+            link="/products",
+        )
+        db.add(notif)
+        db.commit()
+        print(f"[bulk] In-app notification created for user {user_id}", flush=True)
+    except Exception as exc:
+        print(f"[bulk] Notification failed: {exc}", flush=True)
+
+    # Summary email
+    try:
+        from app.models import User
+        from app.services.notification import send_bulk_complete_email
+        owner = db.query(User).filter(User.id == user_id).first()
+        if owner:
+            send_bulk_complete_email(owner, results)
+    except Exception as exc:
+        print(f"[bulk] Email failed: {exc}", flush=True)
+
 
 def _prune_scan_jobs() -> None:
     """Remove completed job entries older than SCAN_STALE_SECS to prevent unbounded growth."""
@@ -187,7 +238,7 @@ async def upload_label(
     return RedirectResponse(url=f"/labels/{label_version.id}?processing=1", status_code=302)
 
 
-def _process_label(label_version_id: int):
+def _process_label(label_version_id: int, batch_id: str | None = None):
     """Background task: extract label data → compliance check → alerts.
 
     Uses _SCAN_JOBS dict for real-time status tracking (same pattern as
@@ -196,6 +247,10 @@ def _process_label(label_version_id: int):
 
     Every step is individually wrapped in try/except. The function
     ALWAYS reaches the end. job["done"] is ALWAYS set to True.
+
+    batch_id: if set, this label is part of a bulk upload batch. A single
+    summary notification + email is sent when the last label in the batch finishes.
+    Individual per-label notifications are suppressed for batch scans to avoid noise.
     """
     from app.database import SessionLocal
 
@@ -341,21 +396,35 @@ def _process_label(label_version_id: int):
         elapsed_ready = _time_mod.time() - t0
         print(f"[scan] READY in {elapsed_ready:.1f}s", flush=True)
 
-        # ── In-app notification so bell badge updates when user navigated away ─
-        try:
-            from app.models import Notification, NotificationType
-            score_val = calculate_compliance_score(checks) if checks else 0
-            _notif = Notification(
-                user_id=product.user_id,
-                title=f"Scan complete — {product.name}",
-                message=f"Compliance score: {score_val}%. Tap to view the full report.",
-                ntype=NotificationType.SUCCESS,
-                link=f"/labels/{label.id}",
-            )
-            db.add(_notif)
-            db.commit()
-        except Exception:
-            pass
+        # ── In-app notification (suppressed for bulk batches — summary sent instead) ─
+        score_val = calculate_compliance_score(checks) if checks else 0
+        if not batch_id:
+            try:
+                from app.models import Notification, NotificationType
+                _notif = Notification(
+                    user_id=product.user_id,
+                    title=f"Scan complete — {product.name}",
+                    message=f"Compliance score: {score_val}%. Tap to view the full report.",
+                    ntype=NotificationType.SUCCESS,
+                    link=f"/labels/{label.id}",
+                )
+                db.add(_notif)
+                db.commit()
+            except Exception:
+                pass
+
+        # ── Bulk batch tracking — fires summary notification + email when last label done ─
+        if batch_id and batch_id in _BULK_BATCHES:
+            batch = _BULK_BATCHES[batch_id]
+            batch["results"].append({
+                "product_name": product.name,
+                "score": score_val,
+                "label_id": label.id,
+            })
+            batch["remaining"] -= 1
+            if batch["remaining"] <= 0:
+                _send_bulk_complete_notification(batch, db)
+                _BULK_BATCHES.pop(batch_id, None)
 
         # ── Alerts (non-critical) ─────────────────────────────────────────
         try:

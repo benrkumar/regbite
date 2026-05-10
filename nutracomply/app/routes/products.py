@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, selectinload, joinedload
 from app.database import get_db
 from app.models import Product, LabelVersion, ComplianceCheck
 from app.routes.auth import get_current_user_from_cookie
-from app.routes.labels import _process_label  # single shared scan pipeline
+from app.routes.labels import _process_label, register_bulk_batch  # shared scan pipeline
 from app.config import get_settings
 from app.utils.alerts import get_unread_alert_count
 
@@ -525,6 +525,11 @@ async def bulk_upload_files(
     if cap_warning:
         errors.append(cap_warning)
 
+    # Batch tracking — one UUID for the whole upload submission
+    batch_id = str(uuid.uuid4())
+    _batch_label_ids: list[int] = []
+    _batch_names: list[str] = []
+
     for f in files:
         if not f.filename:
             continue
@@ -558,10 +563,16 @@ async def bulk_upload_files(
             db.commit()
 
             label_version = await _save_label_file(f, suffix, product.id, db)
-            background_tasks.add_task(_process_label, label_version.id)
+            background_tasks.add_task(_process_label, label_version.id, batch_id)
+            _batch_label_ids.append(label_version.id)
+            _batch_names.append(product_name)
             added.append(product_name)
         except Exception as e:
             errors.append(f"'{f.filename}' — {e}")
+
+    # Register the batch AFTER all background tasks are queued
+    if _batch_label_ids:
+        register_bulk_batch(batch_id, user.id, _batch_label_ids, _batch_names)
 
     from app.models import Alert, AlertStatus
     unread_alerts = get_unread_alert_count(user, db)
