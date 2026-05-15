@@ -1,44 +1,42 @@
-# Design assets (not part of the app)
-*.psd
-*.ai
+# Dependencies
+node_modules/
+.pnpm-store/
 
-# Environment / secrets
-nutracomply/.env
-.env
-
-# Local database
-nutracomply/nutracomply.db
-*.db
-
-# Uploaded files
-nutracomply/uploads/
-
-# FSSAI regulation PDFs — too large for git (552 MB); upload via admin UI
-nutracomply/FSSAI/*.pdf
-FSSAI/*.pdf
-
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.egg-info/
+# Build
+.next/
+out/
 dist/
-build/
-.eggs/
-.venv/
-venv/
-env/
+.turbo/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+prisma/migrations/dev/
 
 # IDE / OS
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+*.swp
 
 # Claude private memory
 .claude/
 
-# Alembic cache (generated)
-nutracomply/alembic/versions/__pycache__/
+# Generated
+*.tsbuildinfo
+coverage/
+
+# Debug
+npm-debug.log*
+pnpm-debug.log*
+
+# Vercel
+.vercel
+
+# Sentry
+.sentryclirc

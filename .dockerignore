@@ -1,9 +1,0 @@
-# Never bake local secrets or dev databases into the image
-nutracomply/.env
-nutracomply/*.db
-nutracomply/__pycache__
-nutracomply/**/__pycache__
-nutracomply/**/*.pyc
-nutracomply/.pytest_cache
-nutracomply/uploads
-nutracomply/alembic/versions/__pycache__

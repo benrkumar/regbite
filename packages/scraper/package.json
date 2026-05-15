@@ -1,0 +1,34 @@
+{
+  "name": "@regbite/scraper",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "scrape:dsial": "tsx src/scrapers/fda-dsial.ts",
+    "scrape:ndi": "tsx src/scrapers/fda-ndi.ts",
+    "scrape:warnings": "tsx src/scrapers/fda-warning-letters.ts",
+    "scrape:nih": "tsx src/scrapers/nih-ods.ts",
+    "scrape:gras": "tsx src/scrapers/fda-gras.ts",
+    "scrape:fr": "tsx src/scrapers/federal-register.ts",
+    "scrape:import-alerts": "tsx src/scrapers/fda-import-alerts.ts",
+    "worker": "tsx src/jobs/daily-scrape.ts"
+  },
+  "dependencies": {
+    "@regbite/database": "workspace:*",
+    "playwright": "^1.49.0",
+    "cheerio": "^1.0.0",
+    "pdf-parse": "^1.1.1",
+    "bullmq": "^5.25.0",
+    "ioredis": "^5.4.0",
+    "xlsx": "^0.18.5",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.0.0",
+    "@types/node-cron": "^3.0.11"
+  }
+}

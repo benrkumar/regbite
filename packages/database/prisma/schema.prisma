@@ -1,0 +1,401 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  ACCOUNT_ADMIN
+  EDITOR
+  VIEWER
+  CONSULTANT
+}
+
+enum PlanType {
+  STARTER
+  GROWTH
+  PROFESSIONAL
+  ENTERPRISE
+  CONSULTANT
+}
+
+enum FDAStatus {
+  PERMITTED
+  RESTRICTED
+  BANNED
+  ADVISORY
+  UNKNOWN
+}
+
+enum GRASStatus {
+  SELF_AFFIRMED
+  FDA_AFFIRMED
+  PENDING
+  NOT_GRAS
+  UNKNOWN
+}
+
+enum ProductType {
+  DIETARY_SUPPLEMENT
+  VITAMIN_MINERAL
+  HERBAL_BOTANICAL
+  AMINO_ACID
+  SPORTS_NUTRITION
+  PROBIOTICS
+  SPECIALTY
+}
+
+enum FormulationStatus {
+  DRAFT
+  UNDER_REVIEW
+  COMPLIANT
+  NON_COMPLIANT
+  ARCHIVED
+}
+
+enum CheckType {
+  INGREDIENT
+  FORMULA
+  LABEL
+  CLAIMS
+  NDI
+  CGMP
+  FULL
+}
+
+enum CheckStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ChangeType {
+  INGREDIENT_BAN
+  INGREDIENT_RESTRICTION
+  LABEL_REQUIREMENT
+  CLAIMS_ENFORCEMENT
+  NDI_DECISION
+  CGMP_UPDATE
+  NEW_REGULATION
+  AMENDMENT
+  GUIDANCE
+  WARNING
+  UNKNOWN
+}
+
+enum RegulatorySource {
+  FDA_FEDERAL_REGISTER
+  FDA_WARNING_LETTERS
+  FDA_CONSTITUENT_UPDATES
+  FDA_IMPORT_ALERTS
+  FTC_PRESS_RELEASES
+  USP_MONOGRAPHS
+  CONGRESS_GOV
+  NIH_ODS
+  PROP65
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  TRIALING
+  UNPAID
+}
+
+// ─── Organization & Members ─────────────────────────────────────────────────
+
+model Organization {
+  id                String    @id @default(cuid())
+  name              String
+  slug              String    @unique
+  clerkOrgId        String?   @unique
+  stripeCustomerId  String?   @unique
+  plan              PlanType  @default(STARTER)
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  members           Member[]
+  formulations      Formulation[]
+  complianceChecks  ComplianceCheck[]
+  subscriptions     Subscription[]
+  cgmpAudits        CGMPAudit[]
+  activityLogs      ActivityLog[]
+}
+
+model Member {
+  id              String    @id @default(cuid())
+  clerkUserId     String    @unique
+  email           String
+  name            String?
+  role            UserRole  @default(EDITOR)
+  organizationId  String
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  activityLogs    ActivityLog[]
+
+  @@index([organizationId])
+}
+
+// ─── Ingredient Database ────────────────────────────────────────────────────
+
+model USIngredient {
+  id                    String     @id @default(cuid())
+  name                  String     @unique
+  aliases               String[]
+  casNumber             String?    @unique
+  fdaStatus             FDAStatus  @default(UNKNOWN)
+  grasStatus            GRASStatus @default(UNKNOWN)
+  dsheaGrandfathered    Boolean    @default(false)
+  ndiNotificationsCount Int        @default(0)
+  prop65Listed          Boolean    @default(false)
+  upperIntakeLevel      String?
+  safeUsageLevel        String?
+  advisoryNotes         String?
+  regulatoryCitations   Json?
+  embedding             Unsupported("vector(1536)")?
+  lastReviewedAt        DateTime?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  warningLetterLinks    FDAWarningLetterIngredient[]
+  ndiNotifications      NDINotification[]
+}
+
+model FDAWarningLetter {
+  id              String   @id @default(cuid())
+  letterId        String   @unique
+  companyName     String
+  issueDate       DateTime
+  subject         String?
+  ingredientsCited String[]
+  claimsCited     String[]
+  violationTypes  String[]
+  letterUrl       String
+  rawText         String?
+  summary         String?
+  embedding       Unsupported("vector(1536)")?
+  scrapedAt       DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  ingredientLinks FDAWarningLetterIngredient[]
+
+  @@index([issueDate])
+  @@index([companyName])
+}
+
+model FDAWarningLetterIngredient {
+  warningLetterId String
+  ingredientId    String
+
+  warningLetter   FDAWarningLetter @relation(fields: [warningLetterId], references: [id], onDelete: Cascade)
+  ingredient      USIngredient     @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@id([warningLetterId, ingredientId])
+}
+
+model NDINotification {
+  id                     String    @id @default(cuid())
+  fdaNotificationNumber  String    @unique
+  ingredientName         String
+  submitter              String?
+  submissionDate         DateTime?
+  fdaResponse            String?
+  responseDate           DateTime?
+  ingredientId           String?
+  rawText                String?
+  embedding              Unsupported("vector(1536)")?
+  scrapedAt              DateTime  @default(now())
+  createdAt              DateTime  @default(now())
+
+  ingredient             USIngredient? @relation(fields: [ingredientId], references: [id])
+
+  @@index([ingredientName])
+}
+
+// ─── GRAS Notices ───────────────────────────────────────────────────────────
+
+model GRASNotice {
+  id              String   @id @default(cuid())
+  grn             String   @unique
+  substance       String
+  intendedUse     String?
+  notifier        String?
+  fdaResponse     String?
+  notificationDate DateTime?
+  responseDate    DateTime?
+  sourceUrl       String?
+  scrapedAt       DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([substance])
+}
+
+// ─── Prop 65 Chemicals (reference data) ─────────────────────────────────────
+
+model Prop65Chemical {
+  id               String    @id @default(cuid())
+  chemical         String    @unique
+  casNumber        String?
+  listingMechanism String?
+  dateAdded        DateTime?
+  relevance        String?
+  createdAt        DateTime  @default(now())
+}
+
+// ─── Formulations & Compliance ──────────────────────────────────────────────
+
+model Formulation {
+  id                  String            @id @default(cuid())
+  organizationId      String
+  productName         String
+  productType         ProductType       @default(DIETARY_SUPPLEMENT)
+  servingSize         String?
+  servingsPerContainer String?
+  ingredients         Json
+  supplementFacts     Json?
+  claims              String[]
+  complianceScore     Int?
+  status              FormulationStatus @default(DRAFT)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  organization        Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  complianceChecks    ComplianceCheck[]
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model ComplianceCheck {
+  id                  String      @id @default(cuid())
+  formulationId       String?
+  organizationId      String
+  checkType           CheckType
+  status              CheckStatus @default(PENDING)
+  overallScore        Int?
+  results             Json?
+  regulatoryCitations Json?
+  createdAt           DateTime    @default(now())
+
+  formulation         Formulation?  @relation(fields: [formulationId], references: [id], onDelete: SetNull)
+  organization        Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([formulationId])
+  @@index([organizationId])
+  @@index([checkType])
+}
+
+// ─── Regulatory Changes ─────────────────────────────────────────────────────
+
+model RegulatoryChange {
+  id              String           @id @default(cuid())
+  source          RegulatorySource
+  sourceUrl       String?
+  documentTitle   String
+  summary         String?
+  changeType      ChangeType       @default(UNKNOWN)
+  severity        Severity         @default(MEDIUM)
+  affectedModules String[]
+  publishedAt     DateTime?
+  detectedAt      DateTime         @default(now())
+  documentHash    String           @unique
+  embedding       Unsupported("vector(1536)")?
+  createdAt       DateTime         @default(now())
+
+  @@index([source])
+  @@index([severity])
+  @@index([detectedAt])
+}
+
+// ─── FDA Daily Values (reference data) ──────────────────────────────────────
+
+model FDADailyValue {
+  id        String  @id @default(cuid())
+  nutrient  String  @unique
+  unit      String
+  dvAdult   Float?
+  dvChild   Float?
+  dvPregnant Float?
+  dvLactating Float?
+  source    String?
+
+  @@index([nutrient])
+}
+
+// ─── Billing ────────────────────────────────────────────────────────────────
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  organizationId       String             @unique
+  stripeSubscriptionId String             @unique
+  stripeCustomerId     String?
+  stripePriceId        String?
+  plan                 PlanType
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelledAt          DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+// ─── cGMP Audit (Phase 2) ───────────────────────────────────────────────────
+
+model CGMPAudit {
+  id              String    @id @default(cuid())
+  organizationId  String
+  title           String
+  sections        Json
+  overallScore    Int?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+// ─── Activity Log ───────────────────────────────────────────────────────────
+
+model ActivityLog {
+  id           String   @id @default(cuid())
+  memberId     String?
+  action       String
+  resourceType String?
+  resourceId   String?
+  detail       String?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  member       Member?       @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([memberId])
+  @@index([action])
+  @@index([createdAt])
+}
