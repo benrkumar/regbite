@@ -91,6 +91,12 @@ export default function HomePage() {
               Start free trial
             </a>
             <Link
+              href="/demo"
+              className="rounded-lg border border-gray-600 text-white px-8 py-3.5 font-semibold text-base hover:bg-gray-800 transition-colors"
+            >
+              Try demo
+            </Link>
+            <Link
               href="/features"
               className="inline-flex items-center gap-1.5 text-gray-400 hover:text-white text-base font-medium transition-colors"
             >

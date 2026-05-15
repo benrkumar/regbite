@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { DemoBanner } from "@/components/demo-banner";
 import {
   LayoutDashboard,
   Search,
@@ -66,8 +67,9 @@ export default function DashboardLayout({
           })}
         </nav>
       </aside>
-      <main className="flex-1 overflow-y-auto bg-[#F8FAFB]">
-        <div className="p-8">{children}</div>
+      <main className="flex-1 overflow-y-auto bg-[#F8FAFB] flex flex-col">
+        <DemoBanner />
+        <div className="p-8 flex-1">{children}</div>
       </main>
     </div>
   );
