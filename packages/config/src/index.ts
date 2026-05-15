@@ -15,3 +15,9 @@ export {
   teamInviteEmail,
   type SendEmailOptions,
 } from "./email";
+export {
+  getR2Client,
+  uploadToR2,
+  getPresignedDownloadUrl,
+  deleteFromR2,
+} from "./storage";

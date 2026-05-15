@@ -15,7 +15,8 @@
     "lucide-react": "^0.469.0",
     "@regbite/database": "workspace:*",
     "@regbite/ui": "workspace:*",
-    "@regbite/config": "workspace:*"
+    "@regbite/config": "workspace:*",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

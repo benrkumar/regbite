@@ -9,9 +9,12 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          600: '#4f46e5',
-          700: '#4338ca',
+          600: '#0D4F3C',
+          700: '#0A3D2E',
         },
+        accent: '#22C55E',
+        negative: '#EF4444',
+        surface: '#F8FAFB',
       },
     },
   },

@@ -13,10 +13,12 @@
     "scrape:gras": "tsx src/scrapers/fda-gras.ts",
     "scrape:fr": "tsx src/scrapers/federal-register.ts",
     "scrape:import-alerts": "tsx src/scrapers/fda-import-alerts.ts",
-    "worker": "tsx src/jobs/daily-scrape.ts"
+    "worker": "tsx src/jobs/daily-scrape.ts",
+    "worker:digest": "tsx src/jobs/weekly-digest.ts"
   },
   "dependencies": {
     "@regbite/database": "workspace:*",
+    "@regbite/config": "workspace:*",
     "playwright": "^1.49.0",
     "cheerio": "^1.0.0",
     "pdf-parse": "^1.1.1",

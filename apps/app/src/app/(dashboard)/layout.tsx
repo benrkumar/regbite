@@ -41,10 +41,10 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen">
-      <aside className="w-64 bg-gray-950 text-white flex flex-col">
-        <div className="p-6 border-b border-gray-800">
-          <h1 className="text-xl font-bold">RegBite US</h1>
-          <p className="text-xs text-gray-400 mt-1">FDA Compliance Platform</p>
+      <aside className="w-64 bg-[#0D4F3C] text-white flex flex-col border-r border-[#0A3D2E]">
+        <div className="p-6 border-b border-[#0A3D2E]">
+          <h1 className="text-xl font-bold text-white">RegBite US</h1>
+          <p className="text-xs text-green-100/60 mt-1">FDA Compliance Platform</p>
         </div>
         <nav className="flex-1 p-4 space-y-1">
           {navigation.map((item) => {
@@ -56,7 +56,7 @@ export default function DashboardLayout({
                 className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isActive
                     ? "bg-brand-600 text-white"
-                    : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                    : "text-green-100/70 hover:bg-[#0A3D2E] hover:text-white"
                 }`}
               >
                 <item.icon className="h-4 w-4 flex-shrink-0" />
@@ -66,7 +66,7 @@ export default function DashboardLayout({
           })}
         </nav>
       </aside>
-      <main className="flex-1 overflow-y-auto bg-gray-50">
+      <main className="flex-1 overflow-y-auto bg-[#F8FAFB]">
         <div className="p-8">{children}</div>
       </main>
     </div>
