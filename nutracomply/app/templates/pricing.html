@@ -1,344 +1,302 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pricing — RegBite FSSAI Compliance Platform</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet" />
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --font: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-      --ink:    #111111;
-      --border: #EBEBEB;
-      --bg:     #F8F8F8;
-      --gray-3: #D4D4D4;
-      --gray-4: #A3A3A3;
-      --gray-5: #737373;
-      --gray-6: #525252;
-    }
-    html { font-size: 16px; scroll-behavior: smooth; }
-    body { font-family: var(--font); color: var(--ink); background: #FFFFFF; line-height: 1.7; letter-spacing: 0.01em; }
-    a { color: inherit; text-decoration: none; }
-    p { color: var(--gray-5); }
+{% extends "public_base.html" %}
+{% block title %}Pricing — FSSAI Compliance Plans for Nutraceuticals{% endblock %}
+{% block description %}RegBite pricing: Free Starter (3 products), Growth at ₹2,999/month (25 products, 100 scans/month), Enterprise custom. No hidden fees. Cancel anytime. Powered by Razorpay.{% endblock %}
 
-    /* ── Navbar ── */
-    .navbar {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      height: 60px; display: flex; align-items: center; padding: 0 2rem;
-      background: #FFFFFF; border-bottom: 1px solid var(--border);
-    }
-    .navbar-brand { display: flex; align-items: center; gap: 0.5rem; margin-right: auto; }
-    .navbar-name  { font-size: 1rem; font-weight: 700; color: var(--ink); letter-spacing: -0.02em; }
-    .navbar-actions { display: flex; align-items: center; gap: 0.65rem; }
-    .navbar-link { font-size: 0.875rem; color: var(--gray-5); transition: color 0.12s; }
-    .navbar-link:hover { color: var(--ink); }
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      padding: 0.45rem 1.1rem; border-radius: 5px;
-      font-size: 0.82rem; font-weight: 500; cursor: pointer;
-      border: 1px solid transparent; transition: all 0.12s;
-      font-family: var(--font); text-decoration: none; white-space: nowrap; line-height: 1;
-    }
-    .btn-ghost   { background: transparent; color: var(--gray-6); border-color: var(--gray-3); }
-    .btn-ghost:hover { background: #F5F5F5; color: var(--ink); }
-    .btn-primary { background: #404040; color: #FFFFFF; border-color: #404040; }
-    .btn-primary:hover { background: #111111; border-color: #111111; }
-    .btn-outline { background: transparent; color: var(--ink); border: 1px solid var(--gray-3); }
-    .btn-outline:hover { background: #F5F5F5; }
-    .btn-outline-white {
-      background: transparent; color: #FFFFFF; border: 1px solid rgba(255,255,255,0.4);
-      border-radius: 5px; padding: 0.6rem 1.4rem; font-size: 0.875rem; font-weight: 400;
-      display: inline-flex; align-items: center; cursor: pointer;
-      transition: all 0.12s; font-family: var(--font); text-decoration: none;
-    }
-    .btn-outline-white:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.7); }
-    .btn-full { width: 100%; justify-content: center; }
-    .btn-lg { padding: 0.65rem 1.5rem; font-size: 0.9rem; }
+{% block extra_css %}
+  /* ── Billing toggle ── */
+  .billing-toggle {
+    display: inline-flex; align-items: center; gap: 0.65rem;
+    background: #FFFFFF; border: 1px solid var(--g200);
+    border-radius: 999px; padding: 0.35rem 1rem;
+    font-size: 0.82rem; font-weight: 400; color: var(--g600);
+    cursor: pointer; user-select: none;
+  }
+  .billing-toggle-lbl { font-weight: 500; color: var(--ink); }
+  .toggle-switch { position: relative; width: 36px; height: 20px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background: var(--g300); border-radius: 999px; transition: background 0.2s;
+  }
+  .toggle-slider::before {
+    content: ''; position: absolute;
+    width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF;
+    left: 3px; top: 3px; transition: transform 0.2s;
+  }
+  .toggle-switch input:checked + .toggle-slider { background: var(--ink); }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
+  .save-badge {
+    font-size: 0.68rem; font-weight: 600; color: #262626;
+    background: var(--g100); padding: 0.1rem 0.45rem; border-radius: 999px;
+  }
 
-    /* ── Hero ── */
-    .pricing-hero {
-      padding-top: 60px; background: var(--bg);
-      border-bottom: 1px solid var(--border); text-align: center; padding-bottom: 3rem;
-    }
-    .pricing-hero-inner { max-width: 600px; margin: 0 auto; padding: 3.5rem 2rem 0; }
-    .section-tag {
-      display: inline-block; padding: 0.2rem 0.7rem;
-      background: #F5F5F5; color: var(--gray-6); border: 1px solid var(--border);
-      border-radius: 999px; font-size: 0.72rem; font-weight: 500;
-      letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1rem;
-    }
-    .pricing-hero h1 {
-      font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 300; color: var(--ink);
-      letter-spacing: -0.03em; line-height: 1.2; margin-bottom: 0.75rem;
-    }
-    .pricing-hero p { font-size: 0.95rem; color: var(--gray-5); margin-bottom: 2rem; }
+  /* ── Pricing cards ── */
+  .pricing-grid {
+    max-width: 1000px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; align-items: stretch;
+  }
+  .pricing-card {
+    background: #FFFFFF; border: 1px solid var(--g200); border-radius: 8px;
+    padding: 1.75rem; display: flex; flex-direction: column; position: relative;
+    transition: box-shadow 0.12s;
+  }
+  .pricing-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+  .pricing-card.popular { border-color: var(--ink); border-width: 1.5px; }
+  .popular-ribbon {
+    position: absolute; top: -1px; right: 1.25rem;
+    background: var(--ink); color: #FFFFFF;
+    font-size: 0.65rem; font-weight: 600; padding: 0.25rem 0.65rem;
+    border-radius: 0 0 5px 5px; letter-spacing: 0.04em;
+  }
+  .plan-badge {
+    display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px;
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.03em; margin-bottom: 0.85rem;
+    background: var(--g100); color: var(--g600); border: 1px solid var(--g200);
+  }
+  .plan-name  { font-size: 1.1rem; font-weight: 500; color: var(--ink); margin-bottom: 0.55rem; letter-spacing: -0.02em; }
+  .plan-price { display: flex; align-items: baseline; gap: 0.25rem; margin-bottom: 0.3rem; }
+  .plan-price-currency { font-size: 1rem; font-weight: 500; color: var(--g500); }
+  .plan-price-amount  { font-size: 2.2rem; font-weight: 700; color: var(--ink); letter-spacing: -0.03em; line-height: 1; }
+  .plan-price-amount.custom { font-size: 1.4rem; font-weight: 400; }
+  .plan-price-period  { font-size: 0.78rem; color: var(--g400); }
+  .plan-desc { font-size: 0.8rem; color: var(--g400); margin-bottom: 1.25rem; min-height: 1.1rem; }
+  .plan-divider { height: 1px; background: var(--g200); margin-bottom: 1.1rem; }
+  .plan-features { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 1.5rem; flex: 1; }
+  .plan-features li { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.845rem; color: var(--g600); }
+  .plan-features li .check {
+    width: 16px; height: 16px; border-radius: 50%; background: var(--g100);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; color: #262626; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .plan-cta { margin-top: auto; }
+  .plan-trial-note { text-align: center; font-size: 0.72rem; color: var(--g400); margin-top: 0.45rem; }
 
-    /* Billing toggle */
-    .billing-toggle {
-      display: inline-flex; align-items: center; gap: 0.65rem;
-      background: #FFFFFF; border: 1px solid var(--border);
-      border-radius: 999px; padding: 0.35rem 1rem;
-      font-size: 0.82rem; font-weight: 400; color: var(--gray-6);
-      cursor: pointer; user-select: none;
-    }
-    .billing-toggle-lbl { font-weight: 500; color: var(--ink); }
-    .toggle-switch { position: relative; width: 36px; height: 20px; }
-    .toggle-switch input { opacity: 0; width: 0; height: 0; }
-    .toggle-slider {
-      position: absolute; cursor: pointer; inset: 0;
-      background: var(--gray-3); border-radius: 999px; transition: background 0.2s;
-    }
-    .toggle-slider::before {
-      content: ''; position: absolute;
-      width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF;
-      left: 3px; top: 3px; transition: transform 0.2s;
-    }
-    .toggle-switch input:checked + .toggle-slider { background: var(--ink); }
-    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
-    .save-badge {
-      font-size: 0.68rem; font-weight: 600; color: #262626;
-      background: #F5F5F5; padding: 0.1rem 0.45rem; border-radius: 999px;
-    }
+  /* ── Comparison table ── */
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; margin-top: 2rem; }
+  .compare-table th { font-weight: 600; color: var(--ink); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid var(--g200); }
+  .compare-table th:not(:first-child) { text-align: center; }
+  .compare-table td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--g100); color: var(--g600); }
+  .compare-table td:not(:first-child) { text-align: center; }
+  .compare-table tr:hover td { background: var(--g50); }
+  .check-yes { color: #357266; font-weight: 700; }
+  .check-no  { color: var(--g300); }
 
-    /* Pricing cards */
-    .pricing-section { padding: 3.5rem 2rem 5rem; }
-    .pricing-grid {
-      max-width: 1000px; margin: 0 auto;
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; align-items: stretch;
-    }
-    .pricing-card {
-      background: #FFFFFF; border: 1px solid var(--border); border-radius: 6px;
-      padding: 1.75rem; display: flex; flex-direction: column; position: relative;
-      transition: box-shadow 0.12s;
-    }
-    .pricing-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
-    .pricing-card.popular { border-color: var(--ink); border-width: 1.5px; }
-    .popular-ribbon {
-      position: absolute; top: -1px; right: 1.25rem;
-      background: var(--ink); color: #FFFFFF;
-      font-size: 0.65rem; font-weight: 600; padding: 0.25rem 0.65rem;
-      border-radius: 0 0 5px 5px; letter-spacing: 0.04em;
-    }
-    .plan-badge {
-      display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px;
-      font-size: 0.68rem; font-weight: 600; letter-spacing: 0.03em; margin-bottom: 0.85rem;
-    }
-    .badge-free       { background: #F5F5F5; color: #262626; }
-    .badge-popular    { background: #F5F5F5; color: #525252; border: 1px solid var(--border); }
-    .badge-enterprise { background: #F5F5F5; color: #525252; border: 1px solid var(--border); }
-    .plan-name  { font-size: 1.1rem; font-weight: 500; color: var(--ink); margin-bottom: 0.55rem; letter-spacing: -0.02em; }
-    .plan-price { display: flex; align-items: baseline; gap: 0.25rem; margin-bottom: 0.3rem; }
-    .plan-price-currency { font-size: 1rem; font-weight: 500; color: var(--gray-5); }
-    .plan-price-amount  { font-size: 2.2rem; font-weight: 700; color: var(--ink); letter-spacing: -0.03em; line-height: 1; }
-    .plan-price-amount.custom { font-size: 1.4rem; font-weight: 400; }
-    .plan-price-period  { font-size: 0.78rem; color: var(--gray-4); }
-    .plan-desc { font-size: 0.8rem; color: var(--gray-4); margin-bottom: 1.25rem; min-height: 1.1rem; }
-    .plan-divider { height: 1px; background: var(--border); margin-bottom: 1.1rem; }
-    .plan-features { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 1.5rem; flex: 1; }
-    .plan-features li { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.845rem; color: var(--gray-6); }
-    .plan-features li .check {
-      width: 16px; height: 16px; border-radius: 50%; background: #F5F5F5;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.55rem; color: #262626; font-weight: 700; flex-shrink: 0; margin-top: 2px;
-    }
-    .plan-cta { margin-top: auto; }
-    .plan-trial-note { text-align: center; font-size: 0.72rem; color: var(--gray-4); margin-top: 0.45rem; }
+  /* ── FAQ ── */
+  .faq-item {
+    background: #FFFFFF; border: 1px solid var(--g200); border-radius: 6px;
+    margin-bottom: 0.65rem; overflow: hidden;
+  }
+  .faq-question {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.9rem 1.1rem; cursor: pointer; font-size: 0.875rem;
+    font-weight: 500; color: var(--ink); user-select: none;
+  }
+  .faq-question:hover { background: var(--g50); }
+  .faq-icon { font-size: 1rem; font-weight: 300; color: var(--g400); transition: transform 0.2s; flex-shrink: 0; }
+  .faq-answer {
+    display: none; padding: 0.75rem 1.1rem 0.9rem; font-size: 0.845rem;
+    color: var(--g500); line-height: 1.7;
+    border-top: 1px solid var(--g100);
+  }
+  .faq-item.open .faq-answer { display: block; }
+  .faq-item.open .faq-icon   { transform: rotate(45deg); }
 
-    /* FAQ */
-    .faq-section { padding: 4rem 2rem; background: var(--bg); border-top: 1px solid var(--border); }
-    .faq-inner { max-width: 680px; margin: 0 auto; }
-    .faq-header { text-align: center; margin-bottom: 2.25rem; }
-    .faq-title  { font-size: clamp(1.25rem, 3vw, 1.6rem); font-weight: 400; color: var(--ink); letter-spacing: -0.02em; margin-bottom: 0.4rem; }
-    .faq-sub    { font-size: 0.875rem; color: var(--gray-5); }
-    .faq-item {
-      background: #FFFFFF; border: 1px solid var(--border); border-radius: 5px;
-      margin-bottom: 0.65rem; overflow: hidden;
-    }
-    .faq-question {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0.9rem 1.1rem; cursor: pointer; font-size: 0.875rem;
-      font-weight: 500; color: var(--ink); user-select: none;
-    }
-    .faq-question:hover { background: var(--bg); }
-    .faq-icon { font-size: 1rem; font-weight: 300; color: var(--gray-4); transition: transform 0.2s; flex-shrink: 0; }
-    .faq-answer {
-      display: none; padding: 0 1.1rem 0.9rem; font-size: 0.845rem;
-      color: var(--gray-5); line-height: 1.7;
-      border-top: 1px solid var(--border); padding-top: 0.75rem;
-    }
-    .faq-item.open .faq-answer { display: block; }
-    .faq-item.open .faq-icon   { transform: rotate(45deg); }
+  @media (max-width: 900px) { .pricing-grid { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; } }
+  @media (max-width: 640px) { .compare-wrap { overflow-x: auto; } }
+{% endblock %}
 
-    /* CTA */
-    .cta-banner { background: var(--ink); padding: 4.5rem 2rem; text-align: center; }
-    .cta-banner h2 { font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 300; color: #FFFFFF; letter-spacing: -0.02em; margin-bottom: 0.65rem; }
-    .cta-banner p  { color: rgba(255,255,255,0.55); font-size: 0.9rem; max-width: 440px; margin: 0 auto 2rem; }
+{% block content %}
 
-    /* Footer */
-    footer { background: #FFFFFF; border-top: 1px solid var(--border); padding: 1.4rem 2rem; text-align: center; }
-    footer p { color: var(--gray-4); font-size: 0.78rem; }
-    footer a { color: var(--gray-5); }
-    footer a:hover { color: var(--ink); }
-
-    /* Responsive */
-    @media (max-width: 900px) { .pricing-grid { grid-template-columns: 1fr; max-width: 420px; } }
-    @media (max-width: 640px) {
-      .navbar { padding: 0 1.25rem; }
-      .pricing-section { padding: 2.5rem 1rem 3.5rem; }
-    }
-  </style>
-</head>
-<body>
-
-<nav class="navbar">
-  <div class="navbar-brand">
-    <a href="/" style="display:flex;align-items:center;gap:0.45rem;">
-      <span style="font-size:0.55rem;color:#111111;">●</span>
-      <span class="navbar-name">RegBite</span>
-    </a>
+{# ── Page Hero ── #}
+<div class="page-hero">
+  <div class="page-hero-inner">
+    <div class="sec-tag">Pricing</div>
+    <h1>Simple, <strong>transparent pricing</strong></h1>
+    <p>Start free — upgrade when you're ready. No hidden fees. Cancel anytime.</p>
+    <div style="margin-top:1.5rem;">
+      <label class="billing-toggle" onclick="toggleBilling()">
+        <span class="billing-toggle-lbl">Monthly</span>
+        <div class="toggle-switch">
+          <input type="checkbox" id="billingToggle" />
+          <span class="toggle-slider"></span>
+        </div>
+        <span class="billing-toggle-lbl">Annual</span>
+        <span class="save-badge">Save 20%</span>
+      </label>
+    </div>
   </div>
-  <div class="navbar-actions">
-    <a href="/#why-compliance" class="navbar-link">Why It Matters</a>
-    <a href="/#features"       class="navbar-link">Features</a>
-    <a href="/#how-it-works"   class="navbar-link">How It Works</a>
-    <a href="/pricing"         class="navbar-link" style="font-weight:600;color:var(--ink);">Pricing</a>
-    <a href="/blog"            class="navbar-link" style="margin-right:0.5rem;">Blog</a>
-    <a href="/login"    class="btn btn-ghost">Sign In</a>
-    <a href="/register" class="btn btn-primary">Get Started</a>
-  </div>
-</nav>
+</div>
 
-<section class="pricing-hero">
-  <div class="pricing-hero-inner">
-    <div class="section-tag">Pricing</div>
-    <h1>Simple, transparent pricing</h1>
-    <p>Start free — upgrade when you&rsquo;re ready. No hidden fees. Cancel anytime.</p>
-    <label class="billing-toggle" onclick="toggleBilling()">
-      <span class="billing-toggle-lbl">Monthly</span>
-      <div class="toggle-switch">
-        <input type="checkbox" id="billingToggle" />
-        <span class="toggle-slider"></span>
+{# ── Pricing Cards ── #}
+<section class="sec">
+  <div class="sec-inner">
+    <div class="pricing-grid">
+
+      {# Starter #}
+      <div class="pricing-card">
+        <div class="plan-badge">Free Forever</div>
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">
+          <span class="plan-price-currency">&#8377;</span>
+          <span class="plan-price-amount" data-monthly="0" data-annual="0">0</span>
+          <span class="plan-price-period">/ month</span>
+        </div>
+        <div class="plan-desc">For brands getting started with FSSAI compliance.</div>
+        <div class="plan-divider"></div>
+        <ul class="plan-features">
+          <li><span class="check">&#10003;</span> Up to 3 products</li>
+          <li><span class="check">&#10003;</span> 5 label scans / month</li>
+          <li><span class="check">&#10003;</span> Full compliance engine (64 rules)</li>
+          <li><span class="check">&#10003;</span> FSSAI regulation feed</li>
+          <li><span class="check">&#10003;</span> PDF compliance reports</li>
+        </ul>
+        <div class="plan-cta">
+          <a href="/register" class="btn btn-primary btn-xl"
+             style="width:100%;justify-content:center;"
+             onclick="gtag('event','sign_up_click',{event_category:'Pricing',event_label:'starter'})">
+            Get Started Free
+          </a>
+        </div>
       </div>
-      <span class="billing-toggle-lbl">Annual</span>
-      <span class="save-badge">Save 20%</span>
-    </label>
+
+      {# Growth #}
+      <div class="pricing-card popular">
+        <div class="popular-ribbon">Most Popular</div>
+        <div class="plan-badge">Growth</div>
+        <div class="plan-name">Growth</div>
+        <div class="plan-price">
+          <span class="plan-price-currency">&#8377;</span>
+          <span class="plan-price-amount" data-monthly="2999" data-annual="2499">2,999</span>
+          <span class="plan-price-period">/ month</span>
+        </div>
+        <div class="plan-desc annual-note" style="display:none;">&#8377;29,990 / year &mdash; save &#8377;5,998</div>
+        <div class="plan-desc monthly-note">Billed monthly. Switch to annual to save 20%.</div>
+        <div class="plan-divider"></div>
+        <ul class="plan-features">
+          <li><span class="check">&#10003;</span> Up to 25 products</li>
+          <li><span class="check">&#10003;</span> 100 label scans / month</li>
+          <li><span class="check">&#10003;</span> All compliance categories (FSSAI + LM + AYUSH)</li>
+          <li><span class="check">&#10003;</span> License renewal tracker</li>
+          <li><span class="check">&#10003;</span> Team collaboration (5 seats)</li>
+          <li><span class="check">&#10003;</span> Bulk label upload</li>
+          <li><span class="check">&#10003;</span> Priority support</li>
+        </ul>
+        <div class="plan-cta">
+          <a href="/billing" class="btn btn-primary btn-xl"
+             style="width:100%;justify-content:center;background:#0B2A4A;border-color:#0B2A4A;"
+             onclick="gtag('event','begin_checkout',{currency:'INR',value:2999,items:[{item_id:'growth',item_name:'Growth Plan',price:2999}]})">
+            Upgrade to Growth &rarr;
+          </a>
+          <div class="plan-trial-note">Secure payment via Razorpay</div>
+        </div>
+      </div>
+
+      {# Enterprise #}
+      <div class="pricing-card">
+        <div class="plan-badge">Enterprise</div>
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-price">
+          <span class="plan-price-amount custom">Custom</span>
+        </div>
+        <div class="plan-desc">Tailored pricing for manufacturers &amp; large organisations.</div>
+        <div class="plan-divider"></div>
+        <ul class="plan-features">
+          <li><span class="check">&#10003;</span> Unlimited products &amp; scans</li>
+          <li><span class="check">&#10003;</span> White-label compliance reports</li>
+          <li><span class="check">&#10003;</span> Custom compliance rules</li>
+          <li><span class="check">&#10003;</span> API access for integrations</li>
+          <li><span class="check">&#10003;</span> SSO / SAML integration</li>
+          <li><span class="check">&#10003;</span> Dedicated compliance manager</li>
+          <li><span class="check">&#10003;</span> Full audit trail</li>
+        </ul>
+        <div class="plan-cta">
+          <a href="/contact" class="btn btn-ghost btn-xl"
+             style="width:100%;justify-content:center;"
+             onclick="gtag('event','generate_lead',{event_category:'Pricing',event_label:'enterprise'})">
+            Contact Sales
+          </a>
+        </div>
+      </div>
+
+    </div>{# /pricing-grid #}
   </div>
 </section>
 
-<section class="pricing-section">
-  <div class="pricing-grid">
-
-    <div class="pricing-card">
-      <div class="plan-badge badge-free">Free Forever</div>
-      <div class="plan-name">Starter</div>
-      <div class="plan-price">
-        <span class="plan-price-currency">&#8377;</span>
-        <span class="plan-price-amount" data-monthly="0" data-annual="0">0</span>
-        <span class="plan-price-period">/ month</span>
-      </div>
-      <div class="plan-desc">For individuals getting started with compliance.</div>
-      <div class="plan-divider"></div>
-      <ul class="plan-features">
-        <li><span class="check">&#10003;</span> Up to 3 products</li>
-        <li><span class="check">&#10003;</span> 5 label scans / month</li>
-        <li><span class="check">&#10003;</span> Basic compliance checks</li>
-        <li><span class="check">&#10003;</span> FSSAI regulation feed</li>
-        <li><span class="check">&#10003;</span> PDF reports</li>
-      </ul>
-      <div class="plan-cta">
-        <a href="/register" class="btn btn-primary btn-full">Get Started Free</a>
-      </div>
+{# ── Comparison Table ── #}
+<section class="sec sec-alt">
+  <div class="sec-inner">
+    <div class="sec-header sec-header-center" style="margin-bottom:2rem;">
+      <div class="sec-tag">Compare Plans</div>
+      <h2 class="sec-title">Everything you need, <strong>nothing you don't</strong></h2>
     </div>
-
-    <div class="pricing-card popular">
-      <div class="popular-ribbon">Most Popular</div>
-      <div class="plan-badge badge-popular">Growth</div>
-      <div class="plan-name">Growth</div>
-      <div class="plan-price">
-        <span class="plan-price-currency">&#8377;</span>
-        <span class="plan-price-amount" data-monthly="2999" data-annual="29990">2,999</span>
-        <span class="plan-price-period">/ month</span>
-      </div>
-      <div class="plan-desc annual-note" style="display:none;">&#8377;29,990 billed annually &mdash; save &#8377;5,998</div>
-      <div class="plan-desc monthly-note">Billed monthly. Switch to annual to save 20%.</div>
-      <div class="plan-divider"></div>
-      <ul class="plan-features">
-        <li><span class="check">&#10003;</span> Up to 25 products</li>
-        <li><span class="check">&#10003;</span> 100 label scans / month</li>
-        <li><span class="check">&#10003;</span> All compliance categories</li>
-        <li><span class="check">&#10003;</span> License renewal tracker</li>
-        <li><span class="check">&#10003;</span> Team collaboration (5 seats)</li>
-        <li><span class="check">&#10003;</span> AI-powered analysis</li>
-        <li><span class="check">&#10003;</span> Priority support</li>
-      </ul>
-      <div class="plan-cta">
-        <a href="/billing" class="btn btn-primary btn-full">Upgrade to Growth &rarr;</a>
-        <div class="plan-trial-note">Secure payment via Razorpay</div>
-      </div>
+    <div class="compare-wrap">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th style="width:40%;">Feature</th>
+            <th>Starter</th>
+            <th>Growth</th>
+            <th>Enterprise</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Products</td><td>3</td><td>25</td><td>Unlimited</td></tr>
+          <tr><td>Label scans / month</td><td>5</td><td>100</td><td>Unlimited</td></tr>
+          <tr><td>Team seats</td><td>1</td><td>5</td><td>Unlimited</td></tr>
+          <tr><td>AI label extraction (Claude Vision)</td><td><span class="check-yes">&#10003;</span></td><td><span class="check-yes">&#10003;</span></td><td><span class="check-yes">&#10003;</span></td></tr>
+          <tr><td>64-rule FSSAI compliance engine</td><td><span class="check-yes">&#10003;</span></td><td><span class="check-yes">&#10003;</span></td><td><span class="check-yes">&#10003;</span></td></tr>
+          <tr><td>Legal Metrology &amp; AYUSH rules</td><td><span class="check-yes">&#10003;</span></td><td><span class="check-yes">&#10003;</span></td><td><span class="check-yes">&#10003;</span></td></tr>
+          <tr><td>FSSAI regulation feed</td><td><span class="check-yes">&#10003;</span></td><td><span class="check-yes">&#10003;</span></td><td><span class="check-yes">&#10003;</span></td></tr>
+          <tr><td>PDF compliance reports</td><td><span class="check-yes">&#10003;</span></td><td><span class="check-yes">&#10003;</span></td><td><span class="check-yes">&#10003;</span></td></tr>
+          <tr><td>Bulk label upload</td><td><span class="check-no">&mdash;</span></td><td><span class="check-yes">&#10003;</span></td><td><span class="check-yes">&#10003;</span></td></tr>
+          <tr><td>License renewal tracker</td><td><span class="check-no">&mdash;</span></td><td><span class="check-yes">&#10003;</span></td><td><span class="check-yes">&#10003;</span></td></tr>
+          <tr><td>AI regulatory Q&amp;A (knowledge base)</td><td><span class="check-no">&mdash;</span></td><td><span class="check-yes">&#10003;</span></td><td><span class="check-yes">&#10003;</span></td></tr>
+          <tr><td>White-label reports</td><td><span class="check-no">&mdash;</span></td><td><span class="check-no">&mdash;</span></td><td><span class="check-yes">&#10003;</span></td></tr>
+          <tr><td>Custom compliance rules</td><td><span class="check-no">&mdash;</span></td><td><span class="check-no">&mdash;</span></td><td><span class="check-yes">&#10003;</span></td></tr>
+          <tr><td>API access</td><td><span class="check-no">&mdash;</span></td><td><span class="check-no">&mdash;</span></td><td><span class="check-yes">&#10003;</span></td></tr>
+          <tr><td>SSO / SAML</td><td><span class="check-no">&mdash;</span></td><td><span class="check-no">&mdash;</span></td><td><span class="check-yes">&#10003;</span></td></tr>
+          <tr><td>Dedicated compliance manager</td><td><span class="check-no">&mdash;</span></td><td><span class="check-no">&mdash;</span></td><td><span class="check-yes">&#10003;</span></td></tr>
+        </tbody>
+      </table>
     </div>
-
-    <div class="pricing-card">
-      <div class="plan-badge badge-enterprise">Enterprise</div>
-      <div class="plan-name">Enterprise</div>
-      <div class="plan-price">
-        <span class="plan-price-amount custom">Custom</span>
-      </div>
-      <div class="plan-desc">Tailored pricing for large organisations.</div>
-      <div class="plan-divider"></div>
-      <ul class="plan-features">
-        <li><span class="check">&#10003;</span> Unlimited products &amp; scans</li>
-        <li><span class="check">&#10003;</span> White-label reports</li>
-        <li><span class="check">&#10003;</span> Custom compliance rules</li>
-        <li><span class="check">&#10003;</span> Dedicated support</li>
-        <li><span class="check">&#10003;</span> API access</li>
-        <li><span class="check">&#10003;</span> SSO integration</li>
-        <li><span class="check">&#10003;</span> Full audit trail</li>
-      </ul>
-      <div class="plan-cta">
-        <a href="mailto:sales@regbite.com" class="btn btn-outline btn-full">Contact Sales</a>
-      </div>
-    </div>
-
   </div>
 </section>
 
-<section class="faq-section">
-  <div class="faq-inner">
-    <div class="faq-header">
-      <h2 class="faq-title">Frequently Asked Questions</h2>
-      <p class="faq-sub">Everything you need to know about RegBite pricing.</p>
+{# ── FAQ ── #}
+<section class="sec">
+  <div class="sec-inner" style="max-width:700px;">
+    <div class="sec-header sec-header-center" style="margin-bottom:2rem;">
+      <div class="sec-tag">FAQ</div>
+      <h2 class="sec-title">Frequently asked <strong>questions</strong></h2>
     </div>
 
     <div class="faq-item">
       <div class="faq-question" onclick="toggleFaq(this)">
-        Can I upgrade or downgrade my plan later?
+        Can I upgrade or downgrade my plan anytime?
         <span class="faq-icon">+</span>
       </div>
       <div class="faq-answer">
-        Yes, you can upgrade or downgrade at any time from account settings. Upgrades take effect immediately; downgrades at the next billing cycle.
-      </div>
-    </div>
-
-    <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
-        Is there a free trial for paid plans?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-answer">
-        Yes. The Growth plan comes with a 14-day free trial — no credit card required.
+        Yes. Upgrade from your billing page and it takes effect immediately. Downgrades apply at the start of the next billing cycle so you keep your current access until it expires.
       </div>
     </div>
 
     <div class="faq-item">
       <div class="faq-question" onclick="toggleFaq(this)">
-        Do you support GST billing for Indian businesses?
+        Is there a free trial for the Growth plan?
         <span class="faq-icon">+</span>
       </div>
       <div class="faq-answer">
-        All invoices are GST-compliant with HSN codes. Add your GSTIN to your profile and it will appear on all future invoices for ITC claims.
+        The Starter plan is free forever and includes 3 products and 5 scans per month — no credit card required. This gives you full access to the compliance engine before you commit to a paid plan.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        Do you issue GST-compliant invoices?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-answer">
+        Yes. All invoices include GST with correct HSN codes. Add your GSTIN to your account profile and it will appear on every future invoice for input tax credit (ITC) claims.
       </div>
     </div>
 
@@ -348,27 +306,21 @@
         <span class="faq-icon">+</span>
       </div>
       <div class="faq-answer">
-        Credit/debit cards (Visa, Mastercard, RuPay), UPI, net banking, and bank transfers for Enterprise. All payments processed via Razorpay.
+        We accept credit/debit cards (Visa, Mastercard, RuPay), UPI, net banking, and wallet payments — all processed securely via Razorpay. Enterprise customers can also pay by bank transfer.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        What happens to my data if I cancel?
+        <span class="faq-icon">+</span>
+      </div>
+      <div class="faq-answer">
+        Your account and all data (products, labels, compliance reports) remain accessible until the end of your current billing period. After that, the account reverts to the Starter free plan — no data is deleted.
       </div>
     </div>
   </div>
 </section>
-
-<section class="cta-banner">
-  <h2>Ready to stay FSSAI compliant?</h2>
-  <p>Start free today — no credit card required.</p>
-  <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
-    <a href="/register" class="btn btn-primary btn-lg">Create Free Account &rarr;</a>
-    <a href="/login" class="btn-outline-white">Sign In</a>
-  </div>
-</section>
-
-<footer>
-  <p>RegBite &copy; 2026 &nbsp;&middot;&nbsp; FSSAI Compliance Platform for India
-    &nbsp;&middot;&nbsp; <a href="/login">Sign In</a>
-    &nbsp;&middot;&nbsp; <a href="/register">Register</a>
-    &nbsp;&middot;&nbsp; Not legal advice</p>
-</footer>
 
 <script>
 function toggleBilling() {
@@ -376,13 +328,14 @@ function toggleBilling() {
   var isAnnual = cb.checked;
   document.querySelectorAll('.plan-price-amount[data-monthly]').forEach(function(el) {
     var m = parseInt(el.getAttribute('data-monthly'), 10);
-    var a = parseInt(el.getAttribute('data-annual'),  10);
-    el.textContent = (m === 0) ? '0' : (isAnnual ? a : m).toLocaleString('en-IN');
+    if (m === 0) { el.textContent = '0'; return; }
+    var display = isAnnual ? Math.round(m * 0.8) : m;
+    el.textContent = display.toLocaleString('en-IN');
   });
   document.querySelectorAll('.annual-note').forEach(function(el) { el.style.display = isAnnual ? '' : 'none'; });
   document.querySelectorAll('.monthly-note').forEach(function(el) { el.style.display = isAnnual ? 'none' : ''; });
 }
 function toggleFaq(el) { el.closest('.faq-item').classList.toggle('open'); }
 </script>
-</body>
-</html>
+
+{% endblock %}

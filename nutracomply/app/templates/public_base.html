@@ -19,7 +19,17 @@
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="RegBite" />
   <meta property="og:title" content="{% block og_title %}{{ self.title() }} — RegBite{% endblock %}" />
-  <meta property="og:description" content="AI-powered FSSAI compliance platform for India's nutraceutical industry." />
+  <meta property="og:description" content="{% block og_description %}AI-powered FSSAI compliance platform for India's nutraceutical industry.{% endblock %}" />
+  <meta property="og:url" content="{{ request.url.scheme }}://{{ request.url.netloc }}{{ request.url.path }}" />
+  <meta property="og:image" content="https://regbite.com/static/img/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@regbite" />
+  <meta name="twitter:title" content="{% block tw_title %}{{ self.title() }} — RegBite{% endblock %}" />
+  <meta name="twitter:description" content="{% block tw_description %}AI-powered FSSAI compliance for India's nutraceutical industry.{% endblock %}" />
+  <meta name="twitter:image" content="https://regbite.com/static/img/og-image.png" />
   <link rel="canonical" href="{{ request.url.scheme }}://{{ request.url.netloc }}{{ request.url.path }}" />
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
   <link rel="icon" type="image/png" href="/static/img/logo.png" />
@@ -113,6 +123,30 @@
 
     {% block extra_css %}{% endblock %}
   </style>
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "RegBite",
+    "applicationCategory": "BusinessApplication",
+    "description": "AI-powered FSSAI compliance platform for India's nutraceutical, health supplement, and Ayurvedic product industry.",
+    "url": "https://regbite.com",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "INR",
+      "description": "Free Starter plan available"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "RegBite",
+      "url": "https://regbite.com"
+    }
+  }
+  </script>
+  {% block extra_head %}{% endblock %}
 </head>
 <body>
 
@@ -133,7 +167,7 @@
     <a href="/dashboard" class="btn btn-primary">Dashboard</a>
     {% else %}
     <a href="/login" class="btn btn-ghost">Sign In</a>
-    <a href="/register" class="btn btn-primary">Get Started</a>
+    <a href="/register" class="btn btn-primary" onclick="gtag('event','sign_up_click',{event_category:'Nav',event_label:'topbar'})">Get Started</a>
     {% endif %}
   </div>
   <button class="nav-hamburger" onclick="document.getElementById('navLinks').classList.toggle('open')" aria-label="Menu">☰</button>

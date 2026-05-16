@@ -312,7 +312,7 @@
         Know exactly which of your SKUs are FSSAI compliant — right now. Get personalised WhatsApp alerts when a regulation changes. Generate audit-ready gap reports in minutes. No consultant calls. No spreadsheets. No surprises.
       </p>
       <div class="hero-ctas">
-        <a href="/register" class="btn btn-primary btn-xl">Start Your Free 14-Day Trial &rarr;</a>
+        <a href="/register" class="btn btn-primary btn-xl" onclick="gtag('event','sign_up_click',{event_category:'CTA',event_label:'hero'})">Start Your Free 14-Day Trial &rarr;</a>
         <a href="#features" class="btn btn-ghost btn-xl">See How It Works</a>
       </div>
       <p class="hero-trust">
@@ -575,59 +575,60 @@
     <div class="pricing-row">
       <div class="price-card">
         <div class="price-name">Starter</div>
-        <div class="price-monthly">&#8377;7,999 <span>/ month</span></div>
-        <div class="price-annual">&#8377;79,999 / year (billed annually)</div>
-        <div class="price-savings">Save &#8377;16,000 on annual billing</div>
-        <div class="price-limit">Up to 15 SKUs</div>
+        <div class="price-monthly">&#8377;0 <span>/ month</span></div>
+        <div class="price-annual">Free forever — no credit card required</div>
+        <div class="price-limit">Up to 3 products &middot; 5 scans/month</div>
         <ul class="price-list">
-          <li>Compliance dashboard &amp; score</li>
-          <li>Ingredient checker</li>
-          <li>Daily FSSAI regulatory alerts</li>
-          <li>WhatsApp notifications</li>
-          <li>FoSCoS renewal tracking</li>
+          <li>Full FSSAI compliance engine (64 rules)</li>
+          <li>AI label scanner</li>
+          <li>Regulation change alerts</li>
+          <li>PDF compliance reports</li>
+          <li>Violations triage dashboard</li>
         </ul>
-        <a href="/register" class="btn btn-ghost" style="width:100%;justify-content:center;">Get Started &rarr;</a>
+        <a href="/register" class="btn btn-ghost" style="width:100%;justify-content:center;"
+           onclick="gtag('event','sign_up_click',{event_category:'Landing',event_label:'pricing_starter'})">Get Started Free &rarr;</a>
       </div>
 
       <div class="price-card featured">
         <div class="price-badge">⭐ Most Popular</div>
         <div class="price-name">Growth</div>
-        <div class="price-monthly">&#8377;21,999 <span>/ month</span></div>
-        <div class="price-annual">&#8377;2,09,999 / year (billed annually)</div>
-        <div class="price-savings">Save &#8377;54,000 on annual billing</div>
-        <div class="price-limit">Up to 60 SKUs</div>
+        <div class="price-monthly">&#8377;2,999 <span>/ month</span></div>
+        <div class="price-annual">&#8377;29,990 / year &mdash; save 20%</div>
+        <div class="price-limit">Up to 25 products &middot; 100 scans/month</div>
         <ul class="price-list">
           <li>Everything in Starter</li>
-          <li>Automated gap reports</li>
-          <li>Label audit tool (AI Vision)</li>
-          <li>Health claim validator</li>
-          <li>FoSCoS auto-fill renewal form</li>
+          <li>Bulk label upload</li>
+          <li>License renewal tracker</li>
+          <li>5 team seats</li>
+          <li>Priority support</li>
         </ul>
-        <a href="/register" class="btn btn-primary" style="width:100%;justify-content:center;">Start Free Trial &rarr;</a>
-        <div style="text-align:center;margin-top:0.75rem;font-size:0.72rem;color:var(--g400);">14-day free trial &middot; No credit card required</div>
+        <a href="/billing" class="btn btn-primary" style="width:100%;justify-content:center;"
+           onclick="gtag('event','begin_checkout',{currency:'INR',value:2999})">Upgrade to Growth &rarr;</a>
+        <div style="text-align:center;margin-top:0.75rem;font-size:0.72rem;color:var(--g400);">Secure payment via Razorpay</div>
       </div>
 
       <div class="price-card">
         <div class="price-name">Enterprise</div>
-        <div class="price-monthly">&#8377;54,999 <span>/ month</span></div>
-        <div class="price-annual">&#8377;4,99,999 / year (billed annually)</div>
-        <div class="price-savings">Save &#8377;1,60,000 on annual billing</div>
-        <div class="price-limit">Unlimited SKUs</div>
+        <div class="price-monthly">Custom <span style="font-size:0.9rem;font-weight:400;">pricing</span></div>
+        <div class="price-annual">Tailored for large manufacturers &amp; consultants</div>
+        <div class="price-limit">Unlimited products &amp; scans</div>
         <ul class="price-list">
           <li>Everything in Growth</li>
-          <li>Supplier &amp; import compliance tracker</li>
-          <li>Board-ready compliance reports</li>
-          <li>Up to 10 team users</li>
-          <li>Monthly expert consultation call</li>
+          <li>White-label compliance reports</li>
+          <li>Custom compliance rules</li>
+          <li>API access &amp; SSO integration</li>
+          <li>Dedicated compliance manager</li>
         </ul>
-        <a href="mailto:hello@regbite.in" class="btn btn-ghost" style="width:100%;justify-content:center;">Contact Sales &rarr;</a>
+        <a href="/contact" class="btn btn-ghost" style="width:100%;justify-content:center;"
+           onclick="gtag('event','generate_lead',{event_category:'Landing',event_label:'enterprise'})">Contact Sales &rarr;</a>
       </div>
     </div>
 
     <div style="margin-top:2rem;padding:1.5rem;background:var(--white);border:1px solid var(--g200);border-radius:8px;text-align:center;">
-      <p style="font-size:0.88rem;color:var(--g600);margin-bottom:0.5rem;"><strong>Not sure which plan?</strong> Start with a free audit.</p>
-      <p style="font-size:0.82rem;color:var(--g400);margin-bottom:1rem;">We scan 5 of your SKUs for free. No credit card. No commitment. Just clarity.</p>
-      <a href="/register" class="btn btn-primary btn-lg">Get My Free Compliance Audit &rarr;</a>
+      <p style="font-size:0.88rem;color:var(--g600);margin-bottom:0.5rem;"><strong>Start free, no credit card.</strong> See your compliance score in minutes.</p>
+      <p style="font-size:0.82rem;color:var(--g400);margin-bottom:1rem;">Upload your first label for free. Get an instant FSSAI compliance report with actionable fixes.</p>
+      <a href="/register" class="btn btn-primary btn-lg"
+         onclick="gtag('event','sign_up_click',{event_category:'Landing',event_label:'pricing_cta'})">Create Free Account &rarr;</a>
     </div>
   </div>
 </section>
@@ -685,7 +686,7 @@
     <h2>Stop waiting for<br>the show-cause notice.</h2>
     <p>Every week you delay is a week where a Schedule IV change could hit your product without warning. Start your free 14-day trial — no credit card required.</p>
     <div class="cta-btns">
-      <a href="/register" class="btn btn-white btn-xl">Start Your Free 14-Day Trial &rarr;</a>
+      <a href="/register" class="btn btn-white btn-xl" onclick="gtag('event','sign_up_click',{event_category:'CTA',event_label:'bottom_banner'})">Start Your Free 14-Day Trial &rarr;</a>
       <a href="/login" class="btn btn-ghost-w btn-xl">Sign In</a>
     </div>
   </div>

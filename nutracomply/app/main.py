@@ -1234,6 +1234,57 @@ async def changelog_page(request: Request):
     return templates.TemplateResponse("changelog.html", {"request": request, "user": _get_optional_user(request), "active_page": "changelog"})
 
 
+@app.get("/sitemap.xml", include_in_schema=False)
+async def sitemap_xml():
+    """XML sitemap for search engine crawlers."""
+    import datetime as _datetime
+    from fastapi.responses import Response as _Resp
+    base = "https://regbite.com"
+    urls = [
+        (base + "/",           "weekly",  "1.0"),
+        (base + "/pricing",    "monthly", "0.9"),
+        (base + "/features",   "monthly", "0.8"),
+        (base + "/about",      "monthly", "0.6"),
+        (base + "/contact",    "monthly", "0.5"),
+        (base + "/blog",       "weekly",  "0.7"),
+        (base + "/help",       "monthly", "0.6"),
+        (base + "/terms",      "yearly",  "0.3"),
+        (base + "/privacy",    "yearly",  "0.3"),
+        (base + "/changelog",  "monthly", "0.5"),
+    ]
+    today = _datetime.date.today().isoformat()
+    items = "\n".join(
+        f"  <url><loc>{loc}</loc><lastmod>{today}</lastmod>"
+        f"<changefreq>{freq}</changefreq><priority>{pri}</priority></url>"
+        for loc, freq, pri in urls
+    )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + items + "\n</urlset>"
+    )
+    return _Resp(xml, media_type="application/xml")
+
+
+@app.get("/robots.txt", include_in_schema=False)
+async def robots_txt():
+    """robots.txt for crawler control."""
+    from fastapi.responses import Response as _Resp
+    content = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /dashboard\n"
+        "Disallow: /products\n"
+        "Disallow: /labels\n"
+        "Disallow: /admin\n"
+        "Disallow: /settings\n"
+        "Disallow: /billing\n"
+        "Disallow: /api/\n\n"
+        "Sitemap: https://regbite.com/sitemap.xml\n"
+    )
+    return _Resp(content, media_type="text/plain")
+
+
 @app.get("/violations")
 async def violations_triage(request: Request, severity: str = ""):
     from app.routes.auth import get_current_user_from_cookie

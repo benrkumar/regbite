@@ -1,6 +1,6 @@
 {% extends "public_base.html" %}
-{% block title %}Contact{% endblock %}
-{% block description %}Get in touch with RegBite — request a demo, ask about enterprise plans, or send feedback.{% endblock %}
+{% block title %}Contact RegBite — FSSAI Compliance Support{% endblock %}
+{% block description %}Contact the RegBite team for FSSAI compliance questions, enterprise pricing, or technical support. We typically respond within one business day.{% endblock %}
 
 {% block extra_css %}
   .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; }
@@ -84,7 +84,7 @@
             <label class="contact-label">Message</label>
             <textarea name="message" class="contact-input" placeholder="Tell us how we can help..." required></textarea>
           </div>
-          <button type="submit" class="contact-submit">Send Message &rarr;</button>
+          <button type="submit" class="contact-submit" onclick="gtag('event','generate_lead',{event_category:'Contact',event_label:'contact_form'})">Send Message &rarr;</button>
         </form>
       </div>
 
