@@ -2,7 +2,7 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "cd ../.. && pnpm install && pnpm build --filter=@regbite/web"
+    "buildCommand": "pnpm install && pnpm build --filter=@regbite/web"
   },
   "deploy": {
     "startCommand": "HOSTNAME=0.0.0.0 node apps/web/.next/standalone/server.js",
