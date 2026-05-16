@@ -42,7 +42,8 @@ export async function retrieveWarningLetters(
     LIMIT ${topK}
   `;
 
-  return results.map((r) => ({
+  type WLRow = { id: string; subject: string | null; company_name: string; letter_url: string; raw_text: string | null; similarity: number };
+  return results.map((r: WLRow) => ({
     id: r.id,
     title: r.subject ?? `Warning Letter — ${r.company_name}`,
     content: r.raw_text ?? r.subject ?? '',
@@ -76,7 +77,8 @@ export async function retrieveNDINotifications(
     LIMIT ${topK}
   `;
 
-  return results.map((r) => ({
+  type NDIRow = { id: string; ingredient_name: string; fda_response: string | null; raw_text: string | null; similarity: number };
+  return results.map((r: NDIRow) => ({
     id: r.id,
     title: `NDI Notification — ${r.ingredient_name}`,
     content: r.raw_text ?? r.fda_response ?? '',
@@ -111,7 +113,8 @@ export async function retrieveRegulatoryChanges(
     LIMIT ${topK}
   `;
 
-  return results.map((r) => ({
+  type RegRow = { id: string; document_title: string; summary: string | null; source_url: string | null; source: string; similarity: number };
+  return results.map((r: RegRow) => ({
     id: r.id,
     title: r.document_title,
     content: r.summary ?? '',
