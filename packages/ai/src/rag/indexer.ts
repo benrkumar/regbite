@@ -22,7 +22,7 @@ function chunk(text: string): string[] {
 /** Index all warning letters that don't yet have embeddings */
 export async function indexWarningLetters(): Promise<{ indexed: number; errors: number }> {
   const unindexed = await prisma.fDAWarningLetter.findMany({
-    where: { embedding: null, rawText: { not: null } },
+    where: { embedding: null, rawText: { not: null } } as never,
     select: { id: true, rawText: true, subject: true, companyName: true },
     take: 100,
   });
@@ -55,7 +55,7 @@ export async function indexWarningLetters(): Promise<{ indexed: number; errors: 
 /** Index NDI notifications that don't yet have embeddings */
 export async function indexNDINotifications(): Promise<{ indexed: number; errors: number }> {
   const unindexed = await prisma.nDINotification.findMany({
-    where: { embedding: null },
+    where: { embedding: null } as never,
     select: { id: true, ingredientName: true, fdaResponse: true, rawText: true },
     take: 200,
   });
@@ -88,7 +88,7 @@ export async function indexNDINotifications(): Promise<{ indexed: number; errors
 /** Index regulatory changes that don't yet have embeddings */
 export async function indexRegulatoryChanges(): Promise<{ indexed: number; errors: number }> {
   const unindexed = await prisma.regulatoryChange.findMany({
-    where: { embedding: null },
+    where: { embedding: null } as never,
     select: { id: true, documentTitle: true, summary: true },
     take: 200,
   });
