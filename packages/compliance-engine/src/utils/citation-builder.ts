@@ -55,6 +55,11 @@ const CITATIONS: Record<string, Citation> = {
     title: 'FDA Advisory List of Dietary Supplement Ingredients',
     url: 'https://www.fda.gov/food/dietary-supplement-ingredient-advisory-list/',
   },
+  FDA_NDI: {
+    code: 'FDA NDI Notification Process',
+    title: 'New Dietary Ingredient Notification Process',
+    url: 'https://www.fda.gov/food/dietary-supplements/new-dietary-ingredient-notification-process',
+  },
 };
 
 export function cite(key: keyof typeof CITATIONS): string {
