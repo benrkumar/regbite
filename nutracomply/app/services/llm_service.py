@@ -923,7 +923,7 @@ def _call_gemma_chat(system_prompt: str, user_message: str,
     headers = {
         "content-type": "application/json",
         "Authorization": f"Bearer {api_key}",
-        "HTTP-Referer": "https://steadfast-courage-production-0f66.up.railway.app",
+        "HTTP-Referer": "https://regbite.com",
         "X-Title": "RegBite",
     }
 

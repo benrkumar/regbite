@@ -107,7 +107,7 @@ async def llm_provider_status(request: Request, db: Session = Depends(get_db)):
             headers = {
                 "content-type": "application/json",
                 "Authorization": f"Bearer {settings.openrouter_api_key}",
-                "HTTP-Referer": "https://steadfast-courage-production-0f66.up.railway.app",
+                "HTTP-Referer": "https://regbite.com",
                 "X-Title": "RegBite",
             }
             payload = {
@@ -186,7 +186,7 @@ async def llm_api_key_stats(request: Request, db: Session = Depends(get_db)):
                 "https://openrouter.ai/api/v1/auth/key",
                 headers={
                     "Authorization": f"Bearer {settings.openrouter_api_key}",
-                    "HTTP-Referer": "https://steadfast-courage-production-0f66.up.railway.app",
+                    "HTTP-Referer": "https://regbite.com",
                 },
                 timeout=10.0,
             )
@@ -252,7 +252,7 @@ async def llm_openrouter_models(request: Request, db: Session = Depends(get_db))
             "https://openrouter.ai/api/v1/models",
             headers={
                 "Authorization": f"Bearer {settings.openrouter_api_key}",
-                "HTTP-Referer": "https://steadfast-courage-production-0f66.up.railway.app",
+                "HTTP-Referer": "https://regbite.com",
             },
             timeout=15.0,
         )
