@@ -19,6 +19,25 @@ log = get_logger("regbite")
 
 settings = get_settings()
 
+# ── Sentry error monitoring ───────────────────────────────────────────────────
+if settings.sentry_dsn:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.starlette import StarletteIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        integrations=[
+            StarletteIntegration(transaction_style="url"),
+            FastApiIntegration(transaction_style="url"),
+            SqlalchemyIntegration(),
+        ],
+        traces_sample_rate=0.1,   # capture 10% of requests for performance tracing
+        send_default_pii=False,   # don't send emails / passwords to Sentry
+        environment="production",
+    )
+    log.info("Sentry initialised")
+
 # Warn if SECRET_KEY is still the default
 if settings.secret_key == "change-this-secret":
     import warnings

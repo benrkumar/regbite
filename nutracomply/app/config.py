@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     razorpay_key_secret: str = ""
     razorpay_webhook_secret: str = ""
 
+    # Sentry error monitoring
+    sentry_dsn: str = ""   # set SENTRY_DSN env var in Railway
+
     # Admin
     admin_email: str = ""
 
