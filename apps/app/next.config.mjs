@@ -9,6 +9,10 @@ const nextConfig = {
   experimental: {
     // Ensures workspace packages are included in the standalone bundle
     outputFileTracingRoot: path.join(__dirname, "../../"),
+    // Explicitly include Prisma binary engines in the standalone output
+    outputFileTracingIncludes: {
+      "/**": ["./node_modules/.prisma/client/**"],
+    },
   },
   transpilePackages: [
     "@regbite/database",
