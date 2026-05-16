@@ -41,19 +41,6 @@
     .login-title { font-size: 1.1rem; font-weight: 500; color: #111111; margin-bottom: 0.3rem; letter-spacing: -0.01em; }
     .login-subtitle { font-size: 0.82rem; color: #737373; margin-bottom: 1.6rem; }
 
-    .demo-hint {
-      background: #F5F5F5; border: 1px solid #EBEBEB;
-      border-left: 3px solid #D4D4D4;
-      border-radius: 4px; padding: 0.65rem 0.9rem;
-      font-size: 0.78rem; color: #525252;
-      margin-bottom: 1.2rem; display: flex; align-items: flex-start; gap: 0.5rem;
-    }
-    .demo-hint strong { color: #262626; }
-    .demo-hint table { width: 100%; border-collapse: collapse; margin-top: 0.4rem; }
-    .demo-hint td { padding: 0.15rem 0.3rem; font-size: 0.74rem; }
-    .demo-hint td:first-child { font-weight: 500; color: #262626; white-space: nowrap; }
-    .demo-hint td:last-child { color: #737373; }
-    .demo-hint code { background: #E5E5E5; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.72rem; }
   </style>
 </head>
 <body>
@@ -77,26 +64,12 @@
     <div class="error-banner">{{ error }}</div>
     {% endif %}
 
-    <!-- Demo credentials hint -->
-    <div class="demo-hint">
-      <div>
-        <strong>Demo accounts</strong>
-        <table>
-          <tr><th style="text-align:left">Login</th><th style="text-align:left">Password</th><th style="text-align:left">Persona</th></tr>
-          <tr><td><code>admin</code></td><td><code>admin@123</code></td><td>Super Admin — full platform control</td></tr>
-          <tr><td><code>ben</code></td><td><code>admin@123</code></td><td>Account Admin — manage products &amp; team</td></tr>
-          <tr><td><code>editor</code></td><td><code>admin@123</code></td><td>Editor — upload labels &amp; run checks</td></tr>
-          <tr><td><code>viewer</code></td><td><code>admin@123</code></td><td>Viewer — read-only dashboard access</td></tr>
-          <tr><td><code>consultant</code></td><td><code>admin@123</code></td><td>Consultant — external audit access</td></tr>
-        </table>
-      </div>
-    </div>
 
     <form method="post" action="/login">
       <div class="field">
         <label class="field-label" for="email">Username</label>
         <input class="input" type="text" id="email" name="email"
-               placeholder="admin, ben, editor, viewer, consultant" required autofocus />
+               placeholder="Username" required autofocus />
       </div>
       <div class="field">
         <label class="field-label" for="password">Password</label>

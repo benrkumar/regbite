@@ -68,7 +68,7 @@ def _run_all_startup_tasks():
         (_run_enum_migrations,     "enum_migrations"),
         (_promote_admin,           "promote_admin"),
         (_seed_initial_data,       "seed_initial_data"),
-        (_seed_demo_users,         "seed_demo_users"),
+        (_deactivate_demo_accounts, "deactivate_demo_accounts"),
         (_activate_lm_rules,       "activate_lm_rules"),
         (_auto_seed_kb_if_empty,   "auto_seed_kb"),
         (_cleanup_unknown_alerts,  "cleanup_unknown_alerts"),
@@ -517,6 +517,47 @@ def _seed_initial_data():
         db.close()
 
 
+def _deactivate_demo_accounts():
+    """
+    Deactivate demo-only accounts (editor, viewer, consultant) on every startup
+    so they cannot be used on the live site.  The SEED_DEMO_USERS env var must
+    be explicitly set to 'true' to keep them active (local dev only).
+    """
+    import os
+    if os.environ.get("SEED_DEMO_USERS", "").lower() == "true":
+        log.info("[startup] SEED_DEMO_USERS=true — skipping demo account cleanup")
+        return
+    db = None
+    try:
+        from app.models import User
+        db = SessionLocal()
+        demo_usernames = ["editor", "viewer", "consultant"]
+        deactivated = 0
+        for username in demo_usernames:
+            user = db.query(User).filter(User.email == username).first()
+            if user and user.is_active:
+                user.is_active = False
+                deactivated += 1
+        if deactivated:
+            db.commit()
+            log.warning("[startup] Deactivated %d demo account(s): %s", deactivated, demo_usernames)
+        else:
+            log.info("[startup] Demo accounts already inactive or absent")
+    except Exception as exc:
+        log.error("[startup] deactivate_demo_accounts error: %s", exc)
+        if db:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+    finally:
+        if db:
+            try:
+                db.close()
+            except Exception:
+                pass
+
+
 def _seed_demo_users():
     """
     Seed demo accounts for every persona on startup (idempotent — skip if already exist).
@@ -837,6 +878,33 @@ app.add_middleware(RequestLoggingMiddleware)
 # CSRF protection
 from app.services.csrf import CSRFMiddleware, COOKIE_NAME as CSRF_COOKIE, generate_csrf_token
 app.add_middleware(CSRFMiddleware)
+
+# Security headers
+from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
+
+class _SecurityHeadersMiddleware(_BaseHTTPMiddleware):
+    """Add hardened HTTP security headers to every response."""
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        # Prevent clickjacking
+        response.headers["X-Frame-Options"] = "DENY"
+        # Prevent MIME-type sniffing
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        # Legacy XSS filter (belt-and-braces for older browsers)
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        # Limit referrer leakage
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # Restrict browser features
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=(), payment=()"
+        )
+        # HSTS — enforce HTTPS for 1 year once on HTTPS
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
+        return response
+
+app.add_middleware(_SecurityHeadersMiddleware)
 
 # Static files
 static_dir = Path(__file__).parent / "static"
