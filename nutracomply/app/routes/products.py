@@ -157,6 +157,17 @@ async def add_product(
             msg = f"Unsupported file type '{suffix}'. Use image/PDF for labels or CSV/Excel for bulk import."
             return RedirectResponse(url=f"/products?msg={quote(msg)}&type=error", status_code=302)
 
+    # ── Duplicate name check ──
+    existing_name = db.query(Product).filter(
+        Product.user_id == user.id,
+        Product.name == name,
+        Product.is_active == True,
+    ).first()
+    if existing_name:
+        from urllib.parse import quote
+        msg = f"A product named '{name}' already exists. Use a different name or upload a new label on the existing product."
+        return RedirectResponse(url=f"/products?msg={quote(msg)}&type=error", status_code=302)
+
     # ── Create the product ──
     product = Product(
         user_id=user.id,
@@ -172,6 +183,18 @@ async def add_product(
     if file and file.filename:
         suffix = Path(file.filename).suffix.lower()
         if suffix in LABEL_EXTENSIONS:
+            # Scan quota gate
+            from app.services.quota_service import check_scan_limit
+            try:
+                scan_allowed, scan_msg = check_scan_limit(user, db)
+            except Exception as _se:
+                import logging as _log
+                _log.getLogger(__name__).error("[quota] Scan quota check failed: %s", _se)
+                scan_allowed, scan_msg = True, ""
+            if not scan_allowed:
+                from urllib.parse import quote
+                return RedirectResponse(url=f"/products?msg={quote(scan_msg)}&type=error", status_code=302)
+
             label_version = await _save_label_file(file, suffix, product.id, db)
             background_tasks.add_task(_process_label, label_version.id)
             try:
@@ -441,9 +464,11 @@ async def bulk_upload_post(
     lines = [l.strip() for l in csv_data.strip().splitlines() if l.strip()]
     added, skipped, errors = [], [], []
 
-    # Skip header if present
-    if lines and lines[0].lower().startswith("name"):
-        lines = lines[1:]
+    # Skip header if present — match "name" exactly as the first CSV column
+    if lines:
+        first_col = lines[0].split(",")[0].strip().strip('"').lower()
+        if first_col == "name":
+            lines = lines[1:]
 
     # Cap to remaining quota headroom
     headroom = get_product_headroom(user, db)
@@ -524,6 +549,17 @@ async def bulk_upload_files(
     added, skipped, errors = [], [], []
     if cap_warning:
         errors.append(cap_warning)
+
+    # Scan quota gate — check headroom before looping
+    from app.services.quota_service import check_scan_limit
+    try:
+        scan_allowed, scan_msg = check_scan_limit(user, db)
+    except Exception as _se:
+        import logging as _log
+        _log.getLogger(__name__).error("[quota] Scan quota check failed: %s", _se)
+        scan_allowed, scan_msg = True, ""
+    if not scan_allowed:
+        return RedirectResponse(url=f"/products?msg={_quote(scan_msg)}&type=error", status_code=302)
 
     # Batch tracking — one UUID for the whole upload submission
     batch_id = str(uuid.uuid4())

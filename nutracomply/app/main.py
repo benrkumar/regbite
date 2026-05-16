@@ -1240,30 +1240,64 @@ async def violations_triage(request: Request, severity: str = ""):
     from app.database import get_db
     from app.models import (
         Product, LabelVersion, ComplianceCheck, ComplianceRule,
-        CheckResult, Severity as Sev,
+        CheckResult, Severity as Sev, Notification,
     )
-    from sqlalchemy import func
+    from app.utils.alerts import get_unread_alert_count
+    from sqlalchemy import func, case
 
     db = next(get_db())
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse("/login", status_code=302)
 
-    # Latest label IDs across all user products
+    # Normalize severity filter
+    severity_filter = severity.upper() if severity else None
+    if severity_filter not in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
+        severity_filter = None
+
+    # Shared sidebar context
+    unread_alerts = get_unread_alert_count(user, db)
+    unread_notifications = db.query(Notification).filter(
+        Notification.user_id == user.id, Notification.is_read == False,
+    ).count()
+
+    # Latest label IDs across all user products (excluding ephemeral quick-checks)
     user_products = (
         db.query(Product)
-        .filter(Product.user_id == user.id, Product.is_active == True)
+        .filter(
+            Product.user_id == user.id,
+            Product.is_active == True,
+            Product.is_quick_check == False,
+        )
         .all()
     )
+    # Eagerly load label_versions so latest_label works without extra queries
+    for p in user_products:
+        _ = p.label_versions
     latest_label_ids = [p.latest_label.id for p in user_products if p.latest_label]
+
+    _common_ctx = {
+        "request": request, "user": user,
+        "unread_alerts": unread_alerts,
+        "unread_notifications": unread_notifications,
+    }
 
     if not latest_label_ids:
         return templates.TemplateResponse("violations.html", {
-            "request": request, "user": user,
+            **_common_ctx,
             "grouped": [], "total_fails": 0,
-            "severity_filter": severity, "sev_counts": {},
+            "severity_filter": severity_filter, "sev_counts": {},
             "violation_count": 0,
         })
+
+    # Severity sort order (CRITICAL first)
+    _sev_order = case(
+        (ComplianceRule.severity == "CRITICAL", 0),
+        (ComplianceRule.severity == "HIGH", 1),
+        (ComplianceRule.severity == "MEDIUM", 2),
+        (ComplianceRule.severity == "LOW", 3),
+        else_=4,
+    )
 
     # Aggregate FAILs by rule (across latest labels)
     fail_rows = (
@@ -1275,11 +1309,11 @@ async def violations_triage(request: Request, severity: str = ""):
             ComplianceRule.active == True,
         )
         .group_by(ComplianceRule.id)
-        .order_by(ComplianceRule.severity.desc(), func.count(ComplianceCheck.id).desc())
+        .order_by(_sev_order, func.count(ComplianceCheck.id).desc())
         .all()
     )
 
-    # Severity counts for filter chips (before applying the severity filter)
+    # Severity counts for filter chips (always computed across ALL fails)
     sev_counts: dict = {}
     for rule, count in fail_rows:
         key = rule.severity.value if rule.severity else "LOW"
@@ -1287,10 +1321,10 @@ async def violations_triage(request: Request, severity: str = ""):
 
     violation_count = len(fail_rows)
 
-    # For each rule, find which products are affected
+    # For each rule, find which products are affected (apply severity filter here)
     grouped = []
     for rule, count in fail_rows:
-        if severity and (rule.severity is None or rule.severity.value != severity):
+        if severity_filter and (rule.severity is None or rule.severity.value != severity_filter):
             continue
         affected_products = (
             db.query(Product)
@@ -1304,18 +1338,21 @@ async def violations_triage(request: Request, severity: str = ""):
             .distinct()
             .all()
         )
+        # Eagerly load label_versions for the pill links in the template
+        for ap in affected_products:
+            _ = ap.label_versions
         grouped.append({
             "rule": rule,
             "affected_count": count,
-            "products": affected_products[:5],
-            "more": max(0, len(affected_products) - 5),
+            "products": affected_products[:6],
+            "more": max(0, len(affected_products) - 6),
         })
 
     return templates.TemplateResponse("violations.html", {
-        "request": request, "user": user,
+        **_common_ctx,
         "grouped": grouped,
         "total_fails": len(fail_rows),
-        "severity_filter": severity,
+        "severity_filter": severity_filter,
         "sev_counts": sev_counts,
         "violation_count": violation_count,
     })

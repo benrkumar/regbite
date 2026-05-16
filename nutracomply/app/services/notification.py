@@ -14,6 +14,7 @@ Email Workflows:
  10. Report Shared         — sent when a compliance report link is created
 """
 
+import html
 import smtplib
 from datetime import datetime
 from email.mime.text import MIMEText
@@ -112,7 +113,7 @@ def send_alert_email(alert, product=None, user=None):
     if not recipients:
         return
 
-    product_name = product.name if product else "Unknown Product"
+    product_name = html.escape(product.name if product else "Unknown Product")
     severity_color = "#DC2626" if alert.severity.value == "CRITICAL" else "#EA580C"
     subject = f"[RegBite] {alert.severity.value}: {alert.title}"
 
@@ -123,11 +124,11 @@ def send_alert_email(alert, product=None, user=None):
         violations_html += (
             f"<tr>"
             f"<td style='padding:8px;border-bottom:1px solid #f3f4f6;'>"
-            f"<span style='color:{sev_color};font-weight:600;font-size:0.75em;'>{sev}</span> "
-            f"<strong>{v.get('rule_code', '')}</strong></td>"
-            f"<td style='padding:8px;border-bottom:1px solid #f3f4f6;'>{v.get('message', '')}</td>"
+            f"<span style='color:{sev_color};font-weight:600;font-size:0.75em;'>{html.escape(sev)}</span> "
+            f"<strong>{html.escape(v.get('rule_code', ''))}</strong></td>"
+            f"<td style='padding:8px;border-bottom:1px solid #f3f4f6;'>{html.escape(v.get('message', ''))}</td>"
             f"<td style='padding:8px;border-bottom:1px solid #f3f4f6;font-size:0.85em;color:#6b7280;'>"
-            f"{v.get('remediation', '')}</td>"
+            f"{html.escape(v.get('remediation', ''))}</td>"
             f"</tr>"
         )
 
@@ -137,7 +138,7 @@ def send_alert_email(alert, product=None, user=None):
 
     <div style='background:#fef2f2;border-left:4px solid {severity_color};padding:12px 16px;margin:0 0 20px;border-radius:4px;'>
         <p style='margin:0;'><strong>Product:</strong> {product_name}</p>
-        <p style='margin:4px 0 0;'>{alert.message}</p>
+        <p style='margin:4px 0 0;'>{html.escape(alert.message or '')}</p>
     </div>
 
     <h3 style='margin:0 0 8px;font-size:1em;'>Violations Found</h3>
