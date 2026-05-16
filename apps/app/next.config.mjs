@@ -17,6 +17,17 @@ const nextConfig = {
     "@regbite/config",
     "@regbite/ai",
   ],
+  webpack: (config) => {
+    // Resolve .js imports to .ts/.tsx source files in workspace packages
+    // This is the ESM TypeScript convention (write .js, resolve to .ts)
+    config.resolve.extensionAlias = {
+      ".js": [".ts", ".tsx", ".js", ".jsx"],
+      ".jsx": [".tsx", ".jsx"],
+      ".mjs": [".mts", ".mjs"],
+      ".cjs": [".cts", ".cjs"],
+    };
+    return config;
+  },
 };
 
 // Wrap with Sentry if DSN is configured in production
