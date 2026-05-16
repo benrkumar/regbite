@@ -377,7 +377,120 @@ def send_subscription_cancelled_email(user, access_until: str):
     _send_email(subject, body, _send_to([user.email]))
 
 
-# ── 8. Password Changed ─────────────────────────────────────────────────────
+# ── 8. Trial Ending ─────────────────────────────────────────────────────────
+
+def send_trial_ending_email(user, days_left: int, trial_ends: str):
+    """Warn user that their free trial ends soon (sent at D-2)."""
+    if not user or not user.email:
+        return
+    plural = "s" if days_left != 1 else ""
+    subject = f"[RegBite] Your free trial ends in {days_left} day{plural}"
+    body = f"""
+    <h2 style='color:#111;margin:0 0 8px;'>Trial ending soon</h2>
+    <p>Hi {html.escape(user.name.split()[0])},</p>
+    <p>Your 14-day free trial ends on <strong>{trial_ends}</strong>
+       ({days_left} day{plural} left).</p>
+
+    <div style='background:#fffbeb;border-left:4px solid #f59e0b;padding:12px 16px;margin:20px 0;border-radius:4px;'>
+        <p style='margin:0;'>Subscribe now to keep full access to your products,
+           scans, and compliance reports. Your data is safe regardless.</p>
+    </div>
+
+    <p style='margin:20px 0 0;'>
+        <a href='{_BASE}/billing'
+           style='display:inline-block;padding:10px 20px;background:#111;color:#fff;
+                  text-decoration:none;border-radius:4px;font-weight:500;'>
+            Choose a Plan &rarr;
+        </a>
+    </p>
+    """
+    _send_email(subject, body, _send_to([user.email]))
+
+
+def send_trial_expired_email(user):
+    """Notify user that their free trial has ended."""
+    if not user or not user.email:
+        return
+    subject = "[RegBite] Your free trial has ended"
+    body = f"""
+    <h2 style='color:#111;margin:0 0 8px;'>Free trial ended</h2>
+    <p>Hi {html.escape(user.name.split()[0])},</p>
+    <p>Your 14-day free trial has ended. Your account is now on the Starter (free) plan,
+       but all your data — products, labels, and reports — is safe.</p>
+
+    <div style='background:#f0f9ff;border-left:4px solid #3b82f6;padding:12px 16px;margin:20px 0;border-radius:4px;'>
+        <p style='margin:0;'>Subscribe anytime to restore full Growth-plan access.</p>
+    </div>
+
+    <p style='margin:20px 0 0;'>
+        <a href='{_BASE}/billing'
+           style='display:inline-block;padding:10px 20px;background:#111;color:#fff;
+                  text-decoration:none;border-radius:4px;font-weight:500;'>
+            Subscribe now &rarr;
+        </a>
+    </p>
+    """
+    _send_email(subject, body, _send_to([user.email]))
+
+
+def send_renewal_email(user, plan: str, amount_display: str, next_billing: str):
+    """Confirm a successful subscription renewal."""
+    if not user or not user.email:
+        return
+    from app.services.billing_service import PLANS as _PLANS
+    plan_name = _PLANS.get(plan, {}).get("name", plan.title())
+    subject = f"[RegBite] {plan_name} plan renewed — {amount_display}"
+    body = f"""
+    <h2 style='color:#111;margin:0 0 8px;'>Subscription Renewed</h2>
+    <p>Hi {html.escape(user.name.split()[0])},</p>
+    <p>Your <strong>{plan_name}</strong> subscription has been renewed
+       for <strong>{amount_display}</strong>.</p>
+
+    <div style='background:#f0fdf4;border-left:4px solid #22c55e;padding:12px 16px;margin:20px 0;border-radius:4px;'>
+        <p style='margin:0;'>Next billing date: <strong>{next_billing}</strong></p>
+    </div>
+
+    <p style='margin:20px 0 0;'>
+        <a href='{_BASE}/billing'
+           style='display:inline-block;padding:10px 20px;background:#111;color:#fff;
+                  text-decoration:none;border-radius:4px;font-weight:500;'>
+            View Billing
+        </a>
+    </p>
+    """
+    _send_email(subject, body, _send_to([user.email]))
+
+
+def send_payment_failed_email(user, plan: str):
+    """Alert user that their recurring subscription payment failed."""
+    if not user or not user.email:
+        return
+    from app.services.billing_service import PLANS as _PLANS
+    plan_name = _PLANS.get(plan, {}).get("name", plan.title())
+    subject = f"[RegBite] Action required — {plan_name} payment failed"
+    body = f"""
+    <h2 style='color:#DC2626;margin:0 0 8px;'>Payment Failed</h2>
+    <p>Hi {html.escape(user.name.split()[0])},</p>
+    <p>We couldn't process your <strong>{plan_name}</strong> subscription payment.
+       Your account access has been temporarily suspended.</p>
+
+    <div style='background:#fef2f2;border-left:4px solid #DC2626;padding:12px 16px;margin:20px 0;border-radius:4px;'>
+        <p style='margin:0;'>Please update your payment method or re-subscribe
+           to restore full access. Your data is safe.</p>
+    </div>
+
+    <p style='margin:20px 0 0;'>
+        <a href='{_BASE}/billing'
+           style='display:inline-block;padding:10px 20px;background:#111;color:#fff;
+                  text-decoration:none;border-radius:4px;font-weight:500;'>
+            Update payment &rarr;
+        </a>
+    </p>
+    """
+    _send_email(subject, body, _send_to([user.email]))
+
+
+# ── 9. Password Changed ─────────────────────────────────────────────────────
 
 def send_password_changed_email(user):
     """Security notification when password is changed."""
@@ -400,7 +513,7 @@ def send_password_changed_email(user):
     _send_email(subject, body, _send_to([user.email]))
 
 
-# ── 9. License Expiry Reminder ───────────────────────────────────────────────
+# ── 10. License Expiry Reminder ──────────────────────────────────────────────
 
 def send_license_expiry_email(user, licenses: list):
     """
@@ -465,7 +578,7 @@ def send_license_expiry_email(user, licenses: list):
     _send_email(subject, body, _send_to([user.email]))
 
 
-# ── 10. Report Shared ────────────────────────────────────────────────────────
+# ── 11. Report Shared ────────────────────────────────────────────────────────
 
 def send_report_shared_email(user, product_name: str, share_url: str, expires_at: str):
     """Notify user that their compliance report share link was created."""
@@ -493,7 +606,7 @@ def send_report_shared_email(user, product_name: str, share_url: str, expires_at
     _send_email(subject, body, _send_to([user.email]))
 
 
-# ── 11. Bulk Upload Complete ─────────────────────────────────────────────────
+# ── 12. Bulk Upload Complete ─────────────────────────────────────────────────
 
 def send_bulk_complete_email(user, results: list):
     """Send a summary email when all labels in a bulk upload batch are analyzed."""

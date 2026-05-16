@@ -77,6 +77,7 @@ def _run_all_startup_tasks():
         (_promote_admin,           "promote_admin"),
         (_seed_initial_data,       "seed_initial_data"),
         (_deactivate_demo_accounts, "deactivate_demo_accounts"),
+        (_check_trial_expiry,      "check_trial_expiry"),
         (_activate_lm_rules,       "activate_lm_rules"),
         (_auto_seed_kb_if_empty,   "auto_seed_kb"),
         (_cleanup_unknown_alerts,  "cleanup_unknown_alerts"),
@@ -564,6 +565,78 @@ def _deactivate_demo_accounts():
                 db.close()
             except Exception:
                 pass
+
+
+def _check_trial_expiry():
+    """Send D-2 trial-ending emails and expire any trials that have passed their end date.
+
+    Runs at every startup (typically daily on Railway restarts / deploys).
+    Idempotent: re-sending the same D-2 email on the same day is acceptable
+    because restarts are infrequent.
+    """
+    from datetime import timedelta
+    from app.models import Subscription, SubscriptionStatus
+
+    db = SessionLocal()
+    try:
+        now = __import__("datetime").datetime.utcnow()
+
+        # ── Trials ending in the next 1–2 days → warning email ──────────────
+        warning_start = now + timedelta(days=1)
+        warning_end   = now + timedelta(days=2)
+        ending_soon = (
+            db.query(Subscription)
+            .filter(
+                Subscription.status == SubscriptionStatus.TRIALING,
+                Subscription.trial_ends_at >= warning_start,
+                Subscription.trial_ends_at <= warning_end,
+            )
+            .all()
+        )
+        for sub in ending_soon:
+            try:
+                days_left = max(1, (sub.trial_ends_at - now).days)
+                from app.services.notification import send_trial_ending_email
+                send_trial_ending_email(
+                    sub.user, days_left,
+                    sub.trial_ends_at.strftime("%d %b %Y"),
+                )
+            except Exception as exc:
+                log.warning("[startup] trial_ending email failed for sub %s: %s", sub.id, exc)
+
+        # ── Trials already past end date → expire them ───────────────────────
+        expired = (
+            db.query(Subscription)
+            .filter(
+                Subscription.status == SubscriptionStatus.TRIALING,
+                Subscription.trial_ends_at < now,
+            )
+            .all()
+        )
+        for sub in expired:
+            try:
+                sub.status = SubscriptionStatus.CANCELLED
+                if sub.user and sub.user.plan:
+                    from app.models import PlanType
+                    sub.user.plan = PlanType.FREE
+                db.commit()
+                from app.services.notification import send_trial_expired_email
+                send_trial_expired_email(sub.user)
+            except Exception as exc:
+                log.warning("[startup] trial expiry failed for sub %s: %s", sub.id, exc)
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+
+        log.info(
+            "[startup] check_trial_expiry: %d ending-soon, %d expired",
+            len(ending_soon), len(expired),
+        )
+    except Exception as exc:
+        log.error("[startup] check_trial_expiry error: %s", exc)
+    finally:
+        db.close()
 
 
 def _auto_seed_kb_if_empty():

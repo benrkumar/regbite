@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     razorpay_key_id: str = ""
     razorpay_key_secret: str = ""
     razorpay_webhook_secret: str = ""
+    # Razorpay recurring plan IDs (created in Razorpay Dashboard → Subscriptions → Plans)
+    razorpay_plan_free_monthly: str = ""
+    razorpay_plan_free_annual: str = ""
+    razorpay_plan_growth_monthly: str = ""
+    razorpay_plan_growth_annual: str = ""
 
     # Sentry error monitoring
     sentry_dsn: str = ""   # set SENTRY_DSN env var in Railway

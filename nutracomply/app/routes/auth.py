@@ -495,6 +495,24 @@ async def register(
     db.commit()
     db.refresh(user)
 
+    # Create 14-day Growth trial subscription (Growth-level access during trial)
+    try:
+        from app.models import Subscription, SubscriptionStatus, PlanType
+        trial_end = datetime.utcnow() + timedelta(days=14)
+        trial_sub = Subscription(
+            user_id=user.id,
+            plan=PlanType.GROWTH,
+            status=SubscriptionStatus.TRIALING,
+            trial_ends_at=trial_end,
+            current_period_start=datetime.utcnow(),
+            current_period_end=trial_end,
+        )
+        user.plan = PlanType.GROWTH  # sync denormalized field for fast lookups
+        db.add(trial_sub)
+        db.commit()
+    except Exception as e:
+        print(f"[register] Subscription seed failed: {e}")
+
     # Seed demo products for new regular users
     try:
         _seed_demo_products(user, db)

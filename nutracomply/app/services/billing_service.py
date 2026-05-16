@@ -148,6 +148,68 @@ def verify_webhook_signature(body: bytes, signature: str) -> bool:
         return False
 
 
+def get_razorpay_plan_id(plan: str, billing: str) -> str | None:
+    """Return the Razorpay Plan ID for a plan+billing combo, or None if not configured.
+
+    Expects env vars like RAZORPAY_PLAN_GROWTH_MONTHLY / RAZORPAY_PLAN_FREE_ANNUAL, etc.
+    The `plan` key "free" corresponds to the Starter plan at ₹7,999.
+    """
+    settings = get_settings()
+    attr = f"razorpay_plan_{plan}_{billing}"   # e.g. razorpay_plan_growth_monthly
+    return getattr(settings, attr, "") or None
+
+
+def create_razorpay_subscription(user_id: int, plan: str, billing: str) -> dict:
+    """
+    Create a Razorpay Subscription (recurring) for the given plan.
+    Returns {"subscription_id": str, "short_url": str} or {"error": str}.
+    """
+    settings = get_settings()
+    if not settings.razorpay_key_id or not settings.razorpay_key_secret:
+        return {"error": "Razorpay not configured."}
+
+    plan_id = get_razorpay_plan_id(plan, billing)
+    if not plan_id:
+        return {
+            "error": (
+                f"Razorpay recurring plan not configured for {plan}/{billing}. "
+                "Set RAZORPAY_PLAN_* env vars in Railway."
+            )
+        }
+
+    try:
+        import requests as http_requests
+        response = http_requests.post(
+            "https://api.razorpay.com/v1/subscriptions",
+            auth=(settings.razorpay_key_id, settings.razorpay_key_secret),
+            json={
+                "plan_id": plan_id,
+                "total_count": 120,       # 10-year cap; Razorpay requires a number
+                "quantity": 1,
+                "customer_notify": 0,     # RegBite sends its own emails
+                "notes": {
+                    "user_id": str(user_id),
+                    "plan": plan,
+                    "billing": billing,
+                },
+            },
+            timeout=10,
+        )
+        data = response.json()
+        if response.status_code != 200:
+            return {
+                "error": data.get("error", {}).get(
+                    "description", "Razorpay subscription creation failed"
+                )
+            }
+        return {
+            "subscription_id": data["id"],
+            "short_url": data.get("short_url", ""),
+        }
+    except Exception as e:
+        return {"error": f"Payment service unavailable: {e}"}
+
+
 def get_plan_limits(plan: str) -> dict:
     """Return limits for a given plan name. Raises KeyError for unknown plans."""
     if plan not in PLANS:

@@ -227,6 +227,25 @@
 {% set sub_status   = subscription.status.value if subscription and subscription.status else "active" %}
 {% set is_growth    = current_plan == "growth" %}
 
+{# ── Trial banner ── #}
+{% if sub_status == "trialing" and trial_days_left is not none %}
+<div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;
+            padding:0.85rem 1.1rem;margin-bottom:1.25rem;font-size:0.875rem;
+            display:flex;align-items:center;gap:0.6rem;">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#d97706"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+    <line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+  <span>
+    <strong>Free trial active</strong> —
+    {{ trial_days_left }} day{{ 's' if trial_days_left != 1 else '' }} remaining
+    (expires {{ trial_ends_display }}).
+    Subscribe below to keep Growth-level access.
+  </span>
+</div>
+{% endif %}
+
 <div class="billing-grid">
 
   {# ── Current Plan Card ── #}
@@ -240,18 +259,14 @@
           {% endif %}
         </div>
         <div class="plan-meta" style="margin-top:0.2rem;">
-          {% if is_growth %}
-            {% if sub_status == "active" %}
-              <span class="plan-pill pill-active">Active</span>
-            {% elif sub_status == "cancelled" %}
-              <span class="plan-pill pill-cancelled">Cancelled</span>
-            {% elif sub_status == "past_due" %}
-              <span class="plan-pill pill-past-due">Past Due</span>
-            {% elif sub_status == "trialing" %}
-              <span class="plan-pill pill-trialing">Trial</span>
-            {% else %}
-              <span class="plan-pill pill-free">{{ sub_status|title }}</span>
-            {% endif %}
+          {% if sub_status == "trialing" %}
+            <span class="plan-pill pill-trialing">Trial</span>
+          {% elif sub_status == "active" %}
+            <span class="plan-pill pill-active">Active</span>
+          {% elif sub_status == "cancelled" %}
+            <span class="plan-pill pill-cancelled">Cancelled</span>
+          {% elif sub_status == "past_due" %}
+            <span class="plan-pill pill-past-due">Past Due</span>
           {% else %}
             <span class="plan-pill pill-free">Free</span>
           {% endif %}
@@ -264,8 +279,12 @@
       {% endif %}
     </div>
 
-    {% if is_growth and subscription %}
-      {% if subscription.current_period_start %}
+    {% if subscription %}
+      {% if sub_status == "trialing" and subscription.trial_ends_at %}
+      <div class="plan-meta">
+        <strong>Trial ends:</strong> {{ subscription.trial_ends_at.strftime('%d %b %Y') }}
+      </div>
+      {% elif subscription.current_period_start %}
       <div class="plan-meta">
         <strong>Period:</strong>
         {{ subscription.current_period_start.strftime('%d %b %Y') }}
@@ -279,39 +298,51 @@
       </div>
       {% endif %}
     {% else %}
-      {# Free plan usage bar — product count #}
+      {# No subscription at all — show starter usage bar #}
       {% set product_count = user.products|length if user.products is defined else 0 %}
+      {% set plan_limit = plans.free.product_limit %}
       <div class="usage-bar-wrap">
         <div class="usage-bar-label">
           <span>Products used</span>
-          <span>{{ product_count }} / 3</span>
+          <span>{{ product_count }} / {{ plan_limit }}</span>
         </div>
         <div class="usage-bar-track">
-          <div class="usage-bar-fill" style="width:{{ [(product_count / 3 * 100), 100]|min }}%;"></div>
+          <div class="usage-bar-fill" style="width:{{ [(product_count / plan_limit * 100), 100]|min }}%;"></div>
         </div>
       </div>
     {% endif %}
 
     <div class="plan-actions">
-      {% if is_growth and sub_status == "active" %}
+      {% if sub_status == "active" %}
         <form method="post" action="/billing/cancel"
-              onsubmit="return confirm('Cancel your Growth subscription? Access continues until the end of the current billing period.')">
+              onsubmit="return confirm('Cancel your subscription? Access continues until the end of the current billing period.')">
+          <input type="hidden" name="csrf_token" value="{{ request.cookies.get('_csrf', '') }}">
           <button type="submit" class="btn btn-outline btn-sm" style="color:#111111;border-color:#D4D4D4;">
             Cancel Subscription
           </button>
         </form>
-      {% elif is_growth and sub_status == "cancelled" %}
-        <a href="/billing" class="btn btn-primary btn-sm">Re-subscribe</a>
+      {% elif sub_status == "cancelled" %}
+        <a href="#upgrade-section" class="btn btn-primary btn-sm">Re-subscribe &rarr;</a>
+      {% elif sub_status == "past_due" %}
+        <a href="#upgrade-section" class="btn btn-primary btn-sm">Restore access &rarr;</a>
+      {% elif sub_status == "trialing" %}
+        <a href="#upgrade-section" class="btn btn-primary btn-sm">Subscribe now &rarr;</a>
       {% else %}
         <a href="#upgrade-section" class="btn btn-primary btn-sm">Upgrade to Growth &rarr;</a>
       {% endif %}
     </div>
   </div>
 
-  {# ── Upgrade Card (only for free/non-growth users) ── #}
-  {% if not is_growth %}
+  {# ── Upgrade / plan summary card ── #}
+  {% if sub_status not in ("active",) or current_plan != "growth" %}
+  {# Show upgrade card for: free, trialing, cancelled, past_due users, and anyone not on Growth #}
   <div class="upgrade-card" id="upgrade-section">
-    <div class="upgrade-card-title">Upgrade to Growth</div>
+    <div class="upgrade-card-title">
+      {% if sub_status == "trialing" %}Subscribe to Growth
+      {% elif sub_status in ("cancelled", "past_due") %}Restore Growth Access
+      {% else %}Upgrade to Growth
+      {% endif %}
+    </div>
     <div style="margin-bottom:0.6rem;">
 
       <div class="billing-toggle-row">
@@ -321,11 +352,14 @@
           <span class="toggle-slider"></span>
         </label>
         <label>Annual</label>
-        <span class="save-chip">Save 20%</span>
+        <span class="save-chip">Save ~20%</span>
       </div>
 
-      <div class="upgrade-price">
-        &#8377;<span id="priceDisplay">21,999</span>
+      {# Server-side price values so JS just reads from data attributes #}
+      <div class="upgrade-price"
+           data-monthly="{{ "{:,}".format(plans.growth.price_monthly_paise // 100) }}"
+           data-annual="{{ "{:,}".format(plans.growth.price_annual_paise // 100) }}">
+        &#8377;<span id="priceDisplay">{{ "{:,}".format(plans.growth.price_monthly_paise // 100) }}</span>
       </div>
       <div class="upgrade-price-sub" id="priceSub">per month, billed monthly</div>
     </div>
@@ -337,11 +371,11 @@
     </ul>
 
     {% if razorpay_configured %}
-      <button class="btn btn-primary btn-full" onclick="startPayment()">
+      <button class="btn btn-primary btn-full" onclick="startPayment('growth')">
         Pay with Razorpay &rarr;
       </button>
       <div style="text-align:center;font-size:0.73rem;color:#A3A3A3;margin-top:0.4rem;">
-        Secure payment via Razorpay
+        Recurring subscription &mdash; cancel anytime
       </div>
     {% else %}
       <div class="warning-box">
@@ -355,7 +389,7 @@
   </div>
 
   {% else %}
-  {# Already on Growth — show a summary card instead #}
+  {# Already on active Growth — show features + downgrade/enterprise options #}
   <div class="plan-card" id="upgrade-section">
     <div class="plan-name-lg" style="margin-bottom:0.6rem;">Growth Plan Features</div>
     <ul class="upgrade-features" style="list-style:none;padding:0;">
@@ -365,7 +399,29 @@
       </li>
       {% endfor %}
     </ul>
-    <div class="plan-meta">Need more? <a href="mailto:sales@regbite.com">Contact sales</a> for Enterprise.</div>
+    <div class="plan-meta" style="margin-bottom:0.75rem;">
+      Need more capacity?
+      <a href="mailto:sales@regbite.com" style="color:#111111;">Contact sales</a>
+      for Enterprise — unlimited products, API access, SSO.
+    </div>
+    {# Downgrade option #}
+    <details style="font-size:0.82rem;color:#737373;">
+      <summary style="cursor:pointer;color:#A3A3A3;">Downgrade to Starter</summary>
+      <div style="margin-top:0.6rem;padding:0.75rem;background:#F8F8F8;border-radius:8px;">
+        <p style="margin:0 0 0.5rem;">Starter plan: ₹{{ "{:,}".format(plans.free.price_monthly_paise // 100) }}/month,
+           {{ plans.free.product_limit }} products, {{ plans.free.scan_limit_monthly }} scans/month.</p>
+        <p style="margin:0 0 0.75rem;color:#A3A3A3;">Downgrade takes effect at the end of your current billing period.</p>
+        <form method="post" action="/billing/switch-plan"
+              onsubmit="return confirm('Downgrade to Starter? You keep Growth access until your current period ends.')">
+          <input type="hidden" name="csrf_token" value="{{ request.cookies.get('_csrf', '') }}">
+          <input type="hidden" name="plan" value="free">
+          <input type="hidden" name="billing" value="monthly">
+          <button type="submit" class="btn btn-outline btn-sm" style="color:#525252;border-color:#D4D4D4;">
+            Schedule downgrade to Starter
+          </button>
+        </form>
+      </div>
+    </details>
   </div>
   {% endif %}
 
@@ -419,12 +475,21 @@
   {% endif %}
 </div>
 
-{# ── Hidden verify form (submitted by Razorpay handler) ── #}
-<form id="verify-form" method="post" action="/billing/verify-payment" style="display:none;">
+{# ── Hidden verify forms (one for orders, one for subscriptions) ── #}
+<form id="verify-order-form" method="post" action="/billing/verify-payment" style="display:none;">
+  <input type="hidden" name="csrf_token" value="{{ request.cookies.get('_csrf', '') }}">
   <input type="hidden" id="vf-order-id"   name="razorpay_order_id" />
   <input type="hidden" id="vf-payment-id" name="razorpay_payment_id" />
   <input type="hidden" id="vf-signature"  name="razorpay_signature" />
   <input type="hidden" id="vf-plan"       name="plan" value="growth" />
+</form>
+<form id="verify-sub-form" method="post" action="/billing/verify-subscription" style="display:none;">
+  <input type="hidden" name="csrf_token" value="{{ request.cookies.get('_csrf', '') }}">
+  <input type="hidden" id="vs-payment-id"  name="razorpay_payment_id" />
+  <input type="hidden" id="vs-sub-id"      name="razorpay_subscription_id" />
+  <input type="hidden" id="vs-signature"   name="razorpay_signature" />
+  <input type="hidden" id="vs-plan"        name="plan" value="growth" />
+  <input type="hidden" id="vs-billing"     name="billing" value="monthly" />
 </form>
 
 {# ── Razorpay Checkout Script ── #}
@@ -433,23 +498,37 @@
 <script>
 var _billing = 'monthly';
 
+// Pull price values from data attributes set server-side
+var _priceEl = document.querySelector('.upgrade-price[data-monthly]');
+var _monthly = _priceEl ? _priceEl.dataset.monthly : '21,999';
+var _annual  = _priceEl ? _priceEl.dataset.annual  : '2,09,999';
+
+{% set monthly_price = plans.growth.price_monthly_paise // 100 %}
+{% set annual_price  = plans.growth.price_annual_paise // 100 %}
+{% set savings = (monthly_price * 12) - annual_price %}
+var _annualSavings = '{{ "{:,}".format(savings) }}';
+
 function updatePrice() {
   var annual = document.getElementById('billingToggle').checked;
   _billing = annual ? 'annual' : 'monthly';
-  document.getElementById('priceDisplay').textContent = annual ? '2,09,999' : '21,999';
+  document.getElementById('priceDisplay').textContent = annual ? _annual : _monthly;
   document.getElementById('priceSub').textContent = annual
-    ? 'per year, billed annually — save ₹54,000'
+    ? 'per year, billed annually — save ₹' + _annualSavings
     : 'per month, billed monthly';
 }
 
-async function startPayment() {
-  var plan = 'growth';
+async function startPayment(plan) {
+  plan = plan || 'growth';
   var billing = _billing;
 
-  var resp = await fetch('/billing/create-order', {
+  var csrfToken = (document.cookie.match(/_csrf=([^;]+)/) || [])[1] || '';
+  var resp = await fetch('/billing/create-subscription', {
     method: 'POST',
     body: new URLSearchParams({ plan: plan, billing: billing }),
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRF-Token': csrfToken
+    }
   });
   var data = await resp.json();
   if (data.error) {
@@ -457,32 +536,55 @@ async function startPayment() {
     return;
   }
 
-  var options = {
-    key: data.key_id,
-    amount: data.amount,
-    currency: data.currency,
-    order_id: data.order_id,
-    name: 'RegBite',
-    description: 'Growth Plan \u2014 ' + (billing === 'annual' ? 'Annual' : 'Monthly'),
-    handler: function(response) {
-      document.getElementById('vf-order-id').value   = response.razorpay_order_id;
-      document.getElementById('vf-payment-id').value = response.razorpay_payment_id;
-      document.getElementById('vf-signature').value  = response.razorpay_signature;
-      document.getElementById('vf-plan').value       = plan;
-      document.getElementById('verify-form').submit();
-    },
-    prefill: {
-      name: '{{ user.name | e }}',
-      email: '{{ user.email | e }}'
-    },
-    theme: { color: '#111111' }
-  };
+  var planLabel = (plan === 'growth' ? 'Growth' : 'Starter') + ' Plan — ' +
+                  (billing === 'annual' ? 'Annual' : 'Monthly');
 
-  var rzp = new Razorpay(options);
-  rzp.on('payment.failed', function(response) {
-    alert('Payment failed: ' + (response.error.description || 'Please try again.'));
-  });
-  rzp.open();
+  if (data.mode === 'subscription') {
+    var options = {
+      key: data.key_id,
+      subscription_id: data.subscription_id,
+      name: 'RegBite',
+      description: planLabel,
+      handler: function(response) {
+        document.getElementById('vs-payment-id').value = response.razorpay_payment_id;
+        document.getElementById('vs-sub-id').value     = response.razorpay_subscription_id;
+        document.getElementById('vs-signature').value  = response.razorpay_signature;
+        document.getElementById('vs-plan').value       = plan;
+        document.getElementById('vs-billing').value    = billing;
+        document.getElementById('verify-sub-form').submit();
+      },
+      prefill: { name: '{{ user.name | e }}', email: '{{ user.email | e }}' },
+      theme: { color: '#111111' }
+    };
+    var rzp = new Razorpay(options);
+    rzp.on('payment.failed', function(r) {
+      alert('Payment failed: ' + (r.error.description || 'Please try again.'));
+    });
+    rzp.open();
+  } else {
+    var options = {
+      key: data.key_id,
+      amount: data.amount,
+      currency: data.currency,
+      order_id: data.order_id,
+      name: 'RegBite',
+      description: planLabel,
+      handler: function(response) {
+        document.getElementById('vf-order-id').value   = response.razorpay_order_id;
+        document.getElementById('vf-payment-id').value = response.razorpay_payment_id;
+        document.getElementById('vf-signature').value  = response.razorpay_signature;
+        document.getElementById('vf-plan').value       = plan;
+        document.getElementById('verify-order-form').submit();
+      },
+      prefill: { name: '{{ user.name | e }}', email: '{{ user.email | e }}' },
+      theme: { color: '#111111' }
+    };
+    var rzp = new Razorpay(options);
+    rzp.on('payment.failed', function(r) {
+      alert('Payment failed: ' + (r.error.description || 'Please try again.'));
+    });
+    rzp.open();
+  }
 }
 </script>
 {% endif %}
