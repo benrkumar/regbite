@@ -8,48 +8,61 @@ import hashlib
 from datetime import datetime
 from app.config import get_settings
 
-# Plan definitions
+# Plan definitions — source of truth for prices, limits, and Razorpay order amounts.
+# All paise values: 1 INR = 100 paise (e.g. ₹7,999 = 799900 paise).
 PLANS = {
     "free": {
         "name": "Starter",
-        "price_monthly_paise": 0,
-        "price_annual_paise": 0,
-        "product_limit": 3,
-        "scan_limit_monthly": 5,
+        "price_monthly_paise": 799900,       # ₹7,999/month
+        "price_annual_paise": 7999900,        # ₹79,999/year
+        "product_limit": 15,
+        "scan_limit_monthly": 50,
         "team_seats": 1,
-        "features": ["3 products", "5 scans/month", "Basic compliance", "PDF reports"],
+        "features": [
+            "15 products (SKUs)",
+            "50 scans/month",
+            "FSSAI compliance dashboard",
+            "Ingredient checker",
+            "Daily FSSAI alerts",
+            "WhatsApp notifications",
+            "FoSCoS renewal tracking",
+            "PDF reports",
+        ],
     },
     "growth": {
         "name": "Growth",
-        "price_monthly_paise": 299900,   # ₹2,999
-        "price_annual_paise": 2999000,   # ₹29,990 (save 20%)
-        "product_limit": 25,
-        "scan_limit_monthly": 100,
+        "price_monthly_paise": 2199900,       # ₹21,999/month
+        "price_annual_paise": 20999900,        # ₹2,09,999/year
+        "product_limit": 60,
+        "scan_limit_monthly": 250,
         "team_seats": 5,
         "features": [
-            "25 products",
-            "100 scans/month",
-            "All compliance categories",
-            "License tracker",
+            "60 products (SKUs)",
+            "250 scans/month",
+            "Everything in Starter",
+            "Automated gap reports",
+            "Label audit tool (AI Vision)",
+            "Health claim validator",
+            "FoSCoS auto-fill",
             "5 team seats",
-            "AI analysis",
             "Priority support",
         ],
     },
     "enterprise": {
         "name": "Enterprise",
-        "price_monthly_paise": None,     # custom
-        "price_annual_paise": None,
-        "product_limit": None,           # unlimited
+        "price_monthly_paise": 5499900,        # ₹54,999/month — reference only; manual sales
+        "price_annual_paise": 49999000,         # ₹4,99,999/year
+        "product_limit": None,                  # unlimited
         "scan_limit_monthly": None,
         "team_seats": None,
         "features": [
-            "Unlimited",
-            "Custom rules",
+            "Unlimited products & scans",
+            "Everything in Growth",
             "White-label reports",
+            "Custom compliance rules",
             "API access",
+            "SSO / SAML",
             "Dedicated support",
-            "SSO",
             "Audit trail",
         ],
     },

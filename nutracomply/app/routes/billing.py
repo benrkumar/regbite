@@ -51,8 +51,10 @@ def _provision_subscription(user, plan: str, order_id: str, payment_id: str, db:
 
         try:
             from app.services.notify_service import push
+            from app.services.billing_service import PLANS as _PLANS
+            plan_display = _PLANS.get(plan, {}).get("name", plan.title())
             push(user.id, "Subscription activated!",
-                 "You're now on the Growth plan. Enjoy unlimited access.",
+                 f"You're now on the {plan_display} plan. Enjoy full access.",
                  ntype="success", link="/billing")
         except Exception:
             pass
@@ -111,8 +113,8 @@ async def create_order(request: Request, db: Session = Depends(get_db)):
     plan = (form.get("plan") or "").strip()
     billing = (form.get("billing") or "monthly").strip()
 
-    if plan not in ("growth",):  # only growth plan is purchasable
-        return JSONResponse({"error": "Invalid plan"}, status_code=400)
+    if plan not in ("free", "growth"):  # enterprise requires manual contracting
+        return JSONResponse({"error": "Invalid plan. Contact sales@regbite.com for Enterprise."}, status_code=400)
 
     from app.services.billing_service import create_order as _create_order
     result = _create_order(user.id, plan, billing)
@@ -171,7 +173,9 @@ async def verify_payment(request: Request, db: Session = Depends(get_db)):
     # Send payment confirmation email
     try:
         from app.services.notification import send_payment_confirmation_email
-        amount_paise = record.amount_paise if record else 299900
+        from app.services.billing_service import PLANS as _PLANS
+        fallback_paise = _PLANS.get(plan, {}).get("price_monthly_paise", 0)
+        amount_paise = record.amount_paise if record else fallback_paise
         send_payment_confirmation_email(
             user,
             plan=plan,
@@ -181,8 +185,10 @@ async def verify_payment(request: Request, db: Session = Depends(get_db)):
     except Exception:
         pass
 
+    from app.services.billing_service import PLANS as _PLANS
+    plan_display = _PLANS.get(plan, {}).get("name", plan.title())
     return RedirectResponse(
-        url="/billing?msg=Payment+successful!+Welcome+to+Growth+plan&type=success",
+        url=f"/billing?msg=Payment+successful!+Welcome+to+{plan_display.replace(' ', '+')}+plan&type=success",
         status_code=302,
     )
 
