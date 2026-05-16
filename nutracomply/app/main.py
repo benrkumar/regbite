@@ -558,172 +558,6 @@ def _deactivate_demo_accounts():
                 pass
 
 
-def _seed_demo_users():
-    """
-    Seed demo accounts for every persona on startup (idempotent — skip if already exist).
-    All use password admin@123:
-      admin      — super_admin (full platform control)
-      ben        — account_admin (manage products & team)
-      editor     — editor (upload labels & run checks)
-      viewer     — viewer (read-only dashboard)
-      consultant — consultant (external audit access)
-    """
-    db = None
-    try:
-        from app.routes.auth import hash_password, _seed_demo_products
-        from app.models import User, UserRole
-        db = SessionLocal()
-
-        from app.models import PlanType
-        # --- ben (regular user) ---
-        ben = db.query(User).filter(User.email == "ben").first()
-        if not ben:
-            ben = User(
-                name="Ben",
-                email="ben",
-                hashed_password=hash_password("admin@123"),
-                is_admin=False,
-                role=UserRole.ACCOUNT_ADMIN,
-                is_active=True,
-                notification_emails=[],
-                plan=PlanType.ENTERPRISE,
-            )
-            db.add(ben)
-            db.commit()
-            db.refresh(ben)
-            print("[demo] Created user: ben (Enterprise plan)")
-            try:
-                _seed_demo_products(ben, db)
-                print("[demo] Seeded demo products for ben")
-            except Exception as e:
-                print(f"[demo] Product seed failed: {e}")
-                try:
-                    db.rollback()
-                except Exception:
-                    pass
-        else:
-            # Ensure ben always has full enterprise access across deploys
-            if ben.plan != PlanType.ENTERPRISE:
-                ben.plan = PlanType.ENTERPRISE
-                db.commit()
-                print("[demo] Upgraded ben to Enterprise plan")
-            else:
-                print("[demo] User ben already exists — skipped")
-
-        # --- admin (super admin) ---
-        adm = db.query(User).filter(User.email == "admin").first()
-        if not adm:
-            adm = User(
-                name="Admin",
-                email="admin",
-                hashed_password=hash_password("admin@123"),
-                is_admin=True,
-                role=UserRole.SUPER_ADMIN,
-                is_active=True,
-                notification_emails=[],
-            )
-            db.add(adm)
-            db.commit()
-            print("[demo] Created user: admin")
-        else:
-            if not adm.is_admin:
-                adm.is_admin = True
-                db.commit()
-            print("[demo] User admin already exists — skipped")
-
-        # --- editor (content editor) ---
-        editor = db.query(User).filter(User.email == "editor").first()
-        if not editor:
-            editor = User(
-                name="Editor",
-                email="editor",
-                hashed_password=hash_password("admin@123"),
-                is_admin=False,
-                role=UserRole.EDITOR,
-                is_active=True,
-                notification_emails=[],
-            )
-            db.add(editor)
-            db.commit()
-            db.refresh(editor)
-            print("[demo] Created user: editor")
-            try:
-                _seed_demo_products(editor, db)
-            except Exception:
-                try:
-                    db.rollback()
-                except Exception:
-                    pass
-        else:
-            print("[demo] User editor already exists — skipped")
-
-        # --- viewer (read-only) ---
-        viewer = db.query(User).filter(User.email == "viewer").first()
-        if not viewer:
-            viewer = User(
-                name="Viewer",
-                email="viewer",
-                hashed_password=hash_password("admin@123"),
-                is_admin=False,
-                role=UserRole.VIEWER,
-                is_active=True,
-                notification_emails=[],
-            )
-            db.add(viewer)
-            db.commit()
-            db.refresh(viewer)
-            print("[demo] Created user: viewer")
-            try:
-                _seed_demo_products(viewer, db)
-            except Exception:
-                try:
-                    db.rollback()
-                except Exception:
-                    pass
-        else:
-            print("[demo] User viewer already exists — skipped")
-
-        # --- consultant (external auditor) ---
-        consultant = db.query(User).filter(User.email == "consultant").first()
-        if not consultant:
-            consultant = User(
-                name="Consultant",
-                email="consultant",
-                hashed_password=hash_password("admin@123"),
-                is_admin=False,
-                role=UserRole.CONSULTANT,
-                is_active=True,
-                notification_emails=[],
-            )
-            db.add(consultant)
-            db.commit()
-            db.refresh(consultant)
-            print("[demo] Created user: consultant")
-            try:
-                _seed_demo_products(consultant, db)
-            except Exception:
-                try:
-                    db.rollback()
-                except Exception:
-                    pass
-        else:
-            print("[demo] User consultant already exists — skipped")
-
-    except Exception as e:
-        print(f"[demo] User seed error: {e}")
-        if db:
-            try:
-                db.rollback()
-            except Exception:
-                pass
-    finally:
-        if db:
-            try:
-                db.close()
-            except Exception:
-                pass
-
-
 def _auto_seed_kb_if_empty():
     """
     On every startup: if the Regulations KB has zero documents, auto-seed
@@ -880,14 +714,12 @@ from app.services.csrf import CSRFMiddleware, COOKIE_NAME as CSRF_COOKIE, genera
 app.add_middleware(CSRFMiddleware)
 
 # Security headers
-from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
-
-class _SecurityHeadersMiddleware(_BaseHTTPMiddleware):
+class _SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add hardened HTTP security headers to every response."""
     async def dispatch(self, request, call_next):
         response = await call_next(request)
         # Prevent clickjacking
-        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
         # Prevent MIME-type sniffing
         response.headers["X-Content-Type-Options"] = "nosniff"
         # Legacy XSS filter (belt-and-braces for older browsers)
@@ -1314,7 +1146,6 @@ async def sitemap_xml():
         (base + "/features",   "monthly", "0.8"),
         (base + "/about",      "monthly", "0.6"),
         (base + "/contact",    "monthly", "0.5"),
-        (base + "/blog",       "weekly",  "0.7"),
         (base + "/help",       "monthly", "0.6"),
         (base + "/terms",      "yearly",  "0.3"),
         (base + "/privacy",    "yearly",  "0.3"),
