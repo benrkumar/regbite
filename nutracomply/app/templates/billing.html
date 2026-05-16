@@ -325,7 +325,7 @@
       </div>
 
       <div class="upgrade-price">
-        &#8377;<span id="priceDisplay">2,999</span>
+        &#8377;<span id="priceDisplay">21,999</span>
       </div>
       <div class="upgrade-price-sub" id="priceSub">per month, billed monthly</div>
     </div>
@@ -436,9 +436,9 @@ var _billing = 'monthly';
 function updatePrice() {
   var annual = document.getElementById('billingToggle').checked;
   _billing = annual ? 'annual' : 'monthly';
-  document.getElementById('priceDisplay').textContent = annual ? '29,990' : '2,999';
+  document.getElementById('priceDisplay').textContent = annual ? '2,09,999' : '21,999';
   document.getElementById('priceSub').textContent = annual
-    ? 'billed annually — save \u20b95,998'
+    ? 'per year, billed annually — save ₹54,000'
     : 'per month, billed monthly';
 }
 

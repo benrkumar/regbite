@@ -57,14 +57,20 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
             # For multipart (file uploads), skip body reading — check header only.
             # BaseHTTPMiddleware + multipart body buffering can conflict on large files.
+            # The JS snippet in base.html/public_base.html reads the _csrf cookie and
+            # adds X-CSRF-Token on all fetch() calls; traditional <form> uploads use
+            # a hidden <input> injected by the inline script, but multipart forms must
+            # set the header explicitly via fetch/XHR.
             if "multipart/form-data" in content_type:
                 submitted_token = request.headers.get(HEADER_NAME)
-                # If no header, also try reading the first part of the body for the token
-                # We'll be lenient for multipart: skip CSRF if no header (these routes
-                # are already behind auth)
+                # Without header: reject. Auth alone is insufficient — CSRF is a
+                # separate attack vector (SameSite=lax covers top-level navigations
+                # but not all same-site subresource requests in some browsers).
                 if not submitted_token:
-                    response = await call_next(request)
-                    return response
+                    return JSONResponse(
+                        {"detail": "CSRF token required for file uploads. Add X-CSRF-Token header."},
+                        status_code=403,
+                    )
             elif "application/x-www-form-urlencoded" in content_type:
                 # Read raw body bytes instead of request.form() to avoid consuming
                 # the body stream — BaseHTTPMiddleware + form() breaks FastAPI's

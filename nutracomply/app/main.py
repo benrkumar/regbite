@@ -38,13 +38,21 @@ if settings.sentry_dsn:
     )
     log.info("Sentry initialised")
 
-# Warn if SECRET_KEY is still the default
+# Hard-fail if SECRET_KEY is still the default in production
 if settings.secret_key == "change-this-secret":
-    import warnings
-    warnings.warn(
-        "SECRET_KEY is still the default! Set a strong SECRET_KEY env var in production.",
-        stacklevel=1,
-    )
+    import os as _os
+    _env = _os.environ.get("ENVIRONMENT", _os.environ.get("RAILWAY_ENVIRONMENT", "development")).lower()
+    if _env in ("production", "prod", "staging"):
+        raise RuntimeError(
+            "SECRET_KEY is still the default value. "
+            "Set a strong SECRET_KEY environment variable before deploying."
+        )
+    else:
+        import warnings
+        warnings.warn(
+            "SECRET_KEY is still the default! Set SECRET_KEY env var before going to production.",
+            stacklevel=1,
+        )
 
 # Ensure upload directory exists
 Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)

@@ -149,5 +149,7 @@ def verify_webhook_signature(body: bytes, signature: str) -> bool:
 
 
 def get_plan_limits(plan: str) -> dict:
-    """Return limits for a given plan name."""
-    return PLANS.get(plan, PLANS["free"])
+    """Return limits for a given plan name. Raises KeyError for unknown plans."""
+    if plan not in PLANS:
+        raise KeyError(f"Unknown plan: '{plan}'. Valid plans: {list(PLANS.keys())}")
+    return PLANS[plan]

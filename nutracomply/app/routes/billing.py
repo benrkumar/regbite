@@ -116,6 +116,9 @@ async def create_order(request: Request, db: Session = Depends(get_db)):
     if plan not in ("free", "growth"):  # enterprise requires manual contracting
         return JSONResponse({"error": "Invalid plan. Contact sales@regbite.com for Enterprise."}, status_code=400)
 
+    if billing not in ("monthly", "annual"):
+        return JSONResponse({"error": "Invalid billing period. Must be 'monthly' or 'annual'."}, status_code=400)
+
     from app.services.billing_service import create_order as _create_order
     result = _create_order(user.id, plan, billing)
 

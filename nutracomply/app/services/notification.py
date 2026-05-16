@@ -95,7 +95,7 @@ def _send_email(subject: str, html_body: str, recipients: list[str]):
     msg.attach(MIMEText(_wrap_html(html_body), "html"))
 
     try:
-        with smtplib.SMTP(settings.brevo_smtp_host, settings.brevo_smtp_port) as server:
+        with smtplib.SMTP(settings.brevo_smtp_host, settings.brevo_smtp_port, timeout=15) as server:
             server.ehlo()
             server.starttls()
             server.login(settings.brevo_smtp_user, settings.brevo_smtp_password)
