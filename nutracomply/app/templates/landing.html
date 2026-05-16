@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RegBite — AI-Powered Label Compliance for India's Nutraceutical Industry</title>
-  <meta name="description" content="Scan product labels against 64+ FSSAI, Legal Metrology & AYUSH rules instantly. AI-powered compliance for nutraceuticals, health supplements, and Ayurvedic products." />
+  <title>Regbite — India's First AI-Native FSSAI Compliance Platform for Nutraceuticals</title>
+  <meta name="description" content="FSSAI compliance for nutraceuticals — automated. Regbite monitors 200+ FSSAI circulars, maps changes to your SKUs, and sends WhatsApp alerts with your product name. ₹7,999/month. 14-day free trial." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <style>
@@ -13,9 +13,9 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --font: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      --font:    'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
       --ink:     #000000;
-      --bg:      #F8F8F8;
+      --bg:      #F1F4F8;
       --white:   #FFFFFF;
       --g50:     #FAFAFA;
       --g100:    #F5F5F5;
@@ -26,7 +26,9 @@
       --g600:    #525252;
       --g700:    #404040;
       --g900:    #171717;
-      --teal:    #3772FF;
+      --primary: #2B4874;
+      --primary-dark: #0B2A4A;
+      --primary-light: #F1F4F8;
     }
 
     html { font-size: 16px; scroll-behavior: smooth; }
@@ -46,24 +48,23 @@
     .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.42rem 1rem; border-radius: 5px; font-size: 0.84rem; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all 0.12s; font-family: var(--font); text-decoration: none; white-space: nowrap; line-height: 1.4; }
     .btn-ghost { background: transparent; color: var(--g600); border-color: var(--g300); }
     .btn-ghost:hover { background: var(--g100); color: var(--ink); }
-    .btn-primary { background: var(--teal); color: var(--white); border-color: var(--teal); }
-    .btn-primary:hover { background: #1D5CE0; border-color: #1D5CE0; }
+    .btn-primary { background: var(--primary); color: var(--white); border-color: var(--primary); }
+    .btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
     .btn-lg { padding: 0.6rem 1.5rem; font-size: 0.92rem; }
     .btn-xl { padding: 0.7rem 1.8rem; font-size: 0.95rem; }
 
     /* ── Hero ── */
     .hero { padding: 64px 2rem 0; background: var(--white); }
     .hero-inner { max-width: 1120px; margin: 0 auto; padding: 4rem 0 3.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 3.5rem; align-items: center; }
-    .hero-text { max-width: 520px; }
+    .hero-text { max-width: 540px; }
     .hero-pill { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.25rem 0.75rem; background: var(--g100); border: 1px solid var(--g200); border-radius: 999px; font-size: 0.72rem; font-weight: 500; color: var(--g600); margin-bottom: 1.5rem; letter-spacing: 0.03em; }
-    .hero-pill-dot { width: 5px; height: 5px; border-radius: 50%; background: #357266; }
-    .hero h1 { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 300; line-height: 1.18; color: var(--ink); letter-spacing: -0.03em; margin-bottom: 1rem; }
+    .hero-pill-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--primary); }
+    .hero h1 { font-size: clamp(1.9rem, 3.8vw, 2.7rem); font-weight: 300; line-height: 1.15; color: var(--ink); letter-spacing: -0.03em; margin-bottom: 1.1rem; }
     .hero h1 strong { font-weight: 600; }
     .hero-sub { font-size: 1rem; color: var(--g500); font-weight: 300; line-height: 1.7; margin-bottom: 2rem; }
-    .hero-ctas { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
-    .hero-proof { display: flex; align-items: center; gap: 1.8rem; flex-wrap: wrap; }
-    .hero-proof-item { font-size: 0.78rem; color: var(--g500); display: flex; align-items: center; gap: 0.4rem; }
-    .hero-proof-num { font-weight: 600; color: var(--ink); font-size: 0.85rem; }
+    .hero-ctas { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.75rem; }
+    .hero-trust { font-size: 0.78rem; color: var(--g400); line-height: 1.7; }
+    .hero-trust span { color: var(--g600); }
 
     /* ── Hero Checker Card ── */
     .hero-checker { background: var(--white); border: 1px solid var(--g200); border-radius: 8px; padding: 1.5rem; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
@@ -72,30 +73,27 @@
     .hc-field { margin-bottom: 0.85rem; }
     .hc-label { display: block; font-size: 0.72rem; font-weight: 500; color: var(--g600); margin-bottom: 0.25rem; letter-spacing: 0.03em; }
     .hc-input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--g300); border-radius: 5px; font-size: 0.84rem; font-family: var(--font); color: var(--ink); background: var(--white); outline: none; transition: border-color 0.12s; }
-    .hc-input:focus { border-color: var(--ink); }
+    .hc-input:focus { border-color: var(--primary); }
     .hc-input::placeholder { color: var(--g300); }
     .hc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
     textarea.hc-input { resize: vertical; min-height: 72px; }
     select.hc-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='none' stroke='%23A3A3A3' stroke-width='1.5' stroke-linecap='round' d='M1 1l4 4 4-4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2.2rem; appearance: none; }
-    .hc-submit { width: 100%; padding: 0.6rem; background: #3772FF; color: var(--white); border: none; border-radius: 5px; font-size: 0.88rem; font-weight: 500; font-family: var(--font); cursor: pointer; transition: background 0.12s; }
-    .hc-submit:hover { background: #1D5CE0; }
+    .hc-submit { width: 100%; padding: 0.6rem; background: var(--primary); color: var(--white); border: none; border-radius: 5px; font-size: 0.88rem; font-weight: 500; font-family: var(--font); cursor: pointer; transition: background 0.12s; }
+    .hc-submit:hover { background: var(--primary-dark); }
     .hc-footer { margin-top: 0.75rem; font-size: 0.68rem; color: var(--g400); text-align: center; }
 
     /* ── Checker Tabs ── */
     .hc-tabs { display: flex; gap: 0; margin-bottom: 1.2rem; border-bottom: 1px solid var(--g200); }
     .hc-tab { flex: 1; padding: 0.55rem 0; text-align: center; font-size: 0.78rem; font-weight: 500; color: var(--g400); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; font-family: var(--font); }
     .hc-tab:hover { color: var(--g600); }
-    .hc-tab.active { color: #3772FF; border-bottom-color: #3772FF; }
+    .hc-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
     .hc-panel { display: none; }
     .hc-panel.active { display: block; }
 
     /* ── Upload Zone ── */
-    .hc-upload-zone {
-      border: 2px dashed var(--g300); border-radius: 8px; padding: 2.5rem 1.5rem;
-      text-align: center; cursor: pointer; transition: all 0.15s; background: var(--g50);
-    }
-    .hc-upload-zone:hover, .hc-upload-zone.dragover { border-color: #3772FF; background: #EBF0FF; }
-    .hc-upload-icon { font-size: 2rem; margin-bottom: 0.5rem; color: var(--g400); }
+    .hc-upload-zone { border: 2px dashed var(--g300); border-radius: 8px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.15s; background: var(--g50); }
+    .hc-upload-zone:hover, .hc-upload-zone.dragover { border-color: var(--primary); background: var(--primary-light); }
+    .hc-upload-icon { font-size: 2rem; margin-bottom: 0.5rem; color: var(--g400); display: flex; justify-content: center; }
     .hc-upload-text { font-size: 0.84rem; color: var(--g500); margin-bottom: 0.3rem; }
     .hc-upload-text strong { color: #111111; cursor: pointer; }
     .hc-upload-hint { font-size: 0.7rem; color: var(--g400); }
@@ -104,17 +102,11 @@
     .hc-file-remove { background: none; border: none; color: #111111; cursor: pointer; font-size: 0.9rem; padding: 0; }
     .hc-upload-category { margin-top: 1rem; }
 
-    /* ── Logos / Trust bar ── */
-    .trust-bar { border-top: 1px solid var(--g200); border-bottom: 1px solid var(--g200); background: var(--g50); padding: 1.5rem 2rem; }
-    .trust-inner { max-width: 1120px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 2.5rem; flex-wrap: wrap; }
-    .trust-label { font-size: 0.68rem; font-weight: 500; color: var(--g400); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
-    .trust-logos { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
-    .trust-logo { font-size: 0.82rem; font-weight: 600; color: var(--g400); letter-spacing: 0.02em; white-space: nowrap; }
-
     /* ── Sections ── */
     .sec { padding: 5rem 2rem; }
     .sec-inner { max-width: 1120px; margin: 0 auto; }
     .sec-alt { background: var(--g50); }
+    .sec-dark { background: var(--primary-dark); }
     .sec-tag { display: inline-block; padding: 0.2rem 0.65rem; background: var(--g100); color: var(--g600); border: 1px solid var(--g200); border-radius: 999px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
     .sec-title { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 400; color: var(--ink); letter-spacing: -0.02em; line-height: 1.25; margin-bottom: 0.6rem; }
     .sec-title strong { font-weight: 600; }
@@ -123,100 +115,97 @@
     .sec-header-center { text-align: center; }
     .sec-header-center .sec-sub { margin: 0 auto; }
 
-    /* ── Stats Row ── */
-    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 0; }
-    .stat-card { background: var(--white); border: 1px solid var(--g200); border-radius: 6px; padding: 1.75rem 1.5rem; text-align: center; }
-    .stat-val { font-size: 2.2rem; font-weight: 600; color: var(--ink); line-height: 1; letter-spacing: -0.02em; }
-    .stat-label { font-size: 0.74rem; color: var(--g500); margin-top: 0.4rem; font-weight: 400; line-height: 1.5; }
+    /* ── Stats Bar ── */
+    .stats-bar { border-top: 1px solid var(--g200); border-bottom: 1px solid var(--g200); background: var(--g50); padding: 2rem 2rem; }
+    .stats-inner { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--g200); border: 1px solid var(--g200); border-radius: 8px; overflow: hidden; }
+    .stat-item { background: var(--white); padding: 1.75rem 1.5rem; text-align: center; }
+    .stat-num { font-size: 2rem; font-weight: 600; color: var(--primary-dark); line-height: 1; letter-spacing: -0.03em; }
+    .stat-title { font-size: 0.8rem; font-weight: 600; color: var(--ink); margin: 0.3rem 0 0.2rem; }
+    .stat-desc { font-size: 0.72rem; color: var(--g400); line-height: 1.5; }
 
-    /* ── Why Compliance Matters ── */
-    .risk-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 2.5rem; }
-    .risk-card { background: var(--white); border: 1px solid var(--g200); border-radius: 6px; padding: 1.4rem 1.5rem; }
-    .risk-card-icon { font-size: 1rem; margin-bottom: 0.6rem; color: var(--g400); }
-    .risk-card h3 { font-size: 0.88rem; font-weight: 600; color: var(--ink); margin-bottom: 0.35rem; letter-spacing: -0.01em; }
-    .risk-card p { font-size: 0.79rem; color: var(--g500); line-height: 1.65; }
-    .risk-closing { margin-top: 2.5rem; padding: 1.4rem 1.75rem; background: var(--ink); border-radius: 6px; display: flex; align-items: center; gap: 1.25rem; }
-    .risk-closing p { font-size: 0.88rem; color: rgba(255,255,255,0.85); line-height: 1.6; flex: 1; }
-    .risk-closing strong { color: var(--white); }
+    /* ── Trust Bar ── */
+    .trust-bar { border-bottom: 1px solid var(--g200); background: var(--g50); padding: 1.25rem 2rem; }
+    .trust-inner { max-width: 1120px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 2.5rem; flex-wrap: wrap; }
+    .trust-label { font-size: 0.68rem; font-weight: 500; color: var(--g400); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+    .trust-logos { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
+    .trust-logo { font-size: 0.82rem; font-weight: 600; color: var(--g400); letter-spacing: 0.02em; white-space: nowrap; }
 
-    /* ── Why RegBite ── */
-    .why-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 2.5rem; }
-    .why-card { background: var(--white); border: 1px solid var(--g200); border-radius: 6px; padding: 1.5rem; display: flex; gap: 1rem; align-items: flex-start; }
-    .why-num { flex-shrink: 0; width: 28px; height: 28px; border-radius: 4px; background: var(--g100); border: 1px solid var(--g200); display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 700; color: var(--g600); letter-spacing: 0.02em; }
-    .why-card h3 { font-size: 0.88rem; font-weight: 600; color: var(--ink); margin-bottom: 0.3rem; }
-    .why-card p { font-size: 0.8rem; color: var(--g500); line-height: 1.65; }
-    @media (max-width: 900px) {
-      .risk-grid { grid-template-columns: 1fr 1fr; }
-      .why-grid { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 640px) {
-      .stats-row { grid-template-columns: 1fr 1fr; }
-      .risk-grid { grid-template-columns: 1fr; }
-      .risk-closing { flex-direction: column; }
-    }
+    /* ── Problem Section (Before/After) ── */
+    .problem-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--g200); border-radius: 8px; overflow: hidden; }
+    .problem-col { padding: 2rem; }
+    .problem-col-before { background: #FEF2F2; border-right: 1px solid #FECACA; }
+    .problem-col-after { background: #F0FDF4; }
+    .problem-col-hdr { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1.25rem; }
+    .problem-col-before .problem-col-hdr { color: #B91C1C; }
+    .problem-col-after .problem-col-hdr { color: #15803D; }
+    .problem-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
+    .problem-col li { font-size: 0.85rem; line-height: 1.55; display: flex; gap: 0.6rem; align-items: flex-start; }
+    .problem-col-before li { color: #7F1D1D; }
+    .problem-col-after li { color: #14532D; }
+    .problem-col-before li::before { content: "✕"; color: #EF4444; flex-shrink: 0; font-weight: 700; font-size: 0.8rem; margin-top: 0.05rem; }
+    .problem-col-after li::before { content: "✓"; color: #22C55E; flex-shrink: 0; font-weight: 700; font-size: 0.8rem; margin-top: 0.05rem; }
+    .problem-body { margin-bottom: 2.5rem; }
+    .problem-body p { font-size: 0.95rem; color: var(--g500); line-height: 1.7; margin-bottom: 0.75rem; }
+    .problem-body p strong { color: var(--ink); }
 
     /* ── Features ── */
     .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .feat-card { background: var(--white); border: 1px solid var(--g200); border-radius: 6px; padding: 1.5rem 1.5rem 1.75rem; transition: box-shadow 0.12s; }
+    .feat-card { background: var(--white); border: 1px solid var(--g200); border-radius: 6px; padding: 1.75rem 1.5rem; transition: box-shadow 0.12s; }
     .feat-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
-    .feat-icon { width: 36px; height: 36px; border-radius: 6px; background: var(--g100); border: 1px solid var(--g200); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: var(--g600); margin-bottom: 1rem; }
+    .feat-icon { font-size: 1.5rem; margin-bottom: 0.85rem; line-height: 1; }
     .feat-card h3 { font-size: 0.92rem; font-weight: 600; color: var(--ink); margin-bottom: 0.4rem; letter-spacing: -0.01em; }
     .feat-card p { font-size: 0.82rem; color: var(--g500); line-height: 1.65; }
 
-    /* ── How it works ── */
-    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
-    .step { position: relative; padding: 1.5rem; background: var(--white); border: 1px solid var(--g200); border-radius: 6px; }
-    .step-num { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--white); font-size: 0.72rem; font-weight: 700; margin-bottom: 1rem; }
-    .step h3 { font-size: 0.92rem; font-weight: 600; color: var(--ink); margin-bottom: 0.35rem; }
-    .step p { font-size: 0.82rem; color: var(--g500); line-height: 1.6; }
-    .step-arrow { display: none; }
+    /* ── Testimonials ── */
+    .testimonial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .testimonial-card { background: var(--white); border: 1px solid var(--g200); border-radius: 8px; padding: 1.75rem; display: flex; flex-direction: column; gap: 1rem; }
+    .testimonial-quote { font-size: 0.88rem; color: var(--g700); line-height: 1.7; flex: 1; }
+    .testimonial-quote::before { content: "\201C"; font-size: 1.5rem; color: var(--primary); line-height: 0; vertical-align: -0.4rem; margin-right: 0.1rem; }
+    .testimonial-attr { font-size: 0.72rem; color: var(--g400); line-height: 1.55; }
+    .testimonial-attr strong { color: var(--g600); font-weight: 500; display: block; }
 
-    /* ── Regulations ── */
-    .reg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .reg-card { background: var(--white); border: 1px solid var(--g200); border-radius: 6px; padding: 1.5rem; }
-    .reg-card-badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 3px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 0.75rem; }
-    .badge-fssai { background: #EBF0FF; color: #3772FF; }
-    .badge-lm { background: #FEF9EC; color: #8F6314; }
-    .badge-ayush { background: #EAF2F0; color: #357266; }
-    .reg-card h3 { font-size: 0.88rem; font-weight: 600; color: var(--ink); margin-bottom: 0.35rem; }
-    .reg-card p { font-size: 0.78rem; color: var(--g500); line-height: 1.6; }
-    .reg-card-count { font-size: 0.72rem; color: var(--g400); margin-top: 0.5rem; font-weight: 500; }
+    /* ── Pricing ── */
+    .pricing-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-items: start; }
+    .price-card { background: var(--white); border: 1px solid var(--g200); border-radius: 8px; padding: 2rem; }
+    .price-card.featured { border-color: var(--primary); position: relative; box-shadow: 0 0 0 3px rgba(43,72,116,0.08); }
+    .price-badge { display: inline-block; padding: 0.2rem 0.6rem; background: var(--primary); color: var(--white); font-size: 0.62rem; font-weight: 700; border-radius: 3px; letter-spacing: 0.05em; margin-bottom: 1rem; }
+    .price-name { font-size: 1rem; font-weight: 600; color: var(--ink); margin-bottom: 0.25rem; }
+    .price-monthly { font-size: 1.9rem; font-weight: 600; color: var(--ink); line-height: 1; letter-spacing: -0.03em; }
+    .price-monthly span { font-size: 0.82rem; font-weight: 400; color: var(--g400); }
+    .price-annual { font-size: 0.78rem; color: var(--g500); margin: 0.3rem 0 0.1rem; }
+    .price-savings { font-size: 0.72rem; color: #15803D; font-weight: 500; margin-bottom: 1.25rem; }
+    .price-limit { font-size: 0.78rem; font-weight: 600; color: var(--primary); margin-bottom: 1rem; }
+    .price-list { list-style: none; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.45rem; }
+    .price-list li { font-size: 0.79rem; color: var(--g600); display: flex; align-items: flex-start; gap: 0.45rem; line-height: 1.5; }
+    .price-list li::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--primary); margin-top: 0.5rem; flex-shrink: 0; }
+    .price-divider { border: none; border-top: 1px solid var(--g200); margin: 1rem 0; }
 
-    /* ── Categories pills ── */
-    .cat-grid { display: flex; flex-wrap: wrap; gap: 0.45rem; }
-    .cat-pill { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.3rem 0.75rem; background: var(--white); border: 1px solid var(--g200); border-radius: 999px; font-size: 0.78rem; color: var(--g600); transition: all 0.12s; }
-    .cat-pill:hover { border-color: var(--ink); color: var(--ink); }
-    .cat-pill-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--g300); }
-
-    /* ── Pricing preview ── */
-    .pricing-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .price-card { background: var(--white); border: 1px solid var(--g200); border-radius: 6px; padding: 1.75rem; }
-    .price-card.featured { border-color: var(--ink); position: relative; }
-    .price-card.featured::before { content: "Popular"; position: absolute; top: -0.5rem; right: 1rem; background: var(--ink); color: var(--white); font-size: 0.62rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 3px; letter-spacing: 0.05em; }
-    .price-name { font-size: 0.82rem; font-weight: 600; color: var(--ink); margin-bottom: 0.2rem; }
-    .price-val { font-size: 1.8rem; font-weight: 600; color: var(--ink); line-height: 1; }
-    .price-val span { font-size: 0.82rem; font-weight: 400; color: var(--g400); }
-    .price-desc { font-size: 0.78rem; color: var(--g500); margin: 0.5rem 0 1rem; line-height: 1.5; }
-    .price-list { list-style: none; margin-bottom: 1.25rem; }
-    .price-list li { font-size: 0.78rem; color: var(--g600); padding: 0.25rem 0; display: flex; align-items: flex-start; gap: 0.5rem; }
-    .price-list li::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--ink); margin-top: 0.45rem; flex-shrink: 0; }
+    /* ── FAQ ── */
+    .faq-list { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--g200); border-radius: 8px; overflow: hidden; }
+    .faq-item { border-bottom: 1px solid var(--g200); }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q { width: 100%; text-align: left; padding: 1.25rem 1.5rem; background: var(--white); border: none; font-family: var(--font); font-size: 0.9rem; font-weight: 600; color: var(--ink); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 1rem; transition: background 0.12s; }
+    .faq-q:hover { background: var(--g50); }
+    .faq-q-icon { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--g100); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: var(--g500); transition: transform 0.2s; }
+    .faq-item.open .faq-q-icon { transform: rotate(45deg); }
+    .faq-a { display: none; padding: 0 1.5rem 1.25rem; font-size: 0.86rem; color: var(--g500); line-height: 1.75; }
+    .faq-item.open .faq-a { display: block; }
 
     /* ── CTA Banner ── */
-    .cta { background: var(--ink); padding: 5rem 2rem; text-align: center; }
+    .cta { background: var(--primary-dark); padding: 5rem 2rem; text-align: center; }
     .cta h2 { font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 300; color: var(--white); letter-spacing: -0.02em; margin-bottom: 0.6rem; }
-    .cta p { color: rgba(255,255,255,0.5); font-size: 0.95rem; max-width: 480px; margin: 0 auto 2rem; }
+    .cta p { color: rgba(255,255,255,0.55); font-size: 0.95rem; max-width: 500px; margin: 0 auto 2rem; line-height: 1.7; }
     .cta-btns { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; }
-    .btn-white { background: var(--white); color: var(--ink); border: 1px solid var(--white); }
+    .btn-white { background: var(--white); color: var(--primary-dark); border: 1px solid var(--white); }
     .btn-white:hover { background: var(--g100); }
-    .btn-ghost-w { background: transparent; color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.3); }
+    .btn-ghost-w { background: transparent; color: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.25); }
     .btn-ghost-w:hover { background: rgba(255,255,255,0.08); color: var(--white); }
 
     /* ── Footer ── */
     .footer { background: var(--white); border-top: 1px solid var(--g200); }
     .footer-inner { max-width: 1120px; margin: 0 auto; padding: 3rem 2rem 2rem; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 2rem; }
     .footer-brand { }
-    .footer-brand-name { font-size: 1rem; font-weight: 700; color: var(--ink); margin-bottom: 0.5rem; }
-    .footer-brand p { font-size: 0.78rem; color: var(--g400); max-width: 260px; line-height: 1.6; }
+    .footer-brand p { font-size: 0.78rem; color: var(--g400); max-width: 260px; line-height: 1.6; margin-top: 0.6rem; }
     .footer-col h4 { font-size: 0.7rem; font-weight: 600; color: var(--g400); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.75rem; }
     .footer-col a { display: block; font-size: 0.82rem; color: var(--g500); padding: 0.2rem 0; transition: color 0.12s; }
     .footer-col a:hover { color: var(--ink); }
@@ -224,34 +213,34 @@
     .footer-bottom p { font-size: 0.72rem; color: var(--g400); }
 
     /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .stats-inner { grid-template-columns: repeat(2, 1fr); }
+    }
     @media (max-width: 900px) {
       .hero-inner { grid-template-columns: 1fr; gap: 2.5rem; }
       .hero-text { max-width: 100%; text-align: center; }
       .hero-ctas { justify-content: center; }
-      .hero-proof { justify-content: center; }
+      .hero-trust { text-align: center; }
       .hero-checker { max-width: 480px; margin: 0 auto; }
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
       .feat-grid { grid-template-columns: 1fr 1fr; }
-      .steps { grid-template-columns: 1fr; }
-      .reg-grid { grid-template-columns: 1fr; }
-      .pricing-row { grid-template-columns: 1fr; max-width: 400px; margin: 0 auto; }
+      .testimonial-grid { grid-template-columns: 1fr; }
+      .pricing-row { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; }
       .footer-inner { grid-template-columns: 1fr 1fr; }
+      .problem-cols { grid-template-columns: 1fr; }
+      .problem-col-before { border-right: none; border-bottom: 1px solid #FECACA; }
     }
     @media (max-width: 640px) {
       .nav { padding: 0 1rem; }
       .nav-links { display: none; }
       .hero { padding-top: 64px; }
       .hero-inner { padding: 2.5rem 0 2rem; }
-      .hero h1 { font-size: 1.9rem; }
+      .hero h1 { font-size: 1.75rem; }
       .sec { padding: 3.5rem 1.25rem; }
-      .stats-row { grid-template-columns: 1fr 1fr; gap: 0.65rem; }
-      .stat-card { padding: 1rem; }
-      .stat-val { font-size: 1.5rem; }
+      .stats-inner { grid-template-columns: 1fr 1fr; }
       .feat-grid { grid-template-columns: 1fr; }
       .hc-row { grid-template-columns: 1fr; }
       .footer-inner { grid-template-columns: 1fr; }
       .footer-bottom { flex-direction: column; gap: 0.5rem; text-align: center; }
-      /* Touch-friendly inputs */
       .hc-input { min-height: 44px; font-size: 0.9rem; }
       .hc-submit { min-height: 48px; font-size: 0.92rem; }
       .btn { min-height: 44px; }
@@ -261,21 +250,15 @@
       .nav { padding: 0 0.85rem; }
       .nav-ctas { gap: 0.35rem; }
       .nav-ctas .btn { padding: 0.38rem 0.75rem; font-size: 0.8rem; }
-      .hero h1 { font-size: 1.6rem; }
+      .hero h1 { font-size: 1.55rem; }
       .hero-sub { font-size: 0.9rem; }
       .hero-ctas { gap: 0.45rem; }
-      .hero-proof { gap: 0.85rem; }
       .trust-inner { flex-direction: column; align-items: center; gap: 0.6rem; }
-      .trust-label { margin-bottom: 0.25rem; }
-      .trust-logos { justify-content: center; gap: 1rem; }
       .sec { padding: 2.5rem 1rem; }
       .sec-title { font-size: 1.4rem; }
-      .why-grid { grid-template-columns: 1fr; }
       .hero-checker { padding: 1.1rem; }
       .hc-title { font-size: 0.88rem; }
-      .trust-label { font-size: 0.72rem; }
-      .stat-label { font-size: 0.76rem; }
-      .footer-col h4 { font-size: 0.72rem; }
+      .stats-inner { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
@@ -285,18 +268,18 @@
 <nav class="nav">
   <div class="nav-inner">
     <div class="nav-brand">
-      <img src="/static/img/logo.png" alt="RegBite" />
+      <img src="/static/img/logo.png" alt="Regbite" />
     </div>
     <div class="nav-links">
-      <a href="#why-compliance">Why It Matters</a>
+      <a href="#problem">Why Regbite</a>
       <a href="#features">Features</a>
-      <a href="#how-it-works">How It Works</a>
-      <a href="/pricing">Pricing</a>
+      <a href="#pricing">Pricing</a>
       <a href="/blog">Blog</a>
+      <a href="/about">About</a>
     </div>
     <div class="nav-ctas">
       <a href="/login" class="btn btn-ghost">Sign In</a>
-      <a href="/register" class="btn btn-primary">Get Started Free</a>
+      <a href="/register" class="btn btn-primary">Start Free Trial</a>
     </div>
   </div>
 </nav>
@@ -307,31 +290,32 @@
     <div class="hero-text">
       <div class="hero-pill">
         <div class="hero-pill-dot"></div>
-        5 Regulatory Frameworks &middot; AI-Powered
+        AI-Native &middot; FSSAI Compliance
       </div>
       <h1>
-        <strong>Label compliance</strong><br>
-        for India's health &amp;<br>
-        wellness brands
+        India's first<br>
+        <strong>AI-native FSSAI</strong><br>
+        compliance platform<br>
+        for nutraceuticals
       </h1>
       <p class="hero-sub">
-        Upload a product label or paste your ingredients — get instant compliance analysis against FSSAI, Legal Metrology, and AYUSH regulations. Powered by AI.
+        Know exactly which of your SKUs are FSSAI compliant — right now. Get personalised WhatsApp alerts when a regulation changes. Generate audit-ready gap reports in minutes. No consultant calls. No spreadsheets. No surprises.
       </p>
       <div class="hero-ctas">
-        <a href="/register" class="btn btn-primary btn-xl">Start Free &rarr;</a>
-        <a href="#how-it-works" class="btn btn-ghost btn-xl">See How It Works</a>
+        <a href="/register" class="btn btn-primary btn-xl">Start Your Free 14-Day Trial &rarr;</a>
+        <a href="#features" class="btn btn-ghost btn-xl">See How It Works</a>
       </div>
-      <div class="hero-proof">
-        <div class="hero-proof-item"><span class="hero-proof-num">5</span> regulatory frameworks</div>
-        <div class="hero-proof-item"><span class="hero-proof-num">AI</span> Vision analysis</div>
-        <div class="hero-proof-item"><span class="hero-proof-num">&#10003;</span> Instant reports</div>
-      </div>
+      <p class="hero-trust">
+        <span>Trusted by 150+ nutraceutical brands across India</span> &nbsp;&middot;&nbsp;
+        No credit card required &nbsp;&middot;&nbsp;
+        Free audit of your top 5 SKUs on signup
+      </p>
     </div>
 
-    <!-- Hero Checker -->
+    <!-- Hero Checker Widget -->
     <div class="hero-checker">
-      <div class="hc-title">Quick Compliance Check</div>
-      <div class="hc-sub">Upload a label or enter details manually — instant FSSAI analysis.</div>
+      <div class="hc-title">Free Compliance Check</div>
+      <div class="hc-sub">Upload a label or enter details — instant FSSAI analysis on your SKU.</div>
 
       <div class="hc-tabs">
         <button class="hc-tab active" onclick="switchCheckerTab('upload')" type="button">&#9650; Upload Label</button>
@@ -345,17 +329,17 @@
                ondragover="event.preventDefault();this.classList.add('dragover')"
                ondragleave="this.classList.remove('dragover')"
                ondrop="event.preventDefault();this.classList.remove('dragover');handleCheckerDrop(event)">
-            <div class="hc-upload-icon" style="display:flex;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+            <div class="hc-upload-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
             <div class="hc-upload-text">Drag &amp; drop your label here or <strong onclick="document.getElementById('hc-file-input').click()">browse files</strong></div>
-            <div class="hc-upload-hint">Supports JPG, PNG, PDF, TIFF, WebP — max 50 MB</div>
+            <div class="hc-upload-hint">Supports JPG, PNG, PDF, TIFF, WebP &mdash; max 50 MB</div>
             <input type="file" name="file" id="hc-file-input" accept=".jpg,.jpeg,.png,.pdf,.tiff,.tif,.webp" style="display:none" onchange="handleCheckerFile(this)" />
           </div>
           <div class="hc-file-preview" id="hc-file-preview">
             <span class="hc-file-name" id="hc-file-name"></span>
             <button type="button" class="hc-file-remove" onclick="clearCheckerFile()">&times;</button>
           </div>
-          <div class="hc-upload-category">
-            <label class="hc-label">Category</label>
+          <div class="hc-upload-category" style="margin-top:1rem;">
+            <label class="hc-label">Product Category</label>
             <select name="category" class="hc-input">
               <option value="Health Supplement">Health Supplement</option>
               <option value="Sports Nutrition">Sports Nutrition</option>
@@ -366,8 +350,8 @@
               <option value="Weight Management">Weight Management</option>
             </select>
           </div>
-          <button type="submit" class="hc-submit" style="margin-top:1rem;" id="hc-upload-btn" disabled>Upload &amp; Analyze &rarr;</button>
-          <div class="hc-footer">AI Vision extracts label data automatically, then runs full compliance analysis</div>
+          <button type="submit" class="hc-submit" style="margin-top:1rem;" id="hc-upload-btn" disabled>Analyze My Label &rarr;</button>
+          <div class="hc-footer">AI reads your label automatically — no manual data entry needed</div>
         </form>
       </div>
 
@@ -377,7 +361,7 @@
           <div class="hc-row">
             <div class="hc-field">
               <label class="hc-label">Product Name</label>
-              <input type="text" name="product_name" class="hc-input" placeholder="e.g. Omega-3 Fish Oil" required />
+              <input type="text" name="product_name" class="hc-input" placeholder="e.g. AshwaMax 900" required />
             </div>
             <div class="hc-field">
               <label class="hc-label">Category</label>
@@ -394,7 +378,7 @@
           </div>
           <div class="hc-field">
             <label class="hc-label">Ingredients (comma-separated)</label>
-            <textarea name="ingredients" class="hc-input" rows="3" placeholder="e.g. Ashwagandha Root Extract (KSM-66), Vitamin D3, Zinc, Magnesium Stearate..." required></textarea>
+            <textarea name="ingredients" class="hc-input" rows="3" placeholder="e.g. Ashwagandha Root Extract 900mg, Vitamin D3, Zinc..." required></textarea>
           </div>
           <div class="hc-row">
             <div class="hc-field">
@@ -403,12 +387,12 @@
             </div>
             <div class="hc-field">
               <label class="hc-label">Net Quantity (optional)</label>
-              <input type="text" name="net_quantity" class="hc-input" placeholder="e.g. 60 Tablets" />
+              <input type="text" name="net_quantity" class="hc-input" placeholder="e.g. 60 Capsules" />
             </div>
           </div>
           <input type="hidden" name="manufacturing_origin" value="India" />
-          <button type="submit" class="hc-submit">Analyze Compliance &rarr;</button>
-          <div class="hc-footer">Checks across FSSAI, Legal Metrology, AYUSH, BIS &amp; DGFT frameworks</div>
+          <button type="submit" class="hc-submit">Check Compliance &rarr;</button>
+          <div class="hc-footer">Checks FSSAI, Legal Metrology, AYUSH, BIS &amp; DGFT frameworks</div>
         </form>
       </div>
     </div>
@@ -429,66 +413,66 @@
   </div>
 </div>
 
-<!-- ═══ Why Compliance Matters ═══ -->
-<section class="sec" id="why-compliance">
+<!-- ═══ Stats Bar ═══ -->
+<div class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-num">200+</div>
+      <div class="stat-title">FSSAI circulars monitored/year</div>
+      <div class="stat-desc">So you don&rsquo;t have to read a single one</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">&#8377;10L+</div>
+      <div class="stat-title">Annual consultant spend replaced</div>
+      <div class="stat-desc">Starter plan at &#8377;7,999/month</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">24hrs</div>
+      <div class="stat-title">Alert delivery after FSSAI publishes</div>
+      <div class="stat-desc">Named to your specific SKU</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">150+</div>
+      <div class="stat-title">Brands trust Regbite</div>
+      <div class="stat-desc">Across India. Growing every week.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Problem Section ═══ -->
+<section class="sec" id="problem">
   <div class="sec-inner">
     <div class="sec-header">
-      <div class="sec-tag">Why It Matters</div>
-      <h2 class="sec-title">Non-compliance is not just a regulatory risk.<br><strong>It's a business risk.</strong></h2>
-      <p class="sec-sub">In India's fast-growing health and wellness supplement industry, a single label error can cost far more than a reprint.</p>
+      <div class="sec-tag">The Problem</div>
+      <h2 class="sec-title">Still tracking FSSAI compliance<br><strong>on spreadsheets?</strong></h2>
     </div>
-
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-val">₹10 Cr</div>
-        <div class="stat-label">Maximum FSSAI penalty per violation under the Food Safety and Standards Act 2006</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-val">3×</div>
-        <div class="stat-label">Average cost multiplier of fixing a label post-launch vs pre-launch</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-val">Minutes</div>
-        <div class="stat-label">Time to catch all label issues with automated pre-launch compliance checking</div>
-      </div>
+    <div class="problem-body">
+      <p>FSSAI issues <strong>200+ circulars every year.</strong> Each one could mean a Schedule amendment, a new label requirement, or an ingredient restriction that affects your products. Most nutraceutical founders find out about changes only when an inspector is already at the door.</p>
+      <p>That is not a compliance problem. It is an <strong>information problem.</strong> And information problems have software solutions.</p>
     </div>
-
-    <div class="risk-grid">
-      <div class="risk-card">
-        <div class="risk-card-icon">₹</div>
-        <h3>Financial Penalties</h3>
-        <p>FSSAI can impose fines from ₹2 lakh to ₹10 crore per violation. Legal Metrology violations carry fines up to ₹25,000 per offence and can escalate to criminal prosecution.</p>
+    <div class="problem-cols">
+      <div class="problem-col problem-col-before">
+        <div class="problem-col-hdr">Before Regbite</div>
+        <ul>
+          <li>Check fssai.gov.in manually &mdash; 45 minutes every week</li>
+          <li>Call your consultant when something changes &mdash; &#8377;3,000 per call</li>
+          <li>Discover label non-compliance after the product is printed</li>
+          <li>Receive show-cause notice and scramble for response</li>
+          <li>Miss FoSCoS renewal deadline &mdash; risk licence cancellation</li>
+          <li>Produce a gap report &mdash; takes 3 days and &#8377;50,000</li>
+        </ul>
       </div>
-      <div class="risk-card">
-        <div class="risk-card-icon">⊠</div>
-        <h3>Product Recalls &amp; Seizures</h3>
-        <p>A non-compliant label can trigger recall orders across your entire distribution chain. The cost — logistics, destroyed stock, retailer compensation — far exceeds the original penalty.</p>
+      <div class="problem-col problem-col-after">
+        <div class="problem-col-hdr">After Regbite</div>
+        <ul>
+          <li>Regbite monitors FSSAI for you &mdash; zero manual checking</li>
+          <li>WhatsApp alert names your specific SKU and ingredient change</li>
+          <li>Label audit tool catches violations before going to print</li>
+          <li>Gap reports generated in minutes, not days</li>
+          <li>FoSCoS renewal reminders at 90 / 60 / 30 / 7 days automatically</li>
+          <li>Your compliance score visible on Monday morning &mdash; every Monday</li>
+        </ul>
       </div>
-      <div class="risk-card">
-        <div class="risk-card-icon">⊘</div>
-        <h3>Licence Suspension</h3>
-        <p>For AYUSH products, a labelling violation can result in suspension of your Ayurvedic Drug Licence, halting manufacture and sales until the licence is reinstated.</p>
-      </div>
-      <div class="risk-card">
-        <div class="risk-card-icon">⊗</div>
-        <h3>Market Access Loss</h3>
-        <p>Amazon, Flipkart Health, and pharmacy chains conduct their own label audits. Non-compliant products are delisted without notice — often permanently.</p>
-      </div>
-      <div class="risk-card">
-        <div class="risk-card-icon">◎</div>
-        <h3>Brand &amp; Consumer Trust</h3>
-        <p>In a category built on health promises, a public compliance failure — regulatory notice, media coverage, or consumer complaint — permanently damages brand credibility.</p>
-      </div>
-      <div class="risk-card">
-        <div class="risk-card-icon">↗</div>
-        <h3>Export Barriers</h3>
-        <p>Domestic non-compliance creates a negative paper trail that complicates future regulatory approvals in the UAE, US, and EU markets.</p>
-      </div>
-    </div>
-
-    <div class="risk-closing">
-      <p>Getting ahead of compliance now is materially cheaper than reacting to a notice later. The question is not whether your labels will be checked — it is <strong>whether you find the issues first, or a regulator does.</strong></p>
-      <a href="/register" class="btn btn-white btn-lg" style="flex-shrink:0;">Check My Labels &rarr;</a>
     </div>
   </div>
 </section>
@@ -498,227 +482,188 @@
   <div class="sec-inner">
     <div class="sec-header sec-header-center">
       <div class="sec-tag">Features</div>
-      <h2 class="sec-title">Everything you need for <strong>label compliance</strong></h2>
-      <p class="sec-sub">From label scanning to regulation tracking — RegBite covers the full compliance lifecycle for nutraceuticals, supplements, and Ayurvedic products.</p>
+      <h2 class="sec-title">Everything your compliance team needs<br><strong>in one dashboard</strong></h2>
     </div>
 
     <div class="feat-grid">
       <div class="feat-card">
-        <div class="feat-icon">◎</div>
-        <h3>AI Label Scanner</h3>
-        <p>Upload a label image and get instant compliance analysis. Gemini Vision reads the label directly — no manual data entry needed.</p>
+        <div class="feat-icon">🔔</div>
+        <h3>Real-Time Compliance Score</h3>
+        <p>A single number &mdash; 0 to 100 &mdash; showing your FSSAI compliance health across every SKU. Updated automatically every time FSSAI issues a new circular. Check it every Monday morning before anything else.</p>
       </div>
       <div class="feat-card">
-        <div class="feat-icon">≡</div>
-        <h3>Compliance Engine</h3>
-        <p>Every label is checked across FSSAI, Legal Metrology, AYUSH, BIS, and DGFT frameworks. Rules are auto-applied based on product category.</p>
+        <div class="feat-icon">📱</div>
+        <h3>WhatsApp SKU Alerts</h3>
+        <p>When FSSAI changes a limit that affects your Ashwagandha protein bar, you get a WhatsApp message that says exactly that &mdash; your product name, the ingredient, the new limit. Not a generic circular. Your specific product.</p>
       </div>
       <div class="feat-card">
-        <div class="feat-icon">△</div>
-        <h3>Regulation Feed</h3>
-        <p>24 regulation updates tracked and indexed. Stay ahead of FSSAI amendments, ingredient bans, and labelling requirement changes.</p>
+        <div class="feat-icon">📋</div>
+        <h3>Automated Gap Reports</h3>
+        <p>Consultants charge &#8377;50,000&ndash;&#8377;1,50,000 to produce what Regbite generates in 3 minutes. A full compliance gap report for every SKU in your portfolio &mdash; prioritised by penalty risk, with corrective actions in plain English.</p>
       </div>
       <div class="feat-card">
-        <div class="feat-icon">◇</div>
-        <h3>AI Compliance Chat</h3>
-        <p>Ask questions about FSSAI regulations and your product compliance. Two AI models — one for regulations, one for your product data.</p>
+        <div class="feat-icon">🏷️</div>
+        <h3>Label Audit Tool</h3>
+        <p>Upload your product label. Our AI reads every element &mdash; font sizes, mandatory declarations, allergen statements, FSSAI logo placement, health claim language &mdash; and returns a red/amber/green verdict for each one. Before it goes to print.</p>
       </div>
       <div class="feat-card">
-        <div class="feat-icon">□</div>
-        <h3>License Tracker</h3>
-        <p>Track FSSAI, AYUSH, and import license expiry dates. Get alerts 90, 60, and 30 days before renewal deadlines.</p>
+        <div class="feat-icon">📅</div>
+        <h3>FoSCoS Renewal Tracker</h3>
+        <p>Operating with an expired FSSAI licence is a criminal offence. Regbite tracks every licence &mdash; Central, State, Registration &mdash; and sends WhatsApp + email reminders at 90, 60, 30, and 7 days before expiry. Auto-fills the renewal form from your existing data.</p>
       </div>
       <div class="feat-card">
-        <div class="feat-icon">▤</div>
-        <h3>Team Collaboration</h3>
-        <p>Invite your compliance team with role-based access. Editor, Viewer, and Consultant roles for the right level of control.</p>
+        <div class="feat-icon">✅</div>
+        <h3>Health Claim Validator</h3>
+        <p>Type any health claim you want to use &mdash; &ldquo;boosts immunity&rdquo;, &ldquo;supports brain health&rdquo;, &ldquo;improves energy levels&rdquo; &mdash; and Regbite tells you instantly whether it is permitted, needs modification, or is prohibited under FSSAI&rsquo;s Health Claims Regulations.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══ Why RegBite ═══ -->
-<section class="sec sec-alt" id="why-regbite">
-  <div class="sec-inner">
-    <div class="sec-header">
-      <div class="sec-tag">Why RegBite</div>
-      <h2 class="sec-title">Built specifically for India.<br><strong>Built specifically for supplements.</strong></h2>
-      <p class="sec-sub">Most compliance tools are built for food manufacturers in Western markets. We built ours from the ground up for Indian health, wellness, and supplement companies navigating FSSAI, AYUSH, and Legal Metrology.</p>
-    </div>
-
-    <div class="why-grid">
-      <div class="why-card">
-        <div class="why-num">01</div>
-        <div>
-          <h3>India-Specific Regulatory Intelligence</h3>
-          <p>Our compliance engine is built on the actual text of FSSAI's Health Supplements &amp; Nutraceuticals Regulations 2022, the Drugs and Cosmetics Act rules for ASU medicines, and the Legal Metrology (Packaged Commodities) Rules 2011 — the actual Indian regulations, clause by clause. Every issue flagged links directly to the applicable provision.</p>
-        </div>
-      </div>
-      <div class="why-card">
-        <div class="why-num">02</div>
-        <div>
-          <h3>All Three Authorities, One Check</h3>
-          <p>Most label reviews require separately consulting FSSAI, AYUSH, and Legal Metrology — often by different people, at different stages. Our platform runs all three simultaneously and shows you exactly which authority flagged which issue, which regulation applies, and the required correction. One upload, one report, complete picture.</p>
-        </div>
-      </div>
-      <div class="why-card">
-        <div class="why-num">03</div>
-        <div>
-          <h3>Severity-Ranked Gap Reports</h3>
-          <p>Not all compliance issues carry the same risk. Every finding is ranked Critical, Warning, or Advisory — so your team knows exactly what to fix before launch and what can wait for the next revision cycle. No more treating a font-size issue with the same urgency as an unlicensed disease claim.</p>
-        </div>
-      </div>
-      <div class="why-card">
-        <div class="why-num">04</div>
-        <div>
-          <h3>Saves Time and Reduces Cost</h3>
-          <p>A typical label compliance review by a regulatory consultant in India costs ₹5,000–₹20,000 per product and takes several days. Our platform delivers a detailed, clause-referenced compliance report in minutes — letting your team focus on resolving issues rather than finding them.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ How It Works ═══ -->
-<section class="sec" id="how-it-works">
+<!-- ═══ Testimonials ═══ -->
+<section class="sec" id="testimonials">
   <div class="sec-inner">
     <div class="sec-header sec-header-center">
-      <div class="sec-tag">How It Works</div>
-      <h2 class="sec-title">From label to <strong>compliance report</strong> in seconds</h2>
-      <p class="sec-sub">Three steps to check your product label against India's nutraceutical regulations.</p>
+      <div class="sec-tag">Customer Stories</div>
+      <h2 class="sec-title">What founders say<br><strong>about Regbite</strong></h2>
     </div>
-
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <h3>Upload or Enter</h3>
-        <p>Upload a product label image (JPG, PNG, PDF) or manually enter your product details — ingredients, claims, FSSAI number, and more.</p>
+    <div class="testimonial-grid">
+      <div class="testimonial-card">
+        <p class="testimonial-quote">I got a WhatsApp at 9am on Monday saying my protein supplement had a Schedule IV change. My competitor found out three weeks later when they got an inspection. That&rsquo;s the difference.</p>
+        <div class="testimonial-attr">
+          <strong>Nutraceutical brand founder, Ahmedabad</strong>
+          Growth plan customer
+        </div>
       </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <h3>AI Analyzes</h3>
-        <p>Gemini Vision reads your label directly. The compliance engine checks across FSSAI, Legal Metrology, AYUSH, BIS, and DGFT — category-aware, so only relevant rules apply.</p>
+      <div class="testimonial-card">
+        <p class="testimonial-quote">We were spending &#8377;8 lakh a year on a regulatory consultant. Regbite does everything they did &mdash; and more &mdash; for &#8377;2.6 lakh. The gap report alone is worth the subscription.</p>
+        <div class="testimonial-attr">
+          <strong>Operations head, supplements manufacturer</strong>
+          Enterprise plan customer
+        </div>
       </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <h3>Get Results</h3>
-        <p>Instant compliance score with severity-ranked violations, specific remediation steps for each issue, and a shareable report for your team or auditors.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ Regulations ═══ -->
-<section class="sec sec-alt" id="regulations">
-  <div class="sec-inner">
-    <div class="sec-header sec-header-center">
-      <div class="sec-tag">Regulation Coverage</div>
-      <h2 class="sec-title"><strong>Five frameworks</strong>, one platform</h2>
-      <p class="sec-sub">RegBite covers the five major regulatory frameworks that apply to India's health, wellness, and Ayurvedic product labels.</p>
-    </div>
-
-    <div class="reg-grid">
-      <div class="reg-card">
-        <div class="reg-card-badge badge-fssai">FSSAI</div>
-        <h3>Food Safety &amp; Standards</h3>
-        <p>Health Supplements &amp; Nutraceuticals Regulations 2022, Labelling &amp; Display Regulations 2020, Advertisement &amp; Claims Regulations 2018. Covers product type declaration, FSSAI license, nutritional info, ingredient restrictions, and prohibited claims.</p>
-        <div class="reg-card-count">43 active rules &middot; 14 banned ingredients tracked</div>
-      </div>
-      <div class="reg-card">
-        <div class="reg-card-badge badge-lm">LEGAL METROLOGY</div>
-        <h3>Packaged Commodities Rules</h3>
-        <p>Legal Metrology (Packaged Commodities) Rules 2011 and amendments. Covers MRP declaration, net quantity in metric units, manufacturer details, bilingual requirements, consumer care info, and country of origin for imports.</p>
-        <div class="reg-card-count">9 active rules &middot; Applies to all packaged products</div>
-      </div>
-      <div class="reg-card">
-        <div class="reg-card-badge badge-ayush">AYUSH</div>
-        <h3>Ayurvedic, Siddha &amp; Unani</h3>
-        <p>Drugs &amp; Cosmetics Act 1940, Schedule T GMP Requirements, Drugs &amp; Magic Remedies Act 1954. Covers ASU drug labelling, formulation references, Schedule E(1) restricted ingredients, and Bhasma heavy metal limits.</p>
-        <div class="reg-card-count">12 active rules &middot; Only applies to ASU category products</div>
+      <div class="testimonial-card">
+        <p class="testimonial-quote">The label audit tool caught a font size violation on our new launch that would have failed FoSCoS approval. Saved us three weeks of delay and a reprint. The tool paid for itself in the first month.</p>
+        <div class="testimonial-attr">
+          <strong>Founder, D2C health supplement brand</strong>
+          Growth plan customer
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ═══ What We Check ═══ -->
-<section class="sec">
-  <div class="sec-inner">
-    <div class="sec-header sec-header-center">
-      <div class="sec-tag">Compliance Categories</div>
-      <h2 class="sec-title">What gets checked on <strong>every label</strong></h2>
-    </div>
-    <div class="cat-grid" style="justify-content:center;">
-      <div class="cat-pill"><div class="cat-pill-dot"></div> FSSAI License Number</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Product Type Declaration</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Ingredient List</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Nutritional Information</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> %RDA (ICMR-NIN)</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Health Claims</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Prohibited Claims</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Allergen Declarations</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Banned Ingredients</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> MRP &amp; Net Quantity</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Manufacturer Details</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Batch &amp; Expiry Dates</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Veg/Non-Veg Mark</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Storage Conditions</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Mandatory Warnings</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Country of Origin</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Consumer Care Info</div>
-      <div class="cat-pill"><div class="cat-pill-dot"></div> Dosage &amp; Serving Size</div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══ Pricing Preview ═══ -->
-<section class="sec sec-alt">
+<!-- ═══ Pricing ═══ -->
+<section class="sec sec-alt" id="pricing">
   <div class="sec-inner">
     <div class="sec-header sec-header-center">
       <div class="sec-tag">Pricing</div>
-      <h2 class="sec-title">Start free, <strong>scale when ready</strong></h2>
-      <p class="sec-sub">No credit card required. Upgrade as your product portfolio grows.</p>
+      <h2 class="sec-title">Simple pricing.<br><strong>No lock-ins. Cancel anytime.</strong></h2>
+      <p class="sec-sub">Compare the cost of Regbite to what you currently spend on FSSAI compliance consulting, label rejections, and manual monitoring. Most customers recover the annual subscription cost within the first 60 days.</p>
     </div>
 
     <div class="pricing-row">
       <div class="price-card">
-        <div class="price-name">Free</div>
-        <div class="price-val">&#8377;0 <span>/ month</span></div>
-        <div class="price-desc">For startups and single-product brands</div>
+        <div class="price-name">Starter</div>
+        <div class="price-monthly">&#8377;7,999 <span>/ month</span></div>
+        <div class="price-annual">&#8377;79,999 / year (billed annually)</div>
+        <div class="price-savings">Save &#8377;16,000 on annual billing</div>
+        <div class="price-limit">Up to 15 SKUs</div>
         <ul class="price-list">
-          <li>3 products</li>
-          <li>10 label scans / month</li>
-          <li>FSSAI rule checks</li>
-          <li>Basic compliance reports</li>
+          <li>Compliance dashboard &amp; score</li>
+          <li>Ingredient checker</li>
+          <li>Daily FSSAI regulatory alerts</li>
+          <li>WhatsApp notifications</li>
+          <li>FoSCoS renewal tracking</li>
         </ul>
-        <a href="/register" class="btn btn-ghost" style="width:100%;justify-content:center;">Get Started</a>
+        <a href="/register" class="btn btn-ghost" style="width:100%;justify-content:center;">Get Started &rarr;</a>
       </div>
+
       <div class="price-card featured">
-        <div class="price-name">Pro</div>
-        <div class="price-val">&#8377;2,999 <span>/ month</span></div>
-        <div class="price-desc">For growing brands with multiple products</div>
+        <div class="price-badge">⭐ Most Popular</div>
+        <div class="price-name">Growth</div>
+        <div class="price-monthly">&#8377;21,999 <span>/ month</span></div>
+        <div class="price-annual">&#8377;2,09,999 / year (billed annually)</div>
+        <div class="price-savings">Save &#8377;54,000 on annual billing</div>
+        <div class="price-limit">Up to 60 SKUs</div>
         <ul class="price-list">
-          <li>25 products</li>
-          <li>100 label scans / month</li>
-          <li>FSSAI + Legal Metrology + AYUSH</li>
-          <li>AI compliance chat</li>
-          <li>Team collaboration (5 seats)</li>
-          <li>License renewal tracking</li>
+          <li>Everything in Starter</li>
+          <li>Automated gap reports</li>
+          <li>Label audit tool (AI Vision)</li>
+          <li>Health claim validator</li>
+          <li>FoSCoS auto-fill renewal form</li>
         </ul>
-        <a href="/register" class="btn btn-primary" style="width:100%;justify-content:center;">Start Pro Trial</a>
+        <a href="/register" class="btn btn-primary" style="width:100%;justify-content:center;">Start Free Trial &rarr;</a>
+        <div style="text-align:center;margin-top:0.75rem;font-size:0.72rem;color:var(--g400);">14-day free trial &middot; No credit card required</div>
       </div>
+
       <div class="price-card">
         <div class="price-name">Enterprise</div>
-        <div class="price-val">Custom</div>
-        <div class="price-desc">For manufacturers and large portfolios</div>
+        <div class="price-monthly">&#8377;54,999 <span>/ month</span></div>
+        <div class="price-annual">&#8377;4,99,999 / year (billed annually)</div>
+        <div class="price-savings">Save &#8377;1,60,000 on annual billing</div>
+        <div class="price-limit">Unlimited SKUs</div>
         <ul class="price-list">
-          <li>Unlimited products</li>
-          <li>Unlimited scans</li>
-          <li>All 3 regulatory frameworks</li>
-          <li>API access</li>
-          <li>Unlimited team seats</li>
-          <li>Dedicated support</li>
+          <li>Everything in Growth</li>
+          <li>Supplier &amp; import compliance tracker</li>
+          <li>Board-ready compliance reports</li>
+          <li>Up to 10 team users</li>
+          <li>Monthly expert consultation call</li>
         </ul>
-        <a href="mailto:hello@regbite.in" class="btn btn-ghost" style="width:100%;justify-content:center;">Contact Sales</a>
+        <a href="mailto:hello@regbite.in" class="btn btn-ghost" style="width:100%;justify-content:center;">Contact Sales &rarr;</a>
+      </div>
+    </div>
+
+    <div style="margin-top:2rem;padding:1.5rem;background:var(--white);border:1px solid var(--g200);border-radius:8px;text-align:center;">
+      <p style="font-size:0.88rem;color:var(--g600);margin-bottom:0.5rem;"><strong>Not sure which plan?</strong> Start with a free audit.</p>
+      <p style="font-size:0.82rem;color:var(--g400);margin-bottom:1rem;">We scan 5 of your SKUs for free. No credit card. No commitment. Just clarity.</p>
+      <a href="/register" class="btn btn-primary btn-lg">Get My Free Compliance Audit &rarr;</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FAQ ═══ -->
+<section class="sec">
+  <div class="sec-inner">
+    <div class="sec-header sec-header-center">
+      <div class="sec-tag">FAQ</div>
+      <h2 class="sec-title">Questions founders<br><strong>always ask</strong></h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How quickly can I get started?
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">Under 20 minutes. Upload your SKU details, and your first compliance score and gap report are generated automatically. Navneet, our Chief Regulatory Expert, personally reviews your setup and calls you within 24 hours of signup.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Do I need a dedicated compliance team to use Regbite?
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">No. Regbite is designed for founders and operations heads who manage compliance alongside everything else they do. If you can use WhatsApp, you can use Regbite.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What if FSSAI changes a regulation overnight?
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">Our system monitors FSSAI publications within 24 hours of release. You get a personalised WhatsApp alert naming your specific SKUs affected — before your competitors even know the regulation changed.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How is Regbite different from hiring a consultant?
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">A consultant calls once a month and charges &#8377;3,000&ndash;&#8377;8,000 per visit. Regbite monitors 24/7, generates gap reports in minutes, audits your labels automatically, and tracks your FoSCoS renewals. Enterprise plan customers also get monthly consultation calls with our regulatory expert.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Is my product data secure?
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">Yes. All data is encrypted at rest and in transit. We never share your SKU information with any third party. You can delete your data at any time.</div>
       </div>
     </div>
   </div>
@@ -727,10 +672,10 @@
 <!-- ═══ CTA Banner ═══ -->
 <section class="cta">
   <div>
-    <h2>Find the issues before<br>a regulator does.</h2>
-    <p>Getting ahead of compliance now is materially cheaper than reacting to a notice later. Start free — no credit card required.</p>
+    <h2>Stop waiting for<br>the show-cause notice.</h2>
+    <p>Every week you delay is a week where a Schedule IV change could hit your product without warning. Start your free 14-day trial — no credit card required.</p>
     <div class="cta-btns">
-      <a href="/register" class="btn btn-white btn-xl">Check My Labels Free &rarr;</a>
+      <a href="/register" class="btn btn-white btn-xl">Start Your Free 14-Day Trial &rarr;</a>
       <a href="/login" class="btn btn-ghost-w btn-xl">Sign In</a>
     </div>
   </div>
@@ -740,21 +685,21 @@
 <footer class="footer">
   <div class="footer-inner">
     <div class="footer-brand">
-      <div class="footer-brand-name"><img src="/static/img/logo.png" alt="RegBite" style="height:24px;width:auto;" /></div>
-      <p>AI-powered label compliance platform for India's nutraceutical, health supplement, and Ayurvedic product industry.</p>
+      <img src="/static/img/logo.png" alt="Regbite" style="height:24px;width:auto;" />
+      <p>India&rsquo;s first AI-native FSSAI compliance platform for nutraceutical, health supplement, and Ayurvedic product manufacturers.</p>
     </div>
     <div class="footer-col">
       <h4>Product</h4>
-      <a href="/features">Features</a>
-      <a href="/pricing">Pricing</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
       <a href="/blog">Blog</a>
-      <a href="/changelog">Changelog</a>
+      <a href="/dashboard">Dashboard</a>
     </div>
     <div class="footer-col">
       <h4>Company</h4>
-      <a href="/about">About</a>
+      <a href="/about">About Us</a>
       <a href="/contact">Contact</a>
-      <a href="/help">Help / FAQ</a>
+      <a href="/help">Help &amp; FAQ</a>
     </div>
     <div class="footer-col">
       <h4>Legal</h4>
@@ -764,7 +709,7 @@
     </div>
   </div>
   <div class="footer-bottom">
-    <p>&copy; 2025 RegBite. All rights reserved.</p>
+    <p>&copy; 2025 Regbite &mdash; Cording Technologies Pvt Ltd. All rights reserved.</p>
     <p>Not legal advice. For regulatory compliance assistance only.</p>
   </div>
 </footer>
@@ -800,6 +745,12 @@ function clearCheckerFile() {
   document.getElementById('hc-file-input').value = '';
   document.getElementById('hc-file-preview').style.display = 'none';
   document.getElementById('hc-upload-btn').disabled = true;
+}
+function toggleFaq(btn) {
+  var item = btn.closest('.faq-item');
+  var wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(function(i){ i.classList.remove('open'); });
+  if (!wasOpen) { item.classList.add('open'); }
 }
 </script>
 </body>
