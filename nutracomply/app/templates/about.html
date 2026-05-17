@@ -16,12 +16,20 @@
   .about-stat { text-align: center; padding: 1.5rem; background: var(--white); border: 1px solid var(--g200); border-radius: 6px; }
   .about-stat-val { font-size: 2rem; font-weight: 600; color: var(--ink); line-height: 1; }
   .about-stat-lbl { font-size: 0.74rem; color: var(--g500); margin-top: 0.3rem; }
-  .team-note { max-width: 600px; margin: 0 auto; text-align: center; }
-  .team-note p { font-size: 0.92rem; color: var(--g500); line-height: 1.75; }
+  .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+  .team-card { background: var(--white); border: 1px solid var(--g200); border-radius: 6px; padding: 1.75rem; }
+  .team-name { font-size: 1.1rem; font-weight: 600; color: var(--ink); margin-bottom: 0.15rem; letter-spacing: -0.01em; }
+  .team-title { font-size: 0.72rem; font-weight: 600; color: var(--g400); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.85rem; }
+  .team-bio { font-size: 0.84rem; color: var(--g500); line-height: 1.7; }
+  .commitment-list { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.75rem; }
+  .commitment-item { display: flex; align-items: flex-start; gap: 1rem; padding: 1rem 1.25rem; background: var(--white); border: 1px solid var(--g200); border-radius: 6px; }
+  .commitment-check { width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; flex-shrink: 0; margin-top: 0.1rem; }
+  .commitment-item p { font-size: 0.88rem; color: var(--g600); line-height: 1.6; }
   @media (max-width: 768px) {
     .about-grid { grid-template-columns: 1fr; gap: 2rem; }
     .values-grid { grid-template-columns: 1fr; }
     .stat-row { grid-template-columns: 1fr 1fr; }
+    .team-grid { grid-template-columns: 1fr; }
   }
 {% endblock %}
 
@@ -40,10 +48,10 @@
   <div class="sec-inner">
     <div class="about-grid">
       <div class="about-text">
-        <h2>Why we built <strong>RegBite</strong></h2>
-        <p>India's nutraceutical market is growing at 20%+ annually, but navigating the regulatory landscape remains one of the biggest challenges for brands. FSSAI, Legal Metrology, and AYUSH each have their own labelling requirements — and they change frequently.</p>
-        <p>We built RegBite because compliance shouldn't require a legal team. Our AI reads your product labels, checks them against 64+ active rules, and tells you exactly what needs fixing — in seconds, not weeks.</p>
-        <p>Whether you're a single-product startup or managing a portfolio of 500+ SKUs, RegBite gives you the confidence that your labels meet every regulatory requirement before they reach the shelf.</p>
+        <h2>We built Regbite because we were tired of watching <strong>good products get penalised for bad information</strong></h2>
+        <p>India's nutraceutical industry is growing at 20%+ year on year. Thousands of founders are building products that genuinely help people — better protein, cleaner supplements, functional foods. And then a show-cause notice arrives because a Schedule IV ingredient limit changed three months ago and nobody noticed.</p>
+        <p>That is not a compliance failure. It is an information failure. FSSAI issues 200+ circulars per year. Reading them is a full-time job. Most founders don't have a full-time person. So they rely on a consultant who calls once a month, or they ignore the circulars altogether and hope for the best.</p>
+        <p>Regbite exists to fix that. We monitor FSSAI so you don't have to. We map every regulatory change to your specific products. We tell you what changed, which of your SKUs are affected, and exactly what to do &mdash; in plain English, in a WhatsApp message, within 24 hours of FSSAI publishing anything.</p>
       </div>
       <div>
         <div class="stat-row">
@@ -89,11 +97,65 @@
   <div class="sec-inner">
     <div class="sec-header sec-header-center">
       <div class="sec-tag">Team</div>
-      <h2 class="sec-title">Built by <strong>compliance professionals</strong></h2>
+      <h2 class="sec-title">The people behind <strong>Regbite</strong></h2>
     </div>
-    <div class="team-note">
-      <p>RegBite is built by a team that understands both the regulatory landscape and the technology needed to automate it. We combine deep domain knowledge of FSSAI regulations with modern AI to deliver a platform that's both accurate and delightful to use.</p>
-      <p style="margin-top:1rem;">Have questions? <a href="/contact" style="color:var(--ink);font-weight:500;text-decoration:underline;">Get in touch</a></p>
+    <div class="team-grid">
+      <div class="team-card">
+        <div class="team-name">Vibhu</div>
+        <div class="team-title">CEO &amp; Co-Founder</div>
+        <p class="team-bio">16+ years in B2B enterprise sales and strategic partnerships. Built and led sales teams at Entigrity and MYCPE ONE. Understands the operational reality of running a nutraceutical business &mdash; the chaos, the consultant bills, the compliance anxiety &mdash; and is building Regbite to eliminate it.</p>
+      </div>
+      <div class="team-card">
+        <div class="team-name">Navneet</div>
+        <div class="team-title">Chief Regulatory Expert &amp; Co-Founder</div>
+        <p class="team-bio">India's most comprehensive nutraceutical FSSAI rule database lives in Navneet's head &mdash; and now in Regbite's engine. Three years building the Schedule I&ndash;VI compliance database that powers every gap report and ingredient check on the platform. Every alert Regbite sends has been validated by her.</p>
+      </div>
+      <div class="team-card">
+        <div class="team-name">Ben</div>
+        <div class="team-title">CPO, CTO &amp; Co-Founder</div>
+        <p class="team-bio">The architect behind Regbite's AI engine, WhatsApp integration, and regulatory scraping system. Full-stack engineer who has built the platform to be genuinely intelligent &mdash; not just a compliance checklist with a modern interface.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Our Commitment -->
+<section class="sec sec-alt">
+  <div class="sec-inner">
+    <div class="sec-header sec-header-center">
+      <div class="sec-tag">Our Commitment</div>
+      <h2 class="sec-title">What we stand <strong>behind</strong></h2>
+    </div>
+    <div class="commitment-list">
+      <div class="commitment-item">
+        <div class="commitment-check">&#10003;</div>
+        <p>Every compliance rule in Regbite is validated by Navneet before it enters the platform</p>
+      </div>
+      <div class="commitment-item">
+        <div class="commitment-check">&#10003;</div>
+        <p>When FSSAI changes a regulation, we update the platform within 24 hours &mdash; always</p>
+      </div>
+      <div class="commitment-item">
+        <div class="commitment-check">&#10003;</div>
+        <p>We never give a customer a gap report we have not verified ourselves</p>
+      </div>
+      <div class="commitment-item">
+        <div class="commitment-check">&#10003;</div>
+        <p>The platform is opinionated &mdash; we tell you what to fix, not just what is wrong</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Talk to us -->
+<section class="sec">
+  <div class="sec-inner" style="text-align:center;max-width:640px;margin:0 auto;">
+    <div class="sec-tag">Talk to us</div>
+    <h2 class="sec-title" style="margin-bottom:0.75rem;">Regbite is a small team.<br><strong>When you call us, Vibhu or Navneet picks up.</strong></h2>
+    <p style="font-size:0.92rem;color:var(--g500);margin-bottom:1.75rem;">Have a compliance question? Evaluating us for your portfolio? We're happy to walk you through the platform live and run a free compliance check on one of your products.</p>
+    <div style="display:flex;gap:0.6rem;justify-content:center;flex-wrap:wrap;">
+      <a href="/contact" class="btn btn-primary btn-lg">Get in Touch &rarr;</a>
+      <a href="/register" class="btn btn-ghost btn-lg">Start Free Trial &rarr;</a>
     </div>
   </div>
 </section>

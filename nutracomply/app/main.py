@@ -1164,6 +1164,11 @@ async def features_page(request: Request):
     return templates.TemplateResponse("features.html", {"request": request, "user": _get_optional_user(request), "active_page": "features"})
 
 
+@app.get("/free-audit")
+async def free_audit_redirect():
+    return RedirectResponse(url="/register", status_code=302)
+
+
 @app.get("/about")
 async def about_page(request: Request):
     return templates.TemplateResponse("about.html", {"request": request, "user": _get_optional_user(request), "active_page": "about"})
