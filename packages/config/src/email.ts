@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 
-export const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy placeholder — prevents "Missing API key" throw at module-eval time during `next build`
+export const resend = new Resend(process.env.RESEND_API_KEY ?? 'resend-not-configured');
 
 const FROM = 'RegBite US <noreply@regbite.com>';
 
