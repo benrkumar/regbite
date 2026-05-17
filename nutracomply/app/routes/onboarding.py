@@ -13,7 +13,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 
 @router.get("/onboarding")
 async def onboarding_page(request: Request, db: Session = Depends(get_db)):
-    from app.models import Alert, AlertStatus
+    from app.utils.alerts import get_unread_alert_count
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
@@ -23,12 +23,7 @@ async def onboarding_page(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url="/dashboard")
 
     step = int(request.query_params.get("step", "1"))
-
-    unread_alerts = (
-        db.query(Alert)
-        .filter(Alert.status == AlertStatus.UNREAD)
-        .count()
-    )
+    unread_alerts = get_unread_alert_count(user, db)
 
     return templates.TemplateResponse("onboarding.html", {
         "request": request,

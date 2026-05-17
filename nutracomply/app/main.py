@@ -835,8 +835,9 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 # Make csrf_token() available in all templates
 def _csrf_input(request: Request) -> str:
     """Return an HTML hidden input with the CSRF token."""
+    import html as _html
     token = request.cookies.get(CSRF_COOKIE, generate_csrf_token())
-    return f'<input type="hidden" name="csrf_token" value="{token}">'
+    return f'<input type="hidden" name="csrf_token" value="{_html.escape(token, quote=True)}">'
 
 templates.env.globals["csrf_input"] = _csrf_input
 
@@ -911,10 +912,10 @@ async def generic_exception_handler(request: Request, exc: Exception):
 async def health_check():
     """Railway healthcheck — verifies DB connectivity."""
     from sqlalchemy import text
+    from app.database import safe_db
     try:
-        db = SessionLocal()
-        db.execute(text("SELECT 1"))
-        db.close()
+        with safe_db() as db:
+            db.execute(text("SELECT 1"))
         return JSONResponse({"status": "ok"})
     except Exception as exc:
         return JSONResponse({"status": "error", "detail": str(exc)}, status_code=503)
@@ -975,11 +976,8 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
         cat = p.category or "Nutraceutical"
         categories[cat].append(p)
 
-    unread_alerts = (
-        db.query(Alert)
-        .filter(Alert.status == AlertStatus.UNREAD)
-        .count()
-    )
+    from app.utils.alerts import get_unread_alert_count
+    unread_alerts = get_unread_alert_count(user, db)
 
     unread_notifications = (
         db.query(Notification)

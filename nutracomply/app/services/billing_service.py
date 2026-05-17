@@ -121,9 +121,12 @@ def verify_payment_signature(order_id: str, payment_id: str, signature: str) -> 
     """Verify Razorpay payment signature."""
     try:
         settings = get_settings()
+        secret = settings.razorpay_key_secret
+        if not secret:
+            return False  # refuse to verify against an empty key
         message = f"{order_id}|{payment_id}"
         h = hmac.new(
-            settings.razorpay_key_secret.encode(),
+            secret.encode(),
             message.encode(),
             hashlib.sha256,
         )
@@ -137,8 +140,11 @@ def verify_webhook_signature(body: bytes, signature: str) -> bool:
     """Verify Razorpay webhook signature."""
     try:
         settings = get_settings()
+        secret = settings.razorpay_webhook_secret
+        if not secret:
+            return False  # refuse to verify against an empty key
         h = hmac.new(
-            settings.razorpay_webhook_secret.encode(),
+            secret.encode(),
             body,
             hashlib.sha256,
         )
