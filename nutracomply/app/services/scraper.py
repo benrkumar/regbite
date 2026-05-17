@@ -253,10 +253,11 @@ def _extract_pdf_text_from_bytes(content: bytes) -> str:
         return ""
 
 
-def classify_regulation_change(document_name: str, text_excerpt: str) -> dict:
+def classify_regulation_change(document_name: str, text_excerpt: str, known_rule_codes: list[str] | None = None) -> dict:
     """
     Uses Claude Haiku to classify the type and severity of a regulation change.
     Falls back to keyword heuristics if Claude is unavailable.
+    ``known_rule_codes`` is accepted for future use (mapping changes to affected rules).
     """
     if settings.anthropic_api_key:
         try:
