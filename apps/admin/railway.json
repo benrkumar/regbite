@@ -5,7 +5,7 @@
     "buildCommand": "pnpm install && pnpm build --filter=@regbite/admin"
   },
   "deploy": {
-    "startCommand": "HOSTNAME=0.0.0.0 node apps/admin/.next/standalone/server.js",
+    "startCommand": "HOSTNAME=0.0.0.0 node apps/admin/.next/standalone/apps/admin/server.js",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }

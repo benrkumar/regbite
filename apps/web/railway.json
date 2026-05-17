@@ -5,7 +5,7 @@
     "buildCommand": "pnpm install && pnpm build --filter=@regbite/web"
   },
   "deploy": {
-    "startCommand": "HOSTNAME=0.0.0.0 node apps/web/.next/standalone/server.js",
+    "startCommand": "HOSTNAME=0.0.0.0 node apps/web/.next/standalone/apps/web/server.js",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }
