@@ -1,3 +1,7 @@
+// Force dynamic so ClerkProvider is never evaluated during `next build`
+// static prerendering (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY may be absent at build time).
+export const dynamic = "force-dynamic";
+
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
