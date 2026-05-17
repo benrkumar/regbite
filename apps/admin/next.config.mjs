@@ -8,6 +8,9 @@ const nextConfig = {
   output: "standalone",
   experimental: {
     outputFileTracingRoot: path.join(__dirname, "../../"),
+    outputFileTracingIncludes: {
+      "/**": ["./node_modules/.prisma/client/**"],
+    },
   },
   transpilePackages: ["@regbite/database", "@regbite/ui", "@regbite/config"],
   webpack: (config) => {
