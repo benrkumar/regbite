@@ -63,8 +63,8 @@ async def export_products_csv(request: Request, db: Session = Depends(get_db)):
         top_violation = ""
         if lbl and lbl.checks:
             failed = [c for c in lbl.checks if c.result == CheckResult.FAIL]
-            crit = sum(1 for c in failed if c.rule and c.rule.severity.value == "CRITICAL")
-            high = sum(1 for c in failed if c.rule and c.rule.severity.value == "HIGH")
+            crit = sum(1 for c in failed if c.rule and c.rule.severity and c.rule.severity.value == "CRITICAL")
+            high = sum(1 for c in failed if c.rule and c.rule.severity and c.rule.severity.value == "HIGH")
             if failed:
                 sev_order = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
                 worst = sorted(

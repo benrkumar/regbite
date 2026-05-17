@@ -174,7 +174,7 @@ async def create_share_link(report_id: int, request: Request, db: Session = Depe
         label = db.query(_LV).filter(_LV.id == report.label_version_id).first() if report.label_version_id else None
         product = db.query(_Product).filter(_Product.id == label.product_id).first() if label else None
         share_url = f"{str(request.base_url).rstrip('/')}/r/{token}"
-        expires_str = report.expires_at.strftime("%d %b %Y") if report.expires_at else "30 days"
+        expires_str = report.share_expires_at.strftime("%d %b %Y") if report.share_expires_at else "30 days"
         send_report_shared_email(
             user,
             product.name if product else "Unknown Product",

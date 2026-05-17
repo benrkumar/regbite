@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Request, Form
+from fastapi import APIRouter, Depends, Request, Form
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
@@ -11,9 +12,8 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 
 
 @router.get("/onboarding")
-async def onboarding_page(request: Request):
+async def onboarding_page(request: Request, db: Session = Depends(get_db)):
     from app.models import Alert, AlertStatus
-    db = next(get_db())
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
@@ -43,8 +43,8 @@ async def onboarding_step1(
     request: Request,
     company_name: str = Form(""),
     company_gstin: str = Form(""),
+    db: Session = Depends(get_db),
 ):
-    db = next(get_db())
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
@@ -57,9 +57,8 @@ async def onboarding_step1(
 
 
 @router.post("/onboarding/step2")
-async def onboarding_step2(request: Request):
+async def onboarding_step2(request: Request, db: Session = Depends(get_db)):
     from app.models import Product
-    db = next(get_db())
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
@@ -84,8 +83,7 @@ async def onboarding_step2(request: Request):
 
 
 @router.post("/onboarding/step3")
-async def onboarding_step3(request: Request):
-    db = next(get_db())
+async def onboarding_step3(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
@@ -97,8 +95,7 @@ async def onboarding_step3(request: Request):
 
 
 @router.post("/onboarding/skip")
-async def onboarding_skip(request: Request):
-    db = next(get_db())
+async def onboarding_skip(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)

@@ -35,3 +35,17 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+from contextlib import contextmanager
+
+@contextmanager
+def safe_db():
+    """Context manager for routes that cannot use Depends(get_db).
+    Usage:  with safe_db() as db: ...
+    Guarantees the session is closed even if an exception is raised."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

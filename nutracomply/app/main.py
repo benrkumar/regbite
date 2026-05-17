@@ -5,13 +5,14 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse, JSONResponse
+from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.database import engine, Base, SessionLocal
+from app.database import engine, Base, SessionLocal, get_db
 from app.logging_config import setup_logging, get_logger
 
 setup_logging()
@@ -890,6 +891,20 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return templates.TemplateResponse("500.html", {"request": request}, status_code=exc.status_code)
 
 
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    """Catch-all: render friendly 500 page for any unhandled exception."""
+    import traceback
+    log.error("Unhandled exception on %s %s: %s\n%s",
+              request.method, request.url.path, exc, traceback.format_exc())
+    try:
+        return templates.TemplateResponse("500.html", {"request": request}, status_code=500)
+    except Exception:
+        # If template rendering itself fails, return plain text
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse("Internal Server Error", status_code=500)
+
+
 # ── Health check ─────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -910,10 +925,10 @@ async def health_check():
 @app.get("/")
 async def root(request: Request):
     from app.routes.auth import get_current_user_from_cookie
-    from app.database import get_db
+    from app.database import safe_db
     try:
-        db = next(get_db())
-        user = get_current_user_from_cookie(request, db)
+        with safe_db() as db:
+            user = get_current_user_from_cookie(request, db)
     except Exception as e:
         print(f"[root] DB not ready: {e}")
         user = None
@@ -923,14 +938,12 @@ async def root(request: Request):
 
 
 @app.get("/dashboard")
-async def dashboard(request: Request):
+async def dashboard(request: Request, db: Session = Depends(get_db)):
     from datetime import datetime
     from app.routes.auth import get_current_user_from_cookie
-    from app.database import get_db
     from app.models import Product, Alert, AlertStatus, LabelVersion, LicenseRenewal, PublishedAlert, PublishedAlertStatus, Notification
     from sqlalchemy.orm import selectinload
 
-    db = next(get_db())
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/login")
@@ -1140,10 +1153,8 @@ async def reg_alerts(request: Request):
 
 
 @app.get("/pricing")
-async def pricing_page(request: Request):
+async def pricing_page(request: Request, db: Session = Depends(get_db)):
     from app.routes.auth import get_current_user_from_cookie
-    from app.database import get_db
-    db = next(get_db())
     user = get_current_user_from_cookie(request, db)
     return templates.TemplateResponse("pricing.html", {"request": request, "user": user})
 
@@ -1151,10 +1162,10 @@ async def pricing_page(request: Request):
 def _get_optional_user(request: Request):
     """Return current user or None (never raises)."""
     from app.routes.auth import get_current_user_from_cookie
-    from app.database import get_db
+    from app.database import safe_db
     try:
-        db = next(get_db())
-        return get_current_user_from_cookie(request, db)
+        with safe_db() as db:
+            return get_current_user_from_cookie(request, db)
     except Exception:
         return None
 
@@ -1271,9 +1282,8 @@ async def robots_txt():
 
 
 @app.get("/violations")
-async def violations_triage(request: Request, severity: str = ""):
+async def violations_triage(request: Request, severity: str = "", db: Session = Depends(get_db)):
     from app.routes.auth import get_current_user_from_cookie
-    from app.database import get_db
     from app.models import (
         Product, LabelVersion, ComplianceCheck, ComplianceRule,
         CheckResult, Severity as Sev, Notification,
@@ -1281,7 +1291,6 @@ async def violations_triage(request: Request, severity: str = ""):
     from app.utils.alerts import get_unread_alert_count
     from sqlalchemy import func, case
 
-    db = next(get_db())
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse("/login", status_code=302)
@@ -1395,12 +1404,10 @@ async def violations_triage(request: Request, severity: str = ""):
 
 
 @app.get("/r/{token}")
-async def shared_report(token: str, request: Request):
+async def shared_report(token: str, request: Request, db: Session = Depends(get_db)):
     from datetime import datetime
-    from app.database import get_db
     from app.models import ComplianceReport
 
-    db = next(get_db())
     report = db.query(ComplianceReport).filter(
         ComplianceReport.share_token == token
     ).first()
@@ -1417,7 +1424,13 @@ async def shared_report(token: str, request: Request):
             "error": "This report link has expired. Please request a new link from the account holder."
         })
 
-    _ = report.product
+    _ = report.product  # eager-load
+
+    if not report.product:
+        return templates.TemplateResponse("shared_report_expired.html", {
+            "request": request,
+            "error": "The product associated with this report has been removed."
+        })
 
     return templates.TemplateResponse("shared_report.html", {
         "request": request,

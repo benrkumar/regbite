@@ -704,7 +704,7 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
         "score": score,
         "critical": critical,
         "violation_summary": violation_summary,
-        "failed_checks": sorted(failed, key=lambda c: c.rule.severity.value if c.rule else "zzz"),
+        "failed_checks": sorted(failed, key=lambda c: c.rule.severity.value if c.rule and c.rule.severity else "zzz"),
         "warning_checks": warnings,
         "passed_checks": passed,
         "processing": bool(processing) and not label.checks,
@@ -718,7 +718,10 @@ async def label_report(label_id: int, request: Request, processing: int = 0, db:
 async def label_image(label_id: int, request: Request = None, db: Session = Depends(get_db)):
     """Serve the label image/first PDF page. DB bytes first, disk fallback."""
     from fastapi.responses import StreamingResponse
-    import fitz  # PyMuPDF
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        fitz = None
 
     user = require_user(request, db)
     if not user:
@@ -738,6 +741,8 @@ async def label_image(label_id: int, request: Request = None, db: Session = Depe
 
     try:
         if label.file_type == "pdf":
+            if fitz is None:
+                return JSONResponse({"detail": "PDF preview unavailable (PyMuPDF not installed)"}, status_code=501)
             doc = fitz.open(stream=raw, filetype="pdf")
             page = doc[0]
             pix = page.get_pixmap(dpi=150)
@@ -770,7 +775,10 @@ async def label_image(label_id: int, request: Request = None, db: Session = Depe
 async def label_preview_page(label_id: int, page_num: int = 0, request: Request = None, db: Session = Depends(get_db)):
     """Serve a PDF page as a PNG image for preview. DB bytes first, disk fallback."""
     from fastapi.responses import StreamingResponse
-    import fitz  # PyMuPDF
+    try:
+        import fitz  # PyMuPDF
+    except ImportError:
+        fitz = None
 
     user = require_user(request, db)
     if not user:
@@ -787,6 +795,9 @@ async def label_preview_page(label_id: int, page_num: int = 0, request: Request 
 
     if not raw:
         return JSONResponse({"detail": "File not found"}, status_code=404)
+
+    if fitz is None:
+        return JSONResponse({"detail": "PDF preview unavailable (PyMuPDF not installed)"}, status_code=501)
 
     try:
         doc = fitz.open(stream=raw, filetype="pdf")
@@ -823,6 +834,9 @@ async def update_extraction_fields(label_id: int, request: Request, db: Session 
         updated_data = await request.json()
     except Exception:
         return JSONResponse({"detail": "Invalid JSON"}, status_code=400)
+
+    if not isinstance(updated_data, dict):
+        return JSONResponse({"detail": "Expected a JSON object"}, status_code=400)
 
     # Merge with existing extraction (preserve internal fields like _extraction_warnings)
     existing = label.extraction_json or {}
