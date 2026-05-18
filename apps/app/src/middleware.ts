@@ -1,5 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse, type NextRequest, type NextFetchEvent } from 'next/server';
 
 const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
@@ -14,14 +14,14 @@ const withClerkAuth = clerkMiddleware(async (auth, req) => {
   }
 });
 
-export default function middleware(req: NextRequest) {
+export default function middleware(req: NextRequest, event: NextFetchEvent) {
   // Bypass Clerk when AUTH_BYPASS=true (set this env var when Clerk credentials
   // are not yet configured — avoids the "dev-browser-missing" 404 loop with
   // placeholder pk_test_* keys that don't back a real Clerk application).
   if (process.env.AUTH_BYPASS === 'true') {
     return NextResponse.next();
   }
-  return withClerkAuth(req as Parameters<typeof withClerkAuth>[0]);
+  return withClerkAuth(req, event);
 }
 
 export const config = {
