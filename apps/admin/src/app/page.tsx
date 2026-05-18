@@ -26,7 +26,14 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/stats').then((r) => r.json()).then(setStats).finally(() => setLoading(false));
+    fetch('/api/stats')
+      .then((r) => {
+        if (!r.ok) throw new Error('API error');
+        return r.json();
+      })
+      .then(setStats)
+      .catch(() => setStats(null))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-sm text-gray-400">Loading…</div>;
