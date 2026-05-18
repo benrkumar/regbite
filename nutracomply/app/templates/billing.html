@@ -1,0 +1,591 @@
+{% extends "base.html" %}
+{% block title %}Billing{% endblock %}
+{% block page_subtitle %}Manage your subscription and payments{% endblock %}
+
+{% block content %}
+<style>
+/* ── Billing page styles ── */
+.billing-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+@media (max-width: 900px) { .billing-grid { grid-template-columns: 1fr; } }
+
+.plan-card {
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 1.5rem;
+}
+.plan-card.active-plan {
+  border-color: #404040;
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.06);
+}
+
+.plan-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+.plan-name-lg {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--gray-900);
+  letter-spacing: -0.02em;
+}
+.plan-pill {
+  display: inline-block;
+  padding: 0.22rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.pill-active    { background: #F5F5F5; color: #262626; }
+.pill-cancelled { background: #EBEBEB; color: #111111; }
+.pill-past-due  { background: #F5F5F5; color: #525252; }
+.pill-trialing  { background: #F5F5F5; color: #737373; }
+.pill-free      { background: #F5F5F5; color: #525252; }
+
+.plan-meta {
+  font-size: 0.82rem;
+  color: var(--gray-500);
+  margin-bottom: 0.4rem;
+}
+.plan-meta strong { color: var(--gray-700); }
+
+.usage-bar-wrap {
+  margin: 0.85rem 0 1rem;
+}
+.usage-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.77rem;
+  color: var(--gray-500);
+  margin-bottom: 0.3rem;
+}
+.usage-bar-track {
+  height: 7px;
+  background: var(--gray-100);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.usage-bar-fill {
+  height: 100%;
+  background: #404040;
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
+
+.plan-actions { display: flex; gap: 0.65rem; flex-wrap: wrap; margin-top: 1rem; }
+
+/* ── Upgrade card ── */
+.upgrade-card {
+  background: #F8F8F8;
+  border: 1.5px solid #EBEBEB;
+  border-radius: var(--r-lg);
+  padding: 1.5rem;
+}
+.upgrade-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #262626;
+  margin-bottom: 0.3rem;
+}
+.upgrade-price {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #262626;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-bottom: 0.2rem;
+}
+.upgrade-price-sub {
+  font-size: 0.8rem;
+  color: #737373;
+  margin-bottom: 1rem;
+}
+.upgrade-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 1.25rem;
+}
+.upgrade-features li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.855rem;
+  color: #262626;
+}
+.upgrade-features li .chk {
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  background: #404040;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; color: #FFFFFF; font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* billing toggle (monthly / annual) */
+.billing-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  font-size: 0.82rem;
+  color: var(--gray-600);
+}
+.billing-toggle-row label { font-weight: 600; cursor: pointer; }
+.toggle-switch {
+  position: relative; width: 38px; height: 21px; display: inline-block;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; cursor: pointer; inset: 0;
+  background: var(--gray-200); border-radius: 999px; transition: background 0.2s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 15px; height: 15px; border-radius: 50%;
+  background: #fff; left: 3px; top: 3px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch input:checked + .toggle-slider { background: #404040; }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(17px); }
+.save-chip {
+  font-size: 0.7rem; font-weight: 700;
+  background: #F5F5F5; color: #262626;
+  padding: 0.1rem 0.45rem; border-radius: 999px;
+}
+
+.warning-box {
+  background: #fffbeb;
+  border: 1.5px solid #E5E5E5;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  font-size: 0.85rem;
+  color: #525252;
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+/* ── Payment history ── */
+.pay-table-wrap {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.pay-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+.pay-table th {
+  background: #F8F8F8;
+  padding: 0.6rem 1rem;
+  text-align: left;
+  font-size: 0.71rem; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--gray-500);
+  border-bottom: 1.5px solid var(--border);
+}
+.pay-table td {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid #F5F5F5;
+  vertical-align: middle;
+}
+.pay-table tr:last-child td { border-bottom: none; }
+.pay-table tbody tr:hover td { background: #fafafa; }
+.status-paid    { background: #F5F5F5; color: #262626; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+.status-created { background: #F5F5F5; color: #525252; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+.status-failed  { background: #EBEBEB; color: #111111; padding: 0.15rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+</style>
+
+{# ── Page header ── #}
+<div class="page-hdr">
+  <div>
+    <h2>Billing &amp; Subscription</h2>
+    <p>Manage your plan, payments, and billing details</p>
+  </div>
+  <a href="/pricing" class="btn btn-outline btn-sm">View Plans</a>
+</div>
+
+{# Determine current plan key and status #}
+{% set current_plan = subscription.plan.value if subscription and subscription.plan else "free" %}
+{% set sub_status   = subscription.status.value if subscription and subscription.status else "active" %}
+{% set is_growth    = current_plan == "growth" %}
+
+{# ── Trial banner ── #}
+{% if sub_status == "trialing" and trial_days_left is not none %}
+<div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;
+            padding:0.85rem 1.1rem;margin-bottom:1.25rem;font-size:0.875rem;
+            display:flex;align-items:center;gap:0.6rem;">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#d97706"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+    <line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+  <span>
+    <strong>Free trial active</strong> —
+    {{ trial_days_left }} day{{ 's' if trial_days_left != 1 else '' }} remaining
+    (expires {{ trial_ends_display }}).
+    Subscribe below to keep Growth-level access.
+  </span>
+</div>
+{% endif %}
+
+<div class="billing-grid">
+
+  {# ── Current Plan Card ── #}
+  <div class="plan-card{% if is_growth %} active-plan{% endif %}">
+    <div class="plan-header">
+      <div>
+        <div class="plan-name-lg">
+          {% if current_plan == "growth" %}Growth Plan
+          {% elif current_plan == "enterprise" %}Enterprise Plan
+          {% else %}Starter Plan
+          {% endif %}
+        </div>
+        <div class="plan-meta" style="margin-top:0.2rem;">
+          {% if sub_status == "trialing" %}
+            <span class="plan-pill pill-trialing">Trial</span>
+          {% elif sub_status == "active" %}
+            <span class="plan-pill pill-active">Active</span>
+          {% elif sub_status == "cancelled" %}
+            <span class="plan-pill pill-cancelled">Cancelled</span>
+          {% elif sub_status == "past_due" %}
+            <span class="plan-pill pill-past-due">Past Due</span>
+          {% else %}
+            <span class="plan-pill pill-free">Free</span>
+          {% endif %}
+        </div>
+      </div>
+      {% if is_growth %}
+      <div style="font-size:1.6rem;line-height:1;">💎</div>
+      {% else %}
+      <div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;background:#F0F0F0;border-radius:6px;color:#525252;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
+      {% endif %}
+    </div>
+
+    {% if subscription %}
+      {% if sub_status == "trialing" and subscription.trial_ends_at %}
+      <div class="plan-meta">
+        <strong>Trial ends:</strong> {{ subscription.trial_ends_at.strftime('%d %b %Y') }}
+      </div>
+      {% elif subscription.current_period_start %}
+      <div class="plan-meta">
+        <strong>Period:</strong>
+        {{ subscription.current_period_start.strftime('%d %b %Y') }}
+        &ndash;
+        {{ subscription.current_period_end.strftime('%d %b %Y') if subscription.current_period_end else '—' }}
+      </div>
+      {% endif %}
+      {% if sub_status == "cancelled" and subscription.cancelled_at %}
+      <div class="plan-meta" style="color:#111111;">
+        <strong>Cancelled on:</strong> {{ subscription.cancelled_at.strftime('%d %b %Y') }}
+      </div>
+      {% endif %}
+    {% else %}
+      {# No subscription at all — show starter usage bar #}
+      {% set product_count = user.products|length if user.products is defined else 0 %}
+      {% set plan_limit = plans.free.product_limit %}
+      <div class="usage-bar-wrap">
+        <div class="usage-bar-label">
+          <span>Products used</span>
+          <span>{{ product_count }} / {{ plan_limit }}</span>
+        </div>
+        <div class="usage-bar-track">
+          <div class="usage-bar-fill" style="width:{{ [(product_count / plan_limit * 100), 100]|min }}%;"></div>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="plan-actions">
+      {% if sub_status == "active" %}
+        <form method="post" action="/billing/cancel"
+              onsubmit="return confirm('Cancel your subscription? Access continues until the end of the current billing period.')">
+          <input type="hidden" name="csrf_token" value="{{ request.cookies.get('_csrf', '') }}">
+          <button type="submit" class="btn btn-outline btn-sm" style="color:#111111;border-color:#D4D4D4;">
+            Cancel Subscription
+          </button>
+        </form>
+      {% elif sub_status == "cancelled" %}
+        <a href="#upgrade-section" class="btn btn-primary btn-sm">Re-subscribe &rarr;</a>
+      {% elif sub_status == "past_due" %}
+        <a href="#upgrade-section" class="btn btn-primary btn-sm">Restore access &rarr;</a>
+      {% elif sub_status == "trialing" %}
+        <a href="#upgrade-section" class="btn btn-primary btn-sm">Subscribe now &rarr;</a>
+      {% else %}
+        <a href="#upgrade-section" class="btn btn-primary btn-sm">Upgrade to Growth &rarr;</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Upgrade / plan summary card ── #}
+  {% if sub_status not in ("active",) or current_plan != "growth" %}
+  {# Show upgrade card for: free, trialing, cancelled, past_due users, and anyone not on Growth #}
+  <div class="upgrade-card" id="upgrade-section">
+    <div class="upgrade-card-title">
+      {% if sub_status == "trialing" %}Subscribe to Growth
+      {% elif sub_status in ("cancelled", "past_due") %}Restore Growth Access
+      {% else %}Upgrade to Growth
+      {% endif %}
+    </div>
+    <div style="margin-bottom:0.6rem;">
+
+      <div class="billing-toggle-row">
+        <label>Monthly</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="billingToggle" onchange="updatePrice()" />
+          <span class="toggle-slider"></span>
+        </label>
+        <label>Annual</label>
+        <span class="save-chip">Save ~20%</span>
+      </div>
+
+      {# Server-side price values so JS just reads from data attributes #}
+      <div class="upgrade-price"
+           data-monthly="{{ "{:,}".format(plans.growth.price_monthly_paise // 100) }}"
+           data-annual="{{ "{:,}".format(plans.growth.price_annual_paise // 100) }}">
+        &#8377;<span id="priceDisplay">{{ "{:,}".format(plans.growth.price_monthly_paise // 100) }}</span>
+      </div>
+      <div class="upgrade-price-sub" id="priceSub">per month, billed monthly</div>
+    </div>
+
+    <ul class="upgrade-features">
+      {% for feat in plans.growth.features %}
+      <li><span class="chk">&#10003;</span> {{ feat }}</li>
+      {% endfor %}
+    </ul>
+
+    {% if razorpay_configured %}
+      <button class="btn btn-primary btn-full" onclick="startPayment('growth')">
+        Pay with Razorpay &rarr;
+      </button>
+      <div style="text-align:center;font-size:0.73rem;color:#A3A3A3;margin-top:0.4rem;">
+        Recurring subscription &mdash; cancel anytime
+      </div>
+    {% else %}
+      <div class="warning-box">
+        <span style="display:inline-flex;align-items:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+        <span>Payment gateway not yet configured. Contact
+          <a href="mailto:support@regbite.com" style="color:#525252;text-decoration:underline;">support@regbite.com</a>
+          to upgrade.
+        </span>
+      </div>
+    {% endif %}
+  </div>
+
+  {% else %}
+  {# Already on active Growth — show features + downgrade/enterprise options #}
+  <div class="plan-card" id="upgrade-section">
+    <div class="plan-name-lg" style="margin-bottom:0.6rem;">Growth Plan Features</div>
+    <ul class="upgrade-features" style="list-style:none;padding:0;">
+      {% for feat in plans.growth.features %}
+      <li style="display:flex;align-items:center;gap:0.5rem;font-size:0.855rem;color:var(--gray-700);margin-bottom:0.4rem;">
+        <span style="color:#111111;font-weight:700;">&#10003;</span> {{ feat }}
+      </li>
+      {% endfor %}
+    </ul>
+    <div class="plan-meta" style="margin-bottom:0.75rem;">
+      Need more capacity?
+      <a href="mailto:sales@regbite.com" style="color:#111111;">Contact sales</a>
+      for Enterprise — unlimited products, API access, SSO.
+    </div>
+    {# Downgrade option #}
+    <details style="font-size:0.82rem;color:#737373;">
+      <summary style="cursor:pointer;color:#A3A3A3;">Downgrade to Starter</summary>
+      <div style="margin-top:0.6rem;padding:0.75rem;background:#F8F8F8;border-radius:8px;">
+        <p style="margin:0 0 0.5rem;">Starter plan: ₹{{ "{:,}".format(plans.free.price_monthly_paise // 100) }}/month,
+           {{ plans.free.product_limit }} products, {{ plans.free.scan_limit_monthly }} scans/month.</p>
+        <p style="margin:0 0 0.75rem;color:#A3A3A3;">Downgrade takes effect at the end of your current billing period.</p>
+        <form method="post" action="/billing/switch-plan"
+              onsubmit="return confirm('Downgrade to Starter? You keep Growth access until your current period ends.')">
+          <input type="hidden" name="csrf_token" value="{{ request.cookies.get('_csrf', '') }}">
+          <input type="hidden" name="plan" value="free">
+          <input type="hidden" name="billing" value="monthly">
+          <button type="submit" class="btn btn-outline btn-sm" style="color:#525252;border-color:#D4D4D4;">
+            Schedule downgrade to Starter
+          </button>
+        </form>
+      </div>
+    </details>
+  </div>
+  {% endif %}
+
+</div>
+
+{# ── Payment History ── #}
+<div class="card" style="padding:0;overflow:hidden;">
+  <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);">
+    <h3 style="font-size:0.95rem;font-weight:700;margin:0;">Payment History</h3>
+  </div>
+
+  {% if payment_history %}
+  <div class="pay-table-wrap">
+    <table class="pay-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Plan</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Reference</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rec in payment_history %}
+        <tr>
+          <td style="color:var(--gray-700);">{{ rec.created_at.strftime('%d %b %Y') }}</td>
+          <td>
+            <span style="font-weight:600;text-transform:capitalize;">{{ rec.plan.value }}</span>
+          </td>
+          <td style="font-weight:600;color:var(--gray-900);">
+            &#8377;{{ "{:,.0f}".format(rec.amount_paise / 100) }}
+          </td>
+          <td>
+            <span class="status-{{ rec.status }}">{{ rec.status|title }}</span>
+          </td>
+          <td style="font-family:monospace;font-size:0.78rem;color:var(--gray-400);">
+            {{ rec.razorpay_payment_id or rec.razorpay_order_id or '—' }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state" style="padding:2.5rem 1rem;">
+    <span class="empty-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span>
+    <h3>No payment history yet</h3>
+    <p>Your payments will appear here once you upgrade your plan.</p>
+  </div>
+  {% endif %}
+</div>
+
+{# ── Hidden verify forms (one for orders, one for subscriptions) ── #}
+<form id="verify-order-form" method="post" action="/billing/verify-payment" style="display:none;">
+  <input type="hidden" name="csrf_token" value="{{ request.cookies.get('_csrf', '') }}">
+  <input type="hidden" id="vf-order-id"   name="razorpay_order_id" />
+  <input type="hidden" id="vf-payment-id" name="razorpay_payment_id" />
+  <input type="hidden" id="vf-signature"  name="razorpay_signature" />
+  <input type="hidden" id="vf-plan"       name="plan" value="growth" />
+</form>
+<form id="verify-sub-form" method="post" action="/billing/verify-subscription" style="display:none;">
+  <input type="hidden" name="csrf_token" value="{{ request.cookies.get('_csrf', '') }}">
+  <input type="hidden" id="vs-payment-id"  name="razorpay_payment_id" />
+  <input type="hidden" id="vs-sub-id"      name="razorpay_subscription_id" />
+  <input type="hidden" id="vs-signature"   name="razorpay_signature" />
+  <input type="hidden" id="vs-plan"        name="plan" value="growth" />
+  <input type="hidden" id="vs-billing"     name="billing" value="monthly" />
+</form>
+
+{# ── Razorpay Checkout Script ── #}
+{% if razorpay_configured %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+var _billing = 'monthly';
+
+// Pull price values from data attributes set server-side
+var _priceEl = document.querySelector('.upgrade-price[data-monthly]');
+var _monthly = _priceEl ? _priceEl.dataset.monthly : '21,999';
+var _annual  = _priceEl ? _priceEl.dataset.annual  : '2,09,999';
+
+{% set monthly_price = plans.growth.price_monthly_paise // 100 %}
+{% set annual_price  = plans.growth.price_annual_paise // 100 %}
+{% set savings = (monthly_price * 12) - annual_price %}
+var _annualSavings = '{{ "{:,}".format(savings) }}';
+
+function updatePrice() {
+  var annual = document.getElementById('billingToggle').checked;
+  _billing = annual ? 'annual' : 'monthly';
+  document.getElementById('priceDisplay').textContent = annual ? _annual : _monthly;
+  document.getElementById('priceSub').textContent = annual
+    ? 'per year, billed annually — save ₹' + _annualSavings
+    : 'per month, billed monthly';
+}
+
+async function startPayment(plan) {
+  plan = plan || 'growth';
+  var billing = _billing;
+
+  var csrfToken = (document.cookie.match(/_csrf=([^;]+)/) || [])[1] || '';
+  var resp = await fetch('/billing/create-subscription', {
+    method: 'POST',
+    body: new URLSearchParams({ plan: plan, billing: billing }),
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRF-Token': csrfToken
+    }
+  });
+  var data = await resp.json();
+  if (data.error) {
+    alert('Error: ' + data.error);
+    return;
+  }
+
+  var planLabel = (plan === 'growth' ? 'Growth' : 'Starter') + ' Plan — ' +
+                  (billing === 'annual' ? 'Annual' : 'Monthly');
+
+  if (data.mode === 'subscription') {
+    var options = {
+      key: data.key_id,
+      subscription_id: data.subscription_id,
+      name: 'RegBite',
+      description: planLabel,
+      handler: function(response) {
+        document.getElementById('vs-payment-id').value = response.razorpay_payment_id;
+        document.getElementById('vs-sub-id').value     = response.razorpay_subscription_id;
+        document.getElementById('vs-signature').value  = response.razorpay_signature;
+        document.getElementById('vs-plan').value       = plan;
+        document.getElementById('vs-billing').value    = billing;
+        document.getElementById('verify-sub-form').submit();
+      },
+      prefill: { name: '{{ user.name | e }}', email: '{{ user.email | e }}' },
+      theme: { color: '#111111' }
+    };
+    var rzp = new Razorpay(options);
+    rzp.on('payment.failed', function(r) {
+      alert('Payment failed: ' + (r.error.description || 'Please try again.'));
+    });
+    rzp.open();
+  } else {
+    var options = {
+      key: data.key_id,
+      amount: data.amount,
+      currency: data.currency,
+      order_id: data.order_id,
+      name: 'RegBite',
+      description: planLabel,
+      handler: function(response) {
+        document.getElementById('vf-order-id').value   = response.razorpay_order_id;
+        document.getElementById('vf-payment-id').value = response.razorpay_payment_id;
+        document.getElementById('vf-signature').value  = response.razorpay_signature;
+        document.getElementById('vf-plan').value       = plan;
+        document.getElementById('verify-order-form').submit();
+      },
+      prefill: { name: '{{ user.name | e }}', email: '{{ user.email | e }}' },
+      theme: { color: '#111111' }
+    };
+    var rzp = new Razorpay(options);
+    rzp.on('payment.failed', function(r) {
+      alert('Payment failed: ' + (r.error.description || 'Please try again.'));
+    });
+    rzp.open();
+  }
+}
+</script>
+{% endif %}
+{% endblock %}

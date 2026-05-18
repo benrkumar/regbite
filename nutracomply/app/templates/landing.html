@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-TE74XJRHND"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-TE74XJRHND');
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Regbite — India's First AI-Native FSSAI Compliance Platform for Nutraceuticals</title>
+  <meta name="description" content="FSSAI compliance for nutraceuticals — automated. Regbite monitors 200+ FSSAI circulars, maps changes to your SKUs, and sends WhatsApp alerts with your product name. ₹7,999/month. 14-day free trial." />
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+  <link rel="manifest" href="/static/manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --font:    'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      --ink:     #000000;
+      --bg:      #F1F4F8;
+      --white:   #FFFFFF;
+      --g50:     #FAFAFA;
+      --g100:    #F5F5F5;
+      --g200:    #E6E8E6;
+      --g300:    #D4D4D4;
+      --g400:    #A3A3A3;
+      --g500:    #737373;
+      --g600:    #525252;
+      --g700:    #404040;
+      --g900:    #171717;
+      --primary: #2B4874;
+      --primary-dark: #0B2A4A;
+      --primary-light: #F1F4F8;
+    }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body { font-family: var(--font); color: var(--ink); background: var(--white); line-height: 1.7; letter-spacing: 0.01em; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+
+    /* ── Navbar ── */
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 64px; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--g200); display: flex; align-items: center; padding: 0 2rem; }
+    .nav-inner { max-width: 1120px; margin: 0 auto; width: 100%; display: flex; align-items: center; }
+    .nav-brand { display: flex; align-items: center; margin-right: auto; text-decoration: none; }
+    .nav-brand img { height: 36px; width: auto; display: block; }
+    .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+    .nav-links a { font-size: 0.84rem; color: var(--g500); transition: color 0.12s; }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-ctas { display: flex; align-items: center; gap: 0.5rem; margin-left: 1.5rem; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.42rem 1rem; border-radius: 5px; font-size: 0.84rem; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all 0.12s; font-family: var(--font); text-decoration: none; white-space: nowrap; line-height: 1.4; }
+    .btn-ghost { background: transparent; color: var(--g600); border-color: var(--g300); }
+    .btn-ghost:hover { background: var(--g100); color: var(--ink); }
+    .btn-primary { background: var(--primary); color: var(--white); border-color: var(--primary); }
+    .btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+    .btn-lg { padding: 0.6rem 1.5rem; font-size: 0.92rem; }
+    .btn-xl { padding: 0.7rem 1.8rem; font-size: 0.95rem; }
+
+    /* ── Hero ── */
+    .hero { padding: 64px 2rem 0; background: var(--white); }
+    .hero-inner { max-width: 1120px; margin: 0 auto; padding: 4rem 0 3.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 3.5rem; align-items: center; }
+    .hero-text { max-width: 540px; }
+    .hero-pill { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.25rem 0.75rem; background: var(--g100); border: 1px solid var(--g200); border-radius: 999px; font-size: 0.72rem; font-weight: 500; color: var(--g600); margin-bottom: 1.5rem; letter-spacing: 0.03em; }
+    .hero-pill-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--primary); }
+    .hero h1 { font-size: clamp(1.9rem, 3.8vw, 2.7rem); font-weight: 300; line-height: 1.15; color: var(--ink); letter-spacing: -0.03em; margin-bottom: 1.1rem; }
+    .hero h1 strong { font-weight: 600; }
+    .hero-sub { font-size: 1rem; color: var(--g500); font-weight: 300; line-height: 1.7; margin-bottom: 2rem; }
+    .hero-ctas { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.75rem; }
+    .hero-trust { font-size: 0.78rem; color: var(--g400); line-height: 1.7; }
+    .hero-trust span { color: var(--g600); }
+
+    /* ── Hero Checker Card ── */
+    .hero-checker { background: var(--white); border: 1px solid var(--g200); border-radius: 8px; padding: 1.5rem; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+    .hc-title { font-size: 0.92rem; font-weight: 600; color: var(--ink); margin-bottom: 0.2rem; }
+    .hc-sub { font-size: 0.76rem; color: var(--g400); margin-bottom: 1.2rem; }
+    .hc-field { margin-bottom: 0.85rem; }
+    .hc-label { display: block; font-size: 0.72rem; font-weight: 500; color: var(--g600); margin-bottom: 0.25rem; letter-spacing: 0.03em; }
+    .hc-input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--g300); border-radius: 5px; font-size: 0.84rem; font-family: var(--font); color: var(--ink); background: var(--white); outline: none; transition: border-color 0.12s; }
+    .hc-input:focus { border-color: var(--primary); }
+    .hc-input::placeholder { color: var(--g300); }
+    .hc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+    textarea.hc-input { resize: vertical; min-height: 72px; }
+    select.hc-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='none' stroke='%23A3A3A3' stroke-width='1.5' stroke-linecap='round' d='M1 1l4 4 4-4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; padding-right: 2.2rem; appearance: none; }
+    .hc-submit { width: 100%; padding: 0.6rem; background: var(--primary); color: var(--white); border: none; border-radius: 5px; font-size: 0.88rem; font-weight: 500; font-family: var(--font); cursor: pointer; transition: background 0.12s; }
+    .hc-submit:hover { background: var(--primary-dark); }
+    .hc-footer { margin-top: 0.75rem; font-size: 0.68rem; color: var(--g400); text-align: center; }
+
+    /* ── Checker Tabs ── */
+    .hc-tabs { display: flex; gap: 0; margin-bottom: 1.2rem; border-bottom: 1px solid var(--g200); }
+    .hc-tab { flex: 1; padding: 0.55rem 0; text-align: center; font-size: 0.78rem; font-weight: 500; color: var(--g400); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; background: none; border-top: none; border-left: none; border-right: none; font-family: var(--font); }
+    .hc-tab:hover { color: var(--g600); }
+    .hc-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .hc-panel { display: none; }
+    .hc-panel.active { display: block; }
+
+    /* ── Upload Zone ── */
+    .hc-upload-zone { border: 2px dashed var(--g300); border-radius: 8px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.15s; background: var(--g50); }
+    .hc-upload-zone:hover, .hc-upload-zone.dragover { border-color: var(--primary); background: var(--primary-light); }
+    .hc-upload-icon { font-size: 2rem; margin-bottom: 0.5rem; color: var(--g400); display: flex; justify-content: center; }
+    .hc-upload-text { font-size: 0.84rem; color: var(--g500); margin-bottom: 0.3rem; }
+    .hc-upload-text strong { color: #111111; cursor: pointer; }
+    .hc-upload-hint { font-size: 0.7rem; color: var(--g400); }
+    .hc-file-preview { margin-top: 1rem; display: none; align-items: center; gap: 0.6rem; padding: 0.6rem 0.8rem; background: var(--white); border: 1px solid var(--g200); border-radius: 5px; }
+    .hc-file-name { font-size: 0.82rem; font-weight: 500; color: var(--ink); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hc-file-remove { background: none; border: none; color: #111111; cursor: pointer; font-size: 0.9rem; padding: 0; }
+    .hc-upload-category { margin-top: 1rem; }
+
+    /* ── Sections ── */
+    .sec { padding: 5rem 2rem; }
+    .sec-inner { max-width: 1120px; margin: 0 auto; }
+    .sec-alt { background: var(--g50); }
+    .sec-dark { background: var(--primary-dark); }
+    .sec-tag { display: inline-block; padding: 0.2rem 0.65rem; background: var(--g100); color: var(--g600); border: 1px solid var(--g200); border-radius: 999px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
+    .sec-title { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 400; color: var(--ink); letter-spacing: -0.02em; line-height: 1.25; margin-bottom: 0.6rem; }
+    .sec-title strong { font-weight: 600; }
+    .sec-sub { font-size: 0.95rem; color: var(--g500); max-width: 540px; line-height: 1.7; }
+    .sec-header { margin-bottom: 3rem; }
+    .sec-header-center { text-align: center; }
+    .sec-header-center .sec-sub { margin: 0 auto; }
+
+    /* ── Stats Bar ── */
+    .stats-bar { border-top: 1px solid var(--g200); border-bottom: 1px solid var(--g200); background: var(--g50); padding: 2rem 2rem; }
+    .stats-inner { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--g200); border: 1px solid var(--g200); border-radius: 8px; overflow: hidden; }
+    .stat-item { background: var(--white); padding: 1.75rem 1.5rem; text-align: center; }
+    .stat-num { font-size: 2rem; font-weight: 600; color: var(--primary-dark); line-height: 1; letter-spacing: -0.03em; }
+    .stat-title { font-size: 0.8rem; font-weight: 600; color: var(--ink); margin: 0.3rem 0 0.2rem; }
+    .stat-desc { font-size: 0.72rem; color: var(--g400); line-height: 1.5; }
+
+    /* ── Trust Bar ── */
+    .trust-bar { border-bottom: 1px solid var(--g200); background: var(--g50); padding: 1.25rem 2rem; }
+    .trust-inner { max-width: 1120px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 2.5rem; flex-wrap: wrap; }
+    .trust-label { font-size: 0.68rem; font-weight: 500; color: var(--g400); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+    .trust-logos { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
+    .trust-logo { font-size: 0.82rem; font-weight: 600; color: var(--g400); letter-spacing: 0.02em; white-space: nowrap; }
+
+    /* ── Problem Section (Before/After) ── */
+    .problem-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--g200); border-radius: 8px; overflow: hidden; }
+    .problem-col { padding: 2rem; }
+    .problem-col-before { background: #FEF2F2; border-right: 1px solid #FECACA; }
+    .problem-col-after { background: #F0FDF4; }
+    .problem-col-hdr { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1.25rem; }
+    .problem-col-before .problem-col-hdr { color: #B91C1C; }
+    .problem-col-after .problem-col-hdr { color: #15803D; }
+    .problem-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
+    .problem-col li { font-size: 0.85rem; line-height: 1.55; display: flex; gap: 0.6rem; align-items: flex-start; }
+    .problem-col-before li { color: #7F1D1D; }
+    .problem-col-after li { color: #14532D; }
+    .problem-col-before li::before { content: "✕"; color: #EF4444; flex-shrink: 0; font-weight: 700; font-size: 0.8rem; margin-top: 0.05rem; }
+    .problem-col-after li::before { content: "✓"; color: #22C55E; flex-shrink: 0; font-weight: 700; font-size: 0.8rem; margin-top: 0.05rem; }
+    .problem-body { margin-bottom: 2.5rem; }
+    .problem-body p { font-size: 0.95rem; color: var(--g500); line-height: 1.7; margin-bottom: 0.75rem; }
+    .problem-body p strong { color: var(--ink); }
+
+    /* ── Features ── */
+    .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .feat-card { background: var(--white); border: 1px solid var(--g200); border-radius: 6px; padding: 1.75rem 1.5rem; transition: box-shadow 0.12s; }
+    .feat-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .feat-icon { font-size: 1.5rem; margin-bottom: 0.85rem; line-height: 1; }
+    .feat-card h3 { font-size: 0.92rem; font-weight: 600; color: var(--ink); margin-bottom: 0.4rem; letter-spacing: -0.01em; }
+    .feat-card p { font-size: 0.82rem; color: var(--g500); line-height: 1.65; }
+
+    /* ── Testimonials ── */
+    .testimonial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .testimonial-card { background: var(--white); border: 1px solid var(--g200); border-radius: 8px; padding: 1.75rem; display: flex; flex-direction: column; gap: 1rem; }
+    .testimonial-quote { font-size: 0.88rem; color: var(--g700); line-height: 1.7; flex: 1; }
+    .testimonial-quote::before { content: "\201C"; font-size: 1.5rem; color: var(--primary); line-height: 0; vertical-align: -0.4rem; margin-right: 0.1rem; }
+    .testimonial-attr { font-size: 0.72rem; color: var(--g400); line-height: 1.55; }
+    .testimonial-attr strong { color: var(--g600); font-weight: 500; display: block; }
+
+    /* ── Pricing ── */
+    .pricing-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; align-items: start; }
+    .price-card { background: var(--white); border: 1px solid var(--g200); border-radius: 8px; padding: 2rem; }
+    .price-card.featured { border-color: var(--primary); position: relative; box-shadow: 0 0 0 3px rgba(43,72,116,0.08); }
+    .price-badge { display: inline-block; padding: 0.2rem 0.6rem; background: var(--primary); color: var(--white); font-size: 0.62rem; font-weight: 700; border-radius: 3px; letter-spacing: 0.05em; margin-bottom: 1rem; }
+    .price-name { font-size: 1rem; font-weight: 600; color: var(--ink); margin-bottom: 0.25rem; }
+    .price-monthly { font-size: 1.9rem; font-weight: 600; color: var(--ink); line-height: 1; letter-spacing: -0.03em; }
+    .price-monthly span { font-size: 0.82rem; font-weight: 400; color: var(--g400); }
+    .price-annual { font-size: 0.78rem; color: var(--g500); margin: 0.3rem 0 0.1rem; }
+    .price-savings { font-size: 0.72rem; color: #15803D; font-weight: 500; margin-bottom: 1.25rem; }
+    .price-limit { font-size: 0.78rem; font-weight: 600; color: var(--primary); margin-bottom: 1rem; }
+    .price-list { list-style: none; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.45rem; }
+    .price-list li { font-size: 0.79rem; color: var(--g600); display: flex; align-items: flex-start; gap: 0.45rem; line-height: 1.5; }
+    .price-list li::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--primary); margin-top: 0.5rem; flex-shrink: 0; }
+    .price-divider { border: none; border-top: 1px solid var(--g200); margin: 1rem 0; }
+
+    /* ── FAQ ── */
+    .faq-list { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--g200); border-radius: 8px; overflow: hidden; }
+    .faq-item { border-bottom: 1px solid var(--g200); }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q { width: 100%; text-align: left; padding: 1.25rem 1.5rem; background: var(--white); border: none; font-family: var(--font); font-size: 0.9rem; font-weight: 600; color: var(--ink); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 1rem; transition: background 0.12s; }
+    .faq-q:hover { background: var(--g50); }
+    .faq-q-icon { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--g100); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: var(--g500); transition: transform 0.2s; }
+    .faq-item.open .faq-q-icon { transform: rotate(45deg); }
+    .faq-a { display: none; padding: 0 1.5rem 1.25rem; font-size: 0.86rem; color: var(--g500); line-height: 1.75; }
+    .faq-item.open .faq-a { display: block; }
+
+    /* ── CTA Banner ── */
+    .cta { background: var(--primary-dark); padding: 5rem 2rem; text-align: center; }
+    .cta h2 { font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 300; color: var(--white); letter-spacing: -0.02em; margin-bottom: 0.6rem; }
+    .cta p { color: rgba(255,255,255,0.55); font-size: 0.95rem; max-width: 500px; margin: 0 auto 2rem; line-height: 1.7; }
+    .cta-btns { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; }
+    .btn-white { background: var(--white); color: var(--primary-dark); border: 1px solid var(--white); }
+    .btn-white:hover { background: var(--g100); }
+    .btn-ghost-w { background: transparent; color: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.25); }
+    .btn-ghost-w:hover { background: rgba(255,255,255,0.08); color: var(--white); }
+
+    /* ── Footer ── */
+    .footer { background: var(--white); border-top: 1px solid var(--g200); }
+    .footer-inner { max-width: 1120px; margin: 0 auto; padding: 3rem 2rem 2rem; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 2rem; }
+    .footer-brand { }
+    .footer-brand p { font-size: 0.78rem; color: var(--g400); max-width: 260px; line-height: 1.6; margin-top: 0.6rem; }
+    .footer-col h4 { font-size: 0.7rem; font-weight: 600; color: var(--g400); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.75rem; }
+    .footer-col a { display: block; font-size: 0.82rem; color: var(--g500); padding: 0.2rem 0; transition: color 0.12s; }
+    .footer-col a:hover { color: var(--ink); }
+    .footer-bottom { max-width: 1120px; margin: 0 auto; padding: 1rem 2rem; border-top: 1px solid var(--g200); display: flex; align-items: center; justify-content: space-between; }
+    .footer-bottom p { font-size: 0.72rem; color: var(--g400); }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .stats-inner { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 900px) {
+      .hero-inner { grid-template-columns: 1fr; gap: 2.5rem; }
+      .hero-text { max-width: 100%; text-align: center; }
+      .hero-ctas { justify-content: center; }
+      .hero-trust { text-align: center; }
+      .hero-checker { max-width: 480px; margin: 0 auto; }
+      .feat-grid { grid-template-columns: 1fr 1fr; }
+      .testimonial-grid { grid-template-columns: 1fr; }
+      .pricing-row { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; }
+      .footer-inner { grid-template-columns: 1fr 1fr; }
+      .problem-cols { grid-template-columns: 1fr; }
+      .problem-col-before { border-right: none; border-bottom: 1px solid #FECACA; }
+    }
+    @media (max-width: 640px) {
+      .nav { padding: 0 1rem; }
+      .nav-links { display: none; }
+      .hero { padding-top: 64px; }
+      .hero-inner { padding: 2.5rem 0 2rem; }
+      .hero h1 { font-size: 1.75rem; }
+      .sec { padding: 3.5rem 1.25rem; }
+      .stats-inner { grid-template-columns: 1fr 1fr; }
+      .feat-grid { grid-template-columns: 1fr; }
+      .hc-row { grid-template-columns: 1fr; }
+      .footer-inner { grid-template-columns: 1fr; }
+      .footer-bottom { flex-direction: column; gap: 0.5rem; text-align: center; }
+      .hc-input { min-height: 44px; font-size: 0.9rem; }
+      .hc-submit { min-height: 48px; font-size: 0.92rem; }
+      .btn { min-height: 44px; }
+      .btn-xl { min-height: 48px; }
+    }
+    @media (max-width: 480px) {
+      .nav { padding: 0 0.85rem; }
+      .nav-ctas { gap: 0.35rem; }
+      .nav-ctas .btn { padding: 0.38rem 0.75rem; font-size: 0.8rem; }
+      .hero h1 { font-size: 1.55rem; }
+      .hero-sub { font-size: 0.9rem; }
+      .hero-ctas { gap: 0.45rem; }
+      .trust-inner { flex-direction: column; align-items: center; gap: 0.6rem; }
+      .sec { padding: 2.5rem 1rem; }
+      .sec-title { font-size: 1.4rem; }
+      .hero-checker { padding: 1.1rem; }
+      .hc-title { font-size: 0.88rem; }
+      .stats-inner { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ Navbar ═══ -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-brand">
+      <img src="/static/img/logo.png" alt="Regbite" />
+    </div>
+    <div class="nav-links">
+      <a href="#problem">Why Regbite</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="/about">About</a>
+    </div>
+    <div class="nav-ctas">
+      <a href="/login" class="btn btn-ghost">Sign In</a>
+      <a href="/register" class="btn btn-primary" onclick="gtag('event','sign_up_click',{event_category:'Nav',event_label:'landing_topbar'})">Start Free Trial</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══ Hero ═══ -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <div class="hero-pill">
+        <div class="hero-pill-dot"></div>
+        AI-Native &middot; FSSAI Compliance
+      </div>
+      <h1>
+        India's first<br>
+        <strong>AI-native FSSAI</strong><br>
+        compliance platform<br>
+        for nutraceuticals
+      </h1>
+      <p class="hero-sub">
+        Know exactly which of your SKUs are FSSAI compliant — right now. Get personalised WhatsApp alerts when a regulation changes. Generate audit-ready gap reports in minutes. No consultant calls. No spreadsheets. No surprises.
+      </p>
+      <div class="hero-ctas">
+        <a href="/register" class="btn btn-primary btn-xl" onclick="gtag('event','sign_up_click',{event_category:'CTA',event_label:'hero'})">Start Your Free 14-Day Trial &rarr;</a>
+        <a href="#features" class="btn btn-ghost btn-xl">See How It Works</a>
+      </div>
+      <p class="hero-trust">
+        <span>Trusted by 150+ nutraceutical brands across India</span> &nbsp;&middot;&nbsp;
+        No credit card required &nbsp;&middot;&nbsp;
+        Free audit of your top 5 SKUs on signup
+      </p>
+    </div>
+
+    <!-- Hero Checker Widget -->
+    <div class="hero-checker">
+      <div class="hc-title">Free Compliance Check</div>
+      <div class="hc-sub">Upload a label or enter details — instant FSSAI analysis on your SKU.</div>
+
+      <div class="hc-tabs">
+        <button class="hc-tab active" onclick="switchCheckerTab('upload')" type="button">&#9650; Upload Label</button>
+        <button class="hc-tab" onclick="switchCheckerTab('manual')" type="button">&#9998; Enter Manually</button>
+      </div>
+
+      <!-- Upload Panel -->
+      <div class="hc-panel active" id="hc-upload-panel">
+        <form method="post" action="/checker/upload" enctype="multipart/form-data" id="hc-upload-form">
+          <div class="hc-upload-zone" id="hc-drop-zone"
+               ondragover="event.preventDefault();this.classList.add('dragover')"
+               ondragleave="this.classList.remove('dragover')"
+               ondrop="event.preventDefault();this.classList.remove('dragover');handleCheckerDrop(event)">
+            <div class="hc-upload-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+            <div class="hc-upload-text">Drag &amp; drop your label here or <strong onclick="document.getElementById('hc-file-input').click()">browse files</strong></div>
+            <div class="hc-upload-hint">Supports JPG, PNG, PDF, TIFF, WebP &mdash; max 50 MB</div>
+            <input type="file" name="file" id="hc-file-input" accept=".jpg,.jpeg,.png,.pdf,.tiff,.tif,.webp" style="display:none" onchange="handleCheckerFile(this)" />
+          </div>
+          <div class="hc-file-preview" id="hc-file-preview">
+            <span class="hc-file-name" id="hc-file-name"></span>
+            <button type="button" class="hc-file-remove" onclick="clearCheckerFile()">&times;</button>
+          </div>
+          <div class="hc-upload-category" style="margin-top:1rem;">
+            <label class="hc-label">Product Category</label>
+            <select name="category" class="hc-input">
+              <option value="Health Supplement">Health Supplement</option>
+              <option value="Sports Nutrition">Sports Nutrition</option>
+              <option value="Herbal/Ayurvedic">Herbal / Ayurvedic</option>
+              <option value="Vitamin & Mineral Supplement">Vitamin &amp; Mineral</option>
+              <option value="Functional Food">Functional Food</option>
+              <option value="Digestive Health">Digestive Health</option>
+              <option value="Weight Management">Weight Management</option>
+            </select>
+          </div>
+          <button type="submit" class="hc-submit" style="margin-top:1rem;" id="hc-upload-btn" disabled>Analyze My Label &rarr;</button>
+          <div class="hc-footer">AI reads your label automatically — no manual data entry needed</div>
+        </form>
+      </div>
+
+      <!-- Manual Panel -->
+      <div class="hc-panel" id="hc-manual-panel">
+        <form method="post" action="/checker/run">
+          <div class="hc-row">
+            <div class="hc-field">
+              <label class="hc-label">Product Name</label>
+              <input type="text" name="product_name" class="hc-input" placeholder="e.g. AshwaMax 900" required />
+            </div>
+            <div class="hc-field">
+              <label class="hc-label">Category</label>
+              <select name="category" class="hc-input">
+                <option value="Health Supplement">Health Supplement</option>
+                <option value="Sports Nutrition">Sports Nutrition</option>
+                <option value="Herbal/Ayurvedic">Herbal / Ayurvedic</option>
+                <option value="Vitamin & Mineral Supplement">Vitamin &amp; Mineral</option>
+                <option value="Functional Food">Functional Food</option>
+                <option value="Digestive Health">Digestive Health</option>
+                <option value="Weight Management">Weight Management</option>
+              </select>
+            </div>
+          </div>
+          <div class="hc-field">
+            <label class="hc-label">Ingredients (comma-separated)</label>
+            <textarea name="ingredients" class="hc-input" rows="3" placeholder="e.g. Ashwagandha Root Extract 900mg, Vitamin D3, Zinc..." required></textarea>
+          </div>
+          <div class="hc-row">
+            <div class="hc-field">
+              <label class="hc-label">FSSAI License (optional)</label>
+              <input type="text" name="fssai_license" class="hc-input" placeholder="14-digit number" />
+            </div>
+            <div class="hc-field">
+              <label class="hc-label">Net Quantity (optional)</label>
+              <input type="text" name="net_quantity" class="hc-input" placeholder="e.g. 60 Capsules" />
+            </div>
+          </div>
+          <input type="hidden" name="manufacturing_origin" value="India" />
+          <button type="submit" class="hc-submit">Check Compliance &rarr;</button>
+          <div class="hc-footer">Checks FSSAI, Legal Metrology, AYUSH, BIS &amp; DGFT frameworks</div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Trust Bar ═══ -->
+<div class="trust-bar">
+  <div class="trust-inner">
+    <div class="trust-label">Regulations Covered</div>
+    <div class="trust-logos">
+      <div class="trust-logo">FSSAI</div>
+      <div class="trust-logo">Legal Metrology</div>
+      <div class="trust-logo">AYUSH (ASU)</div>
+      <div class="trust-logo">ICMR-NIN</div>
+      <div class="trust-logo">Drugs &amp; Cosmetics Act</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Stats Bar ═══ -->
+<div class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-num">200+</div>
+      <div class="stat-title">FSSAI circulars monitored/year</div>
+      <div class="stat-desc">So you don&rsquo;t have to read a single one</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">&#8377;10L+</div>
+      <div class="stat-title">Annual consultant spend replaced</div>
+      <div class="stat-desc">Starter plan at &#8377;7,999/month</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">24hrs</div>
+      <div class="stat-title">Alert delivery after FSSAI publishes</div>
+      <div class="stat-desc">Named to your specific SKU</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">150+</div>
+      <div class="stat-title">Brands trust Regbite</div>
+      <div class="stat-desc">Across India. Growing every week.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Problem Section ═══ -->
+<section class="sec" id="problem">
+  <div class="sec-inner">
+    <div class="sec-header">
+      <div class="sec-tag">The Problem</div>
+      <h2 class="sec-title">Still tracking FSSAI compliance<br><strong>on spreadsheets?</strong></h2>
+    </div>
+    <div class="problem-body">
+      <p>FSSAI issues <strong>200+ circulars every year.</strong> Each one could mean a Schedule amendment, a new label requirement, or an ingredient restriction that affects your products. Most nutraceutical founders find out about changes only when an inspector is already at the door.</p>
+      <p>That is not a compliance problem. It is an <strong>information problem.</strong> And information problems have software solutions.</p>
+    </div>
+    <div class="problem-cols">
+      <div class="problem-col problem-col-before">
+        <div class="problem-col-hdr">Before Regbite</div>
+        <ul>
+          <li>Check fssai.gov.in manually &mdash; 45 minutes every week</li>
+          <li>Call your consultant when something changes &mdash; &#8377;3,000 per call</li>
+          <li>Discover label non-compliance after the product is printed</li>
+          <li>Receive show-cause notice and scramble for response</li>
+          <li>Miss FoSCoS renewal deadline &mdash; risk licence cancellation</li>
+          <li>Produce a gap report &mdash; takes 3 days and &#8377;50,000</li>
+        </ul>
+      </div>
+      <div class="problem-col problem-col-after">
+        <div class="problem-col-hdr">After Regbite</div>
+        <ul>
+          <li>Regbite monitors FSSAI for you &mdash; zero manual checking</li>
+          <li>WhatsApp alert names your specific SKU and ingredient change</li>
+          <li>Label audit tool catches violations before going to print</li>
+          <li>Gap reports generated in minutes, not days</li>
+          <li>FoSCoS renewal reminders at 90 / 60 / 30 / 7 days automatically</li>
+          <li>Your compliance score visible on Monday morning &mdash; every Monday</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Features ═══ -->
+<section class="sec sec-alt" id="features">
+  <div class="sec-inner">
+    <div class="sec-header sec-header-center">
+      <div class="sec-tag">Features</div>
+      <h2 class="sec-title">Everything your compliance team needs<br><strong>in one dashboard</strong></h2>
+    </div>
+
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="feat-icon">🔔</div>
+        <h3>Real-Time Compliance Score</h3>
+        <p>A single number &mdash; 0 to 100 &mdash; showing your FSSAI compliance health across every SKU. Updated automatically every time FSSAI issues a new circular. Check it every Monday morning before anything else.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📱</div>
+        <h3>WhatsApp SKU Alerts</h3>
+        <p>When FSSAI changes a limit that affects your Ashwagandha protein bar, you get a WhatsApp message that says exactly that &mdash; your product name, the ingredient, the new limit. Not a generic circular. Your specific product.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📋</div>
+        <h3>Automated Gap Reports</h3>
+        <p>Consultants charge &#8377;50,000&ndash;&#8377;1,50,000 to produce what Regbite generates in 3 minutes. A full compliance gap report for every SKU in your portfolio &mdash; prioritised by penalty risk, with corrective actions in plain English.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🏷️</div>
+        <h3>Label Audit Tool</h3>
+        <p>Upload your product label. Our AI reads every element &mdash; font sizes, mandatory declarations, allergen statements, FSSAI logo placement, health claim language &mdash; and returns a red/amber/green verdict for each one. Before it goes to print.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📅</div>
+        <h3>FoSCoS Renewal Tracker</h3>
+        <p>Operating with an expired FSSAI licence is a criminal offence. Regbite tracks every licence &mdash; Central, State, Registration &mdash; and sends WhatsApp + email reminders at 90, 60, 30, and 7 days before expiry. Auto-fills the renewal form from your existing data.</p>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">✅</div>
+        <h3>Health Claim Validator</h3>
+        <p>Type any health claim you want to use &mdash; &ldquo;boosts immunity&rdquo;, &ldquo;supports brain health&rdquo;, &ldquo;improves energy levels&rdquo; &mdash; and Regbite tells you instantly whether it is permitted, needs modification, or is prohibited under FSSAI&rsquo;s Health Claims Regulations.</p>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:2.5rem;">
+      <a href="/features" class="btn btn-ghost btn-lg">Explore All Features &rarr;</a>
+      <div style="font-size:0.72rem;color:var(--g400);margin-top:0.4rem;">Full product walkthrough &middot; Dashboard &middot; Intelligence &middot; Gap Reports</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Testimonials ═══ -->
+<section class="sec" id="testimonials">
+  <div class="sec-inner">
+    <div class="sec-header sec-header-center">
+      <div class="sec-tag">Customer Stories</div>
+      <h2 class="sec-title">What founders say<br><strong>about Regbite</strong></h2>
+    </div>
+    <div class="testimonial-grid">
+      <div class="testimonial-card">
+        <p class="testimonial-quote">I got a WhatsApp at 9am on Monday saying my protein supplement had a Schedule IV change. My competitor found out three weeks later when they got an inspection. That&rsquo;s the difference.</p>
+        <div class="testimonial-attr">
+          <strong>Nutraceutical brand founder, Ahmedabad</strong>
+          Growth plan customer
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <p class="testimonial-quote">We were spending &#8377;8 lakh a year on a regulatory consultant. Regbite does everything they did &mdash; and more &mdash; for &#8377;2.6 lakh. The gap report alone is worth the subscription.</p>
+        <div class="testimonial-attr">
+          <strong>Operations head, supplements manufacturer</strong>
+          Enterprise plan customer
+        </div>
+      </div>
+      <div class="testimonial-card">
+        <p class="testimonial-quote">The label audit tool caught a font size violation on our new launch that would have failed FoSCoS approval. Saved us three weeks of delay and a reprint. The tool paid for itself in the first month.</p>
+        <div class="testimonial-attr">
+          <strong>Founder, D2C health supplement brand</strong>
+          Growth plan customer
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Pricing ═══ -->
+<section class="sec sec-alt" id="pricing">
+  <div class="sec-inner">
+    <div class="sec-header sec-header-center">
+      <div class="sec-tag">Pricing</div>
+      <h2 class="sec-title">Simple pricing.<br><strong>No lock-ins. Cancel anytime.</strong></h2>
+      <p class="sec-sub">Compare the cost of Regbite to what you currently spend on FSSAI compliance consulting, label rejections, and manual monitoring. Most customers recover the annual subscription cost within the first 60 days.</p>
+    </div>
+
+    <div class="pricing-row">
+      <div class="price-card">
+        <div class="price-name">Starter</div>
+        <div class="price-monthly">&#8377;7,999 <span>/ month</span></div>
+        <div class="price-annual">&#8377;79,999 / year &mdash; save &#8377;16,000</div>
+        <div class="price-limit">Up to 15 SKUs</div>
+        <ul class="price-list">
+          <li>Compliance dashboard &amp; score</li>
+          <li>Ingredient checker</li>
+          <li>Daily FSSAI regulatory alerts</li>
+          <li>WhatsApp notifications</li>
+          <li>FoSCoS renewal tracking</li>
+        </ul>
+        <a href="/register" class="btn btn-ghost" style="width:100%;justify-content:center;"
+           onclick="gtag('event','sign_up_click',{event_category:'Landing',event_label:'pricing_starter'})">Get Started &rarr;</a>
+      </div>
+
+      <div class="price-card featured">
+        <div class="price-badge">&#11088; Most Popular</div>
+        <div class="price-name">Growth</div>
+        <div class="price-monthly">&#8377;21,999 <span>/ month</span></div>
+        <div class="price-annual">&#8377;2,09,999 / year &mdash; save &#8377;54,000</div>
+        <div class="price-limit">Up to 60 SKUs</div>
+        <ul class="price-list">
+          <li>Everything in Starter</li>
+          <li>Automated gap reports</li>
+          <li>Label audit tool (AI Vision)</li>
+          <li>Health claim validator</li>
+          <li>FoSCoS auto-fill renewal form</li>
+        </ul>
+        <a href="/register" class="btn btn-primary" style="width:100%;justify-content:center;"
+           onclick="gtag('event','begin_checkout',{currency:'INR',value:21999})">Start Free Trial &rarr;</a>
+        <div style="text-align:center;margin-top:0.75rem;font-size:0.72rem;color:var(--g400);">14-day free trial &middot; No credit card required</div>
+      </div>
+
+      <div class="price-card">
+        <div class="price-name">Enterprise</div>
+        <div class="price-monthly">&#8377;54,999 <span>/ month</span></div>
+        <div class="price-annual">&#8377;4,99,999 / year &mdash; save &#8377;1,60,000</div>
+        <div class="price-limit">Unlimited SKUs</div>
+        <ul class="price-list">
+          <li>Everything in Growth</li>
+          <li>Supplier &amp; import compliance tracker</li>
+          <li>Board-ready compliance reports</li>
+          <li>Up to 10 team users</li>
+          <li>Monthly expert consultation call</li>
+        </ul>
+        <a href="/contact" class="btn btn-ghost" style="width:100%;justify-content:center;"
+           onclick="gtag('event','generate_lead',{event_category:'Landing',event_label:'enterprise'})">Contact Sales &rarr;</a>
+      </div>
+    </div>
+
+    <div style="margin-top:2rem;padding:1.5rem;background:var(--white);border:1px solid var(--g200);border-radius:8px;text-align:center;">
+      <p style="font-size:0.88rem;color:var(--g600);margin-bottom:0.5rem;"><strong>14-day free trial. No credit card required.</strong></p>
+      <p style="font-size:0.82rem;color:var(--g400);margin-bottom:1rem;">Try RegBite risk-free. Full platform access for 14 days — cancel anytime.</p>
+      <a href="/register" class="btn btn-primary btn-lg"
+         onclick="gtag('event','sign_up_click',{event_category:'Landing',event_label:'pricing_cta'})">Start Free Trial &rarr;</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FAQ ═══ -->
+<section class="sec">
+  <div class="sec-inner">
+    <div class="sec-header sec-header-center">
+      <div class="sec-tag">FAQ</div>
+      <h2 class="sec-title">Questions founders<br><strong>always ask</strong></h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How quickly can I get started?
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">Under 20 minutes. Upload your SKU details, and your first compliance score and gap report are generated automatically. Navneet, our Chief Regulatory Expert, personally reviews your setup and calls you within 24 hours of signup.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Do I need a dedicated compliance team to use Regbite?
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">No. Regbite is designed for founders and operations heads who manage compliance alongside everything else they do. If you can use WhatsApp, you can use Regbite.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What if FSSAI changes a regulation overnight?
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">Our system monitors FSSAI publications within 24 hours of release. You get a personalised WhatsApp alert naming your specific SKUs affected — before your competitors even know the regulation changed.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How is Regbite different from hiring a consultant?
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">A consultant calls once a month and charges &#8377;3,000&ndash;&#8377;8,000 per visit. Regbite monitors 24/7, generates gap reports in minutes, audits your labels automatically, and tracks your FoSCoS renewals. Enterprise plan customers also get monthly consultation calls with our regulatory expert.</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Is my product data secure?
+          <span class="faq-q-icon">+</span>
+        </button>
+        <div class="faq-a">Yes. All data is encrypted at rest and in transit. We never share your SKU information with any third party. You can delete your data at any time.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CTA Banner ═══ -->
+<section class="cta">
+  <div>
+    <h2>Stop waiting for<br>the show-cause notice.</h2>
+    <p>Every week you delay is a week where a Schedule IV change could hit your product without warning. Start your free 14-day trial — no credit card required.</p>
+    <div class="cta-btns">
+      <a href="/register" class="btn btn-white btn-xl" onclick="gtag('event','sign_up_click',{event_category:'CTA',event_label:'bottom_banner'})">Start Your Free 14-Day Trial &rarr;</a>
+      <a href="/login" class="btn btn-ghost-w btn-xl">Sign In</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Footer ═══ -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <img src="/static/img/logo.png" alt="Regbite" style="height:24px;width:auto;" />
+      <p>India&rsquo;s first AI-native FSSAI compliance platform for nutraceutical, health supplement, and Ayurvedic product manufacturers.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Product</h4>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="/blog">Blog</a>
+      <a href="/dashboard">Dashboard</a>
+    </div>
+    <div class="footer-col">
+      <h4>Company</h4>
+      <a href="/about">About Us</a>
+      <a href="/contact">Contact</a>
+      <a href="/help">Help &amp; FAQ</a>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <a href="/terms">Terms of Service</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/login">Sign In</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2025 Regbite &mdash; Cording Technologies Pvt Ltd. All rights reserved.</p>
+    <p>Not legal advice. For regulatory compliance assistance only.</p>
+  </div>
+</footer>
+
+<script>!function(){var c=document.cookie.match('(^|;)\\s*_csrf=([^;]+)');if(!c)return;var t=decodeURIComponent(c[2]);document.querySelectorAll('form[method="post"],form[method="POST"]').forEach(function(f){if(f.querySelector('input[name="csrf_token"]'))return;var i=document.createElement('input');i.type='hidden';i.name='csrf_token';i.value=t;f.appendChild(i)})}()</script>
+<script>
+function switchCheckerTab(tab) {
+  document.querySelectorAll('.hc-tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.hc-panel').forEach(function(p){ p.classList.remove('active'); });
+  if (tab === 'upload') {
+    document.querySelectorAll('.hc-tab')[0].classList.add('active');
+    document.getElementById('hc-upload-panel').classList.add('active');
+  } else {
+    document.querySelectorAll('.hc-tab')[1].classList.add('active');
+    document.getElementById('hc-manual-panel').classList.add('active');
+  }
+}
+function handleCheckerFile(input) {
+  if (input.files && input.files[0]) {
+    document.getElementById('hc-file-name').textContent = input.files[0].name;
+    document.getElementById('hc-file-preview').style.display = 'flex';
+    document.getElementById('hc-upload-btn').disabled = false;
+  }
+}
+function handleCheckerDrop(e) {
+  var dt = e.dataTransfer;
+  if (dt.files && dt.files[0]) {
+    document.getElementById('hc-file-input').files = dt.files;
+    handleCheckerFile(document.getElementById('hc-file-input'));
+  }
+}
+function clearCheckerFile() {
+  document.getElementById('hc-file-input').value = '';
+  document.getElementById('hc-file-preview').style.display = 'none';
+  document.getElementById('hc-upload-btn').disabled = true;
+}
+function toggleFaq(btn) {
+  var item = btn.closest('.faq-item');
+  var wasOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(function(i){ i.classList.remove('open'); });
+  if (!wasOpen) { item.classList.add('open'); }
+}
+</script>
+</body>
+</html>
