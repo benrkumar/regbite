@@ -1,9 +1,8 @@
-// Force dynamic so ClerkProvider is never evaluated during `next build`
-// static prerendering (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY may be absent at build time).
+// force-dynamic: ensures this layout is never statically prerendered at build
+// time when NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY may be absent.
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
 import { Suspense } from "react";
 import { PostHogProvider } from "@/components/posthog-provider";
@@ -15,17 +14,21 @@ export const metadata: Metadata = {
     "Pre-formulation FDA compliance intelligence for US dietary supplements",
 };
 
-// When AUTH_BYPASS=true the Clerk middleware is also bypassed, which means
-// ClerkProvider would try to fetch JWKS from the (fake) publishable-key domain
-// and throw on the first server render.  Skip it entirely in bypass mode.
-const AUTH_BYPASS = process.env.AUTH_BYPASS === "true";
+// ClerkProvider is intentionally omitted until real Clerk credentials are set.
+//
+// With placeholder pk_test_* keys, ClerkProvider attempts a JWKS network fetch
+// against test.clerk.accounts.dev on every server render, which throws an
+// unhandled error and crashes the Node.js process.
+//
+// TO RE-ENABLE AUTH: wrap the returned JSX in <ClerkProvider> once
+// NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY are configured.
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const body = (
+  return (
     <html lang="en">
       <body>
         <Suspense fallback={null}>
@@ -37,8 +40,4 @@ export default function RootLayout({
       </body>
     </html>
   );
-
-  if (AUTH_BYPASS) return body;
-
-  return <ClerkProvider>{body}</ClerkProvider>;
 }
