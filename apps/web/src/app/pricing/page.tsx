@@ -1,4 +1,5 @@
 import { CheckCircle } from "lucide-react";
+import { APP_URL } from "@/lib/config";
 
 const PLANS = [
   {
@@ -124,7 +125,7 @@ export default function PricingPage() {
             </ul>
 
             <a
-              href={plan.cta === "Contact us" ? "/contact" : "https://app.regbiteusa.com/sign-up"}
+              href={plan.cta === "Contact us" ? "/contact" : `${APP_URL}/sign-up`}
               className={`block text-center rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
                 plan.highlight
                   ? "bg-white text-gray-900 hover:bg-gray-100"

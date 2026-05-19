@@ -1,4 +1,5 @@
 import { CheckCircle } from "lucide-react";
+import { APP_URL } from "@/lib/config";
 
 const MODULES = [
   {
@@ -177,7 +178,7 @@ export default function FeaturesPage() {
         <h2 className="text-2xl font-bold mb-3">Ready to start?</h2>
         <p className="text-gray-400 mb-8">Free trial — no credit card required.</p>
         <a
-          href="https://app.regbiteusa.com/sign-up"
+          href={`${APP_URL}/sign-up`}
           className="inline-block rounded-lg bg-white text-gray-900 px-8 py-3.5 font-semibold hover:bg-gray-100 transition-colors"
         >
           Start free trial

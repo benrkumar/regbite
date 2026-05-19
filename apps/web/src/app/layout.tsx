@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import { APP_URL } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "RegBite US — FDA Supplement Compliance",
@@ -22,9 +23,9 @@ function Header() {
           <Link href="/about" className="hover:text-gray-900 transition-colors">About</Link>
         </nav>
         <div className="flex items-center gap-3">
-          <a href="https://app.regbiteusa.com/sign-in" className="text-sm font-medium text-gray-600 hover:text-gray-900">Sign in</a>
+          <a href={`${APP_URL}/sign-in`} className="text-sm font-medium text-gray-600 hover:text-gray-900">Sign in</a>
           <a
-            href="https://app.regbiteusa.com/sign-up"
+            href={`${APP_URL}/sign-up`}
             className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 transition-colors"
           >
             Start free trial
@@ -45,7 +46,7 @@ function Footer() {
             <ul className="space-y-2">
               <li><Link href="/features" className="text-sm text-gray-500 hover:text-gray-900">Features</Link></li>
               <li><Link href="/pricing" className="text-sm text-gray-500 hover:text-gray-900">Pricing</Link></li>
-              <li><a href="https://app.regbiteusa.com" className="text-sm text-gray-500 hover:text-gray-900">Dashboard</a></li>
+              <li><a href={APP_URL} className="text-sm text-gray-500 hover:text-gray-900">Dashboard</a></li>
             </ul>
           </div>
           <div>

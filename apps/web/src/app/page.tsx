@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { APP_URL } from "@/lib/config";
 import {
   FlaskConical,
   FileCheck,
@@ -85,7 +86,7 @@ export default function HomePage() {
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <a
-              href="https://app.regbiteusa.com/sign-up"
+              href={`${APP_URL}/sign-up`}
               className="rounded-lg bg-white text-gray-900 px-8 py-3.5 font-semibold text-base hover:bg-gray-100 transition-colors"
             >
               Start free trial
@@ -182,7 +183,7 @@ export default function HomePage() {
               View pricing
             </Link>
             <a
-              href="https://app.regbiteusa.com/sign-up"
+              href={`${APP_URL}/sign-up`}
               className="rounded-lg border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
             >
               Start free trial

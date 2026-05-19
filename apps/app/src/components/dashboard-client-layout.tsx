@@ -18,38 +18,45 @@ import {
   Plane,
 } from "lucide-react";
 
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Ingredients", href: "/ingredients", icon: Search },
-  { name: "Formulations", href: "/formulations", icon: FlaskConical },
-  { name: "Label Validator", href: "/label-validator", icon: FileCheck },
-  { name: "Claims Checker", href: "/claims", icon: MessageSquareWarning },
-  { name: "NDI Navigator", href: "/ndi", icon: FileText },
-  { name: "cGMP Readiness", href: "/cgmp", icon: ClipboardCheck },
-  { name: "State Compliance", href: "/state-compliance", icon: ShieldAlert },
-  { name: "Import Intel", href: "/import-intel", icon: Plane },
-  { name: "Regulatory Feed", href: "/regulatory", icon: Newspaper },
-  { name: "Settings", href: "/settings", icon: Settings },
-  { name: "Billing", href: "/billing", icon: CreditCard },
-];
+function buildNavigation(username: string) {
+  return [
+    { name: "Dashboard", href: `/${username}`, icon: LayoutDashboard },
+    { name: "Ingredients", href: `/${username}/ingredients`, icon: Search },
+    { name: "Formulations", href: `/${username}/formulations`, icon: FlaskConical },
+    { name: "Label Validator", href: `/${username}/label-validator`, icon: FileCheck },
+    { name: "Claims Checker", href: `/${username}/claims`, icon: MessageSquareWarning },
+    { name: "NDI Navigator", href: `/${username}/ndi`, icon: FileText },
+    { name: "cGMP Readiness", href: `/${username}/cgmp`, icon: ClipboardCheck },
+    { name: "State Compliance", href: `/${username}/state-compliance`, icon: ShieldAlert },
+    { name: "Import Intel", href: `/${username}/import-intel`, icon: Plane },
+    { name: "Regulatory Feed", href: `/${username}/regulatory`, icon: Newspaper },
+    { name: "Settings", href: `/${username}/settings`, icon: Settings },
+    { name: "Billing", href: `/${username}/billing`, icon: CreditCard },
+  ];
+}
 
 export function DashboardClientLayout({
   children,
+  username,
 }: {
   children: React.ReactNode;
+  username: string;
 }) {
   const pathname = usePathname();
+  const navigation = buildNavigation(username);
 
   return (
     <div className="flex h-screen">
       <aside className="w-64 bg-[#0D4F3C] text-white flex flex-col border-r border-[#0A3D2E]">
         <div className="p-6 border-b border-[#0A3D2E]">
           <h1 className="text-xl font-bold text-white">RegBite US</h1>
-          <p className="text-xs text-green-100/60 mt-1">FDA Compliance Platform</p>
+          <p className="text-xs text-green-100/60 mt-1">@{username}</p>
         </div>
         <nav className="flex-1 p-4 space-y-1">
           {navigation.map((item) => {
-            const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+            const isActive =
+              pathname === item.href ||
+              (item.href !== `/${username}` && pathname?.startsWith(item.href + "/"));
             return (
               <Link
                 key={item.href}

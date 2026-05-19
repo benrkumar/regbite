@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     // Send Resend email
     try {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.regbite.com";
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://regbite-production.up.railway.app";
       await sendEmail({
         ...teamInviteEmail(email, org.name, appUrl),
         to: email,

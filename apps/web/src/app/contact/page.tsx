@@ -1,3 +1,5 @@
+import { APP_URL } from "@/lib/config";
+
 export default function ContactPage() {
   return (
     <main className="max-w-xl mx-auto px-6 py-16">
@@ -39,7 +41,7 @@ export default function ContactPage() {
         <p className="text-sm font-semibold mb-1">Start your free trial</p>
         <p className="text-xs text-gray-400 mb-4">No credit card required. 14-day trial on all plans.</p>
         <a
-          href="https://app.regbiteusa.com/sign-up"
+          href={`${APP_URL}/sign-up`}
           className="inline-block rounded-lg bg-white text-gray-900 px-5 py-2.5 text-sm font-medium hover:bg-gray-100 transition-colors"
         >
           Create free account

@@ -15,7 +15,7 @@ import {
   MessageSquareWarning,
 } from "lucide-react";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.regbite.com";
+import { APP_URL } from "@/lib/config";
 
 const DEMO_ACCOUNTS = [
   {

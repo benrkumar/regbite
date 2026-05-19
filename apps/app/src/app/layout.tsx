@@ -1,7 +1,3 @@
-// force-dynamic: ensures this layout is never statically prerendered at build
-// time when NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY may be absent.
-export const dynamic = "force-dynamic";
-
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
 import { Suspense } from "react";
