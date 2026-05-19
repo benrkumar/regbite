@@ -2,10 +2,10 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "NODE_ENV=development pnpm install && pnpm build --filter=@regbite/admin && cp -r apps/admin/.next/static apps/admin/.next/standalone/apps/admin/.next/ && (cp -r apps/admin/public apps/admin/.next/standalone/apps/admin/ 2>/dev/null || true)"
+    "buildCommand": "NODE_ENV=development pnpm install && pnpm build --filter=@regbite/admin"
   },
   "deploy": {
-    "startCommand": "(./node_modules/.bin/prisma db push --schema=packages/database/prisma/schema.prisma --accept-data-loss || true) && HOSTNAME=0.0.0.0 node apps/admin/.next/standalone/apps/admin/server.js",
+    "startCommand": "(packages/database/node_modules/.bin/prisma db push --schema=packages/database/prisma/schema.prisma --accept-data-loss || true) && HOSTNAME=0.0.0.0 apps/admin/node_modules/.bin/next start apps/admin",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }
