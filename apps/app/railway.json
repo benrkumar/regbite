@@ -5,7 +5,7 @@
     "buildCommand": "NODE_ENV=development pnpm install && pnpm build --filter=@regbite/app"
   },
   "deploy": {
-    "startCommand": "(packages/database/node_modules/.bin/prisma db push --schema=packages/database/prisma/schema.prisma --accept-data-loss || true) && HOSTNAME=0.0.0.0 apps/app/node_modules/.bin/next start apps/app",
+    "startCommand": "(timeout 30 packages/database/node_modules/.bin/prisma db push --schema=packages/database/prisma/schema.prisma --accept-data-loss 2>&1 || true) && HOSTNAME=0.0.0.0 apps/app/node_modules/.bin/next start apps/app",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }
