@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel — Help{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <h2>Admin Panel</h2>
+    <p>Platform administration — users, rules, LLM KB, and system controls</p>
+  </div>
+</div>
+
+<div style="display:flex;gap:1.5rem;align-items:flex-start;">
+
+  {% include "help/_nav.html" %}
+
+  <div style="flex:1;min-width:0;">
+
+    <div class="info-box" style="border-left:3px solid #111;margin-bottom:1.2rem;">
+      <strong>Super Admin only.</strong> The Admin Panel is accessible only to users with the Super Admin role.
+    </div>
+
+    {# Dashboard #}
+    <div class="card" style="margin-bottom:1.2rem;">
+      <h3 style="margin:0 0 0.8rem;">Admin Dashboard</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0;">
+        The admin dashboard shows platform-wide statistics: total users, products, compliance checks run,
+        active subscriptions, and estimated monthly revenue. Use this for a high-level overview of platform health.
+      </p>
+    </div>
+
+    {# User management #}
+    <div class="card" style="margin-bottom:1.2rem;">
+      <h3 style="margin:0 0 0.8rem;">User management</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0 0 0.6rem;">
+        View all registered users with their role, plan, product count, and last activity date.
+        From the user detail page you can:
+      </p>
+      <ul style="font-size:0.85rem;color:#737373;margin:0;padding-left:1.2rem;">
+        <li>View the user's products and compliance history</li>
+        <li>See their subscription details and billing status</li>
+        <li>Review their team members and invitations</li>
+      </ul>
+    </div>
+
+    {# Compliance rules #}
+    <div class="card" style="margin-bottom:1.2rem;">
+      <h3 style="margin:0 0 0.8rem;">Compliance rules management</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0 0 0.6rem;">
+        The rules page lists all 83 compliance rules with their code, description, severity, framework,
+        and active status.
+      </p>
+      <h4 style="margin:0 0 0.4rem;font-size:0.88rem;">Syncing rules from seed</h4>
+      <p style="font-size:0.85rem;color:#737373;margin:0 0 0.6rem;">
+        Click <strong>"Sync Rules from Seed"</strong> to load the latest rules from the seed file
+        (<code>app/data/fssai_rules_seed.json</code>). This operation is additive — new rules are added,
+        existing rules have their regulation_source updated, but no rules are deleted.
+      </p>
+      <h4 style="margin:0 0 0.4rem;font-size:0.88rem;">Rule versioning</h4>
+      <p style="font-size:0.85rem;color:#737373;margin:0;">
+        Each rule tracks its <strong>version</strong> (e.g., "Version VIII"), <strong>framework</strong>
+        (FSSAI, Legal Metrology, AYUSH, BIS, DGFT), and <strong>regulation status</strong>
+        (Draft, Final, Effective, Superseded).
+      </p>
+    </div>
+
+    {# Regulations KB #}
+    <div class="card" style="margin-bottom:1.2rem;">
+      <h3 style="margin:0 0 0.8rem;">Regulations Knowledge Base</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0 0 0.6rem;">
+        The LLM Knowledge Base stores regulation documents as vector embeddings for AI-powered compliance analysis.
+      </p>
+      <h4 style="margin:0 0 0.4rem;font-size:0.88rem;">Seeding the KB</h4>
+      <p style="font-size:0.85rem;color:#737373;margin:0 0 0.6rem;">
+        Click <strong>"Seed Regulations KB"</strong> to populate the knowledge base with regulation data.
+        Seeding is additive — new documents are added without removing existing ones.
+        The system also auto-reseeds daily when the scheduler detects new regulation changes.
+      </p>
+      <h4 style="margin:0 0 0.4rem;font-size:0.88rem;">Managing documents</h4>
+      <p style="font-size:0.85rem;color:#737373;margin:0;">
+        You can view all KB documents, their chunk count, and upload custom documents.
+        Documents are split into chunks for efficient retrieval during compliance analysis.
+      </p>
+    </div>
+
+    {# Alerts management #}
+    <div class="card" style="margin-bottom:1.2rem;">
+      <h3 style="margin:0 0 0.8rem;">Alerts &amp; Regulation Alerts</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0;">
+        From the admin alerts page, you can view all system-wide compliance alerts, filter by status and severity,
+        and publish curated <strong>Regulation Alerts</strong> that appear on all users' Reg. Alerts pages.
+        Published alerts include a title, description, severity level, and optional source URL.
+      </p>
+    </div>
+
+    {# LLM Studio #}
+    <div class="card" style="margin-bottom:1.2rem;">
+      <h3 style="margin:0 0 0.8rem;">LLM Studio</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0;">
+        The LLM Studio provides a chat interface to test the AI's knowledge of regulations,
+        view extraction quality metrics, and monitor KB health. Use it to verify that the AI
+        correctly understands specific regulations before relying on automated compliance checks.
+      </p>
+    </div>
+
+    {# System controls #}
+    <div class="card" style="margin-bottom:1.2rem;">
+      <h3 style="margin:0 0 0.8rem;">System &amp; Controls</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0;">
+        The system page shows platform configuration, database status, scheduler health,
+        and activity logs. The activity log tracks all user actions across the platform
+        (logins, product creation, label uploads, compliance checks, etc.) for audit purposes.
+      </p>
+    </div>
+
+    {# Daily scheduler #}
+    <div class="card">
+      <h3 style="margin:0 0 0.8rem;">Daily scheduler</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0;">
+        RegBite runs an in-process daily scheduler (no external dependencies like Celery/Redis):
+      </p>
+      <ul style="font-size:0.85rem;color:#737373;margin:0.5rem 0 0;padding-left:1.2rem;">
+        <li><strong>6:00 AM IST</strong> — Scrape FSSAI, AYUSH, and eGazette for new regulations</li>
+        <li><strong>6:00 AM IST</strong> — On CRITICAL changes: auto-recheck all labels, suggest rule updates via LLM</li>
+        <li><strong>6:00 AM IST</strong> — Auto-reseed LLM KB when new regulation data detected</li>
+        <li><strong>7:00 AM IST</strong> — Send license expiry reminder emails (30-day window)</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

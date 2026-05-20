@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Reports — Help{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <h2>Compliance Reports</h2>
+    <p>Generate, download, and share compliance reports</p>
+  </div>
+</div>
+
+<div style="display:flex;gap:1.5rem;align-items:flex-start;">
+
+  {% include "help/_nav.html" %}
+
+  <div style="flex:1;min-width:0;">
+
+    {# Generating reports #}
+    <div class="card" style="margin-bottom:1.2rem;">
+      <h3 style="margin:0 0 0.8rem;">Generating a report</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0 0 0.8rem;">
+        Reports are generated automatically after every label compliance check. You can also generate a report
+        manually from any product's label version by clicking <strong>"Generate Report"</strong>.
+      </p>
+      <p style="font-size:0.88rem;color:#737373;margin:0;">
+        Each report includes:
+      </p>
+      <ul style="font-size:0.85rem;color:#737373;margin:0.5rem 0 0;padding-left:1.2rem;">
+        <li>Overall compliance score (weighted percentage)</li>
+        <li>Pass / Fail / Warning / Skipped breakdown</li>
+        <li>Detailed results for every applicable rule</li>
+        <li>Specific remediation guidance for each failure</li>
+        <li>Extracted label data summary</li>
+        <li>Report reference number for audit trail</li>
+      </ul>
+    </div>
+
+    {# Downloading #}
+    <div class="card" style="margin-bottom:1.2rem;">
+      <h3 style="margin:0 0 0.8rem;">Downloading as PDF</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0;">
+        Click the <strong>"Download"</strong> button on any report to get a PDF version suitable for printing
+        or sharing with regulatory consultants. The PDF includes all compliance details and can optionally
+        include your custom branding (logo name and accent colour — configurable in Settings &rarr; Report Branding).
+      </p>
+    </div>
+
+    {# Sharing #}
+    <div class="card" style="margin-bottom:1.2rem;">
+      <h3 style="margin:0 0 0.8rem;">Sharing reports</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0 0 0.8rem;">
+        Click <strong>"Share"</strong> on any report to generate a public link. Anyone with the link can view
+        the report without logging in — useful for sharing with external auditors, regulatory consultants,
+        or supply chain partners.
+      </p>
+      <p style="font-size:0.88rem;color:#737373;margin:0;">
+        Share links include a unique token and expire after 30 days by default. You'll receive an email
+        confirmation when a share link is created.
+      </p>
+    </div>
+
+    {# Report branding #}
+    <div class="card" style="margin-bottom:1.2rem;">
+      <h3 style="margin:0 0 0.8rem;">Custom report branding</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0;">
+        On Growth and Enterprise plans, you can customise reports with your brand name and accent colour.
+        Go to <strong>Settings &rarr; Report Branding</strong> to set your brand name and choose a hex colour.
+        These appear in the PDF header and on shared report pages.
+      </p>
+    </div>
+
+    {# Reports list #}
+    <div class="card">
+      <h3 style="margin:0 0 0.8rem;">Reports list</h3>
+      <p style="font-size:0.88rem;color:#737373;margin:0;">
+        The <strong>Reports</strong> page in the sidebar shows all your generated reports sorted by date.
+        Each entry shows the product name, compliance score, report reference, and creation date.
+        Click any report to view the full details.
+      </p>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

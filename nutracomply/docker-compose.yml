@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: regbite
+      POSTGRES_PASSWORD: regbite
+      POSTGRES_DB: regbite
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - uploads:/app/uploads
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+    env_file: .env
+    volumes:
+      - ./app:/app/app
+      - uploads:/app/uploads
+    command: celery -A app.workers.celery_app worker --beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+volumes:
+  pgdata:
+  uploads:

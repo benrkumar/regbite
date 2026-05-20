@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+{% block title %}Products{% endblock %}
+
+{% block content %}
+<style>
+  /* ── Add Product Panel ── */
+  .add-panel { background:#fff; border:1px solid #EBEBEB; border-radius:10px; margin-bottom:1.5rem; overflow:hidden; }
+  .add-panel-hdr { display:flex; align-items:center; gap:0.75rem; padding:1rem 1.25rem; cursor:pointer; user-select:none; }
+  .add-panel-hdr:hover { background:#FAFAFA; }
+  .add-panel-icon { width:32px; height:32px; border-radius:8px; background:#F0F0F0; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+  .add-panel-title { font-size:0.9rem; font-weight:700; color:#111; flex:1; }
+  .add-panel-chevron { font-size:0.7rem; color:#A3A3A3; transition:transform 0.2s; }
+  .add-panel[open] .add-panel-chevron { transform:rotate(90deg); }
+  .add-panel-body { padding:0 1.25rem 1.25rem; border-top:1px solid #F0F0F0; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem; }
+  .form-grid .field-full { grid-column:1/-1; }
+  @media(max-width:600px){ .form-grid { grid-template-columns:1fr; } }
+
+  /* ── Bulk action bar ── */
+  #bulk-bar { display:none; position:sticky; top:0; z-index:50; background:#1A1A2E; color:#fff; padding:0.65rem 1rem; border-radius:8px; margin-bottom:0.75rem; align-items:center; gap:0.75rem; flex-wrap:wrap; }
+  #bulk-bar.visible { display:flex; }
+  #bulk-count { font-size:0.82rem; font-weight:600; flex:1; }
+  .bulk-btn { font-size:0.75rem; font-weight:600; padding:0.4rem 0.9rem; border-radius:5px; border:none; cursor:pointer; transition:opacity 0.15s; min-height:34px; }
+  .bulk-btn:hover { opacity:0.85; }
+  .bulk-btn-archive { background:#FEF9EC; color:#8F6314; }
+  .bulk-btn-delete  { background:#FDEBEC; color:#DF2935; }
+  .bulk-btn-cancel  { background:transparent; color:#A3A3A3; border:1px solid rgba(255,255,255,0.3); }
+
+  /* ── Table enhancements ── */
+  .tbl-check { width:18px; height:18px; cursor:pointer; accent-color:#3772FF; }
+  .tbl tr.row-selected td { background:#EBF0FF; }
+  .tbl td.td-actions { white-space:nowrap; }
+  .btn-archive-row { font-size:0.72rem; padding:0.3rem 0.6rem; border-radius:4px; border:1px solid #E8E8E8; background:#fff; color:#737373; cursor:pointer; margin-left:0.25rem; transition:all 0.15s; }
+  .btn-archive-row:hover { background:#F5F5F5; color:#111; }
+
+  /* ── Tabs ── */
+  .prod-tabs { display:flex; gap:0.1rem; margin-bottom:1.25rem; border-bottom:2px solid #EBEBEB; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .prod-tab { padding:0.6rem 1rem; font-size:0.82rem; font-weight:600; color:#737373; text-decoration:none; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all 0.15s; white-space:nowrap; min-height:40px; display:inline-flex; align-items:center; }
+  .prod-tab:hover { color:#3772FF; }
+  .prod-tab.active { color:#3772FF; border-bottom-color:#3772FF; }
+  .prod-tab .tab-badge { display:inline-block; background:#E8E8E8; color:#737373; border-radius:99px; font-size:0.65rem; font-weight:700; padding:0.05rem 0.45rem; margin-left:0.3rem; }
+  .prod-tab.active .tab-badge { background:#3772FF; color:#fff; }
+
+  /* ── Drop zone ── */
+  .drop-zone { border:1.5px dashed #D4D4D4; border-radius:8px; padding:1.5rem 1rem; text-align:center; cursor:pointer; transition:all 0.15s; background:#FAFAFA; }
+  .drop-zone:hover, .drop-zone.drag-over { border-color:#3772FF; background:#EBF0FF; }
+  .drop-zone-icon { font-size:1.4rem; color:#A3A3A3; margin-bottom:0.3rem; }
+
+  /* ── Mobile table ── */
+  @media(max-width:768px){
+    .tbl th:nth-child(4), .tbl td:nth-child(4),
+    .tbl th:nth-child(6), .tbl td:nth-child(6) { display:none; }
+    #product-search { max-width:100%; width:100%; }
+    .tbl td.td-actions .btn { padding:0.35rem 0.55rem; font-size:0.76rem; }
+  }
+  @media(max-width:480px){
+    .tbl th:nth-child(1), .tbl td:nth-child(1) { display:none; }
+    .tbl th:nth-child(5) { display:none; }
+    .tbl td:nth-child(5) span.pill { font-size:0.65rem; padding:0.1rem 0.4rem; }
+    .page-hdr > div:last-child { width:100%; }
+    .page-hdr > div:last-child .btn { flex:1; justify-content:center; }
+  }
+</style>
+
+{# ── Flash message ── #}
+{% if flash_message %}
+<div class="alert alert-{{ flash_type or 'info' }}" style="margin-bottom:1rem;">{{ flash_message }}</div>
+{% endif %}
+
+{# ── Page header ── #}
+<div class="page-hdr" style="margin-bottom:1rem;">
+  <div>
+    <h2>Products &amp; SKUs</h2>
+    <p style="color:#737373;font-size:0.82rem;">{{ products|length }} active product{{ 's' if products|length != 1 }}</p>
+  </div>
+  <div style="display:flex;gap:0.5rem;align-items:center;">
+    <a href="/products/export.csv" class="btn btn-ghost btn-sm" style="color:#525252;" title="Download compliance data as CSV">↓ Export CSV</a>
+    <a href="/products/bulk-upload" class="btn btn-outline btn-sm"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Bulk Upload</a>
+    <a href="/checker" class="btn btn-ghost btn-sm" style="color:#737373;" title="Check compliance without creating a product">Manual Check</a>
+  </div>
+</div>
+
+{# ── Tabs: Active / Archived ── #}
+<div class="prod-tabs">
+  <a href="/products" class="prod-tab active">Active <span class="tab-badge">{{ products|length }}</span></a>
+  <a href="/products/archived" class="prod-tab">Archived{% if archived_count %} <span class="tab-badge">{{ archived_count }}</span>{% endif %}</a>
+</div>
+
+{# ── Add New Product panel ── #}
+<details class="add-panel" id="add-panel">
+  <summary class="add-panel-hdr">
+    <div class="add-panel-icon">&#x2795;</div>
+    <span class="add-panel-title">Add New Product</span>
+    <span class="add-panel-chevron">&#9654;</span>
+  </summary>
+  <div class="add-panel-body">
+    <form method="post" action="/products/add" enctype="multipart/form-data" id="add-product-form">
+      <div class="form-grid">
+        <div class="field">
+          <label class="field-label">Product Name <span style="color:#C06060;">*</span></label>
+          <input class="input" type="text" name="name" placeholder="e.g. OmegaPlus Capsules" required autocomplete="off" />
+        </div>
+        <div class="field">
+          <label class="field-label">SKU / Product Code</label>
+          <input class="input" type="text" name="sku" placeholder="e.g. OP-60-CAP" autocomplete="off" />
+        </div>
+        <div class="field">
+          <label class="field-label">Category</label>
+          <select class="input" name="category">
+            <option>Health Supplement</option>
+            <option>Nutraceutical</option>
+            <option>Functional Food</option>
+            <option>Food for Special Dietary Use</option>
+            <option>Novel Food</option>
+            <option>Ayurvedic / ASU</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Description</label>
+          <input class="input" type="text" name="description" placeholder="Optional — e.g. 60 softgels, Vitamin D3+K2" autocomplete="off" />
+        </div>
+        <div class="field field-full">
+          <label class="field-label">Upload Label <span style="font-weight:400;color:#A3A3A3;">(optional — you can add later)</span></label>
+          <div class="drop-zone" id="drop-zone"
+               onclick="document.getElementById('product-file').click()"
+               ondragover="event.preventDefault();this.classList.add('drag-over');"
+               ondragleave="this.classList.remove('drag-over');"
+               ondrop="event.preventDefault();this.classList.remove('drag-over');document.getElementById('product-file').files=event.dataTransfer.files;showFileName();">
+            <div class="drop-zone-icon" style="display:flex;justify-content:center;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+            <div style="font-size:0.82rem;color:#737373;margin-bottom:0.2rem;">
+              Drag &amp; drop or <span style="color:#111111;font-weight:600;">browse</span>
+            </div>
+            <div style="font-size:0.7rem;color:#A3A3A3;">JPG, PNG, WebP, PDF — max 50 MB</div>
+            <div id="file-name-display" style="margin-top:0.5rem;font-size:0.8rem;font-weight:600;color:#111111;display:none;"></div>
+          </div>
+          <input type="file" id="product-file" name="file" accept=".jpg,.jpeg,.png,.webp,.tiff,.tif,.pdf,.csv,.xlsx,.xls" style="display:none;" onchange="showFileName()" />
+        </div>
+      </div>
+      <div style="display:flex;gap:0.75rem;margin-top:1rem;align-items:center;">
+        <button type="submit" class="btn btn-primary" id="add-submit-btn">Add Product &rarr;</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('add-panel').removeAttribute('open')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</details>
+
+{# ── Bulk action bar ── #}
+<div id="bulk-bar">
+  <span id="bulk-count">0 selected</span>
+  <button class="bulk-btn bulk-btn-archive" onclick="bulkAction('archive')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg> Archive</button>
+  <button class="bulk-btn bulk-btn-delete" onclick="bulkAction('delete')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Delete</button>
+  <button class="bulk-btn bulk-btn-cancel" onclick="clearSelection()">Cancel</button>
+</div>
+
+{% if products %}
+{# ── Filters ── #}
+<div style="display:flex;gap:0.65rem;align-items:center;margin-bottom:0.85rem;flex-wrap:wrap;">
+  <input class="input" type="text" id="product-search" placeholder="Search by name, SKU, or description..."
+         style="max-width:300px;font-size:0.82rem;" oninput="filterProducts()" />
+  <select class="input" id="category-filter" style="max-width:200px;font-size:0.82rem;" onchange="filterProducts()">
+    <option value="">All Categories</option>
+    <option>Health Supplement</option>
+    <option>Nutraceutical</option>
+    <option>Functional Food</option>
+    <option>Food for Special Dietary Use</option>
+    <option>Novel Food</option>
+    <option>Ayurvedic / ASU</option>
+  </select>
+  <button class="btn btn-outline btn-sm" onclick="clearFilters()" style="font-size:0.78rem;">Clear</button>
+  <span id="filter-count" style="font-size:0.78rem;color:#737373;margin-left:auto;"></span>
+</div>
+
+<div class="table-wrap">
+  <table class="tbl" id="products-table">
+    <thead>
+      <tr>
+        <th style="width:36px;padding:0.5rem 0.5rem 0.5rem 0.75rem;">
+          <input type="checkbox" class="tbl-check" id="select-all" onchange="toggleSelectAll(this)" title="Select all" />
+        </th>
+        <th style="width:64px;">Label</th>
+        <th style="cursor:pointer;" onclick="sortTable(2,'text')">Product &#x21C5;</th>
+        <th>Category</th>
+        <th style="cursor:pointer;" onclick="sortTable(4,'num')">Score &#x21C5;</th>
+        <th>Last Label</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for p in products %}
+      {% set score = p.compliance_score %}
+      {% set latest = p.latest_label %}
+      <tr data-id="{{ p.id }}" data-name="{{ p.name|lower }}" data-sku="{{ (p.sku or '')|lower }}" data-desc="{{ (p.description or '')|lower }}" data-category="{{ p.category }}">
+        <td style="padding:0.5rem 0.5rem 0.5rem 0.75rem;">
+          <input type="checkbox" class="tbl-check row-check" onchange="onRowCheck()" data-id="{{ p.id }}" />
+        </td>
+        <td style="padding:0.35rem 0.5rem;">
+          {% if latest %}
+            <a href="/labels/{{ latest.id }}" style="display:inline-block;">
+              <img src="/labels/{{ latest.id }}/image" alt="{{ p.name }}" loading="lazy"
+                   style="width:52px;height:52px;object-fit:cover;border-radius:4px;border:1px solid #EBEBEB;display:block;"
+                   onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+              <div style="width:52px;height:52px;background:#F5F5F5;border-radius:4px;border:1px solid #EBEBEB;display:none;align-items:center;justify-content:center;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+            </a>
+          {% else %}
+            <div style="width:52px;height:52px;background:#F5F5F5;border-radius:4px;border:1px solid #EBEBEB;display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </div>
+          {% endif %}
+        </td>
+        <td>
+          <a href="/products/{{ p.id }}" style="font-weight:600;color:var(--gray-900);">{{ p.name }}</a>
+          {% if p.sku %}<br/><small style="color:#A3A3A3;">{{ p.sku }}</small>{% endif %}
+          {% if p.description %}<br/><small style="color:#C0C0C0;font-size:0.68rem;">{{ p.description[:60] }}{% if p.description|length > 60 %}…{% endif %}</small>{% endif %}
+        </td>
+        <td><span class="pill pill-primary" style="font-size:0.7rem;">{{ p.category }}</span></td>
+        <td>
+          {% if score is not none %}
+            <span class="pill {% if score >= 80 %}pill-good{% elif score >= 50 %}pill-warn{% else %}pill-bad{% endif %}">{{ score }}%</span>
+          {% else %}
+            <span style="color:var(--gray-300);">&mdash;</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if latest %}<small>{{ latest.uploaded_at.strftime('%d %b %Y') }}</small>
+          {% else %}<small style="color:var(--gray-300);">No label</small>{% endif %}
+        </td>
+        <td class="td-actions">
+          <a href="/products/{{ p.id }}/upload" class="btn btn-outline btn-sm">Upload</a>
+          {% if latest %}
+            <a href="/labels/{{ latest.id }}" class="btn btn-primary btn-sm" style="margin-left:0.3rem;">Report</a>
+          {% endif %}
+          <form method="post" action="/products/{{ p.id }}/archive" style="display:inline;" onsubmit="return confirm('Archive {{ p.name }}? You can restore it later.')">
+            <button type="submit" class="btn-archive-row" title="Archive product"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div id="no-filter-results" style="display:none;text-align:center;padding:2rem;color:#737373;font-size:0.88rem;">
+  No products match your filters.
+</div>
+
+{% else %}
+<div class="card no-hover" style="padding:0;">
+  <div class="empty-state">
+    <span class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span>
+    <h3>No products yet</h3>
+    <p>Use the form above to add your first product, or bulk upload from CSV</p>
+  </div>
+</div>
+{% endif %}
+
+<script>
+/* ── File picker ── */
+function showFileName(){
+  var f=document.getElementById('product-file');
+  var d=document.getElementById('file-name-display');
+  if(f.files&&f.files.length>0){d.textContent='✓ '+f.files[0].name;d.style.display='block';}
+  else{d.style.display='none';}
+}
+
+/* ── Submit guard ── */
+document.getElementById('add-product-form').addEventListener('submit', function(){
+  var btn = document.getElementById('add-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Adding…';
+});
+
+/* ── Filter & sort ── */
+function filterProducts(){
+  var q=document.getElementById('product-search').value.toLowerCase();
+  var cat=document.getElementById('category-filter').value;
+  var rows=document.querySelectorAll('#products-table tbody tr');
+  var shown=0;
+  rows.forEach(function(row){
+    var name=row.getAttribute('data-name')||'';
+    var sku=row.getAttribute('data-sku')||'';
+    var desc=row.getAttribute('data-desc')||'';
+    var rowCat=row.getAttribute('data-category')||'';
+    var textMatch=!q||name.includes(q)||sku.includes(q)||desc.includes(q);
+    var catMatch=!cat||rowCat===cat;
+    row.style.display=(textMatch&&catMatch)?'':'none';
+    if(textMatch&&catMatch) shown++;
+  });
+  var countEl=document.getElementById('filter-count');
+  countEl.textContent=(q||cat)?shown+' of '+rows.length+' shown':'';
+  var nfr=document.getElementById('no-filter-results');
+  var tw=document.querySelector('.table-wrap');
+  if(nfr){nfr.style.display=shown===0?'block':'none';}
+  if(tw){tw.style.display=shown===0?'none':'';}
+}
+function clearFilters(){
+  document.getElementById('product-search').value='';
+  document.getElementById('category-filter').value='';
+  filterProducts();
+}
+function sortTable(colIndex,type){
+  var tbody=document.querySelector('#products-table tbody');
+  if(!tbody) return;
+  var rows=Array.from(tbody.querySelectorAll('tr'));
+  var asc=tbody.getAttribute('data-sort-asc')!==String(colIndex);
+  rows.sort(function(a,b){
+    var aVal=a.children[colIndex]?a.children[colIndex].textContent.trim():'';
+    var bVal=b.children[colIndex]?b.children[colIndex].textContent.trim():'';
+    if(type==='num'){aVal=parseFloat(aVal)||-1;bVal=parseFloat(bVal)||-1;}
+    else{aVal=aVal.toLowerCase();bVal=bVal.toLowerCase();}
+    return asc?(aVal<bVal?-1:aVal>bVal?1:0):(aVal>bVal?-1:aVal<bVal?1:0);
+  });
+  rows.forEach(function(r){tbody.appendChild(r);});
+  tbody.setAttribute('data-sort-asc',asc?colIndex:'');
+}
+
+/* ── Bulk selection ── */
+function onRowCheck(){
+  var checked=document.querySelectorAll('.row-check:checked');
+  var all=document.querySelectorAll('.row-check');
+  var bar=document.getElementById('bulk-bar');
+  var count=document.getElementById('bulk-count');
+  document.getElementById('select-all').checked=checked.length===all.length&&all.length>0;
+  document.getElementById('select-all').indeterminate=checked.length>0&&checked.length<all.length;
+  bar.classList.toggle('visible', checked.length>0);
+  count.textContent=checked.length+' selected';
+  document.querySelectorAll('#products-table tbody tr').forEach(function(r){
+    var cb=r.querySelector('.row-check');
+    r.classList.toggle('row-selected', cb&&cb.checked);
+  });
+}
+function toggleSelectAll(cb){
+  document.querySelectorAll('.row-check').forEach(function(c){c.checked=cb.checked;});
+  onRowCheck();
+}
+function clearSelection(){
+  document.querySelectorAll('.row-check').forEach(function(c){c.checked=false;});
+  document.getElementById('select-all').checked=false;
+  document.getElementById('select-all').indeterminate=false;
+  onRowCheck();
+}
+
+/* ── Bulk actions ── */
+function getCsrfToken(){
+  var m=document.cookie.match(/(?:^|;\s*)_csrf=([^;]+)/);
+  return m?decodeURIComponent(m[1]):'';
+}
+function bulkAction(action){
+  var ids=Array.from(document.querySelectorAll('.row-check:checked')).map(function(c){return parseInt(c.getAttribute('data-id'));});
+  if(!ids.length) return;
+  var label=action==='archive'?'archive':'delete';
+  if(!confirm('Are you sure you want to '+label+' '+ids.length+' product(s)?')) return;
+  fetch('/products/bulk-action',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRF-Token':getCsrfToken()},
+    body:JSON.stringify({action:action,ids:ids})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.success) window.location.reload();
+    else alert('Error: '+(d.error||'Unknown error'));
+  }).catch(function(){ alert('Request failed — please try again.'); });
+}
+/* Keyboard shortcut: press / to focus search */
+document.addEventListener('keydown',function(e){
+  if(e.key==='/' && !e.ctrlKey && !e.metaKey && !e.altKey){
+    var el=document.activeElement;
+    if(el && (el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT')) return;
+    e.preventDefault();
+    var s=document.getElementById('product-search');
+    if(s){s.focus();s.select();}
+  }
+});
+</script>
+{% endblock %}

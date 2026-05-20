@@ -1,0 +1,1502 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ kb_type | title }} Knowledge Base{% endblock %}
+{% block page_title %}{{ kb_type | title }} Knowledge Base{% endblock %}
+
+{% block content %}
+<style>
+/* ── Page-level ── */
+.kb-page { display:flex; flex-direction:column; gap:1.5rem; }
+
+/* ── Stat chips ── */
+.kb-stats { display:flex; gap:0.65rem; flex-wrap:wrap; align-items:center; }
+.kb-stat-chip {
+  background:#fff; border:1px solid #EBEBEB; border-radius:8px;
+  padding:0.65rem 1rem; display:flex; flex-direction:column; align-items:center;
+  min-width:90px;
+}
+.kb-stat-chip .val { font-size:1.4rem; font-weight:700; color:#262626; line-height:1; }
+.kb-stat-chip .lbl { font-size:0.65rem; color:#A3A3A3; font-weight:500; margin-top:0.2rem;
+                     letter-spacing:0.04em; text-align:center; }
+
+/* ── Two-panel top section ── */
+.kb-top-grid {
+  display:grid; grid-template-columns:280px 1fr; gap:1.25rem; align-items:start;
+}
+@media(max-width:860px){ .kb-top-grid { grid-template-columns:1fr; } }
+@keyframes audit-slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+/* ── Action panel ── */
+.kb-action-panel {
+  background:#fff; border:1px solid #EBEBEB; border-radius:12px;
+  overflow:hidden; position:sticky; top:1rem;
+}
+.kb-action-section { padding:1rem 1.1rem; border-bottom:1px solid #F5F5F5; }
+.kb-action-section:last-child { border-bottom:none; }
+.kb-action-section-lbl {
+  font-size:0.65rem; font-weight:700; letter-spacing:0.08em; color:#A3A3A3;
+  text-transform:uppercase; margin-bottom:0.6rem;
+}
+.kb-action-section .adm-btn { width:100%; justify-content:center; margin-bottom:0.4rem; }
+.kb-action-section .adm-btn:last-child { margin-bottom:0; }
+.kb-reset-row { display:flex; gap:0.4rem; align-items:stretch; }
+.kb-reset-row select {
+  flex:1; padding:0.4rem 0.6rem; border:1px solid #FECACA; border-radius:6px;
+  font-size:0.8rem; color:#DC2626; background:#FEF2F2; cursor:pointer;
+}
+.kb-reset-row button { white-space:nowrap; }
+
+/* ── Upload panel ── */
+.kb-upload-panel {
+  background:#fff; border:1px solid #EBEBEB; border-radius:12px;
+  padding:1rem 1.2rem; margin-bottom:1rem;
+}
+.kb-upload-panel h4 { font-size:0.82rem; font-weight:700; color:#262626; margin:0 0 0.15rem; }
+.kb-upload-panel .kb-upload-meta { font-size:0.72rem; color:#A3A3A3; margin:0 0 0.75rem; }
+
+/* Compact horizontal drop zone */
+.kb-drop-zone {
+  border:1px dashed #D4D4D4; border-radius:8px;
+  padding:0.75rem 1rem;
+  cursor:pointer; transition:border-color 0.15s, background 0.15s;
+  background:#FAFAFA;
+  display:flex; align-items:center; gap:0.75rem;
+}
+.kb-drop-zone:hover, .kb-drop-zone.drag-over {
+  border-color:#111111; background:#F0F9F8;
+}
+.kb-drop-zone .icon { font-size:1.4rem; flex-shrink:0; }
+.kb-drop-zone .drop-text { flex:1; min-width:0; }
+.kb-drop-zone .main { font-size:0.82rem; font-weight:600; color:#525252; }
+.kb-drop-zone .sub  { font-size:0.72rem; color:#A3A3A3; margin-top:0.1rem; }
+.kb-drop-zone .kb-browse-btn {
+  flex-shrink:0; font-size:0.75rem; padding:0.3rem 0.7rem;
+  border:1px solid #D4D4D4; border-radius:5px; background:#fff;
+  color:#525252; white-space:nowrap;
+}
+.kb-drop-zone input[type=file] { display:none; }
+
+/* ── File queue ── */
+.kb-file-queue { margin-top:0.9rem; display:none; }
+.kb-file-queue.has-files { display:block; }
+.kb-file-item {
+  display:flex; align-items:center; gap:0.6rem;
+  padding:0.4rem 0.65rem; border-radius:6px; margin-bottom:0.3rem;
+  background:#F8F8F8; border:1px solid #EBEBEB; font-size:0.8rem;
+}
+.kb-file-item .fi-name { flex:1; color:#262626; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.kb-file-item .fi-size { color:#A3A3A3; font-size:0.72rem; flex-shrink:0; }
+.kb-file-item .fi-status { flex-shrink:0; font-size:0.75rem; min-width:60px; text-align:right; }
+.kb-file-item .fi-remove {
+  cursor:pointer; color:#A3A3A3; font-size:1rem; line-height:1;
+  padding:0 0.2rem; flex-shrink:0;
+}
+.kb-file-item .fi-remove:hover { color:#DC2626; }
+.fi-status.pending  { color:#A3A3A3; }
+.fi-status.uploading{ color:#525252; }
+.fi-status.done     { color:#16A34A; font-weight:600; }
+.fi-status.skipped  { color:#D97706; font-weight:600; }
+.fi-status.error    { color:#DC2626; font-weight:600; }
+
+/* ── Per-file progress bar ── */
+.fi-progress-wrap {
+  flex:1; height:3px; background:#F0F0F0; border-radius:2px; overflow:hidden;
+  display:none;
+}
+.fi-progress-bar {
+  height:100%; background:#525252; border-radius:2px;
+  transition:width 0.3s ease; width:0%;
+  animation:progressPulse 1.2s ease-in-out infinite;
+}
+@keyframes progressPulse {
+  0%,100% { opacity:1; }
+  50%      { opacity:0.6; }
+}
+
+/* ── Overall progress bar ── */
+.kb-overall-progress {
+  display:none; margin-bottom:0.75rem;
+  background:#F5F5F5; border-radius:6px; padding:0.65rem 0.85rem;
+  border:1px solid #EBEBEB;
+}
+.kb-overall-label {
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:0.75rem; color:#525252; margin-bottom:0.45rem;
+}
+.kb-overall-bar-wrap {
+  height:5px; background:#E5E5E5; border-radius:3px; overflow:hidden;
+}
+.kb-overall-bar {
+  height:100%; background:#111111; border-radius:3px;
+  transition:width 0.4s ease;
+}
+
+/* ── File item entrance animation ── */
+@keyframes fiSlideIn {
+  from { opacity:0; transform:translateX(-8px); }
+  to   { opacity:1; transform:translateX(0); }
+}
+.kb-file-item { animation:fiSlideIn 0.18s ease; }
+
+/* ── Upload complete banner ── */
+.kb-upload-done {
+  display:none; margin-top:0.75rem; padding:0.65rem 0.85rem;
+  background:#EDFAF3; border:1px solid #BBF7D0; border-radius:6px;
+  font-size:0.8rem; color:#262626; font-weight:600;
+  animation:fiSlideIn 0.2s ease;
+}
+
+.kb-queue-footer { display:flex; align-items:center; justify-content:space-between; margin-top:0.75rem; gap:0.5rem; }
+.kb-queue-footer .summary { font-size:0.75rem; color:#737373; }
+
+/* ── Documents table extra styles ── */
+.kb-doc-filter {
+  padding:0.4rem 0.7rem; border:1px solid #EBEBEB; border-radius:7px;
+  font-size:0.82rem; width:220px;
+}
+
+/* ── Collapsible rule sections ── */
+.kb-collapsible { background:#fff; border:1px solid #EBEBEB; border-radius:8px; margin-bottom:0.75rem; overflow:hidden; }
+.kb-collapsible-hdr {
+  padding:0.85rem 1.2rem; display:flex; align-items:center; justify-content:space-between;
+  cursor:pointer; user-select:none;
+}
+.kb-collapsible-hdr:hover { background:#FAFAFA; }
+.kb-collapsible-hdr-left { display:flex; align-items:center; gap:0.65rem; }
+.kb-collapsible-title { font-size:0.9rem; font-weight:600; color:#262626; }
+.kb-collapsible-count { font-size:0.72rem; color:#A3A3A3; }
+.kb-collapsible-arrow {
+  font-size:0.75rem; color:#A3A3A3; transition:transform 0.2s;
+  transform:rotate(0deg);
+}
+.kb-collapsible.open .kb-collapsible-arrow { transform:rotate(180deg); }
+.kb-collapsible-body { display:none; border-top:1px solid #EBEBEB; }
+.kb-collapsible.open .kb-collapsible-body { display:block; }
+
+.fw-rule-row { padding:0.55rem 1.2rem; border-bottom:1px solid #F5F5F5; display:flex; align-items:flex-start; gap:0.75rem; font-size:0.79rem; }
+.fw-rule-row:last-child { border-bottom:none; }
+.fw-rule-row:hover { background:#FAFAFA; }
+.fw-rule-code { font-family:monospace; font-size:0.7rem; color:#A3A3A3; min-width:140px; flex-shrink:0; padding-top:0.1rem; }
+.fw-rule-desc { flex:1; color:#525252; line-height:1.5; }
+.fw-rule-src  { font-size:0.66rem; color:#A3A3A3; margin-top:0.1rem; }
+.fw-sev { font-size:0.58rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:3px; white-space:nowrap; flex-shrink:0; }
+.fw-sev-CRITICAL { background:#EBEBEB; color:#111111; }
+.fw-sev-HIGH     { background:#F5F5F5; color:#525252; }
+.fw-sev-MEDIUM   { background:#F5F5F5; color:#525252; }
+.fw-sev-LOW      { background:#F5F5F5; color:#737373; }
+
+.rc-row { padding:0.65rem 1.2rem; border-bottom:1px solid #F5F5F5; }
+.rc-row:last-child { border-bottom:none; }
+.rc-title { font-size:0.84rem; font-weight:600; color:#262626; margin-bottom:0.2rem; }
+.rc-meta  { font-size:0.7rem; color:#A3A3A3; display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; }
+.rc-summary { font-size:0.77rem; color:#525252; margin-top:0.3rem; line-height:1.5; }
+</style>
+
+{# ── Flash message ── #}
+{% if flash_message %}
+{% set _fm = flash_message %}
+{% if _fm.startswith('deleted:') %}
+  {# Format: deleted:<label>:<count> #}
+  {% set _parts = _fm.split(':') %}
+  {% set _label = _parts[1] if _parts|length > 1 else 'selected' %}
+  {% set _count = _parts[2] if _parts|length > 2 else '?' %}
+  <div class="adm-flash adm-flash-{{ flash_type }}" style="margin-bottom:1rem;">
+    Deleted {{ _count }} document(s) from the <strong>{{ _label }}</strong> knowledge base.
+    KB is now empty for this framework — click <strong>Auto-Seed from DB</strong> to rebuild.
+  </div>
+{% elif _fm.startswith('seeded:') %}
+  {# Format: seeded:<count> #}
+  {% set _parts = _fm.split(':') %}
+  {% set _count = _parts[1] if _parts|length > 1 else '?' %}
+  <div class="adm-flash adm-flash-{{ flash_type }}" style="margin-bottom:1rem;">
+    Seeded {{ _count }} document(s) from DB — knowledge base updated.
+  </div>
+{% else %}
+  <div class="adm-flash adm-flash-{{ flash_type }}" style="margin-bottom:1rem;">{{ _fm }}</div>
+{% endif %}
+{% endif %}
+
+
+<div class="kb-page">
+
+{# ── Stats row + Test Chat ─────────────────────────────────────────────────── #}
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
+  <div class="kb-stats">
+    <div class="kb-stat-chip">
+      <span class="val">{{ stats.documents }}</span>
+      <span class="lbl">KB Documents</span>
+    </div>
+    <div class="kb-stat-chip">
+      <span class="val">{{ stats.chunks }}</span>
+      <span class="lbl">Indexed Chunks</span>
+    </div>
+    {% if kb_type == "regulations" %}
+    <div class="kb-stat-chip">
+      <span class="val">{{ fssai_rules|length }}</span>
+      <span class="lbl">FSSAI Rules</span>
+    </div>
+    <div class="kb-stat-chip">
+      <span class="val">{{ lm_rules|length }}</span>
+      <span class="lbl">Legal Metrology</span>
+    </div>
+    <div class="kb-stat-chip">
+      <span class="val">{{ ayush_rules|length }}</span>
+      <span class="lbl">AYUSH / ASU</span>
+    </div>
+    {% endif %}
+  </div>
+  <div style="display:flex;gap:0.5rem;">
+    <a href="/admin/llm/{{ kb_type }}/chat" class="adm-btn adm-btn-primary"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Test Chat →</a>
+    <a href="/admin/llm" class="adm-btn">← Back</a>
+  </div>
+</div>
+
+{# ── Missing rules warning ── #}
+{% if kb_type == "regulations" and (lm_rules|length == 0 or ayush_rules|length == 0) %}
+<div class="adm-flash adm-flash-error">
+  <strong>Missing rules:</strong>
+  {% if lm_rules|length == 0 %}Legal Metrology not loaded. {% endif %}
+  {% if ayush_rules|length == 0 %}AYUSH not loaded. {% endif %}
+  Click <strong>Sync Rules from File</strong> to import them.
+</div>
+{% endif %}
+
+{# ── Two-panel: Actions + Upload ──────────────────────────────────────────── #}
+<div class="kb-top-grid">
+
+  {# Left: KB actions panel #}
+  <div class="kb-action-panel">
+
+    {% if kb_type == "regulations" %}
+    <div class="kb-action-section">
+      <div class="kb-action-section-lbl">Compliance Rules</div>
+      <form method="post" action="/admin/llm/regulations/sync-rules" style="margin:0;">
+        <button type="submit" class="adm-btn adm-btn-primary"
+                onclick="this.disabled=true;this.textContent='Syncing…';this.closest('form').submit();"
+                title="Import any new rules from the seed JSON file. Safe — never deletes existing rules.">
+          ↑ Sync Rules from File
+        </button>
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="kb-action-section">
+      <div class="kb-action-section-lbl">Knowledge Base</div>
+      <form method="post" action="/admin/llm/{{ kb_type }}/seed" style="margin:0 0 0.4rem;">
+        <button type="submit" class="adm-btn adm-btn-success"
+                onclick="return confirm('Auto-import all {{ kb_type }} data from the database? Already-indexed documents will be skipped.')">
+          ↻ Auto-Seed from DB
+        </button>
+      </form>
+      {% if kb_type == "regulations" %}
+      <form method="post" action="/admin/llm/regulations/ingest-fssai" style="margin:0;">
+        <button type="submit" class="adm-btn adm-btn-success"
+                onclick="this.disabled=true;this.innerText='Ingesting…';this.form.submit();return true;"
+                title="Bulk-ingest all FSSAI PDFs from the /FSSAI server folder. Skips already-ingested files.">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Ingest FSSAI PDFs from Server
+        </button>
+      </form>
+      {% endif %}
+    </div>
+
+    {% if kb_type == "regulations" %}
+    {# ── Fresh Start ── #}
+    <div class="kb-action-section" style="background:#FFFAF5;border-left:3px solid #C27B1A;">
+      <div class="kb-action-section-lbl" style="color:#C27B1A;">Fresh Start</div>
+      <p style="font-size:0.72rem;color:#525252;margin:0 0 0.65rem;line-height:1.5;">
+        Wipes all {{ stats.documents }} KB documents, then immediately re-seeds
+        the base rule context from DB. Clears all duplicate locks so you can
+        upload your <code>.md</code> files fresh.
+      </p>
+      <button type="button" id="clearRebuildBtn" class="adm-btn"
+              style="width:100%;font-size:0.78rem;border-color:#C27B1A;color:#C27B1A;"
+              onclick="clearAndRebuild()">
+        ⟳ Clear KB &amp; Rebuild from DB
+      </button>
+      <div id="clearRebuildStatus" style="display:none;margin-top:0.55rem;font-size:0.74rem;color:#525252;line-height:1.5;"></div>
+    </div>
+    {% endif %}
+
+    {# ── Re-read & Re-learn ── always-visible, prominent action ── #}
+    <div class="kb-action-section" style="background:#F0F9F8;border-left:3px solid #111111;">
+      <div class="kb-action-section-lbl" style="color:#111111;">Re-read & Re-learn</div>
+      <p style="font-size:0.72rem;color:#525252;margin:0 0 0.65rem;line-height:1.5;">
+        Re-reads all stored document content and re-chunks everything with the
+        improved <strong>600-char chunker</strong>. Fixes thin documents and improves
+        RAG answer quality. Uploaded PDFs and seeded rules are all re-processed.
+      </p>
+      <button type="button" id="relearnBtn" class="adm-btn adm-btn-primary" onclick="startRelearn()"
+              style="width:100%;font-size:0.78rem;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Re-read & Re-learn from All Docs
+      </button>
+      <div id="relearnStatus" style="display:none;margin-top:0.55rem;font-size:0.75rem;color:#525252;"></div>
+      <div id="relearnResult" style="display:none;margin-top:0.55rem;font-size:0.75rem;color:#262626;background:#F5F5F5;border-radius:6px;padding:0.4rem 0.6rem;"></div>
+    </div>
+
+    <div class="kb-action-section" id="auditSection">
+      <div class="kb-action-section-lbl" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>KB Health</span>
+        <span id="auditTimestamp" style="font-size:0.6rem;color:#A3A3A3;font-weight:400;text-transform:none;letter-spacing:0;"></span>
+      </div>
+      {# Indeterminate progress bar — only visible while scanning #}
+      <div id="auditProgressWrap" style="height:3px;background:#F0F0F0;border-radius:2px;margin-bottom:0.65rem;overflow:hidden;display:none;">
+        <div id="auditProgressBar" style="height:100%;width:40%;background:#111111;border-radius:2px;animation:audit-slide 1.2s ease-in-out infinite;"></div>
+      </div>
+      {# Result card — prominent, hidden until audit completes #}
+      <div id="auditSummary" style="display:none;margin-bottom:0.6rem;background:#F8F8F8;border:1px solid #EBEBEB;border-radius:8px;padding:0.75rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.45rem;">
+          <span id="auditScoreBadge" style="font-size:1.6rem;font-weight:800;line-height:1;"></span>
+          <span id="auditScoreLabel" style="font-size:0.72rem;color:#737373;text-align:right;"></span>
+        </div>
+        <div id="auditProblemLine" style="font-size:0.78rem;font-weight:600;margin-bottom:0.4rem;"></div>
+        <button type="button" id="auditDetailsToggle" onclick="toggleAuditDetails()"
+          style="font-size:0.68rem;color:#111111;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;">
+          Show details ↓
+        </button>
+      </div>
+      {# Full details — collapsed by default #}
+      <div id="auditDetails" style="display:none;margin-bottom:0.5rem;"></div>
+      <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+        <button type="button" class="adm-btn" id="auditBtn" onclick="runAudit()" style="font-size:0.72rem;flex:1;">Run Audit</button>
+        <button type="button" class="adm-btn adm-btn-primary" id="reindexBtn" onclick="startReindex()"
+          style="font-size:0.72rem;flex:1;display:none;">↻ Re-index</button>
+      </div>
+      <div id="auditError" style="display:none;font-size:0.78rem;font-weight:600;color:#DC2626;background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;padding:0.5rem 0.65rem;margin-top:0.5rem;"></div>
+    </div>
+
+    <div class="kb-action-section">
+      <div class="kb-action-section-lbl" style="color:#DC2626;">Danger Zone</div>
+      <!-- hidden form submitted by JS after confirmation -->
+      <form id="deleteKbForm" method="post" action="/admin/llm/{{ kb_type }}/reset">
+        {% if kb_type == "regulations" %}
+        <div class="kb-reset-row" style="margin-bottom:0.4rem;">
+          <select name="subset" id="deleteSubset">
+            <option value="fssai">FSSAI only</option>
+            <option value="ayush">AYUSH only</option>
+            <option value="legal_metrology">Legal Metrology only</option>
+            <option value="all">All Regulations</option>
+          </select>
+        </div>
+        {% else %}
+        <input type="hidden" name="subset" value="all">
+        {% endif %}
+        <button type="button" class="adm-btn" onclick="openDeleteModal()"
+          style="width:100%;background:#FEE2E2;color:#DC2626;border-color:#FECACA;justify-content:center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg> Delete from KB
+        </button>
+      </form>
+
+      <!-- DELETE confirmation modal -->
+      <div id="deleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:0.75rem;padding:2rem;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+          <div style="font-size:1rem;font-weight:700;color:#DC2626;margin-bottom:0.5rem;">⚠ Confirm Deletion</div>
+          <p style="font-size:0.82rem;color:#525252;margin:0 0 1rem;line-height:1.5;">
+            This will permanently remove the selected documents from the knowledge base.
+            This <strong>cannot be undone</strong>. Type <code style="background:#FEE2E2;padding:0.1rem 0.35rem;border-radius:0.25rem;color:#DC2626;font-weight:700;">DELETE</code> to confirm.
+          </p>
+          <input id="deleteConfirmInput" type="text" placeholder="Type DELETE here"
+            style="width:100%;box-sizing:border-box;border:1px solid #FECACA;border-radius:0.4rem;padding:0.5rem 0.75rem;font-size:0.9rem;margin-bottom:1rem;outline:none;"
+            oninput="document.getElementById('deleteConfirmBtn').disabled = this.value !== 'DELETE'">
+          <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+            <button onclick="closeDeleteModal()" style="padding:0.4rem 1rem;border:1px solid #EBEBEB;border-radius:0.4rem;background:#F8F8F8;cursor:pointer;font-size:0.82rem;">Cancel</button>
+            <button id="deleteConfirmBtn" disabled onclick="submitDelete()"
+              style="padding:0.4rem 1rem;border:1px solid #FECACA;border-radius:0.4rem;background:#DC2626;color:#fff;cursor:pointer;font-size:0.82rem;opacity:0.5;"
+              onmouseover="if(!this.disabled)this.style.opacity='1'" onmouseout="if(!this.disabled)this.style.opacity=''">
+              Delete from KB
+            </button>
+          </div>
+        </div>
+      </div>
+      <script>
+        function openDeleteModal() {
+          document.getElementById('deleteConfirmInput').value = '';
+          document.getElementById('deleteConfirmBtn').disabled = true;
+          document.getElementById('deleteConfirmBtn').style.opacity = '0.5';
+          document.getElementById('deleteModal').style.display = 'flex';
+          setTimeout(() => document.getElementById('deleteConfirmInput').focus(), 100);
+        }
+        function closeDeleteModal() { document.getElementById('deleteModal').style.display = 'none'; }
+        function submitDelete() { document.getElementById('deleteKbForm').submit(); }
+        document.getElementById('deleteConfirmInput') && document.getElementById('deleteConfirmInput').addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && !document.getElementById('deleteConfirmBtn').disabled) submitDelete();
+          if (e.key === 'Escape') closeDeleteModal();
+        });
+        document.getElementById('deleteModal').addEventListener('click', function(e) {
+          if (e.target === this) closeDeleteModal();
+        });
+        // Enable/style confirm button when DELETE is typed
+        document.addEventListener('input', function(e) {
+          if (e.target.id === 'deleteConfirmInput') {
+            const btn = document.getElementById('deleteConfirmBtn');
+            btn.style.opacity = e.target.value === 'DELETE' ? '1' : '0.5';
+          }
+        });
+      </script>
+      <p style="font-size:0.7rem;color:#A3A3A3;margin:0.4rem 0 0;line-height:1.4;">
+        Removes this framework's documents from the KB. Use <strong>Auto-Seed from DB</strong> afterward to rebuild.
+      </p>
+    </div>
+
+  </div>{# /.kb-action-panel #}
+
+  {# Right: upload + documents table #}
+  <div>
+
+    {# Compact upload panel #}
+    <div class="kb-upload-panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+        <h4>Upload Documents</h4>
+        <span class="kb-upload-meta" style="margin:0;">PDF · TXT · CSV · MD</span>
+      </div>
+
+      {# Compact horizontal drop zone #}
+      <div class="kb-drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="icon" style="display:flex;align-items:center;justify-content:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <div class="drop-text">
+          <div class="main">Drop files here or click to browse</div>
+          <div class="sub">Multiple files — each chunked &amp; indexed automatically</div>
+        </div>
+        <div class="kb-browse-btn">Browse</div>
+        <input type="file" id="fileInput" accept=".pdf,.txt,.csv,.md" multiple>
+      </div>
+
+      {# File queue #}
+      <div class="kb-file-queue" id="fileQueue">
+        {# Overall progress bar #}
+        <div class="kb-overall-progress" id="overallProgress">
+          <div class="kb-overall-label">
+            <span id="overallLabel">Uploading…</span>
+            <span id="overallPct" style="font-weight:700;color:#111111;">0%</span>
+          </div>
+          <div class="kb-overall-bar-wrap">
+            <div class="kb-overall-bar" id="overallBar" style="width:0%"></div>
+          </div>
+        </div>
+
+        {# Done banner #}
+        <div class="kb-upload-done" id="uploadDoneBanner"></div>
+
+        <div id="fileList"></div>
+        <div class="kb-queue-footer">
+          <span class="summary" id="queueSummary"></span>
+          <div style="display:flex;gap:0.5rem;">
+            <button class="adm-btn" onclick="clearQueue()" style="font-size:0.78rem;">Clear</button>
+            <button class="adm-btn adm-btn-primary" id="uploadAllBtn" onclick="uploadAll()" style="font-size:0.78rem;">
+              Upload All
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if kb_type == "regulations" %}
+    {# ── Two-system explainer ── #}
+    <div style="background:#F8F8F8;border:1px solid #EBEBEB;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.8rem;color:#525252;line-height:1.6;">
+      <strong style="color:#262626;display:block;margin-bottom:0.3rem;">📋 How the KB and Rules work together</strong>
+      <span style="display:inline-block;background:#EBF0FF;color:#3772FF;border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:600;margin-right:0.3rem;">KB Documents</span>
+      Uploaded regulation text adds context used by the AI for <strong>format/layout checks only</strong> (3–4 checks). It does <em>not</em> create new compliance rules.
+      <br>
+      <span style="display:inline-block;background:#EAF2F0;color:#357266;border-radius:4px;padding:0.1rem 0.45rem;font-size:0.72rem;font-weight:600;margin-right:0.3rem;">Compliance Rules</span>
+      The {{ total_rules }} rules below run against every scan. To turn your uploaded documents into new compliance rules, use <strong>↓ Extract Rules</strong> at the bottom of this page.
+    </div>
+    {% endif %}
+
+    {# Indexed Documents table — lives in right column #}
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.65rem;flex-wrap:wrap;gap:0.5rem;">
+        <h4 class="adm-section-title" style="margin:0;">Indexed Documents
+          <span style="font-size:0.78rem;font-weight:400;color:#A3A3A3;">({{ documents|length }})</span>
+        </h4>
+        <input class="kb-doc-filter" id="docFilter" type="text"
+               placeholder="Filter by title or source…"
+               oninput="filterDocs(this.value)">
+      </div>
+  <div class="adm-table-wrap">
+    <table class="adm-table" id="docsTable">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th style="width:90px;">Type</th>
+          <th style="width:70px;text-align:center;">Chunks</th>
+          <th style="width:110px;">Added</th>
+          <th style="width:80px;"></th>
+        </tr>
+      </thead>
+      <tbody id="docsBody">
+        {% for doc in documents %}
+        <tr data-title="{{ doc.title | lower }}" data-source="{{ (doc.source or '') | lower }}">
+          <td>
+            <div style="font-weight:600;color:#262626;font-size:0.84rem;margin-bottom:0.15rem;">{{ doc.title }}</div>
+            <div style="font-size:0.7rem;color:#A3A3A3;word-break:break-all;">{{ doc.source or '—' }}</div>
+          </td>
+          <td>
+            {% if doc.source and doc.source.startswith('db:') %}
+            <span class="adm-badge badge-blue">DB Import</span>
+            {% elif doc.source and doc.source.startswith('fssai:') %}
+            <span class="adm-badge badge-green">FSSAI PDF</span>
+            {% elif doc.source and doc.source.startswith('upload:') %}
+            <span class="adm-badge badge-purple">Uploaded</span>
+            {% else %}
+            <span class="adm-badge badge-gray">Manual</span>
+            {% endif %}
+          </td>
+          <td style="font-weight:700;color:#262626;text-align:center;">{{ doc.chunk_count }}</td>
+          <td style="font-size:0.77rem;color:#737373;">
+            {{ doc.uploaded_at.strftime('%d %b %Y') if doc.uploaded_at else '—' }}
+          </td>
+          <td>
+            <form method="post"
+                  action="/admin/llm/{{ kb_type }}/documents/{{ doc.id }}/delete"
+                  style="margin:0;"
+                  onsubmit="return confirm('Delete \'{{ doc.title[:40] }}\'? Removes {{ doc.chunk_count }} chunk(s).')">
+              <button type="submit" class="adm-btn adm-btn-danger" style="font-size:0.72rem;padding:0.25rem 0.6rem;">
+                Delete
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr id="emptyRow">
+          <td colspan="5" style="text-align:center;color:#A3A3A3;padding:2.5rem 1rem;">
+            <div style="display:flex;justify-content:center;margin-bottom:0.4rem;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div>
+            No documents indexed yet. Use <strong>Auto-Seed from DB</strong> or upload files above.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+    </div>{# /.indexed-docs #}
+  </div>{# /.right-column #}
+
+</div>{# /.kb-top-grid #}
+
+
+{% if kb_type == "regulations" %}
+{# ── Compliance Rules (collapsible) ───────────────────────────────────────── #}
+<div>
+  <h4 class="adm-section-title" style="margin-bottom:0.75rem;">Compliance Rules</h4>
+
+  {# FSSAI #}
+  <div class="kb-collapsible" id="sec-fssai">
+    <div class="kb-collapsible-hdr" onclick="toggleSection('sec-fssai')">
+      <div class="kb-collapsible-hdr-left">
+        <span class="kb-collapsible-title">FSSAI — Food Safety &amp; Standards</span>
+        <span class="kb-collapsible-count">{{ fssai_rules|length }} rules</span>
+      </div>
+      <span class="kb-collapsible-arrow">▾</span>
+    </div>
+    <div class="kb-collapsible-body">
+      {% for rule in fssai_rules %}
+      <div class="fw-rule-row">
+        <div class="fw-rule-code">{{ rule.rule_code }}</div>
+        <div class="fw-rule-desc">
+          {{ rule.description }}
+          <div class="fw-rule-src">{{ rule.regulation_source }}</div>
+        </div>
+        <span class="fw-sev fw-sev-{{ rule.severity.value }}">{{ rule.severity.value }}</span>
+      </div>
+      {% else %}
+      <div style="padding:1.25rem;text-align:center;color:#A3A3A3;font-size:0.82rem;">
+        No FSSAI rules — click <strong>Sync Rules from File</strong>.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Legal Metrology #}
+  <div class="kb-collapsible" id="sec-lm">
+    <div class="kb-collapsible-hdr" onclick="toggleSection('sec-lm')">
+      <div class="kb-collapsible-hdr-left">
+        <span class="kb-collapsible-title">Legal Metrology — Packaged Commodities Rules</span>
+        <span class="kb-collapsible-count">{{ lm_rules|length }} rules</span>
+      </div>
+      <span class="kb-collapsible-arrow">▾</span>
+    </div>
+    <div class="kb-collapsible-body">
+      {% for rule in lm_rules %}
+      <div class="fw-rule-row">
+        <div class="fw-rule-code">{{ rule.rule_code }}</div>
+        <div class="fw-rule-desc">
+          {{ rule.description }}
+          <div class="fw-rule-src">{{ rule.regulation_source }}</div>
+        </div>
+        <span class="fw-sev fw-sev-{{ rule.severity.value }}">{{ rule.severity.value }}</span>
+      </div>
+      {% else %}
+      <div style="padding:1.25rem;text-align:center;color:#A3A3A3;font-size:0.82rem;">
+        No Legal Metrology rules — click <strong>Sync Rules from File</strong>.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# AYUSH #}
+  <div class="kb-collapsible" id="sec-ayush">
+    <div class="kb-collapsible-hdr" onclick="toggleSection('sec-ayush')">
+      <div class="kb-collapsible-hdr-left">
+        <span class="kb-collapsible-title">AYUSH — Ayurvedic, Siddha &amp; Unani Drugs</span>
+        <span class="kb-collapsible-count">{{ ayush_rules|length }} rules</span>
+      </div>
+      <span class="kb-collapsible-arrow">▾</span>
+    </div>
+    <div class="kb-collapsible-body">
+      {% for rule in ayush_rules %}
+      <div class="fw-rule-row">
+        <div class="fw-rule-code">{{ rule.rule_code }}</div>
+        <div class="fw-rule-desc">
+          {{ rule.description }}
+          <div class="fw-rule-src">{{ rule.regulation_source }}</div>
+        </div>
+        <span class="fw-sev fw-sev-{{ rule.severity.value }}">{{ rule.severity.value }}</span>
+      </div>
+      {% else %}
+      <div style="padding:1.25rem;text-align:center;color:#A3A3A3;font-size:0.82rem;">
+        No AYUSH rules — click <strong>Sync Rules from File</strong>.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Regulation Changes #}
+  {% if reg_changes %}
+  <div class="kb-collapsible" id="sec-changes">
+    <div class="kb-collapsible-hdr" onclick="toggleSection('sec-changes')">
+      <div class="kb-collapsible-hdr-left">
+        <span class="kb-collapsible-title">Tracked Regulation Updates</span>
+        <span class="kb-collapsible-count">{{ reg_changes|length }} updates</span>
+      </div>
+      <span class="kb-collapsible-arrow">▾</span>
+    </div>
+    <div class="kb-collapsible-body">
+      {% for rc in reg_changes %}
+      <div class="rc-row">
+        <div class="rc-title">{{ rc.document_name or 'Regulation Update' }}</div>
+        <div class="rc-meta">
+          <span>{{ rc.change_type.value }}</span>
+          <span class="fw-sev fw-sev-{{ rc.severity.value }}">{{ rc.severity.value }}</span>
+          <span>Effective: {{ rc.effective_date.strftime('%d %b %Y') if rc.effective_date else 'TBD' }}</span>
+          {% if rc.source_url %}<a href="{{ rc.source_url }}" target="_blank" style="color:#262626;">Source ↗</a>{% endif %}
+        </div>
+        {% if rc.summary_text %}
+        <div class="rc-summary">{{ rc.summary_text[:300] }}{% if rc.summary_text|length > 300 %}…{% endif %}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+{# ── Extract Rules from Documents ─────────────────────────────────────────── #}
+<div id="extractRulesSection" style="margin-top:2rem;">
+  <h4 class="adm-section-title" style="margin-bottom:0.75rem;">Extract Rules from Uploaded Documents</h4>
+  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:10px;padding:1.25rem 1.4rem;">
+    <p style="font-size:0.82rem;color:#525252;margin:0 0 1rem;line-height:1.6;">
+      Select an uploaded document and click <strong>Extract Rules</strong>. Gemini will read the regulation text
+      and suggest structured compliance rules. Review each suggestion and approve the ones you want added to the engine.
+    </p>
+
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1rem;">
+      <div style="flex:1;min-width:200px;">
+        <label style="font-size:0.72rem;font-weight:600;color:#737373;display:block;margin-bottom:0.3rem;letter-spacing:0.04em;text-transform:uppercase;">Document</label>
+        <select id="extractDocSelect" style="width:100%;padding:0.5rem 0.75rem;border:1px solid #EBEBEB;border-radius:6px;font-size:0.84rem;color:#262626;background:#fff;">
+          <option value="">— Select an uploaded document —</option>
+          {% for doc in documents %}
+            {% if doc.source and (doc.source.startswith('upload:') or doc.source.startswith('fssai:')) %}
+            <option value="{{ doc.id }}">{{ doc.title[:80] }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <button id="extractBtn" class="adm-btn adm-btn-primary" onclick="startExtraction()" style="padding:0.5rem 1.25rem;white-space:nowrap;">
+        ✦ Extract Rules
+      </button>
+    </div>
+
+    <div id="extractStatus" style="display:none;font-size:0.82rem;color:#525252;padding:0.5rem 0;margin-bottom:0.75rem;"></div>
+
+    {# Extracted rules review table #}
+    <div id="extractedRulesWrap" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
+        <div style="font-size:0.82rem;font-weight:600;color:#262626;">
+          Extracted Rules — review and approve
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="adm-btn" onclick="toggleAllApprove(true)" style="font-size:0.75rem;">Select All</button>
+          <button class="adm-btn" onclick="toggleAllApprove(false)" style="font-size:0.75rem;">Deselect All</button>
+          <button id="approveBtn" class="adm-btn adm-btn-primary" onclick="approveSelected()" style="font-size:0.78rem;padding:0.4rem 1rem;">
+            Save Approved Rules
+          </button>
+        </div>
+      </div>
+      <div class="adm-table-wrap">
+        <table class="adm-table" id="extractedTable">
+          <thead>
+            <tr>
+              <th style="width:36px;text-align:center;">✓</th>
+              <th style="width:150px;">Rule Code</th>
+              <th>Description</th>
+              <th style="width:80px;">Severity</th>
+              <th style="width:80px;">Check Type</th>
+              <th style="width:110px;">Source</th>
+            </tr>
+          </thead>
+          <tbody id="extractedBody"></tbody>
+        </table>
+      </div>
+      <div id="approveStatus" style="margin-top:0.75rem;font-size:0.82rem;display:none;"></div>
+    </div>
+  </div>
+</div>
+
+</div>
+{% endif %}{# end regulations #}
+
+</div>{# /.kb-page #}
+
+<script>
+const KB_TYPE        = "{{ kb_type }}";
+const UPLOAD_URL     = `/admin/llm/${KB_TYPE}/upload`;
+const AUDIT_URL      = `/admin/llm/${KB_TYPE}/audit`;
+const REINDEX_URL    = `/admin/llm/${KB_TYPE}/reindex`;
+const RELEARN_URL    = `/admin/llm/${KB_TYPE}/force-relearn`;
+
+// Helper: read _csrf cookie for POST fetch() calls (CSRF middleware requires it)
+function _csrfHeaders() {
+  const m = document.cookie.match('(^|;)\\s*_csrf=([^;]+)');
+  const tok = m ? decodeURIComponent(m[2]) : "";
+  return tok ? { "x-csrf-token": tok } : {};
+}
+
+// ── Re-read & Re-learn ───────────────────────────────────────────────────────
+async function startRelearn() {
+  const btn    = document.getElementById("relearnBtn");
+  const status = document.getElementById("relearnStatus");
+  const result = document.getElementById("relearnResult");
+
+  btn.disabled = true;
+  btn.textContent = "Re-reading… this may take a minute";
+  status.style.display = "block";
+  status.textContent = "Starting re-read job…";
+  result.style.display = "none";
+
+  try {
+    // Start the background re-learn job (same engine as Re-index)
+    const r = await fetch(RELEARN_URL, { method: "POST", headers: _csrfHeaders() });
+    const d = await r.json();
+    if (!r.ok || d.error) throw new Error(d.error || `HTTP ${r.status}`);
+
+    const jobId = d.job_id;
+    status.textContent = "Re-reading all documents… (0s)";
+
+    // Poll for completion
+    let elapsed = 0;
+    const poll = async () => {
+      elapsed += 2;
+      try {
+        const pr = await fetch(`/admin/llm/${KB_TYPE}/reindex/status/${jobId}`, { credentials: "same-origin" });
+        const pd = await pr.json();
+
+        if (pd.status === "done") {
+          status.style.display = "none";
+          result.style.display = "block";
+          result.innerHTML =
+            `✓ Done — re-read <strong>${pd.reindexed ?? pd.total_docs ?? "?"}</strong> documents, ` +
+            `created <strong>${pd.total_new_chunks ?? "?"}</strong> chunks ` +
+            `(avg ${pd.avg_chunks_per_doc ?? "?"} per doc). ` +
+            `Run Audit to see updated health score.`;
+          btn.disabled = false;
+          btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Re-read &amp; Re-learn from All Docs`;
+          return;
+        }
+        if (pd.status === "error") throw new Error(pd.error || "Re-learn job failed");
+
+        status.textContent = `Re-reading all documents… (${elapsed}s elapsed)`;
+        setTimeout(poll, 2000);
+      } catch (e) {
+        status.textContent = "⚠ Poll error: " + e.message;
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Re-read &amp; Re-learn from All Docs`;
+      }
+    };
+    setTimeout(poll, 2000);
+
+  } catch (e) {
+    status.textContent = "⚠ " + e.message;
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Re-read &amp; Re-learn from All Docs`;
+  }
+}
+
+function _auditSetScanning() {
+  document.getElementById("auditProgressWrap").style.display = "block";
+  document.getElementById("auditSummary").style.display     = "none";
+  document.getElementById("auditDetails").style.display     = "none";
+  document.getElementById("auditError").style.display       = "none";
+  document.getElementById("auditBtn").disabled    = true;
+  document.getElementById("auditBtn").textContent = "Scanning…";
+}
+
+function _auditSetDone() {
+  document.getElementById("auditProgressWrap").style.display = "none";
+  document.getElementById("auditSummary").style.display      = "block";
+  document.getElementById("auditBtn").disabled    = false;
+  document.getElementById("auditBtn").textContent = "Run Audit";
+}
+
+function toggleAuditDetails() {
+  const det = document.getElementById("auditDetails");
+  const tog = document.getElementById("auditDetailsToggle");
+  const open = det.style.display === "none";
+  det.style.display = open ? "block" : "none";
+  tog.textContent   = open ? "Hide details ↑" : "Show details ↓";
+}
+
+async function runAudit() {
+  console.log("[KB Audit] runAudit() called");
+  // Reset button to neutral state in case it's showing a previous score
+  const $btn  = document.getElementById("auditBtn");
+  const $prog = document.getElementById("auditProgressWrap");
+  const $err  = document.getElementById("auditError");
+  const $sum  = document.getElementById("auditSummary");
+  const $det  = document.getElementById("auditDetails");
+  const $ts   = document.getElementById("auditTimestamp");
+
+  // Immediate visual feedback — reset any previous score color + show scanning
+  if ($btn)  { $btn.disabled = true; $btn.textContent = "Scanning…"; $btn.style.cssText = ""; }
+  if ($prog) $prog.style.display = "block";
+  if ($err)  $err.style.display  = "none";
+  if ($sum)  $sum.style.display  = "none";
+  if ($det)  $det.style.display  = "none";
+
+  function _reset(errMsg) {
+    if ($prog) $prog.style.display = "none";
+    if ($btn)  { $btn.disabled = false; $btn.textContent = "Run Audit"; $btn.style.cssText = ""; }
+    if (errMsg && $err) {
+      $err.style.cssText = "display:block;font-size:0.78rem;font-weight:600;color:#DC2626;background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;padding:0.5rem 0.65rem;margin-top:0.5rem;";
+      $err.textContent = errMsg;
+    } else if (errMsg) {
+      alert("KB Audit error: " + errMsg);
+    }
+  }
+
+  // Use AbortController (widely supported) instead of AbortSignal.timeout
+  const ctrl = new AbortController();
+  const tid  = setTimeout(() => ctrl.abort(), 30000);
+
+  try {
+    const resp = await fetch(AUDIT_URL, { signal: ctrl.signal });
+    clearTimeout(tid);
+    if (!resp.ok) { _reset(`HTTP ${resp.status} — are you still logged in?`); return; }
+    const d = await resp.json();
+    if (d.error) { _reset(d.error); return; }
+
+    const healthColor = d.health_score >= 80 ? "#16A34A" : d.health_score >= 50 ? "#D97706" : "#DC2626";
+    const problems    = d.zero_chunk_count + d.one_chunk_count;
+
+    // Compact summary
+    const $badge  = document.getElementById("auditScoreBadge");
+    const $slabel = document.getElementById("auditScoreLabel");
+    const $prob   = document.getElementById("auditProblemLine");
+    const $reIdx  = document.getElementById("reindexBtn");
+    if ($badge)  { $badge.style.color = healthColor; $badge.textContent = `${d.health_score}%`; }
+    if ($slabel) $slabel.textContent = `health · ${d.total_docs} docs · avg ${d.avg_chunks} chunks`;
+    if ($ts)     $ts.textContent = new Date().toLocaleTimeString();
+    if ($prob)   $prob.innerHTML = problems > 0
+      ? `<span style="color:#D97706;">${d.zero_chunk_count} empty · ${d.one_chunk_count} thin — click Re-index to fix</span>`
+      : `<span style="color:#16A34A;">All documents adequately chunked</span>`;
+    if ($reIdx)  $reIdx.style.display = problems > 0 ? "inline-flex" : "none";
+
+    // Full details (hidden by default)
+    const srcRows = Object.entries(d.source_stats).map(([src, s]) =>
+      `<tr><td style="padding:3px 6px;font-size:0.7rem;">${src}</td>
+           <td style="padding:3px 6px;text-align:right;font-size:0.7rem;">${s.docs}</td>
+           <td style="padding:3px 6px;text-align:right;font-size:0.7rem;">${s.chunks}</td>
+           <td style="padding:3px 6px;text-align:right;font-size:0.7rem;">${s.docs>0?Math.round(s.chunks/s.docs*10)/10:0}</td></tr>`
+    ).join("");
+
+    const histBars = Object.entries(d.histogram).map(([k,v]) =>
+      `<div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.25rem;font-size:0.7rem;">
+        <span style="min-width:28px;color:#737373;">${k}</span>
+        <div style="flex:1;background:#F0F0F0;border-radius:2px;height:8px;overflow:hidden;">
+          <div style="width:${d.total_docs>0?Math.round(v/d.total_docs*100):0}%;height:100%;background:${k==='0'?'#DC2626':k==='1'?'#D97706':'#111111'};border-radius:2px;"></div>
+        </div>
+        <span style="min-width:20px;text-align:right;font-weight:600;color:#262626;">${v}</span>
+      </div>`
+    ).join("");
+
+    const problemList = d.problem_docs.length === 0 ? "" :
+      `<div style="margin-top:0.5rem;">
+        <div style="font-size:0.65rem;font-weight:600;color:#737373;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">Problem docs (${d.problem_docs.length})</div>
+        <div style="max-height:120px;overflow-y:auto;font-size:0.68rem;">
+          ${d.problem_docs.map(p=>`<div style="padding:0.2rem 0;border-bottom:1px solid #F5F5F5;display:flex;gap:0.5rem;">
+            <span style="color:${p.chunks===0?'#DC2626':'#D97706'};min-width:45px;">${p.chunks===0?'0 chunk':'1 chunk'}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#262626;" title="${p.title}">${p.title}</span>
+          </div>`).join("")}
+        </div>
+      </div>`;
+
+    if ($det) $det.innerHTML = `
+      <div style="margin-bottom:0.5rem;">
+        <div style="font-size:0.65rem;font-weight:600;color:#737373;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">Chunk distribution</div>
+        ${histBars}
+      </div>
+      <div>
+        <div style="font-size:0.65rem;font-weight:600;color:#737373;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">By source</div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="border-bottom:1px solid #EBEBEB;">
+            <th style="text-align:left;padding:2px 6px;font-size:0.65rem;color:#A3A3A3;font-weight:500;">Source</th>
+            <th style="text-align:right;padding:2px 6px;font-size:0.65rem;color:#A3A3A3;font-weight:500;">Docs</th>
+            <th style="text-align:right;padding:2px 6px;font-size:0.65rem;color:#A3A3A3;font-weight:500;">Chunks</th>
+            <th style="text-align:right;padding:2px 6px;font-size:0.65rem;color:#A3A3A3;font-weight:500;">Avg</th>
+          </tr></thead>
+          <tbody>${srcRows}</tbody>
+        </table>
+      </div>
+      ${problemList}`;
+
+    if ($prog) $prog.style.display = "none";
+    if ($sum)  { $sum.style.display = "block"; $sum.style.animation = "none"; void $sum.offsetWidth; $sum.style.animation = ""; }
+    if ($btn)  { $btn.disabled = false; $btn.textContent = `✓ ${d.health_score}% health`; $btn.style.cssText += ";background:#EDFAF3;color:#262626;border-color:#BBF7D0;"; }
+
+  } catch (e) {
+    clearTimeout(tid);
+    const msg = e.name === "AbortError" ? "Audit timed out (>30s) — try again" : `Error: ${e.message}`;
+    console.error("[KB Audit] failed:", e);
+    _reset(msg);
+  }
+}
+
+async function startReindex() {
+  const btn = document.getElementById("reindexBtn");
+  btn.disabled = true;
+  btn.textContent = "Re-indexing…";
+
+  try {
+    const resp = await fetch(REINDEX_URL, { method: "POST", headers: _csrfHeaders() });
+    const data = await resp.json();
+    if (!data.job_id) {
+      alert("Re-index failed: " + (data.error || data.detail || `HTTP ${resp.status}`));
+      btn.disabled = false; btn.textContent = "↻ Re-index"; return;
+    }
+
+    const statusUrl = REINDEX_URL + "/status/" + data.job_id;
+    let attempts = 0;
+    while (attempts < 180) {
+      await new Promise(r => setTimeout(r, 2000));
+      attempts++;
+      const s = await (await fetch(statusUrl)).json();
+      if (s.status === "done") {
+        btn.textContent = `✓ ${s.total_new_chunks} chunks`;
+        btn.style.cssText += ";background:#EDFAF3;color:#262626;border-color:#BBF7D0;";
+        setTimeout(runAudit, 800);
+        return;
+      } else if (s.status === "error") {
+        alert("Re-index error: " + (s.error || "Unknown"));
+        btn.disabled = false; btn.textContent = "↻ Re-index"; return;
+      }
+      btn.textContent = `Re-indexing… ${attempts * 2}s`;
+    }
+    btn.disabled = false; btn.textContent = "↻ Re-index";
+  } catch (e) {
+    alert("Failed: " + e.message);
+    btn.disabled = false; btn.textContent = "↻ Re-index";
+  }
+}
+
+// Keep stats live every 30s — audit only runs on manual click
+refreshDocCount();
+setInterval(refreshDocCount, 30000);
+
+/* ────────────────────────── Collapsible sections ─────────────────────────── */
+function toggleSection(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle("open");
+}
+
+/* ─────────────────────────── Document filter ─────────────────────────────── */
+function filterDocs(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll("#docsBody tr[data-title]").forEach(row => {
+    const match = row.dataset.title.includes(q) || row.dataset.source.includes(q);
+    row.style.display = match ? "" : "none";
+  });
+}
+
+/* ──────────────────────────── Drag & Drop / File input ───────────────────── */
+let fileQueue = [];  // {file, status: "pending"|"uploading"|"done"|"error", msg}
+
+const dropZone  = document.getElementById("dropZone");
+const fileInput = document.getElementById("fileInput");
+
+dropZone.addEventListener("dragover",  e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+dropZone.addEventListener("dragleave", e => { dropZone.classList.remove("drag-over"); });
+dropZone.addEventListener("drop",      e => {
+  e.preventDefault();
+  dropZone.classList.remove("drag-over");
+  addFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener("change", e => addFiles(e.target.files));
+
+function addFiles(files) {
+  const allowed = [".pdf", ".txt", ".csv", ".md"];
+  let added = 0;
+  Array.from(files).forEach(f => {
+    const ext = f.name.slice(f.name.lastIndexOf(".")).toLowerCase();
+    if (!allowed.includes(ext)) return;
+    // Deduplicate by name
+    if (fileQueue.some(q => q.file.name === f.name)) return;
+    fileQueue.push({ file: f, status: "pending", msg: "" });
+    added++;
+  });
+  fileInput.value = "";  // allow re-selecting same file
+  renderQueue();
+  // Auto-start upload immediately — no manual "Upload All" click needed
+  if (added > 0) setTimeout(uploadAll, 150);
+}
+
+function removeFile(idx) {
+  fileQueue.splice(idx, 1);
+  renderQueue();
+}
+
+function clearQueue() {
+  fileQueue = fileQueue.filter(q => q.status === "uploading");
+  renderQueue();
+}
+
+function renderQueue() {
+  const container = document.getElementById("fileQueue");
+  const list      = document.getElementById("fileList");
+  const summary   = document.getElementById("queueSummary");
+  const overallProg = document.getElementById("overallProgress");
+  const overallBar  = document.getElementById("overallBar");
+  const overallLbl  = document.getElementById("overallLabel");
+  const overallPct  = document.getElementById("overallPct");
+  const doneBanner  = document.getElementById("uploadDoneBanner");
+
+  if (fileQueue.length === 0) {
+    container.classList.remove("has-files");
+    overallProg.style.display = "none";
+    doneBanner.style.display  = "none";
+    return;
+  }
+  container.classList.add("has-files");
+
+  // Overall progress
+  const total    = fileQueue.length;
+  const done     = fileQueue.filter(q => ["done","skipped","error"].includes(q.status)).length;
+  const uploading = fileQueue.some(q => q.status === "uploading");
+  const pct      = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  if (uploading || done > 0) {
+    overallProg.style.display = "block";
+    overallBar.style.width    = pct + "%";
+    overallPct.textContent    = pct + "%";
+    if (uploading) {
+      const activeItems = fileQueue.filter(q => q.status === "uploading");
+      const lbl = activeItems.length === 1
+        ? `Uploading ${activeItems[0].file.name} (${done}/${total})`
+        : `Uploading ${activeItems.length} files in parallel (${done}/${total})`;
+      overallLbl.textContent = lbl;
+    } else if (done === total) {
+      overallLbl.textContent = `Complete — ${done} file${done !== 1 ? "s" : ""} processed`;
+    }
+  } else {
+    overallProg.style.display = "none";
+  }
+
+  // Done banner
+  const allSettled = fileQueue.length > 0 && fileQueue.every(q => ["done","skipped","error"].includes(q.status));
+  if (allSettled) {
+    const doneCount    = fileQueue.filter(q => q.status === "done").length;
+    const skippedCount = fileQueue.filter(q => q.status === "skipped").length;
+    const errorCount   = fileQueue.filter(q => q.status === "error").length;
+    const parts = [];
+    if (doneCount)    parts.push(`✓ ${doneCount} indexed`);
+    if (skippedCount) parts.push(`⊘ ${skippedCount} skipped`);
+    if (errorCount)   parts.push(`✗ ${errorCount} failed`);
+    doneBanner.style.display = "block";
+    doneBanner.style.background = errorCount > 0 ? "#FFF7ED" : "#EDFAF3";
+    doneBanner.style.borderColor = errorCount > 0 ? "#FED7AA" : "#BBF7D0";
+    doneBanner.style.color = errorCount > 0 ? "#92400E" : "#262626";
+    doneBanner.textContent = parts.join("  ·  ");
+  } else {
+    doneBanner.style.display = "none";
+  }
+
+  list.innerHTML = fileQueue.map((q, i) => {
+    const size = q.file.size < 1024*1024
+      ? `${(q.file.size/1024).toFixed(0)} KB`
+      : `${(q.file.size/1024/1024).toFixed(1)} MB`;
+    const uploadNote = q.note || "Processing…";
+    const statusHtml = {
+      pending:   `<span class="fi-status pending">Queued</span>`,
+      uploading: `<span class="fi-status uploading" title="${uploadNote}">⏳ ${uploadNote}</span>`,
+      done:      `<span class="fi-status done" title="${q.msg}">✓ ${q.msg || 'Indexed'}</span>`,
+      skipped:   `<span class="fi-status skipped" title="${q.msg}">⊘ Already indexed</span>`,
+      error:     `<span class="fi-status error" title="${q.msg}">✗ ${q.msg ? q.msg.slice(0,40) : 'Failed'}</span>`,
+    }[q.status];
+    const canRemove = q.status !== "uploading";
+    const isUploading = q.status === "uploading";
+    return `
+      <div class="kb-file-item" style="flex-wrap:wrap;gap:0.4rem;">
+        <span class="fi-name" title="${q.file.name}">${q.file.name}</span>
+        <span class="fi-size">${size}</span>
+        ${statusHtml}
+        ${canRemove ? `<span class="fi-remove" onclick="removeFile(${i})" title="Remove">✕</span>` : ""}
+        ${isUploading ? `<div class="fi-progress-wrap" style="display:block;flex-basis:100%;margin-top:-0.15rem;"><div class="fi-progress-bar" style="width:70%;"></div></div>` : ""}
+      </div>`;
+  }).join("");
+
+  const pendingCount = fileQueue.filter(q => q.status === "pending").length;
+  const doneCount2   = fileQueue.filter(q => q.status === "done").length;
+  const errorsCount  = fileQueue.filter(q => q.status === "error").length;
+  const summaryParts = [];
+  if (pendingCount) summaryParts.push(`${pendingCount} pending`);
+  if (doneCount2)   summaryParts.push(`${doneCount2} uploaded`);
+  if (errorsCount)  summaryParts.push(`${errorsCount} failed`);
+  summary.textContent = summaryParts.join(" · ");
+
+  const uploadBtn = document.getElementById("uploadAllBtn");
+  uploadBtn.disabled = (pendingCount === 0);
+  uploadBtn.textContent = pendingCount > 0 ? `Upload ${pendingCount} File${pendingCount > 1 ? "s" : ""}` : "Upload All";
+}
+
+const UPLOAD_CONCURRENCY = 4;  // process this many files simultaneously
+
+async function _uploadOne(item) {
+  item.status = "uploading";
+  item.msg    = "";
+  item.note   = "Queuing…";
+  renderQueue();
+
+  try {
+    const fd = new FormData();
+    fd.append("file", item.file);
+    fd.append("title", "");
+
+    const resp = await fetch(UPLOAD_URL, { method: "POST", body: fd });
+    if (!resp.ok) {
+      item.status = "error";
+      item.msg    = `Server error ${resp.status}`;
+      renderQueue();
+      return;
+    }
+
+    const data = await resp.json();
+
+    if (data.status === "skipped") {
+      item.status = "skipped";
+      item.msg    = data.message || "Already indexed";
+      renderQueue();
+      return;
+    }
+    if (data.status === "error") {
+      item.status = "error";
+      item.msg    = data.error || "Upload failed";
+      renderQueue();
+      return;
+    }
+
+    // Background job — poll until done
+    if (data.job_id) {
+      const statusUrl = UPLOAD_URL + "/status/" + data.job_id;
+      let attempts = 0;
+      while (attempts < 120) {   // max 4 minutes
+        await new Promise(r => setTimeout(r, 2000));
+        attempts++;
+        const sData = await (await fetch(statusUrl)).json();
+
+        if (sData.status === "done") {
+          item.status = "done";
+          item.msg    = `${sData.chunks} chunk${sData.chunks !== 1 ? "s" : ""} indexed`;
+          renderQueue();
+          refreshDocCount();
+          return;
+        } else if (sData.status === "error") {
+          item.status = "error";
+          item.msg    = sData.error || "Processing failed";
+          renderQueue();
+          return;
+        } else {
+          item.note = sData.note || "Processing…";
+          renderQueue();
+        }
+      }
+      item.status = "error";
+      item.msg    = "Timed out waiting for processing";
+    }
+
+  } catch (e) {
+    item.status = "error";
+    item.msg    = e.message;
+  }
+  renderQueue();
+}
+
+async function uploadAll() {
+  const pending = fileQueue.filter(q => q.status === "pending");
+  if (!pending.length) return;
+
+  document.getElementById("uploadAllBtn").disabled = true;
+
+  // Process in parallel batches of UPLOAD_CONCURRENCY
+  for (let i = 0; i < pending.length; i += UPLOAD_CONCURRENCY) {
+    const batch = pending.slice(i, i + UPLOAD_CONCURRENCY);
+    await Promise.all(batch.map(_uploadOne));
+  }
+
+  // Final doc count refresh
+  refreshDocCount();
+}
+
+async function refreshDocCount() {
+  try {
+    // Update stat chips (fast path)
+    const cr = await fetch(`/admin/llm/${KB_TYPE}/doc-count`);
+    const cd = await cr.json();
+    if (cd.docs !== undefined) {
+      document.querySelectorAll(".kb-stat-chip").forEach(chip => {
+        const lbl = chip.querySelector(".lbl");
+        if (lbl && lbl.textContent.trim() === "KB Documents")
+          chip.querySelector(".val").textContent = cd.docs;
+        if (lbl && lbl.textContent.trim() === "Indexed Chunks")
+          chip.querySelector(".val").textContent = cd.chunks;
+      });
+    }
+  } catch (_) {}
+
+  try {
+    // Live-refresh the documents table
+    const dr = await fetch(`/admin/llm/${KB_TYPE}/docs-partial`);
+    const dd = await dr.json();
+    if (!dd.docs) return;
+
+    // Update count label
+    const countSpan = document.querySelector(".adm-section-title span");
+    if (countSpan) countSpan.textContent = `(${dd.total})`;
+
+    // Rebuild tbody
+    const tbody = document.getElementById("docsBody");
+    if (!tbody) return;
+    tbody.innerHTML = dd.docs.map(d => {
+      const srcType = d.source.startsWith("db:")     ? '<span class="adm-badge badge-blue">DB Import</span>'
+                    : d.source.startsWith("fssai:")  ? '<span class="adm-badge badge-green">FSSAI PDF</span>'
+                    : d.source.startsWith("upload:") ? '<span class="adm-badge badge-purple">Uploaded</span>'
+                    : '<span class="adm-badge badge-gray">Manual</span>';
+      const escapedTitle = d.title.replace(/'/g,"&#39;").replace(/</g,"&lt;");
+      return `<tr data-title="${d.title.toLowerCase()}" data-source="${d.source.toLowerCase()}">
+        <td>
+          <div style="font-weight:600;color:#262626;font-size:0.84rem;margin-bottom:0.15rem;">${d.title}</div>
+          <div style="font-size:0.7rem;color:#A3A3A3;word-break:break-all;">${d.source || "—"}</div>
+        </td>
+        <td>${srcType}</td>
+        <td style="font-weight:700;color:#262626;text-align:center;">${d.chunk_count}</td>
+        <td style="font-size:0.77rem;color:#737373;">${d.uploaded_at}</td>
+        <td>
+          <form method="post" action="/admin/llm/${KB_TYPE}/documents/${d.id}/delete" style="margin:0;"
+                onsubmit="return confirm('Delete \'${escapedTitle.slice(0,40)}\'? Removes ${d.chunk_count} chunk(s).')">
+            <button type="submit" class="adm-btn adm-btn-danger" style="font-size:0.72rem;padding:0.25rem 0.6rem;">Delete</button>
+          </form>
+        </td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="5" style="text-align:center;color:#A3A3A3;padding:2.5rem 1rem;">No documents indexed yet.</td></tr>`;
+
+    // Also refresh extract-rules dropdown if it exists
+    _refreshExtractDropdown(dd.docs.filter(d => d.source.startsWith("upload:") || d.source.startsWith("fssai:")));
+  } catch (_) {}
+}
+
+/* ──────────────────────────── Clear & Rebuild ──────────────────────────── */
+async function clearAndRebuild() {
+  const docCount = document.querySelector('.kb-stat-chip .val')?.textContent || "all";
+  const confirmed = confirm(
+    `⚠️ CLEAR & REBUILD\n\n` +
+    `This will:\n` +
+    `  1. Delete ALL ${docCount} KB documents + chunks\n` +
+    `  2. Re-seed base rule context from DB (~87 docs)\n\n` +
+    `Uploaded .md files will be removed. ` +
+    `You can re-upload them fresh after this.\n\n` +
+    `Continue?`
+  );
+  if (!confirmed) return;
+
+  const btn    = document.getElementById("clearRebuildBtn");
+  const status = document.getElementById("clearRebuildStatus");
+  btn.disabled = true;
+  btn.textContent = "⏳ Clearing…";
+  status.style.display = "block";
+  status.style.color = "#525252";
+  status.textContent = "Deleting documents and chunks…";
+
+  try {
+    const r = await fetch("/admin/llm/regulations/clear-and-rebuild", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", ..._csrfHeaders() },
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+
+    status.style.color = "#357266";
+    status.innerHTML =
+      `✓ <strong>${d.docs_deleted}</strong> docs deleted · ` +
+      `<strong>${d.reseeded}</strong> base docs re-seeded<br>` +
+      `<span style="color:#525252;">KB is clean — upload your .md files now.</span>`;
+    btn.textContent = "✓ Done";
+
+    // Refresh the document list and stat chips live
+    await refreshDocCount();
+  } catch (e) {
+    status.style.color = "#DC2626";
+    status.textContent = `✗ ${e.message}`;
+    btn.disabled = false;
+    btn.textContent = "⟳ Clear KB & Rebuild from DB";
+  }
+}
+
+/* ──────────────────────────── Extract Rules ─────────────────────────────── */
+let _extractedRules = [];
+
+function _refreshExtractDropdown(uploadedDocs) {
+  const sel = document.getElementById("extractDocSelect");
+  if (!sel) return;
+  const cur = sel.value;
+  // Keep existing options that are still present; add new ones
+  const existing = new Set(Array.from(sel.options).map(o => o.value));
+  uploadedDocs.forEach(d => {
+    if (!existing.has(String(d.id))) {
+      const opt = document.createElement("option");
+      opt.value = d.id;
+      opt.textContent = d.title.slice(0, 80);
+      sel.appendChild(opt);
+    }
+  });
+  if (cur) sel.value = cur;
+}
+
+async function startExtraction() {
+  const sel = document.getElementById("extractDocSelect");
+  const docId = sel && sel.value;
+  if (!docId) { alert("Please select a document first."); return; }
+
+  const btn = document.getElementById("extractBtn");
+  const status = document.getElementById("extractStatus");
+  const wrap = document.getElementById("extractedRulesWrap");
+
+  btn.disabled = true;
+  btn.textContent = "Extracting…";
+  status.style.display = "block";
+  status.textContent = "⏳ Calling Gemini — this takes 10–30 seconds…";
+  wrap.style.display = "none";
+  document.getElementById("approveStatus").style.display = "none";
+
+  try {
+    const r = await fetch("/admin/llm/regulations/extract-rules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ..._csrfHeaders() },
+      body: JSON.stringify({ doc_id: parseInt(docId) }),
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+
+    const jobId = d.job_id;
+    let attempts = 0;
+    while (attempts < 60) {
+      await new Promise(res => setTimeout(res, 2000));
+      attempts++;
+      const sr = await fetch(`/admin/llm/regulations/extract-rules/status/${jobId}`);
+      const sd = await sr.json();
+      if (sd.status === "done") {
+        _extractedRules = sd.rules || [];
+        renderExtractedRules(_extractedRules);
+        status.textContent = `✓ Found ${_extractedRules.length} candidate rule(s) from "${sd.doc_title}". Review and approve below.`;
+        wrap.style.display = _extractedRules.length > 0 ? "block" : "none";
+        if (_extractedRules.length === 0) status.textContent += " — No new rules found (document may already be fully covered).";
+        break;
+      } else if (sd.status === "error") {
+        throw new Error(sd.error || "Extraction failed");
+      } else {
+        status.textContent = `⏳ ${sd.note || "Processing…"} (${attempts * 2}s)`;
+      }
+    }
+    if (attempts >= 60) throw new Error("Extraction timed out after 2 minutes");
+  } catch (e) {
+    status.textContent = `✗ Error: ${e.message}`;
+    status.style.color = "#DC2626";
+  }
+  btn.disabled = false;
+  btn.textContent = "✦ Extract Rules";
+}
+
+const SEV_COLORS = { CRITICAL: "#DF2935", HIGH: "#C27B1A", MEDIUM: "#3772FF", LOW: "#A3A3A3" };
+
+function renderExtractedRules(rules) {
+  const tbody = document.getElementById("extractedBody");
+  tbody.innerHTML = rules.map((r, i) => {
+    const sevColor = SEV_COLORS[r.severity] || "#737373";
+    return `<tr id="rule-row-${i}">
+      <td style="text-align:center;"><input type="checkbox" id="approve-${i}" checked style="accent-color:#3772FF;width:15px;height:15px;"></td>
+      <td>
+        <input type="text" id="code-${i}" value="${(r.rule_code||"").replace(/"/g,"&quot;")}"
+               style="font-family:monospace;font-size:0.72rem;padding:0.2rem 0.4rem;border:1px solid #EBEBEB;border-radius:4px;width:100%;color:#262626;">
+      </td>
+      <td>
+        <div style="font-size:0.82rem;color:#262626;line-height:1.5;">${r.description || ""}</div>
+        <div style="font-size:0.7rem;color:#A3A3A3;margin-top:0.2rem;">${r.regulation_source || ""}</div>
+      </td>
+      <td><span style="font-size:0.68rem;font-weight:700;color:${sevColor};padding:0.15rem 0.4rem;border-radius:3px;border:1px solid ${sevColor}33;">${r.severity||"?"}</span></td>
+      <td style="font-size:0.75rem;color:#525252;">${r.check_type||""}</td>
+      <td style="font-size:0.7rem;color:#A3A3A3;word-break:break-word;">${(r.regulation_source||"").slice(0,60)}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="6" style="text-align:center;color:#A3A3A3;padding:1.5rem;">No rules extracted.</td></tr>`;
+}
+
+function toggleAllApprove(state) {
+  document.querySelectorAll("[id^='approve-']").forEach(cb => cb.checked = state);
+}
+
+async function approveSelected() {
+  const approved = _extractedRules
+    .map((r, i) => {
+      const cb = document.getElementById(`approve-${i}`);
+      const codeInput = document.getElementById(`code-${i}`);
+      if (!cb || !cb.checked) return null;
+      return { ...r, rule_code: codeInput ? codeInput.value.trim() : r.rule_code };
+    })
+    .filter(Boolean);
+
+  if (!approved.length) { alert("No rules selected."); return; }
+
+  const btn = document.getElementById("approveBtn");
+  const apStatus = document.getElementById("approveStatus");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  apStatus.style.display = "block";
+  apStatus.style.color = "#525252";
+  apStatus.textContent = "Saving rules…";
+
+  try {
+    const r = await fetch("/admin/llm/regulations/approve-rules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ..._csrfHeaders() },
+      body: JSON.stringify({ rules: approved }),
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    apStatus.style.color = "#357266";
+    apStatus.textContent = `✓ ${d.message}${d.errors && d.errors.length ? " (some errors: " + d.errors.join(", ") + ")" : ""}`;
+    // Refresh the page stats after adding rules
+    setTimeout(() => window.location.reload(), 1500);
+  } catch (e) {
+    apStatus.style.color = "#DC2626";
+    apStatus.textContent = `✗ ${e.message}`;
+    btn.disabled = false;
+    btn.textContent = "Save Approved Rules";
+  }
+}
+</script>
+
+{% endblock %}

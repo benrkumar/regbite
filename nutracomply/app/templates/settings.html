@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div>
+    <h2>Account Settings</h2>
+    <p>Manage your notification preferences and account details</p>
+  </div>
+</div>
+
+{% if flash_message %}
+<div class="flash flash-{{ flash_type | default('info') }}">{{ flash_message }}</div>
+{% endif %}
+
+{# ── Notification Emails ── #}
+<div class="card" style="max-width:640px;margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1.2rem;">
+    <span style="display:inline-flex;align-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+    <div>
+      <h3 style="margin:0;">Notification Emails</h3>
+      <p style="margin:0;font-size:0.83rem;color:var(--gray-500);">
+        Add up to 5 email addresses to receive compliance alerts and regulation updates.
+      </p>
+    </div>
+  </div>
+
+  <div class="info-box" style="margin-bottom:1.2rem;">
+    &#x2139; Alerts are sent when a product label fails compliance checks or when new FSSAI / AYUSH / Legal Metrology regulations are detected.
+  </div>
+
+  <form method="post" action="/settings/notifications">
+    {% set current_emails = user.notification_emails or [] %}
+    {% for i in range(1, 6) %}
+    {% set existing = current_emails[i-1] if i <= current_emails|length else '' %}
+    <div class="field" style="margin-bottom:0.75rem;">
+      <label class="field-label">Email {{ i }}{% if i == 1 %} <span style="color:var(--gray-400);font-weight:400;">(primary)</span>{% endif %}</label>
+      <input
+        type="email"
+        name="email_{{ i }}"
+        class="input"
+        value="{{ existing }}"
+        placeholder="name@company.com"
+        autocomplete="email"
+      />
+    </div>
+    {% endfor %}
+
+    <div style="display:flex;gap:0.6rem;margin-top:1.4rem;flex-wrap:wrap;">
+      <button type="submit" class="btn btn-primary">Save Notifications</button>
+      <a href="/dashboard" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{# ── Update Profile ── #}
+<div class="card" style="max-width:640px;margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1.2rem;">
+    <span style="display:inline-flex;align-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+    <div>
+      <h3 style="margin:0;">Update Profile</h3>
+      <p style="margin:0;font-size:0.83rem;color:var(--gray-500);">Change your display name.</p>
+    </div>
+  </div>
+  <form method="post" action="/settings/profile">
+    <div class="field">
+      <label class="field-label">Full Name</label>
+      <input type="text" name="name" class="input" value="{{ user.name }}" required minlength="2" maxlength="100" />
+    </div>
+    <div style="margin-top:1rem;">
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+  </form>
+</div>
+
+{# ── Change Password ── #}
+<div class="card" style="max-width:640px;margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1.2rem;">
+    <span style="display:inline-flex;align-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+    <div>
+      <h3 style="margin:0;">Change Password</h3>
+      <p style="margin:0;font-size:0.83rem;color:var(--gray-500);">Update your account password (minimum 8 characters).</p>
+    </div>
+  </div>
+  <form method="post" action="/settings/password">
+    <div class="field" style="margin-bottom:0.75rem;">
+      <label class="field-label">Current Password</label>
+      <input type="password" name="current_password" class="input" required autocomplete="current-password" />
+    </div>
+    <div class="field" style="margin-bottom:0.75rem;">
+      <label class="field-label">New Password <span style="color:var(--gray-400);font-weight:400;">(min 8 chars)</span></label>
+      <input type="password" name="new_password" class="input" required minlength="8" autocomplete="new-password" />
+    </div>
+    <div class="field" style="margin-bottom:0.75rem;">
+      <label class="field-label">Confirm New Password</label>
+      <input type="password" name="confirm_password" class="input" required minlength="8" autocomplete="new-password" />
+    </div>
+    <div style="margin-top:1rem;">
+      <button type="submit" class="btn btn-primary">Update Password</button>
+    </div>
+  </form>
+</div>
+
+{# ── Account Info (read-only) ── #}
+<div class="card card-flat no-hover" style="max-width:640px;">
+  <h4 style="margin-bottom:1rem;">Account Details</h4>
+  <div style="display:grid;gap:0.75rem;">
+    <div style="display:flex;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--gray-100);">
+      <span style="font-size:0.85rem;color:var(--gray-500);font-weight:500;">Name</span>
+      <span style="font-size:0.85rem;font-weight:600;">{{ user.name }}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--gray-100);">
+      <span style="font-size:0.85rem;color:var(--gray-500);font-weight:500;">Email</span>
+      <span style="font-size:0.85rem;font-weight:600;">{{ user.email }}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--gray-100);">
+      <span style="font-size:0.85rem;color:var(--gray-500);font-weight:500;">Account Status</span>
+      <span class="pill {% if user.is_active %}pill-good{% else %}pill-bad{% endif %}">
+        {{ 'Active' if user.is_active else 'Inactive' }}
+      </span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid var(--gray-100);">
+      <span style="font-size:0.85rem;color:var(--gray-500);font-weight:500;">Role</span>
+      <span class="pill {% if user.is_admin %}pill-accent{% else %}pill-neutral{% endif %}">
+        {{ user.role.value.replace('_', ' ').title() if user.role else 'Account Admin' }}
+      </span>
+    </div>
+    <div style="display:flex;justify-content:space-between;padding:0.6rem 0;">
+      <span style="font-size:0.85rem;color:var(--gray-500);font-weight:500;">Member Since</span>
+      <span style="font-size:0.85rem;font-weight:600;">{{ user.created_at.strftime('%d %B %Y') }}</span>
+    </div>
+  </div>
+
+  {% if user.is_admin %}
+  <div style="margin-top:1.2rem;padding-top:1rem;border-top:1px solid var(--gray-200);">
+    <a href="/admin/dashboard" class="btn btn-accent btn-sm">&#x1F6E1; Open Admin Panel &rarr;</a>
+  </div>
+  {% endif %}
+</div>
+
+{# ── Report Branding ── #}
+<div class="card" style="max-width:640px;margin-bottom:1.5rem;">
+  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1.2rem;">
+    <span style="display:inline-flex;align-items:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg></span>
+    <div>
+      <h3 style="margin:0;">Report Branding</h3>
+      <p style="margin:0;font-size:0.83rem;color:var(--gray-500);">Customise the brand name and accent colour shown on compliance reports.</p>
+    </div>
+  </div>
+  <form method="post" action="/settings/branding">
+    <div class="field" style="margin-bottom:0.75rem;">
+      <label class="field-label">Brand Name <span style="font-weight:400;color:var(--gray-400);">(shown on reports instead of "RegBite")</span></label>
+      <input type="text" name="brand_name" class="input" value="{{ user.report_brand_name or '' }}" maxlength="255" placeholder="Your Company Name" />
+    </div>
+    <div class="field" style="margin-bottom:0.75rem;">
+      <label class="field-label">Accent Colour</label>
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        <input type="color" name="brand_color" value="{{ user.report_brand_color or '#525252' }}" style="width:3rem;height:2.2rem;border:1px solid var(--gray-200);border-radius:6px;cursor:pointer;padding:0.1rem;" />
+        <span style="font-size:0.82rem;color:var(--gray-400);">Used for headers and score rings in PDF reports</span>
+      </div>
+    </div>
+    <div style="margin-top:1rem;">
+      <button type="submit" class="btn btn-primary">Save Branding</button>
+    </div>
+  </form>
+</div>
+
+<div style="max-width:640px;margin-top:0.5rem;">
+  <a href="/settings/api-keys" class="btn btn-ghost">&#x1F511; Manage API Keys &rarr;</a>
+</div>
+{% endblock %}

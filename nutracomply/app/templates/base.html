@@ -76,83 +76,91 @@
 
     <nav class="sidebar-nav">
 
-      {# ── COMPLIANCE ── daily compliance work #}
-      <div class="sidebar-section-label">Compliance</div>
+      {# ── OVERVIEW ── hero item #}
+      <div class="sidebar-section">
+        <a href="/dashboard" class="sidebar-link{% if request.url.path == '/dashboard' %} active{% endif %}">
+          <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span> Dashboard
+          <span class="nav-info" data-tip="Compliance score, open violations, and SKU health overview">ⓘ</span>
+        </a>
+      </div>
 
-      <a href="/dashboard" class="sidebar-link{% if request.url.path == '/dashboard' %} active{% endif %}">
-        <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span> Dashboard
-        <span class="nav-info" data-tip="Compliance score, open violations, and SKU health overview">ⓘ</span>
-      </a>
-      <a href="/products" class="sidebar-link{% if '/products' in request.url.path %} active{% endif %}">
-        <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span> Products
-        <span class="nav-info" data-tip="Add and manage your SKU portfolio; run compliance scans">ⓘ</span>
-      </a>
-      <a href="/checker" class="sidebar-link{% if '/checker' in request.url.path %} active{% endif %}">
-        <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span> Quick Check
-        <span class="nav-info" data-tip="Instantly scan a single product label for FSSAI violations">ⓘ</span>
-      </a>
-      <a href="/violations" class="sidebar-link{% if request.url.path == '/violations' %} active{% endif %}">
-        <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Violations
-        <span class="nav-info" data-tip="All open compliance failures across your SKUs by severity">ⓘ</span>
-        {% if violation_count is defined and violation_count > 0 %}
-        <span class="sidebar-badge">{{ violation_count }}</span>
+      {# ── PRODUCTS & SCANS ── daily compliance work #}
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Products &amp; Scans</div>
+        <a href="/products" class="sidebar-link{% if '/products' in request.url.path %} active{% endif %}">
+          <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span> Products
+          <span class="nav-info" data-tip="Add and manage your SKU portfolio; run compliance scans">ⓘ</span>
+        </a>
+        <a href="/checker" class="sidebar-link{% if '/checker' in request.url.path %} active{% endif %}">
+          <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span> Quick Check
+          <span class="nav-info" data-tip="Instantly scan a single product label for FSSAI violations">ⓘ</span>
+        </a>
+        <a href="/violations" class="sidebar-link{% if request.url.path == '/violations' %} active{% endif %}">
+          <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Violations
+          <span class="nav-info" data-tip="All open compliance failures across your SKUs by severity">ⓘ</span>
+          {% if violation_count is defined and violation_count > 0 %}
+          <span class="sidebar-badge">{{ violation_count }}</span>
+          {% endif %}
+        </a>
+        <a href="/reports" class="sidebar-link{% if '/reports' in request.url.path %} active{% endif %}">
+          <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Reports
+          <span class="nav-info" data-tip="Download detailed gap reports for individual or all SKUs">ⓘ</span>
+        </a>
+      </div>
+
+      {# ── REGULATORY INTEL ── external context #}
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Regulatory Intel</div>
+        <a href="/alerts" class="sidebar-link{% if request.url.path == '/alerts' %} active{% endif %}">
+          <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> Alerts
+          <span class="nav-info" data-tip="FSSAI regulation change notifications mapped to your products">ⓘ</span>
+          {% if unread_alerts is defined and unread_alerts > 0 %}
+          <span class="sidebar-badge">{{ unread_alerts }}</span>
+          {% endif %}
+        </a>
+        <a href="/regulations" class="sidebar-link{% if request.url.path == '/regulations' or request.url.path == '/reg-alerts' %} active{% endif %}">
+          <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span> Regulations
+          <span class="nav-info" data-tip="Searchable FSSAI knowledge base — Schedules I–VI and more">ⓘ</span>
+        </a>
+        <a href="/renewals" class="sidebar-link{% if '/renewals' in request.url.path %} active{% endif %}">
+          <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span> Licenses
+          <span class="nav-info" data-tip="Track FoSCoS licence renewal deadlines and expiry warnings">ⓘ</span>
+          {% if expiring_license_count is defined and expiring_license_count > 0 %}
+          <span class="sidebar-badge" style="background:#FEF9EC;color:#8F6314;">{{ expiring_license_count }}</span>
+          {% endif %}
+        </a>
+      </div>
+
+      {# ── ACCOUNT ── pushed to bottom #}
+      <div class="sidebar-section sidebar-section-bottom">
+        <div class="sidebar-section-label">Account</div>
+        {% if user.role and user.role.value in ('account_admin', 'super_admin') %}
+        <a href="/team" class="sidebar-link{% if '/team' in request.url.path %} active{% endif %}">
+          <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Team
+          <span class="nav-info" data-tip="Invite team members and manage their access roles">ⓘ</span>
+        </a>
         {% endif %}
-      </a>
-      <a href="/reports" class="sidebar-link{% if '/reports' in request.url.path %} active{% endif %}">
-        <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Reports
-        <span class="nav-info" data-tip="Download detailed gap reports for individual or all SKUs">ⓘ</span>
-      </a>
-
-      {# ── REGULATORY ── external context #}
-      <div class="sidebar-section-label" style="margin-top:0.5rem;">Regulatory</div>
-
-      <a href="/alerts" class="sidebar-link{% if request.url.path == '/alerts' %} active{% endif %}">
-        <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> Alerts
-        <span class="nav-info" data-tip="FSSAI regulation change notifications mapped to your products">ⓘ</span>
-        {% if unread_alerts is defined and unread_alerts > 0 %}
-        <span class="sidebar-badge">{{ unread_alerts }}</span>
-        {% endif %}
-      </a>
-      <a href="/regulations" class="sidebar-link{% if request.url.path == '/regulations' or request.url.path == '/reg-alerts' %} active{% endif %}">
-        <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span> Regulations
-        <span class="nav-info" data-tip="Searchable FSSAI knowledge base — Schedules I–VI and more">ⓘ</span>
-      </a>
-      <a href="/renewals" class="sidebar-link{% if '/renewals' in request.url.path %} active{% endif %}">
-        <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span> Licenses
-        <span class="nav-info" data-tip="Track FoSCoS licence renewal deadlines and expiry warnings">ⓘ</span>
-        {% if expiring_license_count is defined and expiring_license_count > 0 %}
-        <span class="sidebar-badge" style="background:#FEF9EC;color:#8F6314;">{{ expiring_license_count }}</span>
-        {% endif %}
-      </a>
-
-      {# ── WORKSPACE ── administrative #}
-      <div class="sidebar-section-label" style="margin-top:0.5rem;">Workspace</div>
-
-      {% if user.role and user.role.value in ('account_admin', 'super_admin') %}
-      <a href="/team" class="sidebar-link{% if '/team' in request.url.path %} active{% endif %}">
-        <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Team
-        <span class="nav-info" data-tip="Invite team members and manage their access roles">ⓘ</span>
-      </a>
-      {% endif %}
-      <a href="/settings" class="sidebar-link{% if '/settings' in request.url.path %} active{% endif %}">
-        <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Settings
-        <span class="nav-info" data-tip="Account details, notifications, and WhatsApp integration">ⓘ</span>
-      </a>
-      <a href="/billing" class="sidebar-link{% if '/billing' in request.url.path %} active{% endif %}">
-        <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Billing
-        <span class="nav-info" data-tip="Manage your subscription plan, invoices, and payments">ⓘ</span>
-      </a>
-      <a href="/help" class="sidebar-link{% if '/help' in request.url.path %} active{% endif %}">
-        <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Help
-        <span class="nav-info" data-tip="FAQs, documentation, and direct contact with RegBite team">ⓘ</span>
-      </a>
+        <a href="/settings" class="sidebar-link{% if '/settings' in request.url.path %} active{% endif %}">
+          <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Settings
+          <span class="nav-info" data-tip="Account details, notifications, and WhatsApp integration">ⓘ</span>
+        </a>
+        <a href="/billing" class="sidebar-link{% if '/billing' in request.url.path %} active{% endif %}">
+          <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Billing
+          <span class="nav-info" data-tip="Manage your subscription plan, invoices, and payments">ⓘ</span>
+        </a>
+        <a href="/help" class="sidebar-link{% if '/help' in request.url.path %} active{% endif %}">
+          <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Help
+          <span class="nav-info" data-tip="FAQs, documentation, and direct contact with RegBite team">ⓘ</span>
+        </a>
+      </div>
 
       {% if user.is_admin %}
-      <div style="margin-top:0.75rem;border-top:1px solid #EBEBEB;padding-top:0.5rem;"></div>
-      <a href="/admin/dashboard" class="sidebar-link admin-link{% if '/admin' in request.url.path %} active{% endif %}">
-        <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> Admin Panel
-        <span class="nav-info" data-tip="Super-admin: rule sync, KB seeding, and user management">ⓘ</span>
-      </a>
+      <div class="sidebar-section" style="margin-top:0.15rem;">
+        <a href="/admin/dashboard" class="sidebar-link admin-link{% if '/admin' in request.url.path %} active{% endif %}">
+          <span class="sidebar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> Admin Panel
+          <span class="nav-info" data-tip="Super-admin: rule sync, KB seeding, and user management">ⓘ</span>
+        </a>
+      </div>
       {% endif %}
 
     </nav>

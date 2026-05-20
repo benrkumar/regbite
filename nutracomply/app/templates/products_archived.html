@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Archived Products{% endblock %}
+
+{% block content %}
+<style>
+  .prod-tabs { display:flex; gap:0.1rem; margin-bottom:1.25rem; border-bottom:2px solid #EBEBEB; }
+  .prod-tab { padding:0.55rem 1rem; font-size:0.82rem; font-weight:600; color:#737373; text-decoration:none; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all 0.15s; }
+  .prod-tab:hover { color:#111; }
+  .prod-tab.active { color:#111; border-bottom-color:#111; }
+  .prod-tab .tab-badge { display:inline-block; background:#E8E8E8; color:#737373; border-radius:99px; font-size:0.65rem; font-weight:700; padding:0.05rem 0.45rem; margin-left:0.3rem; }
+  .prod-tab.active .tab-badge { background:#111; color:#fff; }
+  .btn-restore { font-size:0.72rem; padding:0.2rem 0.65rem; border-radius:4px; border:1px solid #B8DDD9; background:#F0F0F0; color:#2D7A74; cursor:pointer; font-weight:600; }
+  .btn-restore:hover { background:#B8DDD9; }
+  .archived-row td { color:#A3A3A3; }
+  .archived-row td a { color:#A3A3A3; }
+</style>
+
+<div class="page-hdr" style="margin-bottom:1rem;">
+  <div>
+    <h2>Archived Products</h2>
+    <p style="color:#737373;font-size:0.82rem;">{{ products|length }} archived product{{ 's' if products|length != 1 }}</p>
+  </div>
+</div>
+
+<div class="prod-tabs">
+  <a href="/products" class="prod-tab">Active</a>
+  <a href="/products/archived" class="prod-tab active">Archived <span class="tab-badge">{{ products|length }}</span></a>
+</div>
+
+{% if products %}
+<div class="table-wrap">
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Category</th>
+        <th>Last Label</th>
+        <th>Archived</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for p in products %}
+      {% set latest = p.latest_label %}
+      <tr class="archived-row">
+        <td>
+          <span style="font-weight:600;">{{ p.name }}</span>
+          {% if p.sku %}<br/><small>{{ p.sku }}</small>{% endif %}
+        </td>
+        <td><span class="pill pill-primary" style="font-size:0.7rem;opacity:0.6;">{{ p.category }}</span></td>
+        <td>
+          {% if latest %}<small>{{ latest.uploaded_at.strftime('%d %b %Y') }}</small>
+          {% else %}<small>—</small>{% endif %}
+        </td>
+        <td><small>{{ p.updated_at.strftime('%d %b %Y') if p.updated_at else '—' }}</small></td>
+        <td style="white-space:nowrap;">
+          <form method="post" action="/products/{{ p.id }}/restore" style="display:inline;">
+            <button type="submit" class="btn-restore">&#8617; Restore</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card no-hover">
+  <div class="empty-state">
+    <span class="empty-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></span>
+    <h3>No archived products</h3>
+    <p>Products you archive will appear here. You can restore them at any time.</p>
+    <a href="/products" class="btn btn-outline btn-sm" style="margin-top:0.75rem;">Back to Products</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

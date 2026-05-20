@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Link Expired — RegBite</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #F5F5F5; color: #111111; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  </style>
+</head>
+<body>
+
+<div style="max-width: 460px; width: 100%; text-align: center;">
+
+  <!-- RegBite logo -->
+  <div style="margin-bottom: 24px;">
+    <div style="font-size: 1.5rem; font-weight: 900; color: #0f172a; letter-spacing: -0.03em;">RegBite</div>
+    <div style="font-size: 0.8rem; color: #737373; margin-top: 3px;">India Nutraceutical Compliance Platform</div>
+  </div>
+
+  <!-- Error card -->
+  <div style="background: #fff; border: 1px solid #EBEBEB; border-radius: 16px; padding: 36px 28px;">
+    <div style="display:flex;justify-content:center;margin-bottom:14px;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
+    <h2 style="font-size: 1.2rem; font-weight: 800; color: #0f172a; margin-bottom: 10px;">This link is no longer active</h2>
+    <p style="font-size: 0.9rem; color: #737373; line-height: 1.7; margin-bottom: 20px;">
+      {{ error or "This shared report link is invalid, has expired, or has been revoked by the account holder." }}
+    </p>
+    <div style="font-size: 0.82rem; color: #A3A3A3; line-height: 1.6; margin-bottom: 20px;">
+      Shared links are valid for 30 days. Please ask the report owner to generate a new share link.
+    </div>
+    <a href="/login" style="display: inline-block; background: linear-gradient(135deg, #262626, #262626); color: #fff; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-size: 0.9rem; font-weight: 700;">
+      Sign in to RegBite
+    </a>
+  </div>
+
+  <div style="margin-top: 20px; font-size: 0.73rem; color: #A3A3A3;">
+    &copy; RegBite · Not legal advice
+  </div>
+
+</div>
+
+</body>
+</html>

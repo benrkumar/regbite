@@ -1,0 +1,101 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Activity Log{% endblock %}
+{% block page_title %}Activity Log{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.75rem;">
+  <p style="margin:0;color:#737373;font-size:0.86rem;">{{ total }} total event{{ 's' if total != 1 }}</p>
+  <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+    <a href="/admin/activity" class="adm-btn {% if not since %}adm-btn-primary{% endif %}">All Time</a>
+    <a href="/admin/activity?since=24h" class="adm-btn {% if since == '24h' %}adm-btn-primary{% endif %}">Last 24h</a>
+    <a href="/admin/activity?since=7d" class="adm-btn {% if since == '7d' %}adm-btn-primary{% endif %}">Last 7 Days</a>
+  </div>
+</div>
+
+<div class="adm-table-wrap">
+  <table class="adm-table">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>User</th>
+        <th>Action</th>
+        <th>Resource</th>
+        <th>Detail</th>
+        <th>IP</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td style="white-space:nowrap;font-size:0.78rem;color:#737373;">
+          {{ log.created_at.strftime('%d %b %Y') }}<br>
+          <span style="color:#A3A3A3;">{{ log.created_at.strftime('%H:%M:%S') }}</span>
+        </td>
+        <td>
+          {% if log.user %}
+          <div style="font-weight:600;font-size:0.84rem;color:#262626;">{{ log.user.name }}</div>
+          <div style="font-size:0.73rem;color:#737373;">{{ log.user.email }}</div>
+          {% else %}
+          <span style="color:#A3A3A3;font-size:0.82rem;">System</span>
+          {% endif %}
+        </td>
+        <td>
+          {% set action = log.action %}
+          {% if action in ['login', 'logout'] %}
+          <span class="adm-badge badge-blue">{{ action }}</span>
+          {% elif action in ['label_uploaded', 'compliance_checked'] %}
+          <span class="adm-badge badge-purple">{{ action }}</span>
+          {% elif action in ['report_generated', 'report_shared'] %}
+          <span class="adm-badge badge-green">{{ action }}</span>
+          {% elif action in ['product_created', 'product_deleted'] %}
+          <span class="adm-badge badge-yellow">{{ action }}</span>
+          {% elif action == 'rule_updated' %}
+          <span class="adm-badge badge-orange">{{ action }}</span>
+          {% elif action in ['api_key_created', 'password_changed'] %}
+          <span class="adm-badge badge-red">{{ action }}</span>
+          {% else %}
+          <span class="adm-badge badge-gray">{{ action }}</span>
+          {% endif %}
+        </td>
+        <td style="font-size:0.82rem;color:#525252;">
+          {% if log.resource_type %}
+          <span style="font-weight:600;">{{ log.resource_type }}</span>
+          {% if log.resource_id %}<span style="color:#A3A3A3;"> #{{ log.resource_id }}</span>{% endif %}
+          {% else %}
+          <span style="color:#A3A3A3;">—</span>
+          {% endif %}
+        </td>
+        <td style="font-size:0.82rem;color:#737373;max-width:260px;">
+          {% if log.detail %}
+          {{ log.detail }}
+          {% else %}
+          <span style="color:#A3A3A3;">—</span>
+          {% endif %}
+        </td>
+        <td style="font-size:0.78rem;color:#A3A3A3;white-space:nowrap;">
+          {% if log.ip_address %}{{ log.ip_address }}{% else %}<span style="color:#A3A3A3;">—</span>{% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" style="text-align:center;padding:2.5rem;color:#A3A3A3;">No activity recorded yet.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if total_pages > 1 %}
+<div style="display:flex;align-items:center;gap:0.6rem;margin-top:1.2rem;justify-content:center;flex-wrap:wrap;">
+  {% if page > 1 %}
+  <a href="/admin/activity?page={{ page - 1 }}{% if since %}&since={{ since }}{% endif %}" class="adm-btn">&larr; Previous</a>
+  {% endif %}
+  <span style="font-size:0.84rem;color:#737373;">Page {{ page }} of {{ total_pages }}</span>
+  {% if page < total_pages %}
+  <a href="/admin/activity?page={{ page + 1 }}{% if since %}&since={{ since }}{% endif %}" class="adm-btn">Next &rarr;</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

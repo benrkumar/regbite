@@ -1,0 +1,271 @@
+[
+  {
+    "name": "Raspberry Ketone",
+    "aliases": ["rheosmin", "frambinone", "4-(4-hydroxyphenyl)butan-2-one"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Banned by FSSAI October 2022 - insufficient safety data for use in nutraceuticals",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022"
+  },
+  {
+    "name": "Saw Palmetto",
+    "aliases": ["serenoa repens", "sabal serrulata", "sabal extract"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Banned by FSSAI 2022 - lack of scientific safety data",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022"
+  },
+  {
+    "name": "Paullinia Cupana",
+    "aliases": ["guarana", "guarana extract", "guarana seed extract", "paullinia"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Banned by FSSAI 2022",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022"
+  },
+  {
+    "name": "Angelica Sinensis",
+    "aliases": ["dong quai", "dang gui", "chinese angelica", "female ginseng"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Banned by FSSAI 2022",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022"
+  },
+  {
+    "name": "Notoginseng",
+    "aliases": ["panax notoginseng", "tian qi", "san qi", "three-seven", "pseudoginseng"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Banned by FSSAI 2022",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022"
+  },
+  {
+    "name": "Chaga Extract",
+    "aliases": ["inonotus obliquus", "chaga mushroom", "chaga mushroom extract"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Banned by FSSAI 2022 - insufficient safety data",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022"
+  },
+  {
+    "name": "Chlorella Growth Factor",
+    "aliases": ["CGF", "chlorella extract growth factor"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Banned by FSSAI 2022",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022"
+  },
+  {
+    "name": "Tea Tree Oil",
+    "aliases": ["melaleuca alternifolia oil", "melaleuca oil"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Banned for internal use in nutraceuticals by FSSAI 2022",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV Amendment Oct 2022"
+  },
+  {
+    "name": "Vitamin C",
+    "aliases": ["ascorbic acid", "l-ascorbic acid", "sodium ascorbate", "calcium ascorbate"],
+    "status": "APPROVED",
+    "max_daily_dose": "1000mg",
+    "source_restriction": null,
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule I"
+  },
+  {
+    "name": "Vitamin D3",
+    "aliases": ["cholecalciferol", "colecalciferol", "vitamin d-3"],
+    "status": "APPROVED",
+    "max_daily_dose": "2000 IU (50mcg)",
+    "source_restriction": "Source must be declared (animal/sheep lanolin or vegan/lichen-derived). Veg-certified D3 from lichen is permitted.",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule I"
+  },
+  {
+    "name": "Vitamin B12",
+    "aliases": ["cobalamin", "cyanocobalamin", "methylcobalamin", "adenosylcobalamin"],
+    "status": "APPROVED",
+    "max_daily_dose": "250mcg",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule I"
+  },
+  {
+    "name": "Folic Acid",
+    "aliases": ["folate", "vitamin b9", "pteroylglutamic acid"],
+    "status": "APPROVED",
+    "max_daily_dose": "400mcg",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule I"
+  },
+  {
+    "name": "Zinc",
+    "aliases": ["zinc gluconate", "zinc sulphate", "zinc oxide", "zinc picolinate", "zinc bisglycinate"],
+    "status": "APPROVED",
+    "max_daily_dose": "40mg",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule I"
+  },
+  {
+    "name": "Magnesium",
+    "aliases": ["magnesium oxide", "magnesium glycinate", "magnesium citrate", "magnesium sulphate"],
+    "status": "APPROVED",
+    "max_daily_dose": "350mg (supplemental)",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule I"
+  },
+  {
+    "name": "Omega-3 Fatty Acids",
+    "aliases": ["fish oil", "EPA", "DHA", "eicosapentaenoic acid", "docosahexaenoic acid", "flaxseed oil", "algal oil"],
+    "status": "APPROVED",
+    "max_daily_dose": "3000mg",
+    "source_restriction": "Source (fish/algae/flaxseed) must be declared. Non-veg mark required for fish-sourced omega-3.",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule II"
+  },
+  {
+    "name": "Probiotics",
+    "aliases": ["lactobacillus", "bifidobacterium", "lactobacillus acidophilus", "lactobacillus rhamnosus"],
+    "status": "APPROVED",
+    "max_daily_dose": "10 billion CFU",
+    "source_restriction": "Strain must be identified to species level. Must be from FSSAI-approved probiotic strains list.",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule III"
+  },
+  {
+    "name": "Ashwagandha",
+    "aliases": ["withania somnifera", "indian ginseng", "winter cherry", "ashwagandha root extract"],
+    "status": "APPROVED",
+    "max_daily_dose": "600mg (root extract)",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV"
+  },
+  {
+    "name": "Turmeric Extract",
+    "aliases": ["curcuma longa", "curcumin", "curcuminoids", "turmeric root extract"],
+    "status": "APPROVED",
+    "max_daily_dose": "1500mg",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV"
+  },
+  {
+    "name": "Green Tea Extract",
+    "aliases": ["camellia sinensis", "egcg", "epigallocatechin gallate", "green tea polyphenols"],
+    "status": "APPROVED",
+    "max_daily_dose": "400mg EGCG",
+    "source_restriction": "Caffeine content must be declared if standardized to caffeine",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule IV"
+  },
+  {
+    "name": "Coenzyme Q10",
+    "aliases": ["CoQ10", "ubiquinone", "ubiquinol", "coenzyme q-10"],
+    "status": "APPROVED",
+    "max_daily_dose": "300mg",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule II"
+  },
+  {
+    "name": "Alpha Lipoic Acid",
+    "aliases": ["ALA", "thioctic acid", "lipoic acid", "alpha-lipoic acid"],
+    "status": "APPROVED",
+    "max_daily_dose": "600mg",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule II"
+  },
+  {
+    "name": "Resveratrol",
+    "aliases": ["trans-resveratrol", "grape extract resveratrol"],
+    "status": "APPROVED",
+    "max_daily_dose": "250mg",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule II"
+  },
+  {
+    "name": "Iron",
+    "aliases": ["ferrous sulphate", "ferrous gluconate", "ferric ammonium citrate", "iron bisglycinate", "carbonyl iron"],
+    "status": "APPROVED",
+    "max_daily_dose": "45mg",
+    "source_restriction": "Heme iron from animal source requires non-veg marking",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule I"
+  },
+  {
+    "name": "Calcium",
+    "aliases": ["calcium carbonate", "calcium citrate", "calcium phosphate", "calcium glycinate"],
+    "status": "APPROVED",
+    "max_daily_dose": "1200mg",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule I"
+  },
+  {
+    "name": "Biotin",
+    "aliases": ["vitamin b7", "vitamin h", "d-biotin"],
+    "status": "APPROVED",
+    "max_daily_dose": "10000mcg",
+    "regulation_reference": "FSS (Health Supplements, Nutraceuticals) Regulations 2022, Schedule I"
+  },
+  {
+    "name": "Aristolochic Acid Herbs",
+    "aliases": ["aristolochia", "birthwort", "pipevine", "asarum"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Proven nephrotoxin and carcinogen — banned globally",
+    "regulation_reference": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023"
+  },
+  {
+    "name": "Ephedra",
+    "aliases": ["ma huang", "ephedrine", "pseudoephedrine", "ephedra sinica"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Cardiovascular deaths reported; banned globally for supplement use",
+    "regulation_reference": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023"
+  },
+  {
+    "name": "Kava",
+    "aliases": ["kava kava", "piper methysticum", "kavain", "kavalactones"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Hepatotoxicity; liver failure cases documented",
+    "regulation_reference": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023"
+  },
+  {
+    "name": "Pennyroyal",
+    "aliases": ["mentha pulegium", "pennyroyal oil", "pulegone"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Hepatotoxic; abortifacient effects",
+    "regulation_reference": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023"
+  },
+  {
+    "name": "Colloidal Silver",
+    "aliases": ["silver solution", "nano silver", "silver hydrosol", "silver protein"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Argyria (permanent skin discolouration); no proven health benefit; heavy metal accumulation",
+    "regulation_reference": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023"
+  },
+  {
+    "name": "Androstenedione",
+    "aliases": ["4-androstenedione", "andro", "4-AD"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Anabolic steroid precursor; banned in sports; hormonal risks",
+    "regulation_reference": "FSSAI Order F.No.Stds/HS/SP-18/FSSAI-2023, July 2023"
+  },
+  {
+    "name": "Titanium Dioxide",
+    "aliases": ["TiO2", "E171", "CI 77891"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Banned as food additive per EFSA 2021 safety assessment — can no longer be considered safe for ingestion",
+    "regulation_reference": "FSS (Food Products Standards and Food Additives) First Amendment Regulations 2025"
+  },
+  {
+    "name": "Phenylephrine",
+    "aliases": ["phenylpropanolamine", "PPA"],
+    "status": "BANNED",
+    "max_daily_dose": null,
+    "ban_reason": "Drug substance not permitted in food/supplement category",
+    "regulation_reference": "FSSAI Notification S.O. 2847(E), June 2024"
+  },
+  {
+    "name": "Vitamin K2 (MK-7)",
+    "aliases": ["menaquinone-7", "MK-7", "vitamin k2 mk7"],
+    "status": "APPROVED",
+    "max_daily_dose": "300mcg",
+    "source_restriction": "Must carry warning: 'Do not take if on anticoagulant therapy'",
+    "regulation_reference": "FSS HS Regulations 2022, Schedule I Amendment Dec 2023"
+  },
+  {
+    "name": "Vitamin K2 (MK-4)",
+    "aliases": ["menaquinone-4", "MK-4", "menatetrenone"],
+    "status": "APPROVED",
+    "max_daily_dose": "1500mcg",
+    "source_restriction": "Must carry warning: 'Do not take if on anticoagulant therapy'",
+    "regulation_reference": "FSS HS Regulations 2022, Schedule I Amendment Dec 2023"
+  }
+]

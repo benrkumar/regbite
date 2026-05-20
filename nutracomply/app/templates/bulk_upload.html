@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Bulk Upload Products{% endblock %}
+
+{% block content %}
+<style>
+  .tab-bar { display:flex; gap:0; border-bottom:1px solid #EBEBEB; margin-bottom:1.5rem; }
+  .tab-btn { padding:0.6rem 1.2rem; font-size:0.85rem; font-weight:500; color:#737373; background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; font-family:inherit; }
+  .tab-btn.active { color:#111111; border-bottom-color:#111111; }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+  .drop-zone { border:2px dashed #EBEBEB; border-radius:8px; padding:2.5rem 1.5rem; text-align:center; cursor:pointer; transition:border-color 0.15s,background 0.15s; }
+  .drop-zone:hover, .drop-zone.dragover { border-color:#111; background:#FAFAFA; }
+  .drop-zone-icon { font-size:2rem; color:#A3A3A3; margin-bottom:0.5rem; }
+  .file-list { margin-top:1rem; }
+  .file-item { display:flex; align-items:center; gap:0.5rem; padding:0.35rem 0; font-size:0.82rem; color:#525252; }
+  .file-item .remove { color:#111111; cursor:pointer; font-size:0.75rem; }
+</style>
+
+<div class="breadcrumb">
+  <a href="/products">Products</a>
+  <span>/</span>
+  <span>Bulk Upload</span>
+</div>
+
+<div class="page-hdr">
+  <div>
+    <h2>Bulk Upload Products</h2>
+    <p>Add multiple products at once via CSV or label files</p>
+  </div>
+  <a href="/products" class="btn btn-ghost btn-sm">&larr; Back to Products</a>
+</div>
+
+{% if result %}
+  {% if result.added %}
+  <div class="flash flash-success">
+    <strong>&#x2713; {{ result.added|length }} product{{ 's' if result.added|length != 1 }} added:</strong>
+    {{ result.added | join(', ') }}
+  </div>
+  {% endif %}
+  {% if result.skipped %}
+  <div class="flash flash-info">
+    <strong>Skipped ({{ result.skipped|length }}):</strong>
+    <ul style="margin:0.3rem 0 0 1.2rem;">
+      {% for s in result.skipped %}<li>{{ s }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if result.errors %}
+  <div class="flash flash-error">
+    <strong>Errors:</strong>
+    <ul style="margin:0.3rem 0 0 1.2rem;">
+      {% for e in result.errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if result.added %}
+  <div style="margin-bottom:1rem;">
+    <a href="/products" class="btn btn-primary">View All Products &rarr;</a>
+  </div>
+  {% endif %}
+  {% if result.added and active_tab == 'files' %}
+  <div style="background:#DDE4ED;border:1px solid #B6C3D5;border-radius:8px;
+              padding:1rem 1.25rem;margin-bottom:1.5rem;
+              display:flex;align-items:flex-start;gap:0.75rem;">
+    <div style="font-size:1.2rem;line-height:1.2;flex-shrink:0;">🔔</div>
+    <div>
+      <p style="margin:0 0 0.3rem;font-weight:600;color:#0B2A4A;font-size:0.9rem;">
+        {{ result.added|length }} label{{ 's are' if result.added|length != 1 else ' is' }} being analyzed in the background
+      </p>
+      <p style="margin:0;font-size:0.82rem;color:#2B4874;line-height:1.55;">
+        We'll send you an in-app notification and email when all labels have been processed and compliance reports are ready. You can safely close this page.
+      </p>
+      <a href="/products" style="font-size:0.82rem;color:#173558;text-decoration:underline;
+                                 display:inline-block;margin-top:0.4rem;font-weight:500;">
+        Check status on Products page &rarr;
+      </a>
+    </div>
+  </div>
+  {% endif %}
+{% endif %}
+
+<div class="tab-bar">
+  <button class="tab-btn{% if not active_tab or active_tab == 'csv' %} active{% endif %}" onclick="switchTab('csv')">CSV Data</button>
+  <button class="tab-btn{% if active_tab == 'files' %} active{% endif %}" onclick="switchTab('files')">Label Files</button>
+</div>
+
+{# ── CSV Tab ── #}
+<div id="tab-csv" class="tab-panel{% if not active_tab or active_tab == 'csv' %} active{% endif %}">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;">
+    <div class="card no-hover">
+      <h4 style="margin-bottom:1rem;">Paste CSV Data</h4>
+      <form method="post" action="/products/bulk-upload">
+        <div class="field">
+          <label class="field-label">Product Data (CSV format)</label>
+          <textarea class="input mono" name="csv_data" rows="14"
+            placeholder="name,sku,category,description
+OmegaPlus Capsules,OP-60-CAP,Health Supplement,Fish oil supplement
+VitaMax Tablets,VM-90,Nutraceutical,Multivitamin formula
+ProFlora Probiotics,PF-30,Health Supplement,Daily probiotic blend
+IronPro Syrup,IP-200ML,Nutraceutical,Iron and folic acid syrup"></textarea>
+          <span class="field-hint">One product per line. Only &lsquo;name&rsquo; is required. Category defaults to &lsquo;Health Supplement&rsquo;.</span>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Import Products &rarr;</button>
+      </form>
+    </div>
+
+    <div>
+      <div class="card card-flat no-hover" style="margin-bottom:1rem;">
+        <h4 style="margin-bottom:0.8rem;">CSV Format</h4>
+        <pre style="font-size:0.78rem;margin:0;">name,sku,category,description</pre>
+        <div style="font-size:0.83rem;color:var(--gray-600);margin-top:0.75rem;">
+          <p style="margin-bottom:0.5rem;"><strong>Columns (all optional except name):</strong></p>
+          <table style="font-size:0.81rem;width:100%;">
+            <tr><td style="padding:0.2rem 0.5rem 0.2rem 0;"><code>name</code></td><td style="color:var(--gray-500);">Product name <span style="color:var(--danger);">*required</span></td></tr>
+            <tr><td style="padding:0.2rem 0.5rem 0.2rem 0;"><code>sku</code></td><td style="color:var(--gray-500);">SKU / product code</td></tr>
+            <tr><td style="padding:0.2rem 0.5rem 0.2rem 0;"><code>category</code></td><td style="color:var(--gray-500);">See valid values below</td></tr>
+            <tr><td style="padding:0.2rem 0.5rem 0.2rem 0;"><code>description</code></td><td style="color:var(--gray-500);">Optional notes</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="card card-flat no-hover">
+        <h4 style="margin-bottom:0.8rem;">Valid Categories</h4>
+        <div class="tag-row">
+          <span class="pill pill-primary">Health Supplement</span>
+          <span class="pill pill-primary">Nutraceutical</span>
+          <span class="pill pill-primary">Functional Food</span>
+          <span class="pill pill-primary">Food for Special Dietary Use</span>
+          <span class="pill pill-primary">Novel Food</span>
+        </div>
+        <p style="font-size:0.79rem;color:var(--gray-400);margin-top:0.75rem;">Invalid categories default to &lsquo;Health Supplement&rsquo;. Duplicate product names are skipped automatically.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Files Tab ── #}
+<div id="tab-files" class="tab-panel{% if active_tab == 'files' %} active{% endif %}">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;">
+    <div class="card no-hover">
+      <h4 style="margin-bottom:1rem;">Upload Label Images</h4>
+      <form method="post" action="/products/bulk-upload-files" enctype="multipart/form-data" id="fileUploadForm">
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <div class="drop-zone-icon">+</div>
+          <p style="font-size:0.88rem;color:#525252;margin:0;">Drop label files here or click to browse</p>
+          <p style="font-size:0.75rem;color:#A3A3A3;margin-top:0.3rem;">JPG, PNG, PDF, WEBP, TIFF &mdash; max 50 MB each</p>
+        </div>
+        <input type="file" id="fileInput" name="files" multiple accept=".jpg,.jpeg,.png,.pdf,.webp,.tiff,.tif" style="display:none;" />
+        <div class="file-list" id="fileList"></div>
+        <button type="submit" id="fileSubmitBtn" class="btn btn-primary btn-full" style="margin-top:1rem;" disabled>
+          Upload &amp; Process Labels &rarr;
+        </button>
+      </form>
+    </div>
+
+    <div>
+      <div class="card card-flat no-hover" style="margin-bottom:1rem;">
+        <h4 style="margin-bottom:0.8rem;">How It Works</h4>
+        <div style="font-size:0.83rem;color:#525252;line-height:1.7;">
+          <p style="margin-bottom:0.5rem;"><strong>1.</strong> Upload one or more label images/PDFs</p>
+          <p style="margin-bottom:0.5rem;"><strong>2.</strong> A product is created for each file (named from filename)</p>
+          <p style="margin-bottom:0.5rem;"><strong>3.</strong> AI extracts label data and runs compliance checks</p>
+          <p><strong>4.</strong> You'll receive an in-app notification and email when all labels are ready</p>
+        </div>
+      </div>
+
+      <div class="card card-flat no-hover">
+        <h4 style="margin-bottom:0.8rem;">Tips</h4>
+        <ul style="font-size:0.82rem;color:#737373;padding-left:1.2rem;line-height:1.7;">
+          <li>Name files descriptively &mdash; filenames become product names</li>
+          <li>Use clear, high-resolution label images for best extraction</li>
+          <li>Processing happens in the background &mdash; check products list for results</li>
+          <li>Duplicate product names are automatically skipped</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+}
+
+(function() {
+  var dropZone = document.getElementById('dropZone');
+  var fileInput = document.getElementById('fileInput');
+  var fileList = document.getElementById('fileList');
+  var submitBtn = document.getElementById('fileSubmitBtn');
+
+  function updateFileList() {
+    var files = fileInput.files;
+    fileList.innerHTML = '';
+    submitBtn.disabled = files.length === 0;
+    for (var i = 0; i < files.length; i++) {
+      var div = document.createElement('div');
+      div.className = 'file-item';
+      var size = (files[i].size / 1024).toFixed(0);
+      div.innerHTML = '<span style="color:#A3A3A3;">&#x25A0;</span> ' +
+        '<span>' + files[i].name + '</span>' +
+        '<span style="color:#A3A3A3;font-size:0.72rem;margin-left:auto;">' + size + ' KB</span>';
+      fileList.appendChild(div);
+    }
+    if (files.length > 0) {
+      submitBtn.textContent = 'Upload & Process ' + files.length + ' Label' + (files.length > 1 ? 's' : '') + ' \u2192';
+    }
+  }
+
+  fileInput.addEventListener('change', updateFileList);
+
+  dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('dragover'); });
+  dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    fileInput.files = e.dataTransfer.files;
+    updateFileList();
+  });
+})();
+</script>
+{% endblock %}

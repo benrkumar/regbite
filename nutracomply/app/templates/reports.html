@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Compliance Reports{% endblock %}
+{% block page_subtitle %}Your saved compliance reports{% endblock %}
+
+{% block content %}
+
+<!-- Page header -->
+<div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+  <hgroup>
+    <h2 style="margin:0;font-size:1.6rem;font-weight:800;color:#0f172a;">Compliance Reports</h2>
+    <p style="margin:0.2rem 0 0;color:#737373;font-size:0.95rem;">All generated compliance reports for your products</p>
+  </hgroup>
+  <a href="/checker" style="background:linear-gradient(135deg,#262626,#262626);color:#fff;padding:9px 20px;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:700;">
+    + New Check
+  </a>
+</div>
+
+<!-- Stats strip -->
+{% set compliant_reports = reports | selectattr('score', 'ge', 90) | list %}
+{% set partial_reports = reports | selectattr('score', 'ge', 60) | selectattr('score', 'lt', 90) | list %}
+{% set non_compliant_reports = reports | selectattr('score', 'lt', 60) | list %}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.8rem;">
+  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:10px;padding:14px 18px;text-align:center;">
+    <div style="font-size:1.8rem;font-weight:900;color:#0f172a;">{{ reports | length }}</div>
+    <div style="font-size:0.78rem;color:#737373;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Total Reports</div>
+  </div>
+  <div style="background:#F5F5F5;border:1px solid #F5F5F5;border-radius:10px;padding:14px 18px;text-align:center;">
+    <div style="font-size:1.8rem;font-weight:900;color:#262626;">{{ compliant_reports | length }}</div>
+    <div style="font-size:0.78rem;color:#262626;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Compliant</div>
+  </div>
+  <div style="background:#fffbeb;border:1px solid #E5E5E5;border-radius:10px;padding:14px 18px;text-align:center;">
+    <div style="font-size:1.8rem;font-weight:900;color:#525252;">{{ partial_reports | length }}</div>
+    <div style="font-size:0.78rem;color:#b45309;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Partial</div>
+  </div>
+  <div style="background:#EBEBEB;border:1px solid #D4D4D4;border-radius:10px;padding:14px 18px;text-align:center;">
+    <div style="font-size:1.8rem;font-weight:900;color:#111111;">{{ non_compliant_reports | length }}</div>
+    <div style="font-size:0.78rem;color:#111111;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">Non-Compliant</div>
+  </div>
+</div>
+
+<!-- Reports table -->
+{% if reports %}
+<div style="background:#fff;border:1px solid #EBEBEB;border-radius:12px;overflow:hidden;">
+  <div style="padding:16px 20px;border-bottom:1px solid #F5F5F5;">
+    <span style="font-size:0.9rem;font-weight:700;color:#525252;">{{ reports | length }} report{{ 's' if reports | length != 1 else '' }}</span>
+  </div>
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="background:#F8F8F8;">
+          <th style="padding:10px 16px;text-align:left;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.07em;color:#737373;font-weight:700;border-bottom:1px solid #EBEBEB;">Report ID</th>
+          <th style="padding:10px 16px;text-align:left;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.07em;color:#737373;font-weight:700;border-bottom:1px solid #EBEBEB;">Product</th>
+          <th style="padding:10px 16px;text-align:center;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.07em;color:#737373;font-weight:700;border-bottom:1px solid #EBEBEB;">Score</th>
+          <th style="padding:10px 16px;text-align:center;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.07em;color:#737373;font-weight:700;border-bottom:1px solid #EBEBEB;">Verdict</th>
+          <th style="padding:10px 16px;text-align:left;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.07em;color:#737373;font-weight:700;border-bottom:1px solid #EBEBEB;">Generated</th>
+          <th style="padding:10px 16px;text-align:right;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.07em;color:#737373;font-weight:700;border-bottom:1px solid #EBEBEB;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for report in reports %}
+        {% set score = report.score or 0 %}
+        {% if score >= 90 %}
+          {% set score_color = '#262626' %}
+          {% set score_bg = '#F5F5F5' %}
+          {% set verdict_label = 'COMPLIANT' %}
+          {% set verdict_bg = '#F5F5F5' %}
+          {% set verdict_color = '#262626' %}
+        {% elif score >= 60 %}
+          {% set score_color = '#525252' %}
+          {% set score_bg = '#F5F5F5' %}
+          {% set verdict_label = 'PARTIAL' %}
+          {% set verdict_bg = '#F5F5F5' %}
+          {% set verdict_color = '#b45309' %}
+        {% else %}
+          {% set score_color = '#111111' %}
+          {% set score_bg = '#EBEBEB' %}
+          {% set verdict_label = 'NON-COMPLIANT' %}
+          {% set verdict_bg = '#EBEBEB' %}
+          {% set verdict_color = '#111111' %}
+        {% endif %}
+        <tr style="border-bottom:1px solid #F5F5F5;transition:background 0.15s;" onmouseover="this.style.background='#F8F8F8'" onmouseout="this.style.background=''">
+          <td style="padding:12px 16px;">
+            <span style="font-family:monospace;font-size:0.82rem;font-weight:700;color:#525252;background:#F5F5F5;padding:3px 8px;border-radius:5px;">{{ report.report_ref }}</span>
+          </td>
+          <td style="padding:12px 16px;">
+            <div style="font-size:0.9rem;font-weight:600;color:#0f172a;">{{ report.product.name if report.product else 'Unknown' }}</div>
+            {% if report.product and report.product.category %}
+            <div style="font-size:0.75rem;color:#A3A3A3;margin-top:1px;">{{ report.product.category }}</div>
+            {% endif %}
+          </td>
+          <td style="padding:12px 16px;text-align:center;">
+            <span style="background:{{ score_bg }};color:{{ score_color }};font-weight:800;font-size:1rem;padding:4px 12px;border-radius:20px;">{{ score }}%</span>
+          </td>
+          <td style="padding:12px 16px;text-align:center;">
+            <span style="background:{{ verdict_bg }};color:{{ verdict_color }};font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:0.05em;">{{ verdict_label }}</span>
+          </td>
+          <td style="padding:12px 16px;">
+            <span style="font-size:0.83rem;color:#737373;">{{ report.created_at.strftime('%d %b %Y') }}</span>
+          </td>
+          <td style="padding:12px 16px;text-align:right;">
+            <div style="display:flex;gap:0.4rem;justify-content:flex-end;">
+              <a href="/reports/{{ report.id }}" style="background:#0f172a;color:#fff;padding:5px 12px;border-radius:6px;text-decoration:none;font-size:0.78rem;font-weight:600;">View</a>
+              <a href="/reports/{{ report.id }}/download" style="background:#EBEBEB;color:#525252;padding:5px 12px;border-radius:6px;text-decoration:none;font-size:0.78rem;font-weight:600;">PDF</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<!-- Empty state -->
+<div style="background:#fff;border:2px dashed #EBEBEB;border-radius:16px;padding:48px 24px;text-align:center;">
+  <div style="display:flex;justify-content:center;margin-bottom:12px;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+  <h3 style="font-size:1.2rem;font-weight:700;color:#525252;margin:0 0 8px;">No reports yet</h3>
+  <p style="color:#737373;font-size:0.9rem;max-width:400px;margin:0 auto 20px;">Generate your first compliance report by using the Compliance Checker or from a label upload result.</p>
+  <div style="display:flex;gap:0.8rem;justify-content:center;flex-wrap:wrap;">
+    <a href="/checker" style="background:linear-gradient(135deg,#262626,#262626);color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:700;">Use Compliance Checker</a>
+    <a href="/products" style="background:#F5F5F5;color:#525252;padding:10px 22px;border-radius:8px;text-decoration:none;font-size:0.9rem;font-weight:600;">View Products</a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
