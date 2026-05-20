@@ -7,12 +7,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   output: "standalone",
   experimental: {
-    // Ensures workspace packages are included in the standalone bundle
+    // Ensures workspace packages are included in the bundle
     outputFileTracingRoot: path.join(__dirname, "../../"),
-    // Explicitly include Prisma binary engines in the standalone output
-    outputFileTracingIncludes: {
-      "/**": ["./node_modules/.prisma/client/**"],
-    },
   },
   transpilePackages: [
     "@regbite/database",
