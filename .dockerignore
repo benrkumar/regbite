@@ -1,0 +1,15 @@
+# Never copy local node_modules into Docker — they contain platform-specific
+# binaries and pnpm shims with hardcoded local paths.
+# Nixpacks runs `pnpm install` inside the build container to produce
+# correct Linux binaries; the final COPY . /app must not overwrite them.
+node_modules
+**/node_modules
+
+# Other local artifacts that should not be in the image
+.next
+**/.next
+.pnpm-store
+*.local
+.env
+.env.*
+!.env.example
