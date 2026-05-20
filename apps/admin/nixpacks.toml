@@ -1,0 +1,10 @@
+[phases.build]
+cmds = [
+  "NODE_ENV=development pnpm install",
+  "pnpm build --filter=@regbite/admin",
+  "cp -r apps/admin/.next/static apps/admin/.next/standalone/apps/admin/.next/static",
+  "bash -c 'cp -r apps/admin/public apps/admin/.next/standalone/apps/admin/public 2>/dev/null || true'"
+]
+
+[start]
+cmd = "HOSTNAME=0.0.0.0 node apps/admin/.next/standalone/apps/admin/server.js"
