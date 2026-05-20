@@ -12,8 +12,10 @@
     "db:studio": "pnpm --filter @regbite/database exec prisma studio",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\""
   },
+  "dependencies": {
+    "turbo": "^2.5.0"
+  },
   "devDependencies": {
-    "turbo": "^2.5.0",
     "typescript": "^5.7.0",
     "@types/node": "^22.0.0",
     "prettier": "^3.4.0"
