@@ -1,9 +1,7 @@
-import { SignUp } from '@clerk/nextjs';
+import { redirect } from "next/navigation";
 
+// Sign-up is not active yet. Send visitors to the sign-in page where
+// they can access the demo account while auth is being configured.
 export default function SignUpPage() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <SignUp />
-    </div>
-  );
+  redirect("/sign-in");
 }
