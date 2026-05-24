@@ -1,10 +1,28 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
+import { Component, type ReactNode } from "react";
 
 const DEMO_EMAILS = ["demo@regbite.com", "viewer@regbite.com"];
 
-export function DemoBanner() {
+// Silently absorbs any Clerk context errors (e.g. when ClerkProvider is absent)
+class SafeClerkBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    if (this.state.failed) return null;
+    return this.props.children as ReactNode;
+  }
+}
+
+function DemoBannerContent() {
   const { user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
 
@@ -20,5 +38,13 @@ export function DemoBanner() {
         Sign up for a real account →
       </a>
     </div>
+  );
+}
+
+export function DemoBanner() {
+  return (
+    <SafeClerkBoundary>
+      <DemoBannerContent />
+    </SafeClerkBoundary>
   );
 }

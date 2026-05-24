@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { DemoBanner } from "@/components/demo-banner";
+import dynamic from "next/dynamic";
+
+// DemoBanner uses the Clerk `useUser` hook. Loading it client-only (ssr: false)
+// prevents the SSR crash that occurs when ClerkProvider is absent.
+const DemoBanner = dynamic(
+  () => import("@/components/demo-banner").then((m) => ({ default: m.DemoBanner })),
+  { ssr: false, loading: () => null }
+);
 import {
   LayoutDashboard,
   Search,
