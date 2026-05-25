@@ -733,6 +733,28 @@
 
 <script>!function(){var c=document.cookie.match('(^|;)\\s*_csrf=([^;]+)');if(!c)return;var t=decodeURIComponent(c[2]);document.querySelectorAll('form[method="post"],form[method="POST"]').forEach(function(f){if(f.querySelector('input[name="csrf_token"]'))return;var i=document.createElement('input');i.type='hidden';i.name='csrf_token';i.value=t;f.appendChild(i)})}()</script>
 <script>
+!function(){
+  var c=document.cookie.match('(^|;)\\s*_csrf=([^;]+)');
+  if(!c)return;
+  var token=decodeURIComponent(c[2]);
+  document.querySelectorAll('form[enctype="multipart/form-data"]').forEach(function(f){
+    f.addEventListener('submit',function(e){
+      e.preventDefault();
+      var btns=f.querySelectorAll('button[type="submit"],input[type="submit"]');
+      btns.forEach(function(b){b.disabled=true;b.style.opacity='0.6'});
+      var fd=new FormData(f);
+      fetch(f.action,{method:'POST',body:fd,headers:{'X-CSRF-Token':token},redirect:'follow'})
+        .then(function(r){
+          if(r.redirected){window.location.href=r.url}
+          else if(r.ok){window.location.href=r.url||f.action}
+          else{r.text().then(function(t){try{var j=JSON.parse(t);alert(j.detail||'Error')}catch(e){alert('Error: '+r.status)};btns.forEach(function(b){b.disabled=false;b.style.opacity='1'})})}
+        })
+        .catch(function(err){alert('Network error');btns.forEach(function(b){b.disabled=false;b.style.opacity='1'})});
+    });
+  });
+}();
+</script>
+<script>
 function switchCheckerTab(tab) {
   document.querySelectorAll('.hc-tab').forEach(function(t){ t.classList.remove('active'); });
   document.querySelectorAll('.hc-panel').forEach(function(p){ p.classList.remove('active'); });
