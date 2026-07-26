@@ -110,6 +110,14 @@ def _run_daily_scrape():
             known_set = set(known_rule_codes)
             affected_rule_codes = [c for c in raw_affected if c in known_set] if raw_affected else []
 
+            # Detect draft/proposed documents and mark accordingly
+            _name_lower = name.lower()
+            reg_status = (
+                RegulationStatus.DRAFT
+                if any(kw in _name_lower for kw in ["draft", "proposed", "open for comment"])
+                else RegulationStatus.EFFECTIVE
+            )
+
             change = RegulationChange(
                 source_url=url,
                 document_name=name,
@@ -121,7 +129,7 @@ def _run_daily_scrape():
                 severity=severity,
                 document_hash=new_hash,
                 status="NEW",
-                regulation_status=RegulationStatus.EFFECTIVE,
+                regulation_status=reg_status,
                 affected_rule_codes=affected_rule_codes,
             )
             db.add(change)

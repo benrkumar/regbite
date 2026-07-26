@@ -47,7 +47,7 @@ _REGULATION_KEYWORDS = [
     "act", "rule", "standard", "advisory", "direction", "guideline",
     "labelling", "packaged commodit", "food safety", "nutraceutical",
     "health supplement", "ayurved", "prohibition", "restriction",
-    "schedule", "annex", "draft", "final", "notifi",
+    "schedule", "annex", "final", "notifi",
 ]
 
 # Patterns that indicate non-regulation content to reject
@@ -62,6 +62,19 @@ _REJECT_PATTERNS = [
     "visitor", "contact us", "sitemap", "faq",
     "empanelment", "vendor", "quotation", "e-tender",
     "citizen charter", "citizen-charter",
+    # Pagination artifacts
+    "last page", "next page", "previous page", "first page",
+    "go to page", "pagination",
+    # Draft / proposed (not yet law)
+    "draft notification", "draft regulation", "draft amendment",
+    "open for comments", "open for public comment", "proposed regulation",
+    "inviting comments", "invite objections", "stakeholder consultation",
+    # Government internal noise
+    "meeting minutes", "minutes of the meeting", "minutes of meeting",
+    "press release", "press note", "media advisory",
+    "office memorandum", "office order", "transfer order",
+    "parliament question", "lok sabha", "rajya sabha",
+    "corrigendum", "errata",
 ]
 
 

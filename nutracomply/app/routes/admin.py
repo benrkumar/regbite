@@ -15,7 +15,8 @@ from app.database import get_db
 from app.routes.auth import get_current_user_from_cookie
 from app.models import (
     User, Product, LabelVersion, ComplianceCheck, ComplianceRule,
-    Alert, AlertStatus, AlertType, RegulationChange, Severity, CheckResult,
+    Alert, AlertStatus, AlertType, RegulationChange, RegulationStatus,
+    ChangeType, Severity, CheckResult,
     PublishedAlert, PublishedAlertSeverity, PublishedAlertStatus,
     ComplianceReport, PlanType, UserRole, Subscription, PaymentRecord,
 )
@@ -584,6 +585,42 @@ async def admin_trigger_scrape(request: Request, db: Session = Depends(get_db)):
         t = "error"
 
     return RedirectResponse(url=f"/admin/system?msg={msg}&type={t}", status_code=302)
+
+
+_CLEANUP_JUNK_PATTERNS = [
+    "last page", "next page", "draft notification", "draft regulation",
+    "open for comments", "meeting minutes", "press release",
+    "office memorandum", "corrigendum", "ordinary notification",
+    "wto tbt", "wto sps", "g.s.r.", "s.o. ", "f. no.",
+]
+
+
+@router.post("/cleanup-regulations")
+async def admin_cleanup_regulations(request: Request, db: Session = Depends(get_db)):
+    """Mark junk/draft/unknown regulation entries as FILTERED."""
+    user, redirect = _require_admin(request, db)
+    if redirect:
+        return redirect
+
+    all_regs = db.query(RegulationChange).filter(
+        RegulationChange.regulation_status != RegulationStatus.FILTERED,
+    ).all()
+
+    filtered_count = 0
+    for reg in all_regs:
+        name_lower = (reg.document_name or "").lower()
+        should_filter = (
+            reg.regulation_status == RegulationStatus.DRAFT
+            or reg.change_type == ChangeType.UNKNOWN
+            or any(pat in name_lower for pat in _CLEANUP_JUNK_PATTERNS)
+        )
+        if should_filter:
+            reg.regulation_status = RegulationStatus.FILTERED
+            filtered_count += 1
+
+    db.commit()
+    msg = f"Cleanup+complete:+{filtered_count}+entries+marked+as+filtered"
+    return RedirectResponse(url=f"/admin/system?msg={msg}&type=success", status_code=302)
 
 
 @router.post("/trigger-recheck")

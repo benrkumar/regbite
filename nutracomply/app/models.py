@@ -49,6 +49,7 @@ class RegulationStatus(str, enum.Enum):
     FINAL = "FINAL"
     EFFECTIVE = "EFFECTIVE"
     SUPERSEDED = "SUPERSEDED"
+    FILTERED = "FILTERED"
 
 
 class CheckType(str, enum.Enum):

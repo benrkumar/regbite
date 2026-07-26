@@ -8,7 +8,7 @@ from typing import Optional
 
 from app.database import get_db
 from app.models import (
-    RegulationChange, ChangeType, ComplianceRule, RuleCategory,
+    RegulationChange, ChangeType, RegulationStatus, ComplianceRule, RuleCategory,
     PublishedAlert, PublishedAlertStatus, PublishedAlertSeverity,
 )
 
@@ -22,6 +22,15 @@ _JUNK_DOCUMENT_PATTERNS = [
     "G.S.R.",
     "S.O. ",
     "F. No.",
+    "Last Page",
+    "Next Page",
+    "Draft Notification",
+    "Draft Regulation",
+    "Open for Comments",
+    "Meeting Minutes",
+    "Press Release",
+    "Office Memorandum",
+    "Corrigendum",
 ]
 from app.routes.auth import get_current_user_from_cookie
 from app.utils.alerts import get_unread_alert_count
@@ -47,8 +56,11 @@ async def regulations_feed(
     changes_q = db.query(RegulationChange).order_by(RegulationChange.detected_at.desc())
     if source:
         changes_q = changes_q.filter(RegulationChange.source_url.ilike(f"%{source}%"))
-    # Exclude UNKNOWN change types and known junk administrative notifications
+    # Exclude UNKNOWN change types, junk statuses, and known junk administrative notifications
     changes_q = changes_q.filter(RegulationChange.change_type != ChangeType.UNKNOWN)
+    changes_q = changes_q.filter(RegulationChange.regulation_status.notin_([
+        RegulationStatus.DRAFT, RegulationStatus.FILTERED, RegulationStatus.SUPERSEDED,
+    ]))
     for pat in _JUNK_DOCUMENT_PATTERNS:
         changes_q = changes_q.filter(~RegulationChange.document_name.ilike(f"%{pat}%"))
     changes = changes_q.all()

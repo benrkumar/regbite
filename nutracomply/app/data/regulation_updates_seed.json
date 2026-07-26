@@ -130,19 +130,6 @@
     "document_hash": "d0e1f2a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1"
   },
   {
-    "document_name": "FSSAI Amendment: Schedule I RDA Reference Values Updated — ICMR-NIN 2023 Revision",
-    "source_url": "https://fssai.gov.in/upload/uploadfiles/files/Amendment_Schedule1_RDA_2023.pdf",
-    "change_type": "AMENDMENT",
-    "severity": "HIGH",
-    "status": "REVIEWED",
-    "detected_at": "2023-12-20",
-    "effective_date": "2024-04-01",
-    "affected_rule_codes": ["FSSAI-NUTRA-QTY-001", "FSSAI-NUTRA-QTY-002"],
-    "summary_text": "Amendment to Schedule I of FSS (Health Supplements, Nutraceuticals) Regulations 2022. Updates maximum permitted levels for Vitamin D (raised to 2000 IU/day), Vitamin B6 (lowered to 10mg/day upper limit), and introduces first-time limits for Vitamin K2 (MK-7 form: max 300 mcg/day). Companies have 4 months to reformulate products exceeding new limits.",
-    "diff_text": "Schedule I amendments — selected nutrients:\n\nVitamin D:\n  Previous max: 1000 IU/day serving\n  New max: 2000 IU/day serving\n  Note: Above 4000 IU requires 'consult physician' warning\n\nVitamin B6 (Pyridoxine):\n  Previous max: 25 mg/day\n  New max: 10 mg/day (aligned with EFSA UL)\n  Reason: Peripheral neuropathy reports at chronic high doses\n\nVitamin K2 (MK-7 form) — NEW entry:\n  Max: 300 mcg/day\n  Warning: 'Do not take if on anticoagulant therapy' mandatory\n\nVitamin K2 (MK-4 form) — NEW entry:\n  Max: 1500 mcg/day\n  Same anticoagulant warning required\n\nFolate (as methylfolate 5-MTHF):\n  Previous: Not separately listed\n  New: Same limit as folic acid (500 mcg DFE/day) applies to 5-MTHF",
-    "document_hash": "e1f2a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1f2a7b8c9d0e1f2"
-  },
-  {
     "document_name": "FSSAI Guidance: Digital Labelling and QR Code Requirements for Packaged Health Supplements",
     "source_url": "https://fssai.gov.in/upload/uploadfiles/files/Digital_Labelling_QR_Guidance_2024.pdf",
     "change_type": "FORMAT_CHANGE",
@@ -355,20 +342,6 @@
     "diff_text": "Licensing threshold changes:\n\nREGISTRATION (previously up to ₹12 lakh):\n  New threshold: up to ₹1.5 Crore annual turnover\n  Validity: Perpetual (no renewal)\n\nSTATE LICENSE (previously ₹12 lakh to ₹20 Cr):\n  New threshold: ₹1.5 Cr to ₹50 Crore\n  Validity: Perpetual\n\nCENTRAL LICENSE (previously above ₹20 Cr):\n  New threshold: above ₹50 Crore\n  Validity: Perpetual\n\nSTREET VENDORS:\n  Deemed registration under FSSAI if registered under Street Vendors Act 2014\n  No separate application required\n\nINSPECTION FRAMEWORK:\n  Risk-based: High-risk (annual), Medium (biennial), Low (triennial)\n  Replaces calendar-based inspection schedule\n  Risk categorisation based on: product type, compliance history, consumer complaints",
     "document_hash": "c3c3d3e3f3a3b3c3d3e3f3a3b3c3d3e3f3a3b3c3d3e3f3a3b3c3d3e3f3a3b3c3",
     "regulation_status": "EFFECTIVE"
-  },
-  {
-    "document_name": "FSSAI Draft Notification: Packaging Requirements for Health Supplements — Open for Comments",
-    "source_url": "https://fssai.gov.in/upload/uploadfiles/files/Draft_Packaging_Amendment_2026.pdf",
-    "change_type": "AMENDMENT",
-    "severity": "MEDIUM",
-    "status": "NEW",
-    "detected_at": "2026-02-15",
-    "effective_date": null,
-    "affected_rule_codes": ["FSSAI-NUTRA-FMT-001", "FSSAI-NUTRA-FMT-002"],
-    "summary_text": "Draft amendment proposing: (1) Tamper-evident packaging mandatory for all supplements, (2) Child-resistant closures for iron and vitamin A supplements, (3) Sustainability labelling (recyclability symbols) mandatory, (4) Blister pack individual unit labelling for multi-dose strips. Currently open for public comments until April 2026.",
-    "diff_text": "DRAFT — not yet effective. Proposed requirements:\n\n1. TAMPER-EVIDENT PACKAGING:\n   - All supplement bottles/jars must have induction seal or shrink band\n   - Blister packs must have foil backing (not push-through clear)\n\n2. CHILD-RESISTANT CLOSURES:\n   - Mandatory for: Iron supplements (>18mg/serving), Vitamin A (>5000 IU), Vitamin D (>2000 IU)\n   - CRC must comply with IS 15644 or equivalent\n\n3. SUSTAINABILITY LABELLING:\n   - Recyclability symbol (Mobius loop with resin code) mandatory\n   - Non-recyclable packaging must carry 'Not Recyclable' marking\n\nComment period: Open until 15 April 2026\nExpected effective date: TBD (likely Q3 2026)",
-    "document_hash": "d4d4e4f4a4b4c4d4e4f4a4b4c4d4e4f4a4b4c4d4e4f4a4b4c4d4e4f4a4b4c4d4",
-    "regulation_status": "DRAFT"
   },
   {
     "document_name": "FSSAI Order: Mandatory Testing for Ethylene Oxide Residues in Health Supplements",
