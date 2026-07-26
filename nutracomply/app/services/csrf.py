@@ -5,9 +5,10 @@ How it works:
 1. On every response, set a `_csrf` cookie with a random token (if not already present).
 2. On every state-changing request (POST/PUT/PATCH/DELETE), verify that a matching
    `csrf_token` field (from form data) or `X-CSRF-Token` header equals the cookie value.
-3. Exempt paths: webhooks, health checks, file uploads (multipart + middleware conflicts).
+3. Exempt paths: webhooks, health checks.
 """
 
+import re
 import secrets
 from urllib.parse import parse_qs
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -55,22 +56,25 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             submitted_token = None
             content_type = request.headers.get("content-type", "")
 
-            # For multipart (file uploads), skip body reading — check header only.
-            # BaseHTTPMiddleware + multipart body buffering can conflict on large files.
-            # The JS snippet in base.html/public_base.html reads the _csrf cookie and
-            # adds X-CSRF-Token on all fetch() calls; traditional <form> uploads use
-            # a hidden <input> injected by the inline script, but multipart forms must
-            # set the header explicitly via fetch/XHR.
             if "multipart/form-data" in content_type:
                 submitted_token = request.headers.get(HEADER_NAME)
-                # Without header: reject. Auth alone is insufficient — CSRF is a
-                # separate attack vector (SameSite=lax covers top-level navigations
-                # but not all same-site subresource requests in some browsers).
                 if not submitted_token:
-                    return JSONResponse(
-                        {"detail": "CSRF token required for file uploads. Add X-CSRF-Token header."},
-                        status_code=403,
+                    # Fallback: extract csrf_token from the multipart body without
+                    # calling request.form() (which conflicts with FastAPI's
+                    # Form(...) dependency injection under BaseHTTPMiddleware).
+                    # The hidden csrf_token <input> is appended first by the inline
+                    # script in base.html/public_base.html, so it lives in the
+                    # first few KB. Tolerate optional extra part-headers (e.g. a
+                    # Content-Type line) between the disposition and the value.
+                    body = await request.body()
+                    m = re.search(
+                        rb'name="csrf_token"(?:;[^\r\n]*)?\r\n'
+                        rb'(?:[A-Za-z][A-Za-z0-9-]*:[^\r\n]*\r\n)*'
+                        rb'\r\n([^\r\n]+)',
+                        body[:4096],
                     )
+                    if m:
+                        submitted_token = m.group(1).decode("utf-8", errors="ignore")
             elif "application/x-www-form-urlencoded" in content_type:
                 # Read raw body bytes instead of request.form() to avoid consuming
                 # the body stream — BaseHTTPMiddleware + form() breaks FastAPI's
