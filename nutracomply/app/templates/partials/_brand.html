@@ -1,0 +1,58 @@
+{#
+  Regbite brand lockup — inline SVG mark + HTML wordmark.
+
+  Replaces a 2171x580 / 45KB PNG that was being scaled to 22-36px everywhere,
+  and makes the individual dots animatable.
+
+  Geometry is traced from the source logo: a 6x6 grid with the four corner
+  cells empty = 24 dots. Column pitch 83, row pitch 87. Diameters are in an
+  exact 1:2:3 ratio (21 / 42 / 63). Coordinates below are the original logo
+  pixel positions offset to the mark's bounding box (394 x 415).
+
+  data-d = ring index, used for the staggered entrance: the dense core (0)
+  animates first, the sparse outer ring (2) last — the logo's own radial
+  density falloff expressed as a time gradient.
+
+  Params (all optional):
+    brand_size     px height of the mark            (default 30)
+    brand_word     show the wordmark                (default true)
+    brand_animate  staggered dot entrance           (default false)
+    brand_breathe  slow pulse on the 4 core dots    (default false)
+    brand_invert   white, for dark backgrounds      (default false)
+#}
+{% set _size = brand_size | default(30) %}
+{% set _word = brand_word if brand_word is defined else true %}
+<span class="brand{% if brand_invert %} brand-invert{% endif %}">
+  <svg class="brand-mark{% if brand_animate %} animate{% endif %}{% if brand_breathe %} breathe{% endif %}"
+       viewBox="0 0 394 415" height="{{ _size }}" width="{{ (_size * 394 / 415) | round(1) }}"
+       role="img" aria-label="Regbite" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    {# outer ring — smallest dots, r=10.5 #}
+    <circle cx="155.5" cy="10.5"  r="10.5" data-d="2"/>
+    <circle cx="238.5" cy="10.5"  r="10.5" data-d="2"/>
+    <circle cx="10.5"  cy="164"   r="10.5" data-d="2"/>
+    <circle cx="383.5" cy="164"   r="10.5" data-d="2"/>
+    <circle cx="10.5"  cy="251"   r="10.5" data-d="2"/>
+    <circle cx="383.5" cy="251"   r="10.5" data-d="2"/>
+    <circle cx="155.5" cy="404.5" r="10.5" data-d="2"/>
+    <circle cx="238.5" cy="404.5" r="10.5" data-d="2"/>
+    {# mid ring — r=20.5 #}
+    <circle cx="72.5"  cy="76.5"  r="20.5" data-d="1"/>
+    <circle cx="155.5" cy="76.5"  r="20.5" data-d="1"/>
+    <circle cx="238.5" cy="76.5"  r="20.5" data-d="1"/>
+    <circle cx="321.5" cy="76.5"  r="20.5" data-d="1"/>
+    <circle cx="72.5"  cy="164"   r="20.5" data-d="1"/>
+    <circle cx="321.5" cy="164"   r="20.5" data-d="1"/>
+    <circle cx="72.5"  cy="251"   r="20.5" data-d="1"/>
+    <circle cx="321.5" cy="251"   r="20.5" data-d="1"/>
+    <circle cx="72.5"  cy="338.5" r="20.5" data-d="1"/>
+    <circle cx="155.5" cy="338.5" r="20.5" data-d="1"/>
+    <circle cx="238.5" cy="338.5" r="20.5" data-d="1"/>
+    <circle cx="321.5" cy="338.5" r="20.5" data-d="1"/>
+    {# dense core — r=31.5, the 4 largest dots #}
+    <circle cx="155.5" cy="164" r="31.5" data-d="0" data-core/>
+    <circle cx="238.5" cy="164" r="31.5" data-d="0" data-core/>
+    <circle cx="155.5" cy="251" r="31.5" data-d="0" data-core/>
+    <circle cx="238.5" cy="251" r="31.5" data-d="0" data-core/>
+  </svg>
+  {% if _word %}<span class="brand-word">regbite</span>{% endif %}
+</span>

@@ -1,6 +1,6 @@
 {% extends "public_base.html" %}
-{% block title %}Pricing — FSSAI Compliance Plans for Nutraceuticals{% endblock %}
-{% block description %}RegBite pricing: Starter at ₹7,999/month (15 SKUs), Growth at ₹21,999/month (60 SKUs), and Enterprise custom. Save up to 20% on annual billing. No hidden fees. Cancel anytime.{% endblock %}
+{% block title %}Pricing{% endblock %}
+{% block description %}Regbite pricing: Starter at ₹7,999/month (15 SKUs), Growth at ₹21,999/month (60 SKUs), and Enterprise custom. Save up to 20% on annual billing. No hidden fees. Cancel anytime.{% endblock %}
 
 {% block extra_css %}
   /* ── Billing toggle ── */
@@ -78,24 +78,6 @@
   .check-no  { color: var(--g300); }
 
   /* ── FAQ ── */
-  .faq-item {
-    background: #FFFFFF; border: 1px solid var(--g200); border-radius: 6px;
-    margin-bottom: 0.65rem; overflow: hidden;
-  }
-  .faq-question {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0.9rem 1.1rem; cursor: pointer; font-size: 0.875rem;
-    font-weight: 500; color: var(--ink); user-select: none;
-  }
-  .faq-question:hover { background: var(--g50); }
-  .faq-icon { font-size: 1rem; font-weight: 300; color: var(--g400); transition: transform 0.2s; flex-shrink: 0; }
-  .faq-answer {
-    display: none; padding: 0.75rem 1.1rem 0.9rem; font-size: 0.845rem;
-    color: var(--g500); line-height: 1.7;
-    border-top: 1px solid var(--g100);
-  }
-  .faq-item.open .faq-answer { display: block; }
-  .faq-item.open .faq-icon   { transform: rotate(45deg); }
 
   @media (max-width: 900px) { .pricing-grid { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; } }
   @media (max-width: 640px) { .compare-wrap { overflow-x: auto; } }
@@ -289,83 +271,67 @@
     </div>
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">
         Can I upgrade or downgrade my plan anytime?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-answer">
-        Yes. Upgrade from your billing page and it takes effect immediately. Downgrades apply at the start of the next billing cycle so you keep your current access until it expires.
-      </div>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </button>
+      <div class="faq-a"><div><p>Yes. Upgrade from your billing page and it takes effect immediately. Downgrades apply at the start of the next billing cycle so you keep your current access until it expires.</p></div></div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">
         Is there a free trial for the Growth plan?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-answer">
-        All paid plans come with a 14-day free trial — no credit card required. You can also book a demo and we will walk you through the platform live before you decide.
-      </div>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </button>
+      <div class="faq-a"><div><p>All paid plans come with a 14-day free trial — no credit card required. You can also book a demo and we will walk you through the platform live before you decide.</p></div></div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">
         Do you issue GST-compliant invoices?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-answer">
-        Yes. All invoices include GST with correct HSN codes. Add your GSTIN to your account profile and it will appear on every future invoice for input tax credit (ITC) claims.
-      </div>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </button>
+      <div class="faq-a"><div><p>Yes. All invoices include GST with correct HSN codes. Add your GSTIN to your account profile and it will appear on every future invoice for input tax credit (ITC) claims.</p></div></div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">
         What payment methods are accepted?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-answer">
-        We accept credit/debit cards (Visa, Mastercard, RuPay), UPI, net banking, and wallet payments — all processed securely via Razorpay. Enterprise customers can also pay by bank transfer.
-      </div>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </button>
+      <div class="faq-a"><div><p>We accept credit/debit cards (Visa, Mastercard, RuPay), UPI, net banking, and wallet payments — all processed securely via Razorpay. Enterprise customers can also pay by bank transfer.</p></div></div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">
         What happens to my data if I cancel?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-answer">
-        Your account and all data (products, labels, compliance reports) remain accessible until the end of your current billing period. After that, the account reverts to the Starter free plan — no data is deleted.
-      </div>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </button>
+      <div class="faq-a"><div><p>Your account and all data (products, labels, compliance reports) remain accessible until the end of your current billing period. After that, the account reverts to the Starter free plan — no data is deleted.</p></div></div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">
         What happens after 15 SKUs on the Starter plan?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-answer">
-        You will see a notification when you are approaching your limit. We will not auto-charge you &mdash; we will have a conversation about upgrading. The first upgrade conversation is always Vibhu or Navneet personally.
-      </div>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </button>
+      <div class="faq-a"><div><p>You will see a notification when you are approaching your limit. We will not auto-charge you &mdash; we will have a conversation about upgrading. The first upgrade conversation is always Vibhu or Navneet personally.</p></div></div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">
         Is there a setup fee?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-answer">
-        No setup fee. No onboarding fee. No hidden charges. Starter customers get a self-serve onboarding guide. Growth customers get a guided onboarding call. Enterprise customers get a dedicated setup session where our team loads your full SKU database for you.
-      </div>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </button>
+      <div class="faq-a"><div><p>No setup fee. No onboarding fee. No hidden charges. Starter customers get a self-serve onboarding guide. Growth customers get a guided onboarding call. Enterprise customers get a dedicated setup session where our team loads your full SKU database for you.</p></div></div>
     </div>
 
     <div class="faq-item">
-      <div class="faq-question" onclick="toggleFaq(this)">
+      <button class="faq-q" type="button" aria-expanded="false" onclick="toggleFaq(this)">
         What is the Founding Customer offer?
-        <span class="faq-icon">+</span>
-      </div>
-      <div class="faq-answer">
-        The first 20 customers who sign an annual plan receive Growth features at Starter pricing &mdash; &#8377;5,999/month permanently locked. This offer closes the moment 20 Founding Members are confirmed. <a href="/contact" style="color:var(--ink);font-weight:500;">Ask us if spots are still available &rarr;</a>
-      </div>
+        <span class="faq-icon" aria-hidden="true"></span>
+      </button>
+      <div class="faq-a"><div><p>The first 20 customers who sign an annual plan receive Growth features at Starter pricing &mdash; &#8377;5,999/month permanently locked. This offer closes the moment 20 Founding Members are confirmed. <a href="/contact" style="color:var(--ink);font-weight:500;">Ask us if spots are still available &rarr;</a></p></div></div>
     </div>
   </div>
 </section>
@@ -397,7 +363,6 @@ function toggleBilling() {
   document.querySelectorAll('.annual-note').forEach(function(el) { el.style.display = isAnnual ? '' : 'none'; });
   document.querySelectorAll('.monthly-note').forEach(function(el) { el.style.display = isAnnual ? 'none' : ''; });
 }
-function toggleFaq(el) { el.closest('.faq-item').classList.toggle('open'); }
 </script>
 
 {% endblock %}

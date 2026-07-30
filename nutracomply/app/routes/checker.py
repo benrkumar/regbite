@@ -6,7 +6,7 @@ and run a compliance check without needing to create a product first.
 import uuid
 from datetime import datetime
 from fastapi import APIRouter, Request, Depends, Form, UploadFile, File
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from pathlib import Path
@@ -203,7 +203,35 @@ async def run_check(
         return RedirectResponse(url=f"/labels/{label.id}", status_code=302)
 
 
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".pdf", ".webp"}
+from app.utils.file_validation import ALLOWED_EXTENSIONS, validate_file_magic
+
+# Families that a claimed suffix must agree with, so a .pdf-named JPEG is
+# rejected rather than silently accepted.
+_EXT_FAMILY = {
+    ".jpg": "jpg", ".jpeg": "jpg",
+    ".png": "png",
+    ".pdf": "pdf",
+    ".tif": "tiff", ".tiff": "tiff",
+    ".webp": "webp",
+}
+
+
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+def _wants_json(request: Request) -> bool:
+    """The landing uploader sets this so it can render inline state instead of
+    being navigated away by a redirect."""
+    return request.headers.get("x-rb-async") == "1"
+
+
+def _upload_error(request: Request, message: str, status: int = 400):
+    """JSON for the async uploader, a redirect for a native form POST."""
+    from urllib.parse import quote
+    if _wants_json(request):
+        return JSONResponse({"ok": False, "detail": message}, status_code=status)
+    return RedirectResponse(url=f"/?error={quote(message)}", status_code=302)
 
 
 @router.post("/upload")
@@ -213,17 +241,26 @@ async def upload_check(
     category: str = Form("Health Supplement"),
     db: Session = Depends(get_db),
 ):
-    """Upload a label image/PDF, run Vision extraction + compliance check."""
+    """
+    Upload a label image/PDF for a compliance check.
+
+    Signed in  -> analyse immediately (unchanged behaviour).
+    Anonymous  -> validate, stash the bytes server-side, and send them to sign
+                  up. The stash is claimed on register/login and the analysis
+                  resumes automatically, so the file is never lost.
+    """
     user = get_current_user_from_cookie(request, db)
-    if not user:
-        return RedirectResponse(url="/login", status_code=302)
+
+    if user is None:
+        return await _stash_anonymous_upload(request, file, category, db)
 
     try:
         from app.services.rate_limiter import limiter
-        client_ip = request.client.host if request.client else "unknown"
-        allowed, retry_after = limiter.check("checker_upload", client_ip, limit=15, window=3600)
+        allowed, retry_after = limiter.check(
+            "checker_upload", _client_ip(request), limit=15, window=3600
+        )
         if not allowed:
-            return RedirectResponse(url="/?error=Rate+limit+exceeded", status_code=302)
+            return _upload_error(request, "Rate limit exceeded. Please try again shortly.", 429)
     except Exception:
         pass
 
@@ -238,22 +275,20 @@ async def upload_check(
         pass
 
     # Validate file extension
-    suffix = Path(file.filename).suffix.lower()
+    suffix = Path(file.filename or "").suffix.lower()
     if suffix not in ALLOWED_EXTENSIONS:
-        return RedirectResponse(url="/?error=Unsupported+file+type", status_code=302)
+        return _upload_error(request, "Unsupported file type.")
 
     content = await file.read()
     if len(content) > 50 * 1024 * 1024:
-        return RedirectResponse(url="/?error=File+too+large", status_code=302)
+        return _upload_error(request, "File too large (max 50 MB).", 413)
 
     # Validate file magic bytes (prevents disguised file uploads)
-    from app.utils.file_validation import validate_file_magic
     detected_ext = validate_file_magic(content)
-    if detected_ext is None:
-        from urllib.parse import quote
-        return RedirectResponse(
-            url=f"/checker?msg={quote('File type not recognised. Please upload a valid image or PDF.')}&type=error",
-            status_code=302,
+    if detected_ext is None or _EXT_FAMILY.get(detected_ext) != _EXT_FAMILY.get(suffix):
+        return _upload_error(
+            request,
+            "File type not recognised. Please upload a valid image or PDF.",
         )
 
     # Save file
@@ -307,6 +342,161 @@ async def upload_check(
     except Exception as e:
         print(f"[checker/upload] Report error: {e}")
         return RedirectResponse(url=f"/labels/{label.id}", status_code=302)
+
+
+async def _stash_anonymous_upload(
+    request: Request,
+    file: UploadFile,
+    category: str,
+    db: Session,
+):
+    """
+    Hold an anonymous visitor's label until they have an account.
+
+    This is the app's only unauthenticated byte-storing path, so every control
+    below runs BEFORE anything is persisted, and the rate limiter is allowed to
+    deny (it fails closed; wrapping it in try/except would turn that into
+    fail-open, which is what the authenticated path above unfortunately does).
+    """
+    from app.services import stash_service as stash
+
+    # Opportunistic sweep — cheap and indexed.
+    stash.purge_expired(db, limit=200)
+
+    # 1. Size, before reading the body. Starlette spools UploadFile to disk
+    #    above ~1 MB, so a huge POST would fill the container disk before any
+    #    post-read size check could fire.
+    try:
+        declared = int(request.headers.get("content-length") or 0)
+    except ValueError:
+        declared = 0
+    if declared > stash.STASH_MAX_BYTES + 8192:  # small allowance for the envelope
+        return _upload_error(request, "File too large. The free check accepts up to 10 MB.", 413)
+
+    # 2. Rate limits. No try/except swallow: a limiter error must deny.
+    from app.services.rate_limiter import limiter
+    ip = _client_ip(request)
+    for ns, lim, win, msg in (
+        ("anon_upload_ip", 3, 3600, "You've used the free check a few times. Create an account to keep going."),
+        ("anon_upload_ip_day", 8, 86400, "Daily free-check limit reached. Create an account to keep going."),
+    ):
+        allowed, _retry = limiter.check(ns, ip, limit=lim, window=win)
+        if not allowed:
+            return _upload_error(request, msg, 429)
+    allowed, _retry = limiter.check("anon_upload_global", "all", limit=300, window=3600)
+    if not allowed:
+        return _upload_error(
+            request,
+            "The free check is unusually busy right now. Create an account to run it immediately.",
+            429,
+        )
+
+    # 3. Extension allowlist.
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in ALLOWED_EXTENSIONS:
+        return _upload_error(request, "Unsupported file type. Upload a JPG, PNG, WebP, TIFF or PDF.")
+
+    # 4. Read with a running cap, in case Content-Length lied or was absent.
+    chunks, total = [], 0
+    while True:
+        chunk = await file.read(256 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > stash.STASH_MAX_BYTES:
+            return _upload_error(request, "File too large. The free check accepts up to 10 MB.", 413)
+        chunks.append(chunk)
+    content = b"".join(chunks)
+    if not content:
+        return _upload_error(request, "That file appears to be empty.")
+
+    # 5. Magic bytes, cross-checked against the claimed suffix.
+    detected_ext = validate_file_magic(content)
+    if detected_ext is None or _EXT_FAMILY.get(detected_ext) != _EXT_FAMILY.get(suffix):
+        return _upload_error(request, "File type not recognised. Please upload a valid image or PDF.")
+
+    # 6. Per-IP parked-row cap, so one visitor cannot park several large files.
+    if stash.count_unclaimed_for_ip(db, stash.hash_ip(ip)) >= stash.PER_IP_UNCLAIMED_MAX:
+        return _upload_error(
+            request,
+            "You already have a label waiting. Create your account to analyse it.",
+            429,
+        )
+
+    # 7. Global unclaimed-bytes ceiling.
+    if stash.unclaimed_bytes(db) + len(content) > stash.UNCLAIMED_BYTE_CEIL:
+        return _upload_error(
+            request,
+            "The free check is unusually busy right now. Create an account to run it immediately.",
+            429,
+        )
+
+    safe_name = Path(file.filename or "label").name[:255]
+    raw_token = stash.create_stash(
+        db,
+        kind="file",
+        file_bytes=content,
+        file_name=safe_name,
+        suffix=suffix,
+        file_type="pdf" if suffix == ".pdf" else "image",
+        category=category,
+        ip=ip,
+    )
+
+    secure = request.url.scheme == "https"
+    if _wants_json(request):
+        resp = JSONResponse({
+            "ok": True,
+            "redirect": "/register?stashed=1",
+            "file_name": safe_name,
+        })
+    else:
+        # No JS: a native form POST just follows the redirect.
+        resp = RedirectResponse(url="/register?stashed=1", status_code=302)
+    stash.set_stash_cookie(resp, raw_token, secure=secure)
+    return resp
+
+
+@router.get("/resume/{label_id}")
+async def resume_check(label_id: int, request: Request, db: Session = Depends(get_db)):
+    """
+    Run the analysis on a label that was just claimed from an anonymous stash.
+
+    Deliberately NOT /dashboard: main.py bounces users with
+    onboarding_complete == False back to /onboarding, and we want a brand-new
+    signup to see their report first. Their next /dashboard visit still routes
+    them into the wizard.
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+
+    label = db.query(LabelVersion).filter(LabelVersion.id == label_id).first()
+    if not label:
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+    product = db.query(Product).filter(Product.id == label.product_id).first()
+    if not product or product.user_id != user.id:
+        return RedirectResponse(url="/dashboard", status_code=302)
+
+    try:
+        from app.routes.labels import _process_label
+        _process_label(label.id)
+    except Exception as e:
+        print(f"[checker/resume] Processing error: {e}")
+        return RedirectResponse(url=f"/labels/{label.id}?from=signup", status_code=302)
+
+    try:
+        db.refresh(label)
+        from app.services.report_service import get_or_create_report
+        _ = label.checks
+        for c in label.checks:
+            _ = c.rule
+        report = get_or_create_report(db, user.id, product.id, label.id)
+        return RedirectResponse(url=f"/reports/{report.id}?from=signup", status_code=302)
+    except Exception as e:
+        print(f"[checker/resume] Report error: {e}")
+        return RedirectResponse(url=f"/labels/{label.id}?from=signup", status_code=302)
 
 
 def _run_basic_checks(label: LabelVersion, extraction: dict, db: Session):

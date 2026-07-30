@@ -1,33 +1,53 @@
 {% extends "public_base.html" %}
-{% block title %}Features — AI Label Scanner &amp; FSSAI Compliance Tools{% endblock %}
-{% block description %}RegBite features: AI label scanner, 64-rule FSSAI compliance engine, regulation change alerts, licence renewal tracker, team collaboration, and bulk upload for India's nutraceutical and Ayurvedic brands.{% endblock %}
+{% block title %}Features{% endblock %}
+{% block description %}Regbite features: AI label scanner, 64-rule FSSAI compliance engine, regulation change alerts, licence renewal tracker, team collaboration, and bulk upload for India's nutraceutical and Ayurvedic brands.{% endblock %}
 
 {% block extra_css %}
-  .feat-hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; margin-bottom: 4rem; }
-  .feat-hero-text h2 { font-size: 1.35rem; font-weight: 400; color: var(--ink); letter-spacing: -0.02em; margin-bottom: 0.6rem; }
-  .feat-hero-text h2 strong { font-weight: 600; }
-  .feat-hero-text p { font-size: 0.92rem; color: var(--g500); line-height: 1.75; }
-  .feat-hero-visual { background: var(--g100); border: 1px solid var(--g200); border-radius: 8px; padding: 2.5rem; text-align: center; color: var(--g400); font-size: 3rem; min-height: 220px; display: flex; align-items: center; justify-content: center; }
+  .feat-hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3.5rem; align-items: center; margin-bottom: 4.5rem; }
+  /* Reverse without the old direction:rtl hack, which flipped punctuation and
+     required a direction:ltr counter-override on every child. */
+  .feat-hero-grid.reverse .feat-hero-text { order: 2; }
+  .feat-hero-grid.reverse .feat-hero-visual,
+  .feat-hero-grid.reverse .feat-hero-aside { order: 1; }
+  .feat-hero-text h2 { font-size: clamp(1.4rem, 2.5vw, 1.85rem); font-weight: 500; color: var(--ink); letter-spacing: -0.03em; line-height: 1.25; margin-bottom: .8rem; }
+  .feat-hero-text h2 strong { font-weight: 800; }
+  .feat-hero-text p { font-size: .95rem; color: var(--n500); line-height: 1.8; }
+  .feat-hero-visual {
+    background: var(--canvas); border: 1px solid var(--n100); border-radius: var(--r-lg);
+    padding: 2.5rem; text-align: center; min-height: 240px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .feat-hero-visual svg { width: 68px; height: 68px; color: var(--brand-2); position: relative; z-index: 1; }
+  .feat-hero-visual::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(79,70,229,.10), transparent 65%);
+  }
+
+  .feat-list { list-style: none; display: flex; flex-direction: column; gap: .6rem; margin-top: 1.1rem; }
+  .feat-list li { font-size: .9rem; color: var(--n600); line-height: 1.6; padding-left: 1.5rem; position: relative; }
+  .feat-list li::before { content: '›'; position: absolute; left: 0; color: var(--brand-2); font-weight: 700; }
 
   .feat-detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-  .feat-detail { background: var(--white); border: 1px solid var(--g200); border-radius: 6px; padding: 1.5rem; transition: box-shadow 0.12s; }
-  .feat-detail:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
-  .feat-detail-icon { width: 36px; height: 36px; border-radius: 6px; background: var(--g100); border: 1px solid var(--g200); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: var(--g600); margin-bottom: 0.75rem; }
-  .feat-detail h3 { font-size: 0.92rem; font-weight: 600; color: var(--ink); margin-bottom: 0.35rem; }
-  .feat-detail p { font-size: 0.82rem; color: var(--g500); line-height: 1.65; }
-  .feat-detail ul { list-style: none; margin-top: 0.5rem; }
-  .feat-detail ul li { font-size: 0.78rem; color: var(--g500); padding: 0.2rem 0; display: flex; gap: 0.4rem; }
-  .feat-detail ul li::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--ink); margin-top: 0.5rem; flex-shrink: 0; }
+  .feat-detail h3 { font-size: 1rem; font-weight: 700; color: var(--ink); margin-bottom: .4rem; letter-spacing: -0.015em; }
+  .feat-detail p { font-size: .875rem; color: var(--n500); line-height: 1.7; }
+  .feat-detail ul { list-style: none; margin-top: .7rem; }
+  .feat-detail ul li { font-size: .8rem; color: var(--n500); padding: .2rem 0; display: flex; gap: .5rem; line-height: 1.55; }
+  .feat-detail ul li::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--brand-2); margin-top: .5rem; flex-shrink: 0; }
 
-  .comparison-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-  .comparison-table th { background: var(--g50); padding: 0.75rem 1rem; text-align: left; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g400); border-bottom: 1px solid var(--g200); }
-  .comparison-table td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--g100); color: var(--g600); }
+  .comparison-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+  .comparison-table th { background: var(--canvas); padding: .85rem 1rem; text-align: left; font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--n400); border-bottom: 1px solid var(--n200); }
+  .comparison-table td { padding: .75rem 1rem; border-bottom: 1px solid var(--n100); color: var(--n600); }
   .comparison-table tr:last-child td { border-bottom: none; }
-  .check-mark { color: #262626; font-weight: 700; }
-  .cross-mark { color: var(--g300); }
+  .check-mark { color: var(--ok-fg); font-weight: 700; }
+  .cross-mark { color: var(--n300); }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--n100); border-radius: var(--r-lg); }
 
   @media (max-width: 900px) {
-    .feat-hero-grid { grid-template-columns: 1fr; }
+    .feat-hero-grid { grid-template-columns: 1fr; gap: 2rem; }
+    .feat-hero-grid.reverse .feat-hero-text,
+    .feat-hero-grid.reverse .feat-hero-visual,
+    .feat-hero-grid.reverse .feat-hero-aside { order: 0; }
     .feat-detail-grid { grid-template-columns: 1fr; }
   }
 {% endblock %}
@@ -37,7 +57,7 @@
   <div class="page-hero-inner">
     <div class="sec-tag">Features</div>
     <h1>Everything you need for <strong>FSSAI compliance</strong></h1>
-    <p>From AI label scanning to automated rule checking — RegBite covers the full compliance lifecycle.</p>
+    <p>From AI label scanning to automated rule checking — Regbite covers the full compliance lifecycle.</p>
   </div>
 </section>
 
@@ -51,17 +71,21 @@
         <p>Upload a product label image — JPG, PNG, or PDF — and our Gemini Vision AI reads every detail directly from the label. Product name, ingredients, FSSAI number, claims, allergens, nutritional info — all extracted automatically.</p>
         <p style="margin-top:0.75rem;">Extraction results are cached so re-analysis against updated rules doesn't cost extra API tokens. Confidence scoring ensures accuracy before compliance checks run.</p>
       </div>
-      <div class="feat-hero-visual">◎</div>
+      <div class="feat-hero-visual" data-reveal>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 11h4M10 14h2"/></svg>
+      </div>
     </div>
 
-    <div class="feat-hero-grid" style="direction:rtl;">
-      <div class="feat-hero-text" style="direction:ltr;">
+    <div class="feat-hero-grid reverse">
+      <div class="feat-hero-text">
         <div class="sec-tag">Engine</div>
         <h2><strong>AI-Powered</strong> Compliance Engine</h2>
         <p>Every label is checked across multiple regulatory frameworks. Rules are category-aware — AYUSH rules only apply to Ayurvedic/ASU products, while FSSAI and Legal Metrology rules apply to all products.</p>
         <p style="margin-top:0.75rem;">Severity-weighted scoring means failing a CRITICAL rule impacts your score far more than a LOW-severity issue. Each violation includes a specific remediation step.</p>
       </div>
-      <div class="feat-hero-visual" style="direction:ltr;">≡</div>
+      <div class="feat-hero-visual" data-reveal>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="18.5" cy="18" r="3.2"/><path d="m20.8 20.3 1.7 1.7"/></svg>
+      </div>
     </div>
   </div>
 </section>
@@ -147,7 +171,7 @@
       <h2 class="sec-title"><strong>Multiple frameworks</strong>, comprehensive coverage</h2>
       <p class="sec-sub">Every rule is sourced directly from the actual regulation text and gazette notifications.</p>
     </div>
-    <div style="background:var(--white);border:1px solid var(--g200);border-radius:6px;overflow:hidden;">
+    <div class="table-wrap">
       <table class="comparison-table">
         <thead>
           <tr><th>Framework</th><th>Applies To</th><th>Key Areas</th></tr>
@@ -182,11 +206,11 @@
         <div class="sec-tag">Dashboard</div>
         <h2>Your compliance health.<br><strong>One number. Every morning.</strong></h2>
         <p>The Regbite dashboard gives you a single compliance score &mdash; 0 to 100 &mdash; calculated across your entire SKU portfolio. Green means compliant. Amber means at risk. Red means action required today.</p>
-        <ul style="list-style:none;margin-top:1rem;display:flex;flex-direction:column;gap:0.55rem;">
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> Every SKU shown in a visual grid with real-time status &mdash; updated within 24 hours of any FSSAI change</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> Active alerts counter showing Critical, Important, and Informational alerts separately &mdash; so you know what to act on today vs this week</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> Trend view &mdash; see if your compliance score is improving or declining month on month</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> One-click drill-down from portfolio view to individual SKU status</li>
+        <ul class="feat-list">
+          <li>Every SKU shown in a visual grid with real-time status &mdash; updated within 24 hours of any FSSAI change</li>
+          <li>Active alerts counter showing Critical, Important, and Informational alerts separately &mdash; so you know what to act on today vs this week</li>
+          <li>Trend view &mdash; see if your compliance score is improving or declining month on month</li>
+          <li>One-click drill-down from portfolio view to individual SKU status</li>
         </ul>
       </div>
       <div>
@@ -202,20 +226,20 @@
 <!-- Walkthrough: Intelligence -->
 <section class="sec">
   <div class="sec-inner">
-    <div class="feat-hero-grid" style="direction:rtl;">
-      <div class="feat-hero-text" style="direction:ltr;">
+    <div class="feat-hero-grid reverse">
+      <div class="feat-hero-text">
         <div class="sec-tag">Intelligence</div>
         <h2>FSSAI monitors itself.<br><strong>You do not have to.</strong></h2>
         <p>Regbite scrapes FSSAI&rsquo;s website, FoSCoS notifications, and Ministry of Health circulars within 24 hours of any publication. Our AI reads the regulation, extracts the change, and maps it against your portfolio. You get a WhatsApp message &mdash; not a PDF link.</p>
-        <ul style="list-style:none;margin-top:1rem;display:flex;flex-direction:column;gap:0.55rem;">
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> Daily regulatory alert feed &mdash; plain English, no jargon, no 40-page PDFs</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> SKU-mapped alerts &mdash; every alert shows which of <em>your</em> products are affected</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> WhatsApp delivery &mdash; because email gets ignored but WhatsApp gets read</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> Circular archive &mdash; 90 days of FSSAI history, searchable by ingredient or date</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> Enforcement tracker &mdash; see which categories are being targeted with show-cause notices right now</li>
+        <ul class="feat-list">
+          <li>Daily regulatory alert feed &mdash; plain English, no jargon, no 40-page PDFs</li>
+          <li>SKU-mapped alerts &mdash; every alert shows which of <em>your</em> products are affected</li>
+          <li>WhatsApp delivery &mdash; because email gets ignored but WhatsApp gets read</li>
+          <li>Circular archive &mdash; 90 days of FSSAI history, searchable by ingredient or date</li>
+          <li>Enforcement tracker &mdash; see which categories are being targeted with show-cause notices right now</li>
         </ul>
       </div>
-      <div style="direction:ltr;">
+      <div class="feat-hero-aside">
         <div style="background:var(--g50);border:1px solid var(--g200);border-radius:8px;padding:1.75rem;">
           <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--g400);margin-bottom:0.75rem;">What a Regbite Alert Looks Like</div>
           <div style="font-size:0.78rem;color:var(--ink);line-height:1.7;font-family:monospace;background:var(--white);border:1px solid var(--g200);border-radius:5px;padding:1rem;">
@@ -238,13 +262,13 @@
         <div class="sec-tag">Gap Reports</div>
         <h2>The report your consultant charges<br><strong>&#8377;50,000 to produce. In 3 minutes.</strong></h2>
         <p>A compliance gap report identifies every way your product formulation, label, or documentation falls short of FSSAI requirements &mdash; and tells you exactly what to do about it. Consultants charge &#8377;50,000 to &#8377;1,50,000 for this. Regbite generates it in 3 minutes for your entire portfolio.</p>
-        <ul style="list-style:none;margin-top:1rem;display:flex;flex-direction:column;gap:0.55rem;">
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> One-click generation for a single SKU or all SKUs simultaneously</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> Every gap rated High / Medium / Low by penalty risk severity</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> Corrective action in plain English for every gap &mdash; not just &ldquo;non-compliant with Schedule IV(3)(b)(ii)&rdquo;</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> PDF output formatted for sharing with your product development team directly</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> History view &mdash; compare this month&rsquo;s report to last month&rsquo;s to track remediation progress</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.85rem;color:var(--g600);line-height:1.55;"><span style="color:var(--g400);flex-shrink:0;">&rsaquo;</span> Bulk download &mdash; all SKU reports as a single ZIP file</li>
+        <ul class="feat-list">
+          <li>One-click generation for a single SKU or all SKUs simultaneously</li>
+          <li>Every gap rated High / Medium / Low by penalty risk severity</li>
+          <li>Corrective action in plain English for every gap &mdash; not just &ldquo;non-compliant with Schedule IV(3)(b)(ii)&rdquo;</li>
+          <li>PDF output formatted for sharing with your product development team directly</li>
+          <li>History view &mdash; compare this month&rsquo;s report to last month&rsquo;s to track remediation progress</li>
+          <li>Bulk download &mdash; all SKU reports as a single ZIP file</li>
         </ul>
         <div style="margin-top:1.5rem;">
           <a href="/register" class="btn btn-primary btn-lg" onclick="gtag('event','sign_up_click',{event_category:'Features',event_label:'gap_report_cta'})">Run a Free Gap Report &rarr;</a>

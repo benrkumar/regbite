@@ -247,6 +247,50 @@ class LabelVersion(Base):
     alerts = relationship("Alert", back_populates="label_version")
 
 
+class PendingUpload(Base):
+    """
+    A label uploaded by an anonymous visitor, held until they create an account
+    (or sign in) and it can be attached to a real Product/LabelVersion.
+
+    Bytes live in the DB rather than on disk deliberately: Railway containers
+    are ephemeral and the upload -> signup window can span a redeploy, which
+    would silently lose the file — the exact failure this feature exists to
+    prevent. LabelVersion.file_data exists for the same reason.
+
+    Rows are short-lived (2h) and hard-capped in size, so the usual objection to
+    storing files in Postgres does not apply here.
+
+    Nothing here identifies a person: the claim token is stored only as a
+    SHA-256 hash, and the IP only as a salted hash for abuse accounting.
+    """
+    __tablename__ = "pending_uploads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    # sha256 of the claim token. Storing the raw token would make any DB read —
+    # a log leak, a backup, an admin query — a replayable credential for
+    # someone else's label.
+    token_hash = Column(String(64), unique=True, index=True, nullable=False)
+
+    kind = Column(String(10), nullable=False, default="file")   # "file" | "form"
+    file_name = Column(String(255))
+    file_type = Column(String(50))
+    suffix = Column(String(10))
+    category = Column(String(100))
+    byte_size = Column(Integer, nullable=False, default=0)
+    file_data = Column(LargeBinary, nullable=True)   # nullable so kind="form" works
+    form_json = Column(JSON, nullable=True)
+
+    ip_hash = Column(String(64), index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    claimed_at = Column(DateTime, nullable=True)
+    claimed_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    __table_args__ = (
+        Index("ix_pending_unclaimed", "claimed_at", "expires_at"),
+    )
+
+
 class ComplianceRule(Base):
     __tablename__ = "compliance_rules"
 

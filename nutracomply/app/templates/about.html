@@ -1,30 +1,35 @@
 {% extends "public_base.html" %}
-{% block title %}About RegBite — India's AI-Powered FSSAI Compliance Platform{% endblock %}
-{% block description %}RegBite automates FSSAI label compliance for India's nutraceutical, health supplement, and Ayurvedic brands. Built for manufacturers, importers, consultants, and contract packers.{% endblock %}
+{% block title %}About{% endblock %}
+{% block description %}Regbite automates FSSAI label compliance for India's nutraceutical, health supplement, and Ayurvedic brands. Built for manufacturers, importers, consultants, and contract packers.{% endblock %}
 
 {% block extra_css %}
-  .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
-  .about-text h2 { font-size: 1.35rem; font-weight: 400; color: var(--ink); letter-spacing: -0.02em; margin-bottom: 0.75rem; }
-  .about-text h2 strong { font-weight: 600; }
-  .about-text p { font-size: 0.92rem; color: var(--g500); line-height: 1.75; margin-bottom: 1rem; }
+  .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center; }
+  .about-text h2 { font-size: clamp(1.5rem, 2.6vw, 1.9rem); font-weight: 500; color: var(--ink); letter-spacing: -0.03em; line-height: 1.25; margin-bottom: 1rem; }
+  .about-text h2 strong { font-weight: 800; }
+  .about-text p { font-size: 0.95rem; color: var(--n500); line-height: 1.8; margin-bottom: 1rem; }
   .values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
-  .value-card { background: var(--white); border: 1px solid var(--g200); border-radius: 6px; padding: 1.5rem; }
-  .value-icon { width: 36px; height: 36px; border-radius: 6px; background: var(--g100); border: 1px solid var(--g200); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: var(--g600); margin-bottom: 0.75rem; }
-  .value-card h3 { font-size: 0.92rem; font-weight: 600; color: var(--ink); margin-bottom: 0.3rem; }
-  .value-card p { font-size: 0.82rem; color: var(--g500); line-height: 1.6; }
+  .value-card h3 { font-size: 1rem; font-weight: 700; color: var(--ink); margin-bottom: 0.35rem; letter-spacing: -0.015em; }
+  .value-card p { font-size: 0.875rem; color: var(--n500); line-height: 1.7; }
   .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
-  .about-stat { text-align: center; padding: 1.5rem; background: var(--white); border: 1px solid var(--g200); border-radius: 6px; }
-  .about-stat-val { font-size: 2rem; font-weight: 600; color: var(--ink); line-height: 1; }
-  .about-stat-lbl { font-size: 0.74rem; color: var(--g500); margin-top: 0.3rem; }
+  .about-stat { text-align: center; padding: 1.6rem 1rem; background: var(--surface); border: 1px solid var(--n100); border-radius: var(--r-md); }
+  .about-stat-val { font-size: 2.1rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+  .about-stat-lbl { font-size: 0.74rem; color: var(--n500); margin-top: 0.4rem; }
   .team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
-  .team-card { background: var(--white); border: 1px solid var(--g200); border-radius: 6px; padding: 1.75rem; }
-  .team-name { font-size: 1.1rem; font-weight: 600; color: var(--ink); margin-bottom: 0.15rem; letter-spacing: -0.01em; }
-  .team-title { font-size: 0.72rem; font-weight: 600; color: var(--g400); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.85rem; }
-  .team-bio { font-size: 0.84rem; color: var(--g500); line-height: 1.7; }
-  .commitment-list { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.75rem; }
-  .commitment-item { display: flex; align-items: flex-start; gap: 1rem; padding: 1rem 1.25rem; background: var(--white); border: 1px solid var(--g200); border-radius: 6px; }
-  .commitment-check { width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--white); display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; flex-shrink: 0; margin-top: 0.1rem; }
-  .commitment-item p { font-size: 0.88rem; color: var(--g600); line-height: 1.6; }
+  .team-avatar {
+    width: 46px; height: 46px; border-radius: 50%;
+    background: var(--grad-cta); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em;
+    margin-bottom: 1.1rem;
+  }
+  .team-name { font-size: 1.15rem; font-weight: 700; color: var(--ink); margin-bottom: 0.2rem; letter-spacing: -0.02em; }
+  .team-title { font-size: 0.7rem; font-weight: 700; color: var(--brand-2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.9rem; }
+  .team-bio { font-size: 0.875rem; color: var(--n500); line-height: 1.75; }
+  .commitment-list { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.7rem; }
+  .commitment-item { display: flex; align-items: flex-start; gap: 1rem; padding: 1.15rem 1.35rem; background: var(--surface); border: 1px solid var(--n100); border-radius: var(--r-md); transition: border-color var(--t-base) var(--e-out), box-shadow var(--t-base) var(--e-out); }
+  .commitment-item:hover { border-color: var(--n200); box-shadow: var(--sh); }
+  .commitment-check { width: 26px; height: 26px; border-radius: 50%; background: var(--grad-cta); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; flex-shrink: 0; margin-top: 0.15rem; }
+  .commitment-item p { font-size: 0.9rem; color: var(--n600); line-height: 1.7; }
   @media (max-width: 768px) {
     .about-grid { grid-template-columns: 1fr; gap: 2rem; }
     .values-grid { grid-template-columns: 1fr; }
@@ -39,7 +44,7 @@
   <div class="page-hero-inner">
     <div class="sec-tag">About</div>
     <h1>Making <strong>label compliance</strong> simple for Indian nutraceuticals</h1>
-    <p>RegBite automates FSSAI, Legal Metrology, and AYUSH compliance checks so brands can focus on building great products.</p>
+    <p>Regbite automates FSSAI, Legal Metrology, and AYUSH compliance checks so brands can focus on building great products.</p>
   </div>
 </section>
 
@@ -70,21 +75,27 @@
   <div class="sec-inner">
     <div class="sec-header sec-header-center">
       <div class="sec-tag">Our Values</div>
-      <h2 class="sec-title">What drives <strong>RegBite</strong></h2>
+      <h2 class="sec-title">What drives <strong>Regbite</strong></h2>
     </div>
     <div class="values-grid">
-      <div class="value-card">
-        <div class="value-icon">◎</div>
+      <div class="value-card card card-hover" data-reveal style="--i:0">
+        <span class="icon-tile icon-tile-grad">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+        </span>
         <h3>Accuracy First</h3>
         <p>Every rule in our engine is sourced directly from FSSAI, Legal Metrology, and AYUSH regulations. We verify against the actual gazette notifications.</p>
       </div>
-      <div class="value-card">
-        <div class="value-icon">△</div>
+      <div class="value-card card card-hover" data-reveal style="--i:1">
+        <span class="icon-tile icon-tile-grad">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.5 13H11l-1 9 8.5-11H12l1-9Z"/></svg>
+        </span>
         <h3>Radical Simplicity</h3>
         <p>Compliance is complex enough. Our platform is designed to be minimal, fast, and clear — no clutter, no jargon, just actionable results.</p>
       </div>
-      <div class="value-card">
-        <div class="value-icon">□</div>
+      <div class="value-card card card-hover" data-reveal style="--i:2">
+        <span class="icon-tile icon-tile-grad">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z"/></svg>
+        </span>
         <h3>India-First</h3>
         <p>Built specifically for Indian regulatory frameworks. We understand the nuances of FSSAI categorization, AYUSH exemptions, and Legal Metrology requirements.</p>
       </div>
@@ -100,20 +111,23 @@
       <h2 class="sec-title">The people behind <strong>Regbite</strong></h2>
     </div>
     <div class="team-grid">
-      <div class="team-card">
+      <div class="team-card card card-hover" data-reveal style="--i:0">
+        <div class="team-avatar">V</div>
         <div class="team-name">Vibhu</div>
         <div class="team-title">CEO &amp; Co-Founder</div>
         <p class="team-bio">16+ years in B2B enterprise sales and strategic partnerships. Built and led sales teams at Entigrity and MYCPE ONE. Understands the operational reality of running a nutraceutical business &mdash; the chaos, the consultant bills, the compliance anxiety &mdash; and is building Regbite to eliminate it.</p>
       </div>
-      <div class="team-card">
+      <div class="team-card card card-hover" data-reveal style="--i:1">
+        <div class="team-avatar">N</div>
         <div class="team-name">Navneet</div>
         <div class="team-title">Chief Regulatory Expert &amp; Co-Founder</div>
         <p class="team-bio">India's most comprehensive nutraceutical FSSAI rule database lives in Navneet's head &mdash; and now in Regbite's engine. Three years building the Schedule I&ndash;VI compliance database that powers every gap report and ingredient check on the platform. Every alert Regbite sends has been validated by her.</p>
       </div>
-      <div class="team-card">
+      <div class="team-card card card-hover" data-reveal style="--i:2">
+        <div class="team-avatar">B</div>
         <div class="team-name">Ben</div>
-        <div class="team-title">CPO, CTO &amp; Co-Founder</div>
-        <p class="team-bio">The architect behind Regbite's AI engine, WhatsApp integration, and regulatory scraping system. Full-stack engineer who has built the platform to be genuinely intelligent &mdash; not just a compliance checklist with a modern interface.</p>
+        <div class="team-title">CMO, CPO, CTO &amp; Co-Founder</div>
+        <p class="team-bio">More than 10 years in the IT space as a product marketer and product enthusiast. The architect behind Regbite's AI engine, WhatsApp integration and regulatory scraping system &mdash; and the voice that takes it to market.</p>
       </div>
     </div>
   </div>

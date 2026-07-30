@@ -63,7 +63,7 @@
 <!-- Hero -->
 <section class="blog-hero">
   <div class="blog-hero-inner">
-    <h1>RegBite <strong>Blog</strong></h1>
+    <h1>Regbite <strong>Blog</strong></h1>
     <p>FSSAI compliance insights, regulatory updates, and labelling best practices for India's nutraceutical industry.</p>
 
     <div class="blog-cats">
@@ -96,7 +96,7 @@
           <div class="featured-title"><a href="/blog/{{ post.slug }}">{{ post.title }}</a></div>
           {% if post.excerpt %}<div class="featured-excerpt">{{ post.excerpt }}</div>{% endif %}
           <div class="featured-meta">
-            {{ post.author.name if post.author else 'RegBite' }} &middot;
+            {{ post.author.name if post.author else 'Regbite' }} &middot;
             {{ post.published_at.strftime('%b %d, %Y') if post.published_at else '' }}
           </div>
         </div>
@@ -117,7 +117,7 @@
         <div class="post-title"><a href="/blog/{{ post.slug }}">{{ post.title }}</a></div>
         {% if post.excerpt %}<div class="post-excerpt">{{ post.excerpt }}</div>{% endif %}
         <div class="post-meta">
-          <span>{{ post.author.name if post.author else 'RegBite' }}</span>
+          <span>{{ post.author.name if post.author else 'Regbite' }}</span>
           <span>{{ post.published_at.strftime('%b %d, %Y') if post.published_at else '' }}</span>
           <span>{{ post.views or 0 }} views</span>
         </div>

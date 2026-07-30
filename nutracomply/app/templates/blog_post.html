@@ -1,6 +1,6 @@
 {% extends "public_base.html" %}
 {% block title %}{{ post.meta_title or post.title }}{% endblock %}
-{% block description %}{{ post.meta_description or post.excerpt or 'Read this article on RegBite Blog.' }}{% endblock %}
+{% block description %}{{ post.meta_description or post.excerpt or 'Read this article on Regbite Blog.' }}{% endblock %}
 
 {% block extra_css %}
   .article-hero { padding: 56px 2rem 0; background: var(--g50); border-bottom: 1px solid var(--g200); }
@@ -74,7 +74,7 @@
     {% endif %}
     <h1>{{ post.title }}</h1>
     <div class="article-meta">
-      <span class="article-meta-author">{{ post.author.name if post.author else 'RegBite' }}</span>
+      <span class="article-meta-author">{{ post.author.name if post.author else 'Regbite' }}</span>
       <span>{{ post.published_at.strftime('%B %d, %Y') if post.published_at else '' }}</span>
       <span>{{ post.views or 0 }} views</span>
     </div>

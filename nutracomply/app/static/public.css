@@ -1,0 +1,575 @@
+/* ===========================================================================
+   Regbite — public marketing stylesheet
+   ---------------------------------------------------------------------------
+   Single source of truth for the marketing site (landing, about, features,
+   pricing, auth, legal, blog). The logged-in app uses styles.css instead —
+   do not merge the two.
+
+   Design derives from the logo: a 6x6 grid with the corners removed = 24 dots,
+   diameters in a 1:2:3 ratio, density falling off radially from a dense core.
+   That falloff becomes the motion language (stagger delay by ring index).
+   =========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* ── Ink: the logo's single colour ───────────────────────────────────── */
+  --ink: #121212;
+  --ink-2: #1F1F1F;
+  --canvas: #FAFAFA;
+  --surface: #FFFFFF;
+
+  /* ── Neutrals ────────────────────────────────────────────────────────── */
+  --n50: #F4F4F5;
+  --n100: #ECECEE;
+  --n200: #DEDEE1;
+  --n300: #C2C2C7;
+  --n400: #9A9AA1;
+  --n500: #6F6F77;
+  --n600: #4E4E55;
+  --n700: #333338;
+
+  /* ── Brand ───────────────────────────────────────────────────────────── */
+  --brand-1: #2B4874;
+  --brand-2: #4F46E5;
+  --grad-cta: linear-gradient(135deg, #2B4874 0%, #4F46E5 100%);
+  --glow: 0 0 32px rgba(79, 70, 229, .45);
+  --focus: 0 0 0 3px rgba(79, 70, 229, .40);
+
+  /* ── Status ──────────────────────────────────────────────────────────── */
+  --ok-bg: #ECFDF5; --ok-fg: #047857; --ok-bd: #A7F3D0;
+  --bad-bg: #FEF2F2; --bad-fg: #B91C1C; --bad-bd: #FECACA;
+  --warn-bg: #FFFBEB; --warn-fg: #92400E;
+
+  /* ── Type ────────────────────────────────────────────────────────────── */
+  --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* ── Motion ──────────────────────────────────────────────────────────── */
+  --e-out: cubic-bezier(.22, .61, .36, 1);
+  --e-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --t-fast: 160ms;
+  --t-base: 260ms;
+  --t-slow: 420ms;
+
+  /* ── Geometry — radii echo the logo's circles ────────────────────────── */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-pill: 999px;
+
+  /* ── Elevation ───────────────────────────────────────────────────────── */
+  --sh-sm: 0 1px 2px rgba(18,18,18,.05);
+  --sh: 0 2px 10px rgba(18,18,18,.06);
+  --sh-lg: 0 10px 40px rgba(18,18,18,.08);
+  --sh-xl: 0 24px 64px rgba(18,18,18,.10);
+
+  --nav-h: 64px;
+  --maxw: 1120px;
+
+  /* ── Legacy aliases ───────────────────────────────────────────────────
+     The older marketing pages (help, blog, legal, changelog) still declare
+     CSS against the previous token names. Mapping them here keeps those
+     pages coherent on the new palette without rewriting each one. Prefer
+     the names above for anything new. */
+  --white: var(--surface);
+  --bg: var(--canvas);
+  --g50: var(--n50);
+  --g100: var(--n100);
+  --g200: var(--n200);
+  --g300: var(--n300);
+  --g400: var(--n400);
+  --g500: var(--n500);
+  --g600: var(--n600);
+  --g700: var(--n700);
+  --g900: var(--ink);
+  --primary: var(--brand-1);
+  --primary-dark: #0B2A4A;
+  --primary-light: #EEF0FB;
+}
+
+html { font-size: 16px; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--surface);
+  line-height: 1.65;
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: inherit; text-decoration: none; }
+img, svg { max-width: 100%; display: block; }
+button { font-family: inherit; }
+
+::selection { background: rgba(79,70,229,.18); }
+
+:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+
+/* ===========================================================================
+   MOTION PRIMITIVES
+   =========================================================================== */
+
+@keyframes dotIn   { from { opacity: 0; transform: scale(.35); } to { opacity: 1; transform: scale(1); } }
+@keyframes breathe { 0%,100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+@keyframes gradShift { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+@keyframes glowPulse { 0%,100% { opacity: .34; } 50% { opacity: .64; } }
+@keyframes revealUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+
+/* Scroll reveal.
+   The hidden state is scoped to .js so a JS-disabled visitor sees everything
+   (`.js` is set by the first inline script in <head>).
+
+   Deliberately a transition, not an animation: the revealed state is a plain
+   declaration, so content is visible the instant .in lands even if the
+   transition never runs. A keyframe animation would leave the element stuck at
+   its `from` opacity whenever the animation clock is not advancing — a
+   backgrounded tab, a throttled renderer — which means invisible content. */
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(14px);
+}
+.js [data-reveal].in {
+  opacity: 1;
+  transform: none;
+  transition: opacity var(--t-slow) var(--e-out), transform var(--t-slow) var(--e-out);
+  transition-delay: calc(var(--i, 0) * 60ms);
+}
+
+/* ===========================================================================
+   BUTTONS
+   =========================================================================== */
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  padding: .58rem 1.15rem;
+  border-radius: var(--r-sm);
+  font-size: .875rem; font-weight: 600; letter-spacing: -0.01em;
+  cursor: pointer; border: 1px solid transparent;
+  transition: background var(--t-fast) var(--e-out),
+              color var(--t-fast) var(--e-out),
+              border-color var(--t-fast) var(--e-out),
+              transform var(--t-fast) var(--e-out),
+              box-shadow var(--t-fast) var(--e-out);
+  white-space: nowrap; line-height: 1.4; text-decoration: none;
+}
+.btn:active { transform: translateY(1px); }
+
+.btn-ghost { background: transparent; color: var(--n600); border-color: var(--n200); }
+.btn-ghost:hover { background: var(--n50); color: var(--ink); border-color: var(--n300); }
+
+.btn-ink { background: var(--ink); color: #fff; border-color: var(--ink); }
+.btn-ink:hover { background: #000; }
+
+.btn-white { background: #fff; color: var(--ink); border-color: #fff; }
+.btn-white:hover { background: var(--n100); }
+
+.btn-ghost-w { background: transparent; color: rgba(255,255,255,.82); border-color: rgba(255,255,255,.28); }
+.btn-ghost-w:hover { background: rgba(255,255,255,.10); color: #fff; border-color: rgba(255,255,255,.5); }
+
+.btn-lg { padding: .72rem 1.6rem; font-size: .94rem; border-radius: var(--r-md); }
+.btn-xl { padding: .85rem 2rem; font-size: 1rem; border-radius: var(--r-md); }
+.btn-block { width: 100%; }
+
+/* ── The animated gradient CTA ────────────────────────────────────────────
+   The glow lives on a wrapper pseudo-element rather than on the button so a
+   transform on :hover can never re-root the stacking context and clip it.
+   isolation:isolate makes z-index:-1 deterministic.
+   NOTE: no ancestor of .cta-glow may set overflow:hidden.               */
+.cta-glow {
+  position: relative;
+  display: inline-block;
+  isolation: isolate;
+  border-radius: var(--r-md);
+}
+.cta-glow::before {
+  content: '';
+  position: absolute; inset: -8px;
+  border-radius: inherit;
+  background: var(--grad-cta);
+  filter: blur(18px);
+  opacity: .4;
+  z-index: -1;
+  animation: glowPulse 3.4s var(--e-out) infinite;
+  pointer-events: none;
+}
+.cta-glow:hover::before { opacity: .72; }
+
+.btn-cta {
+  position: relative; z-index: 1;
+  color: #fff; border: 0;
+  border-radius: var(--r-md);
+  background: var(--grad-cta);
+  background-size: 220% 220%;
+  animation: gradShift 7s var(--e-out) infinite alternate;
+  box-shadow: 0 1px 2px rgba(18,18,18,.18);
+  font-weight: 700;
+}
+.btn-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(79,70,229,.32); }
+.btn-cta:focus-visible { box-shadow: var(--focus); }
+
+/* In the nav the button sits right on the header edge, so a full-strength
+   glow smudges past the border. Tighten it there. */
+.nav .cta-glow::before { inset: -4px; filter: blur(10px); opacity: .26; }
+.nav .cta-glow:hover::before { opacity: .5; }
+
+/* ===========================================================================
+   BRAND MARK (inline SVG — see partials/_brand.html)
+   =========================================================================== */
+
+.brand { display: inline-flex; align-items: center; gap: .5rem; }
+.brand-mark { flex: none; display: block; }
+.brand-mark circle { fill: currentColor; }
+.brand-word {
+  font-weight: 800; letter-spacing: -0.035em; line-height: 1;
+  color: var(--ink);
+}
+.brand-invert .brand-word { color: #fff; }
+.brand-invert .brand-mark { color: #fff; }
+
+/* Staggered dot entrance — delay proportional to ring index, mirroring the
+   logo's own radial density falloff as a time gradient. */
+.js .brand-mark.animate circle {
+  animation: dotIn 520ms var(--e-spring) both;
+  animation-delay: calc(var(--d, 0) * 70ms);
+}
+/* Only the 4 core dots breathe, and only where it's a focal point. */
+.brand-mark.breathe circle[data-core] {
+  animation: breathe 8s var(--e-out) infinite;
+}
+
+/* ===========================================================================
+   NAV
+   =========================================================================== */
+
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: var(--nav-h);
+  background: rgba(255,255,255,.82);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--t-base) var(--e-out), background var(--t-base) var(--e-out);
+}
+.nav.scrolled { border-bottom-color: var(--n100); background: rgba(255,255,255,.92); }
+
+.nav-inner {
+  max-width: var(--maxw); margin: 0 auto; height: 100%;
+  padding: 0 2rem;
+  display: flex; align-items: center;
+}
+.nav-brand { margin-right: auto; }
+.nav-brand .brand-word { font-size: 1.15rem; }
+
+.nav-links { display: flex; align-items: center; gap: 1.75rem; }
+.nav-links a {
+  font-size: .875rem; font-weight: 500; color: var(--n500);
+  position: relative; padding: .2rem 0;
+  transition: color var(--t-fast) var(--e-out);
+}
+.nav-links a::after {
+  content: ''; position: absolute; left: 0; right: 100%; bottom: -2px; height: 1.5px;
+  background: var(--grad-cta); border-radius: 2px;
+  transition: right var(--t-base) var(--e-out);
+}
+.nav-links a:hover { color: var(--ink); }
+.nav-links a:hover::after { right: 0; }
+.nav-links a.active { color: var(--ink); font-weight: 600; }
+.nav-links a.active::after { right: 0; }
+
+.nav-ctas { display: flex; align-items: center; gap: .55rem; margin-left: 1.75rem; }
+.nav-mobile-only { display: none; }
+
+.nav-hamburger {
+  display: none; background: none; border: 1px solid var(--n200);
+  border-radius: var(--r-sm); cursor: pointer; padding: .35rem .5rem;
+  color: var(--n600); line-height: 1;
+}
+.nav-hamburger svg { width: 18px; height: 18px; }
+
+@media (max-width: 900px) {
+  .nav-inner { padding: 0 1.25rem; }
+  .nav-links {
+    display: none;
+    position: fixed; top: var(--nav-h); left: 0; right: 0;
+    flex-direction: column; align-items: stretch; gap: 0;
+    background: #fff; border-bottom: 1px solid var(--n100);
+    padding: .5rem 1.25rem 1rem; z-index: 99; box-shadow: var(--sh-lg);
+  }
+  .nav-links.open { display: flex; }
+  .nav-links a { padding: .7rem 0; border-bottom: 1px solid var(--n50); font-size: .95rem; }
+  .nav-links a::after { display: none; }
+  .nav-hamburger { display: inline-flex; order: 3; margin-left: .6rem; }
+  /* CTAs stay visible on mobile — they used to be display:none, which hid
+     Sign In / Get Started entirely on phones. */
+  .nav-ctas { margin-left: auto; gap: .4rem; }
+  .nav-ctas .btn { padding: .45rem .8rem; font-size: .8rem; }
+  .nav-cta-hide-sm { display: none; }
+  .nav-mobile-only { display: block; }
+}
+
+/* ===========================================================================
+   LAYOUT / SECTIONS
+   =========================================================================== */
+
+.page-content { padding-top: var(--nav-h); }
+
+.sec { padding: 6rem 2rem; }
+.sec-sm { padding: 4rem 2rem; }
+.sec-inner { max-width: var(--maxw); margin: 0 auto; }
+.sec-alt { background: var(--canvas); }
+.sec-ink { background: var(--ink); color: #fff; }
+
+.sec-tag {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .28rem .7rem;
+  background: var(--surface); color: var(--n600);
+  border: 1px solid var(--n200); border-radius: var(--r-pill);
+  font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  margin-bottom: 1.1rem;
+}
+.sec-tag::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--grad-cta);
+}
+
+.sec-title {
+  font-size: clamp(1.75rem, 3.4vw, 2.5rem);
+  font-weight: 500; letter-spacing: -0.035em; line-height: 1.15;
+  margin-bottom: .75rem;
+}
+.sec-title strong { font-weight: 800; }
+.sec-sub { font-size: 1rem; color: var(--n500); max-width: 560px; line-height: 1.7; }
+.sec-header { margin-bottom: 3.5rem; }
+.sec-header-center { text-align: center; }
+.sec-header-center .sec-sub { margin-left: auto; margin-right: auto; }
+.sec-header-center .sec-tag { margin-left: auto; margin-right: auto; }
+
+/* gradient text accent */
+.grad-text {
+  background: var(--grad-cta);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+
+/* ── Page hero (interior pages) ───────────────────────────────────────── */
+.page-hero {
+  padding: 4.5rem 2rem 3.5rem;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--n100);
+  position: relative; overflow: hidden;
+}
+.page-hero-inner { max-width: 800px; margin: 0 auto; text-align: center; position: relative; z-index: 1; }
+.page-hero h1 {
+  font-size: clamp(2rem, 4.5vw, 3rem);
+  font-weight: 500; letter-spacing: -0.04em; line-height: 1.1; margin-bottom: .9rem;
+}
+.page-hero h1 strong { font-weight: 800; }
+.page-hero p { font-size: 1.02rem; color: var(--n500); max-width: 560px; margin: 0 auto; }
+
+/* dot-grid backdrop, derived from the logo */
+.dot-field {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(circle, var(--n200) 1.2px, transparent 1.2px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 0%, transparent 75%);
+  opacity: .8;
+}
+
+/* ===========================================================================
+   CARDS
+   =========================================================================== */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--n100);
+  border-radius: var(--r-lg);
+  padding: 1.75rem;
+  transition: border-color var(--t-base) var(--e-out),
+              box-shadow var(--t-base) var(--e-out),
+              transform var(--t-base) var(--e-out);
+}
+.card-hover:hover { border-color: var(--n200); box-shadow: var(--sh-lg); transform: translateY(-3px); }
+
+.icon-tile {
+  width: 42px; height: 42px; border-radius: var(--r-md);
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--n50); border: 1px solid var(--n100);
+  color: var(--ink); margin-bottom: 1.1rem;
+}
+.icon-tile svg { width: 20px; height: 20px; }
+.icon-tile-grad { background: var(--grad-cta); border-color: transparent; color: #fff; }
+
+/* ===========================================================================
+   CTA BAND
+   =========================================================================== */
+
+.cta {
+  background: var(--ink); color: #fff;
+  padding: 6rem 2rem; text-align: center;
+  position: relative; overflow: hidden;
+}
+.cta::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 55% 70% at 50% 100%, rgba(79,70,229,.30), transparent 70%);
+  pointer-events: none;
+}
+.cta-inner { position: relative; z-index: 1; max-width: 640px; margin: 0 auto; }
+.cta h2 {
+  font-size: clamp(1.85rem, 3.6vw, 2.6rem);
+  font-weight: 500; letter-spacing: -0.035em; line-height: 1.15; margin-bottom: .8rem;
+}
+.cta h2 strong { font-weight: 800; }
+.cta p { color: rgba(255,255,255,.62); font-size: 1rem; margin: 0 auto 2.2rem; }
+.cta-btns { display: flex; gap: .7rem; justify-content: center; flex-wrap: wrap; }
+
+/* ===========================================================================
+   FOOTER
+   =========================================================================== */
+
+.footer { background: var(--surface); border-top: 1px solid var(--n100); }
+.footer-inner {
+  max-width: var(--maxw); margin: 0 auto;
+  padding: 4rem 2rem 2.5rem;
+  display: grid; grid-template-columns: 2.2fr 1fr 1fr 1fr; gap: 2.5rem;
+}
+.footer-brand .brand { margin-bottom: .9rem; }
+.footer-brand .brand-word { font-size: 1.05rem; }
+.footer-brand p { font-size: .84rem; color: var(--n400); max-width: 280px; line-height: 1.7; }
+.footer-col h4 {
+  font-size: .7rem; font-weight: 700; color: var(--n400);
+  text-transform: uppercase; letter-spacing: .1em; margin-bottom: .85rem;
+}
+.footer-col a {
+  display: block; font-size: .875rem; color: var(--n500);
+  padding: .28rem 0; transition: color var(--t-fast) var(--e-out);
+}
+.footer-col a:hover { color: var(--ink); }
+.footer-bottom {
+  max-width: var(--maxw); margin: 0 auto;
+  padding: 1.25rem 2rem 2rem; border-top: 1px solid var(--n100);
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem;
+}
+.footer-bottom p { font-size: .76rem; color: var(--n400); }
+
+@media (max-width: 900px) { .footer-inner { grid-template-columns: 1fr 1fr; gap: 2rem; } }
+@media (max-width: 560px) { .footer-inner { grid-template-columns: 1fr; } .footer-bottom { flex-direction: column; } }
+
+/* ===========================================================================
+   FAQ — one accessible component (replaces 3 divergent implementations)
+   =========================================================================== */
+
+.faq-list { max-width: 760px; margin: 0 auto; }
+.faq-item { border-bottom: 1px solid var(--n100); }
+.faq-q {
+  width: 100%; background: none; border: 0; cursor: pointer;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 1.25rem;
+  padding: 1.35rem 0; text-align: left;
+  font-family: inherit; font-size: 1rem; font-weight: 600; color: var(--ink);
+  letter-spacing: -0.015em; line-height: 1.5;
+}
+.faq-q:hover { color: var(--brand-2); }
+.faq-icon {
+  flex: none; width: 20px; height: 20px; position: relative; margin-top: .2rem;
+  transition: transform var(--t-base) var(--e-out);
+}
+.faq-icon::before, .faq-icon::after {
+  content: ''; position: absolute; background: var(--n400); border-radius: 2px;
+  transition: background var(--t-fast) var(--e-out);
+}
+.faq-icon::before { top: 9px; left: 2px; right: 2px; height: 2px; }
+.faq-icon::after  { left: 9px; top: 2px; bottom: 2px; width: 2px; }
+.faq-q[aria-expanded="true"] .faq-icon { transform: rotate(135deg); }
+.faq-q[aria-expanded="true"] .faq-icon::before,
+.faq-q[aria-expanded="true"] .faq-icon::after { background: var(--brand-2); }
+
+.faq-a {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows var(--t-base) var(--e-out);
+}
+.faq-a > div { overflow: hidden; }
+.faq-item.open .faq-a { grid-template-rows: 1fr; }
+.faq-a p { font-size: .95rem; color: var(--n500); line-height: 1.75; padding-bottom: 1.35rem; }
+
+/* ===========================================================================
+   FORMS
+   =========================================================================== */
+
+.field { margin-bottom: 1.1rem; }
+.field-label {
+  display: block; font-size: .8rem; font-weight: 600; color: var(--n600);
+  margin-bottom: .4rem; letter-spacing: -0.01em;
+}
+.input, .select, .textarea {
+  width: 100%; font-family: inherit; font-size: .92rem; color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--n200); border-radius: var(--r-sm);
+  padding: .65rem .85rem; line-height: 1.5;
+  transition: border-color var(--t-fast) var(--e-out), box-shadow var(--t-fast) var(--e-out);
+}
+.input::placeholder, .textarea::placeholder { color: var(--n400); }
+.input:focus, .select:focus, .textarea:focus {
+  outline: none; border-color: var(--brand-2); box-shadow: var(--focus);
+}
+.select {
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239A9AA1' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right .7rem center; background-size: 16px;
+  padding-right: 2.2rem; cursor: pointer;
+}
+.textarea { resize: vertical; min-height: 90px; }
+
+.alert {
+  border-radius: var(--r-sm); padding: .7rem .9rem; font-size: .85rem;
+  margin-bottom: 1rem; border: 1px solid transparent; line-height: 1.55;
+}
+.alert-bad { background: var(--bad-bg); color: var(--bad-fg); border-color: var(--bad-bd); }
+.alert-ok  { background: var(--ok-bg);  color: var(--ok-fg);  border-color: var(--ok-bd); }
+
+/* ===========================================================================
+   UTILITIES
+   =========================================================================== */
+
+.spinner-sm {
+  width: 15px; height: 15px; border: 2px solid rgba(255,255,255,.35);
+  border-top-color: #fff; border-radius: 50%;
+  animation: spin .65s linear infinite; flex: none;
+}
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 999;
+  background: var(--ink); color: #fff; padding: .7rem 1.1rem;
+  border-radius: 0 0 var(--r-sm) 0; font-size: .875rem; font-weight: 600;
+}
+.skip-link:focus { left: 0; }
+
+/* ===========================================================================
+   REDUCED MOTION — must also neutralise scroll-behavior:smooth
+   =========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+  html { scroll-behavior: auto !important; }
+  .js [data-reveal] { opacity: 1 !important; transform: none !important; }
+  .cta-glow::before { opacity: .45 !important; }
+}
+
+@media (max-width: 640px) {
+  .sec { padding: 4rem 1.25rem; }
+  .sec-sm { padding: 3rem 1.25rem; }
+  .page-hero { padding: 3rem 1.25rem 2.5rem; }
+  .cta { padding: 4rem 1.25rem; }
+  .footer-inner { padding: 3rem 1.25rem 2rem; }
+  .footer-bottom { padding: 1.25rem 1.25rem 2rem; }
+}

@@ -1,59 +1,85 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex, nofollow" />
-  <title>Create Account — RegBite</title>
-  <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
-  <link rel="manifest" href="/static/manifest.json" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="/static/styles.css" />
-</head>
-<body>
-<div class="auth-wrap">
+{% extends "public_base.html" %}
+
+{% block page_title %}Create your account — Regbite{% endblock %}
+{% block title %}Create account{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex, nofollow" />{% endblock %}
+
+{% block extra_css %}
+  .auth-shell { min-height: calc(100vh - var(--nav-h)); display: flex; align-items: center; justify-content: center; padding: 3rem 1.25rem 4rem; background: var(--canvas); position: relative; overflow: hidden; }
+  .auth-card { width: 100%; max-width: 440px; position: relative; z-index: 1; }
+  .auth-panel { background: var(--surface); border: 1px solid var(--n100); border-radius: var(--r-lg); padding: 2.25rem 2rem; box-shadow: var(--sh-lg); }
+  .auth-head { text-align: center; margin-bottom: 1.6rem; }
+  .auth-head h1 { font-size: 1.45rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: .3rem; }
+  .auth-head p { font-size: .9rem; color: var(--n500); }
+  .auth-terms { display: flex; align-items: flex-start; gap: .6rem; font-size: .8rem; color: var(--n500); cursor: pointer; line-height: 1.6; }
+  .auth-terms input { margin-top: .25rem; width: 16px; height: 16px; flex: none; accent-color: var(--brand-2); cursor: pointer; }
+  .auth-terms a { font-weight: 600; color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+  .auth-alt { text-align: center; margin-top: 1.3rem; font-size: .88rem; color: var(--n500); }
+  .auth-alt a { font-weight: 700; color: var(--brand-2); }
+  /* Held-file reassurance — only rendered when a stash is actually claimable */
+  .held-note {
+    display: flex; align-items: flex-start; gap: .7rem;
+    padding: .85rem 1rem; margin-bottom: 1.3rem;
+    background: var(--ok-bg); border: 1px solid var(--ok-bd); border-radius: var(--r-md);
+  }
+  .held-note svg { width: 18px; height: 18px; color: var(--ok-fg); flex: none; margin-top: .1rem; }
+  .held-note-body { font-size: .84rem; color: var(--ok-fg); line-height: 1.55; }
+  .held-note-body strong { display: block; font-weight: 700; }
+  .held-note-file { font-weight: 600; word-break: break-all; }
+{% endblock %}
+
+{% block content %}
+<div class="auth-shell">
+  <div class="dot-field" aria-hidden="true"></div>
   <div class="auth-card">
-    <div class="card no-hover" style="padding:2.2rem 2rem;">
-      <div style="text-align:center;margin-bottom:1.8rem;">
-        <img src="/static/img/logo.png" alt="RegBite" style="height:30px;width:auto;" />
-        <p style="margin-top:0.3rem;font-size:0.88rem;">Create your compliance account</p>
+    <div class="auth-panel">
+      <div class="auth-head">
+        <h1>Create your account</h1>
+        <p>14-day free trial &middot; No credit card required</p>
       </div>
-      {% if error %}
-      <div class="error-banner">{{ error }}</div>
+
+      {% if stashed_file %}
+      <div class="held-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        <div class="held-note-body">
+          <strong>Your label is safe with us</strong>
+          <span class="held-note-file">{{ stashed_file.name }}</span> ({{ stashed_file.size_kb }} KB) is held and ready — we'll analyse it the moment your account is created.
+        </div>
+      </div>
       {% endif %}
+
+      {% if error %}<div class="alert alert-bad">{{ error }}</div>{% endif %}
+
       <form method="post" action="/register">
         <div class="field">
-          <label class="field-label" for="name">Full Name</label>
-          <input class="input" type="text" id="name" name="name" placeholder="Regulatory Affairs Manager" required autofocus />
+          <label class="field-label" for="name">Full name</label>
+          <input class="input" type="text" id="name" name="name" placeholder="Regulatory Affairs Manager" required autofocus autocomplete="name" />
         </div>
         <div class="field">
-          <label class="field-label" for="email">Work Email</label>
-          <input class="input" type="email" id="email" name="email" placeholder="you@company.com" required />
+          <label class="field-label" for="email">Work email</label>
+          <input class="input" type="email" id="email" name="email" placeholder="you@company.com" required autocomplete="email" />
         </div>
         <div class="field">
           <label class="field-label" for="password">Password</label>
-          <input class="input" type="password" id="password" name="password" placeholder="Min 8 characters" required minlength="8" />
+          <input class="input" type="password" id="password" name="password" placeholder="Min 8 characters" required minlength="8" autocomplete="new-password" />
         </div>
-        <div class="field" style="margin-top:0.75rem;">
-          <label style="display:flex;align-items:flex-start;gap:0.5rem;font-size:0.8rem;color:#525252;cursor:pointer;line-height:1.5;">
-            <input type="checkbox" name="agree_terms" id="agree_terms" required
-                   style="margin-top:0.25rem;width:16px;height:16px;flex-shrink:0;accent-color:#111;cursor:pointer;" />
-            <span>I agree to the <a href="/terms" target="_blank" style="font-weight:600;color:#111;">Terms of Service</a>
-            and <a href="/privacy" target="_blank" style="font-weight:600;color:#111;">Privacy Policy</a>.
-            I understand that RegBite processes label data using AI and is not a substitute for professional legal advice.</span>
+        <div class="field" style="margin-top:1rem;">
+          <label class="auth-terms">
+            <input type="checkbox" name="agree_terms" id="agree_terms" required />
+            <span>I agree to the <a href="/terms" target="_blank" rel="noopener">Terms of Service</a>
+            and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
+            I understand that Regbite processes label data using AI and is not a substitute for professional legal advice.</span>
           </label>
         </div>
-        <button type="submit" class="btn btn-primary btn-xl btn-full" style="margin-top:0.5rem;">Create Account</button>
+        <span class="cta-glow" style="display:block;margin-top:1.2rem;">
+          <button type="submit" class="btn btn-cta btn-lg btn-block">Create account &rarr;</button>
+        </span>
       </form>
-      <p style="text-align:center;margin-top:1.2rem;font-size:0.87rem;">
-        Already have an account? <a href="/login" style="font-weight:600;">Sign in</a>
-      </p>
+
+      <p class="auth-alt">Already have an account? <a href="/login">Sign in</a></p>
     </div>
   </div>
 </div>
-<script>!function(){var c=document.cookie.match('(^|;)\\s*_csrf=([^;]+)');if(!c)return;var t=decodeURIComponent(c[2]);document.querySelectorAll('form[method="post"],form[method="POST"]').forEach(function(f){if(f.querySelector('input[name="csrf_token"]'))return;var i=document.createElement('input');i.type='hidden';i.name='csrf_token';i.value=t;f.appendChild(i)})}()</script>
-</body>
-</html>
+{% endblock %}
+
+{% block cta %}{% endblock %}

@@ -1,5 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#0B2A4A"/>
-  <text x="16" y="23" font-family="Arial, sans-serif" font-size="21" font-weight="700"
-        text-anchor="middle" fill="#ffffff">R</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="37 47 320 320" role="img" aria-label="Regbite">
+  <title>Regbite</title>
+  <style>
+    circle { fill: #121212; }
+    @media (prefers-color-scheme: dark) { circle { fill: #FAFAFA; } }
+  </style>
+  <!-- 16-dot simplification of the logo's 24-dot grid: the outer ring is
+       dropped so the mark stays legible at tab size. The full 24-dot grid is
+       used at 48px and above. Geometry matches partials/_brand.html. -->
+  <circle cx="72.5"  cy="76.5"  r="20.5"/>
+  <circle cx="155.5" cy="76.5"  r="20.5"/>
+  <circle cx="238.5" cy="76.5"  r="20.5"/>
+  <circle cx="321.5" cy="76.5"  r="20.5"/>
+  <circle cx="72.5"  cy="164"   r="20.5"/>
+  <circle cx="321.5" cy="164"   r="20.5"/>
+  <circle cx="72.5"  cy="251"   r="20.5"/>
+  <circle cx="321.5" cy="251"   r="20.5"/>
+  <circle cx="72.5"  cy="338.5" r="20.5"/>
+  <circle cx="155.5" cy="338.5" r="20.5"/>
+  <circle cx="238.5" cy="338.5" r="20.5"/>
+  <circle cx="321.5" cy="338.5" r="20.5"/>
+  <circle cx="155.5" cy="164" r="31.5"/>
+  <circle cx="238.5" cy="164" r="31.5"/>
+  <circle cx="155.5" cy="251" r="31.5"/>
+  <circle cx="238.5" cy="251" r="31.5"/>
 </svg>

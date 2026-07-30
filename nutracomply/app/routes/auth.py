@@ -382,9 +382,49 @@ def _seed_demo_products(user: User, db: Session):
     db.commit()
 
 
+def _stashed_file(request: Request, db: Session):
+    """
+    Describe a label the visitor uploaded before signing up, so the auth pages
+    can reassure them it is still held. Returns None when there is nothing
+    claimable — never echo a stale filename.
+    """
+    try:
+        from app.services.stash_service import read_stash, STASH_COOKIE
+        row = read_stash(db, request.cookies.get(STASH_COOKIE))
+        if not row:
+            return None
+        return {
+            "name": row.file_name,
+            "size_kb": max(1, (row.byte_size or 0) // 1024),
+        }
+    except Exception:
+        return None
+
+
+def _claim_target(request: Request, db: Session, user, fallback: str) -> tuple[str, bool]:
+    """
+    Claim any pending anonymous upload for `user`.
+
+    Returns (redirect_target, claimed). Never raises — a stash failure must not
+    break a sign-in or a signup.
+    """
+    try:
+        from app.services.stash_service import claim_stash, STASH_COOKIE
+        label = claim_stash(db, request.cookies.get(STASH_COOKIE), user)
+        if label:
+            return f"/checker/resume/{label.id}", True
+    except Exception as e:
+        print(f"[auth] stash claim failed: {e}")
+    return fallback, False
+
+
 @router.get("/login")
-async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+async def login_page(request: Request, db: Session = Depends(get_db)):
+    return templates.TemplateResponse("login.html", {
+        "request": request,
+        "error": None,
+        "stashed_file": _stashed_file(request, db),
+    })
 
 
 @router.post("/login")
@@ -421,8 +461,14 @@ async def login(
         })
 
     token = create_access_token({"sub": user.email})
-    response = RedirectResponse(url="/dashboard", status_code=302)
+    # Someone who uploaded anonymously and already has an account arrives here,
+    # not at /register — this is roughly half the traffic on that path.
+    target, claimed = _claim_target(request, db, user, "/dashboard")
+    response = RedirectResponse(url=target, status_code=302)
     response.set_cookie("access_token", token, httponly=True, max_age=settings.access_token_expire_minutes * 60)
+    if claimed:
+        from app.services.stash_service import clear_stash_cookie
+        clear_stash_cookie(response)
     try:
         from app.services.activity_service import log_action
         log_action(user.id, "login", detail=f"User {user.email} logged in", ip_address=request.client.host if request.client else None)
@@ -445,8 +491,12 @@ async def logout(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/register")
-async def register_page(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request, "error": None})
+async def register_page(request: Request, db: Session = Depends(get_db)):
+    return templates.TemplateResponse("register.html", {
+        "request": request,
+        "error": None,
+        "stashed_file": _stashed_file(request, db),
+    })
 
 
 @router.post("/register")
@@ -531,6 +581,12 @@ async def register(
         pass
 
     token = create_access_token({"sub": user.email})
-    response = RedirectResponse(url="/onboarding", status_code=302)
+    # Claim any anonymous upload now that the account exists. Wrapped so a stash
+    # problem can never fail a signup that already committed.
+    target, claimed = _claim_target(request, db, user, "/onboarding")
+    response = RedirectResponse(url=target, status_code=302)
     response.set_cookie("access_token", token, httponly=True, max_age=settings.access_token_expire_minutes * 60)
+    if claimed:
+        from app.services.stash_service import clear_stash_cookie
+        clear_stash_cookie(response)
     return response

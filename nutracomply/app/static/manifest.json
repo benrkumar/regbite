@@ -1,22 +1,35 @@
 {
-  "name": "RegBite",
-  "short_name": "RegBite",
+  "name": "Regbite",
+  "short_name": "Regbite",
   "description": "AI-powered FSSAI compliance platform for India's nutraceutical industry.",
   "start_url": "/",
   "display": "browser",
-  "theme_color": "#111111",
-  "background_color": "#ffffff",
+  "theme_color": "#121212",
+  "background_color": "#FAFAFA",
   "icons": [
     {
       "src": "/static/img/favicon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/static/favicon-32x32.png",
-      "sizes": "32x32",
-      "type": "image/png"
+      "src": "/static/img/favicon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/img/favicon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/img/favicon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

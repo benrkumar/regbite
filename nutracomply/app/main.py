@@ -841,6 +841,13 @@ def _csrf_input(request: Request) -> str:
 
 templates.env.globals["csrf_input"] = _csrf_input
 
+# Cache-busting stamp for static assets. There is no build step, so this is a
+# manual constant — bump it whenever public.css or an icon changes.
+templates.env.globals["asset_v"] = "20260731"
+# Canonical origin for <link rel=canonical> / og:url. Building these from
+# request.url.netloc leaks the internal hostname when behind the Railway proxy.
+templates.env.globals["site_origin"] = settings.app_base_url.rstrip("/")
+
 # Register routers
 # NOTE: import settings route as settings_router to avoid shadowing the
 # module-level `settings = get_settings()` config object.
@@ -1240,6 +1247,7 @@ async def sitemap_xml():
         (base + "/pricing",    "monthly", "0.9"),
         (base + "/features",   "monthly", "0.8"),
         (base + "/about",      "monthly", "0.6"),
+        (base + "/blog",       "weekly",  "0.7"),
         (base + "/contact",    "monthly", "0.5"),
         (base + "/help",       "monthly", "0.6"),
         (base + "/terms",      "yearly",  "0.3"),
@@ -1258,6 +1266,34 @@ async def sitemap_xml():
         + items + "\n</urlset>"
     )
     return _Resp(xml, media_type="application/xml")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon_ico():
+    """
+    Root favicon. Browsers, Slack/WhatsApp unfurlers and Google's SERP crawler
+    all request /favicon.ico directly rather than reading the <link> tag; without
+    this route they got the HTML 404 page. Serving from the root is also what
+    makes a favicon change actually appear, since this URL was never cached.
+    """
+    from fastapi.responses import FileResponse as _File
+    return _File(
+        static_dir / "favicon.ico",
+        media_type="image/x-icon",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
+
+
+@app.get("/apple-touch-icon.png", include_in_schema=False)
+@app.get("/apple-touch-icon-precomposed.png", include_in_schema=False)
+async def apple_touch_icon():
+    """iOS probes both of these at the document root before reading <link>."""
+    from fastapi.responses import FileResponse as _File
+    return _File(
+        static_dir / "apple-touch-icon.png",
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 @app.get("/robots.txt", include_in_schema=False)
