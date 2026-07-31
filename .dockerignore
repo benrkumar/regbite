@@ -1,0 +1,24 @@
+# Never bake local secrets or dev databases into the image
+nutracomply/.env
+nutracomply/*.db
+nutracomply/__pycache__
+nutracomply/**/__pycache__
+nutracomply/**/*.pyc
+nutracomply/.pytest_cache
+nutracomply/uploads
+nutracomply/alembic/versions/__pycache__
+nutracomply/.venv
+nutracomply/.venv-*
+
+# Dependency and build output — never useful inside an image, and node_modules
+# is the bulk of the upload. Deliberately NOT excluding apps/, packages/ or the
+# workspace manifests: the JS services build from this same repo and excluding
+# their source could break them.
+node_modules
+**/node_modules
+.next
+**/.next
+.turbo
+**/.turbo
+
+.git

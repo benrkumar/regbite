@@ -2,11 +2,14 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# System deps: Tesseract (OCR fallback) + poppler (PDF utils)
-# Note: libglib/libsm/opencv removed — PaddleOCR no longer used
+# System deps: Tesseract (OCR fallback) + poppler (PDF utils) + libgomp1
+# Note: libglib/libsm/opencv removed — PaddleOCR no longer used. libgomp1 stays:
+# scikit-learn needs the OpenMP runtime, and pattern_library.py imports it inside
+# a try/except, so losing it would silently disable that feature rather than fail
+# loudly.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr tesseract-ocr-eng tesseract-ocr-hin \
-    poppler-utils \
+    poppler-utils libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
