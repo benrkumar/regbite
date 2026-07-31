@@ -43,7 +43,25 @@
   .cross-mark { color: var(--n300); }
   .table-wrap { overflow-x: auto; border: 1px solid var(--n100); border-radius: var(--r-lg); }
 
+  /* Flagship AI agent banner */
+  .agent-banner { display: grid; grid-template-columns: 1.15fr .85fr; gap: 3rem; align-items: center; }
+  .agent-banner h2 { font-size: clamp(1.5rem, 2.8vw, 2.05rem); font-weight: 500; letter-spacing: -0.035em; line-height: 1.18; margin-bottom: .8rem; }
+  .agent-banner h2 strong { font-weight: 800; }
+  .agent-banner > .agent-banner-text > p { font-size: .97rem; color: var(--n500); line-height: 1.8; }
+  .agent-banner-visual {
+    background: var(--surface); border: 1px solid var(--n100); border-radius: var(--r-lg);
+    min-height: 260px; display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .agent-banner-visual svg { width: 76px; height: 76px; color: var(--brand-2); position: relative; z-index: 1; }
+  .agent-banner-visual::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(79,70,229,.12), transparent 66%);
+  }
+
   @media (max-width: 900px) {
+    .agent-banner { grid-template-columns: 1fr; gap: 2rem; }
+    .agent-banner-visual { min-height: 180px; }
     .feat-hero-grid { grid-template-columns: 1fr; gap: 2rem; }
     .feat-hero-grid.reverse .feat-hero-text,
     .feat-hero-grid.reverse .feat-hero-visual,
@@ -58,6 +76,32 @@
     <div class="sec-tag">Features</div>
     <h1>Everything you need for <strong>FSSAI compliance</strong></h1>
     <p>From AI label scanning to automated rule checking — Regbite covers the full compliance lifecycle.</p>
+  </div>
+</section>
+
+<!-- Flagship: AI Compliance Agent (dedicated page at /features/ai-agent) -->
+<section class="sec sec-alt">
+  <div class="sec-inner">
+    <div class="agent-banner">
+      <div class="agent-banner-text">
+        <div class="sec-tag">Flagship &middot; AI Agent</div>
+        <h2>Ask a question. <strong>Get a cited answer.</strong></h2>
+        <p>The AI agent answers across three knowledge bases at once — FSSAI regulations, your own product portfolio, and your compliance documents. Every answer cites the specific rule code it came from.</p>
+        <ul class="feat-list">
+          <li><strong>Regulations</strong> &mdash; 64 rules across FSSAI, Legal Metrology and AYUSH, indexed to the clause</li>
+          <li><strong>Your products</strong> &mdash; ask &ldquo;which of my SKUs are affected?&rdquo; and get named SKUs back</li>
+          <li><strong>Your documents</strong> &mdash; your SOPs, supplier CoAs and test reports, indexed alongside the law</li>
+        </ul>
+        <div style="margin-top:1.6rem;">
+          <span class="cta-glow">
+            <a href="/features/ai-agent" class="btn btn-cta btn-lg">Explore the AI agent &rarr;</a>
+          </span>
+        </div>
+      </div>
+      <div class="agent-banner-visual" data-reveal>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a4 4 0 0 1 4 4v1a4 4 0 0 1 0 8v1a4 4 0 0 1-8 0v-1a4 4 0 0 1 0-8V7a4 4 0 0 1 4-4Z"/><path d="M12 3v18M8 8h8M8 16h8"/></svg>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -111,12 +155,12 @@
       </div>
       <div class="feat-detail">
         <div class="feat-detail-icon">◇</div>
-        <h3>AI Compliance Chat</h3>
-        <p>Ask questions about FSSAI regulations and get AI-powered answers grounded in our regulations knowledge base.</p>
+        <h3>AI Compliance Agent</h3>
+        <p>Ask questions in plain English and get answers grounded in the regulations, your own products, and your uploaded documents. <a href="/features/ai-agent" style="font-weight:700;color:var(--brand-2);">See how it works &rarr;</a></p>
         <ul>
-          <li>Two AI brains — regulations + products</li>
-          <li>RAG-based retrieval for accuracy</li>
-          <li>Citation of specific rule codes</li>
+          <li>Three knowledge bases — regulations, products, your documents</li>
+          <li>Retrieval-grounded, so it can't invent a clause</li>
+          <li>Every answer cites a specific rule code</li>
         </ul>
       </div>
       <div class="feat-detail">

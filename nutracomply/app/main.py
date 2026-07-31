@@ -1180,6 +1180,15 @@ async def features_page(request: Request):
     return templates.TemplateResponse("features.html", {"request": request, "user": _get_optional_user(request), "active_page": "features"})
 
 
+@app.get("/features/ai-agent")
+async def ai_agent_page(request: Request):
+    return templates.TemplateResponse("feature_ai_agent.html", {
+        "request": request,
+        "user": _get_optional_user(request),
+        "active_page": "features",
+    })
+
+
 @app.get("/free-audit")
 async def free_audit_redirect():
     return RedirectResponse(url="/register", status_code=302)
@@ -1246,6 +1255,7 @@ async def sitemap_xml():
         (base + "/",           "weekly",  "1.0"),
         (base + "/pricing",    "monthly", "0.9"),
         (base + "/features",   "monthly", "0.8"),
+        (base + "/features/ai-agent", "monthly", "0.8"),
         (base + "/about",      "monthly", "0.6"),
         (base + "/blog",       "weekly",  "0.7"),
         (base + "/contact",    "monthly", "0.5"),

@@ -1,0 +1,272 @@
+{% extends "public_base.html" %}
+
+{% block page_title %}AI Compliance Agent — Ask your regulations, products and documents | Regbite{% endblock %}
+{% block title %}AI Compliance Agent{% endblock %}
+{% block description %}Regbite's AI agent answers questions across three knowledge bases — FSSAI regulations, your own product portfolio, and your uploaded documents — with every answer cited to a specific rule code.{% endblock %}
+
+{% block extra_css %}
+  /* ── Hero ── */
+  .ag-hero { padding: 4.5rem 2rem 4rem; position: relative; overflow: hidden; }
+  .ag-hero::before {
+    content: ''; position: absolute; top: -25%; left: 50%; transform: translateX(-50%);
+    width: 900px; height: 620px; pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(79,70,229,.12), transparent 66%);
+  }
+  .ag-hero-inner { max-width: var(--maxw); margin: 0 auto; position: relative; z-index: 1; display: grid; grid-template-columns: 1.02fr .98fr; gap: 3.5rem; align-items: center; }
+  .ag-hero h1 { font-size: clamp(2.1rem, 4.6vw, 3.2rem); font-weight: 500; letter-spacing: -0.045em; line-height: 1.08; margin-bottom: 1.1rem; }
+  .ag-hero h1 strong { font-weight: 800; }
+  .ag-hero p.lede { font-size: 1.05rem; color: var(--n500); line-height: 1.75; margin-bottom: 1.8rem; }
+  .ag-hero-ctas { display: flex; gap: .7rem; flex-wrap: wrap; }
+
+  /* ── Chat mock ── */
+  .chat-mock { background: var(--surface); border: 1px solid var(--n100); border-radius: var(--r-lg); box-shadow: var(--sh-xl); overflow: hidden; }
+  .chat-head { display: flex; align-items: center; gap: .6rem; padding: .85rem 1.1rem; border-bottom: 1px solid var(--n100); background: var(--canvas); }
+  .chat-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--grad-cta); flex: none; }
+  .chat-head-title { font-size: .82rem; font-weight: 700; letter-spacing: -0.01em; }
+  .chat-head-kb { margin-left: auto; font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--n400); }
+  .chat-body { padding: 1.1rem; display: flex; flex-direction: column; gap: .85rem; }
+  .msg { max-width: 92%; font-size: .84rem; line-height: 1.65; }
+  .msg-user { align-self: flex-end; background: var(--grad-cta); color: #fff; padding: .6rem .85rem; border-radius: 12px 12px 3px 12px; font-weight: 500; }
+  .msg-bot { align-self: flex-start; background: var(--n50); border: 1px solid var(--n100); color: var(--n700); padding: .7rem .9rem; border-radius: 12px 12px 12px 3px; }
+  .msg-bot code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .78rem; background: rgba(79,70,229,.10); color: var(--brand-2); padding: .08rem .32rem; border-radius: 4px; font-weight: 600; }
+  .cite { margin-top: .55rem; padding-top: .5rem; border-top: 1px dashed var(--n200); font-size: .72rem; color: var(--n400); }
+
+  /* ── Three brains ── */
+  .brains { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+  .brain { position: relative; }
+  .brain-n { font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--brand-2); margin-bottom: .7rem; }
+  .brain h3 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: .45rem; }
+  .brain p { font-size: .875rem; color: var(--n500); line-height: 1.7; }
+  .brain ul { list-style: none; margin-top: .8rem; display: flex; flex-direction: column; gap: .4rem; }
+  .brain li { font-size: .8rem; color: var(--n600); line-height: 1.55; padding-left: 1.2rem; position: relative; }
+  .brain li::before { content: '›'; position: absolute; left: 0; color: var(--brand-2); font-weight: 700; }
+
+  /* ── How it works ── */
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.1rem; counter-reset: s; }
+  .step { position: relative; padding-top: 2.6rem; }
+  .step::before {
+    counter-increment: s; content: counter(s);
+    position: absolute; top: 0; left: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--grad-cta); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .82rem; font-weight: 800;
+  }
+  .step h3 { font-size: .95rem; font-weight: 700; letter-spacing: -0.015em; margin-bottom: .35rem; }
+  .step p { font-size: .84rem; color: var(--n500); line-height: 1.65; }
+
+  /* ── Example questions ── */
+  .qs { display: grid; grid-template-columns: repeat(2, 1fr); gap: .7rem; max-width: 880px; margin: 0 auto; }
+  .q {
+    display: flex; align-items: flex-start; gap: .7rem;
+    padding: .95rem 1.15rem; background: var(--surface);
+    border: 1px solid var(--n100); border-radius: var(--r-md);
+    font-size: .875rem; color: var(--n600); line-height: 1.6;
+    transition: border-color var(--t-base) var(--e-out), box-shadow var(--t-base) var(--e-out);
+  }
+  .q:hover { border-color: var(--n200); box-shadow: var(--sh); }
+  .q::before { content: '?'; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--n50); border: 1px solid var(--n200); color: var(--brand-2); font-weight: 800; font-size: .7rem; display: flex; align-items: center; justify-content: center; margin-top: .1rem; }
+
+  /* ── Trust strip ── */
+  .trust-pts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+  .trust-pt h3 { font-size: .95rem; font-weight: 700; margin-bottom: .35rem; letter-spacing: -0.015em; }
+  .trust-pt p { font-size: .85rem; color: var(--n500); line-height: 1.7; }
+
+  @media (max-width: 980px) {
+    .ag-hero-inner { grid-template-columns: 1fr; gap: 2.5rem; }
+    .brains, .trust-pts { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr 1fr; }
+    .qs { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .ag-hero { padding: 3rem 1.25rem 2.5rem; }
+    .steps { grid-template-columns: 1fr; }
+    .ag-hero-ctas .btn, .ag-hero-ctas .cta-glow { width: 100%; }
+  }
+{% endblock %}
+
+{% block content %}
+
+<!-- ═══ Hero ═══ -->
+<section class="ag-hero">
+  <div class="ag-hero-inner">
+    <div>
+      <div class="sec-tag">AI Agent</div>
+      <h1>Ask a question. <strong>Get a cited answer.</strong></h1>
+      <p class="lede">
+        Regbite's AI agent answers compliance questions across three knowledge bases at once — FSSAI regulations, your own product portfolio, and your compliance documents. Every answer cites the specific rule code it came from, so you can verify it rather than trust it.
+      </p>
+      <div class="ag-hero-ctas">
+        <span class="cta-glow">
+          <a href="/register" class="btn btn-cta btn-xl"
+             onclick="gtag('event','sign_up_click',{event_category:'CTA',event_label:'ai_agent_hero'})">Try it free for 14 days &rarr;</a>
+        </span>
+        <a href="/features" class="btn btn-ghost btn-xl">All features</a>
+      </div>
+    </div>
+
+    <div class="chat-mock" data-reveal>
+      <div class="chat-head">
+        <span class="chat-dot"></span>
+        <span class="chat-head-title">Compliance Agent</span>
+        <span class="chat-head-kb">Regulations + Products</span>
+      </div>
+      <div class="chat-body">
+        <div class="msg msg-user">Can I say “boosts immunity” on my Vitamin C gummies?</div>
+        <div class="msg msg-bot">
+          No — “boosts immunity” is a prohibited disease-prevention claim for a health supplement. A permitted alternative is <em>“contributes to the normal function of the immune system”</em>, which requires substantiation on file.
+          <div class="cite">Cited: <code>FSSAI-NUTRA-CLM-001</code> · Schedule III, Clause 3.9 · Health Claims Regulations</div>
+        </div>
+        <div class="msg msg-user">Which of my SKUs are affected by the Vitamin B6 limit change?</div>
+        <div class="msg msg-bot">
+          3 of your 14 SKUs exceed the revised 10 mg/day upper limit: <strong>AshwaMax 900</strong>, <strong>DailyMulti Men</strong> and <strong>NeuroB Complex</strong>. All three need reformulation before the effective date.
+          <div class="cite">Cited: <code>FSSAI-NUTRA-ING-009</code> · matched against your product knowledge base</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Three knowledge bases ═══ -->
+<section class="sec sec-alt">
+  <div class="sec-inner">
+    <div class="sec-header sec-header-center">
+      <div class="sec-tag">How it thinks</div>
+      <h2 class="sec-title">Three knowledge bases, <strong>one answer</strong></h2>
+      <p class="sec-sub">Most compliance chatbots only know the law. Regbite's agent also knows <em>your</em> products and <em>your</em> documents — which is what turns a generic answer into an actionable one.</p>
+    </div>
+
+    <div class="brains">
+      <div class="brain card card-hover" data-reveal style="--i:0">
+        <span class="icon-tile icon-tile-grad">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2Z"/><path d="M9 8h7M9 12h7"/></svg>
+        </span>
+        <div class="brain-n">Knowledge base 01</div>
+        <h3>Regulations</h3>
+        <p>FSSAI, Legal Metrology, AYUSH and ICMR-NIN — indexed down to the clause and searchable in plain English.</p>
+        <ul>
+          <li>64 compliance rules across 3 frameworks</li>
+          <li>Gazette notifications and circulars</li>
+          <li>Schedule I&ndash;VI ingredient limits</li>
+        </ul>
+      </div>
+
+      <div class="brain card card-hover" data-reveal style="--i:1">
+        <span class="icon-tile icon-tile-grad">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg>
+        </span>
+        <div class="brain-n">Knowledge base 02</div>
+        <h3>Your products</h3>
+        <p>Every SKU you've added — ingredients, claims, licence numbers, extracted label data. The agent answers about <em>your</em> portfolio, not a hypothetical one.</p>
+        <ul>
+          <li>Ask “which of my SKUs are affected?”</li>
+          <li>Ingredient and claim cross-checks</li>
+          <li>Kept in sync as you add products</li>
+        </ul>
+      </div>
+
+      <div class="brain card card-hover" data-reveal style="--i:2">
+        <span class="icon-tile icon-tile-grad">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6M9 17h4"/></svg>
+        </span>
+        <div class="brain-n">Knowledge base 03 &middot; Rolling out</div>
+        <h3>Your documents</h3>
+        <p>Your own compliance library &mdash; SOPs, supplier certificates, test reports and internal policies &mdash; indexed alongside the law so the agent can answer from your paperwork too.</p>
+        <ul>
+          <li>PDFs chunked and indexed for retrieval</li>
+          <li>Supplier CoAs and lab reports</li>
+          <li>Talk to us about onboarding your library</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ How it works ═══ -->
+<section class="sec">
+  <div class="sec-inner">
+    <div class="sec-header sec-header-center">
+      <div class="sec-tag">Under the hood</div>
+      <h2 class="sec-title">Retrieval first, <strong>then the answer</strong></h2>
+      <p class="sec-sub">The agent never answers from memory alone. It retrieves the relevant source passages first, then writes an answer constrained to what it found — which is what keeps it from inventing a regulation.</p>
+    </div>
+    <div class="steps">
+      <div class="step" data-reveal style="--i:0">
+        <h3>Query expansion</h3>
+        <p>Your plain-English question is expanded with the regulatory vocabulary that actually appears in the source text.</p>
+      </div>
+      <div class="step" data-reveal style="--i:1">
+        <h3>Retrieval</h3>
+        <p>The most relevant passages are pulled from all three knowledge bases and ranked before anything is generated.</p>
+      </div>
+      <div class="step" data-reveal style="--i:2">
+        <h3>Grounded answer</h3>
+        <p>The model answers only from the retrieved passages, so it cannot quietly invent a clause that does not exist.</p>
+      </div>
+      <div class="step" data-reveal style="--i:3">
+        <h3>Citation</h3>
+        <p>Every answer names the rule code and source, so you can open the original and check it yourself.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Example questions ═══ -->
+<section class="sec sec-alt">
+  <div class="sec-inner">
+    <div class="sec-header sec-header-center">
+      <div class="sec-tag">In practice</div>
+      <h2 class="sec-title">What founders actually <strong>ask it</strong></h2>
+    </div>
+    <div class="qs">
+      <div class="q" data-reveal style="--i:0">Can I use “clinically proven” on a probiotic label?</div>
+      <div class="q" data-reveal style="--i:1">What is the current upper limit for Vitamin D in a daily supplement?</div>
+      <div class="q" data-reveal style="--i:2">Which of my SKUs contain an ingredient that was restricted this year?</div>
+      <div class="q" data-reveal style="--i:3">What font size does the FSSAI licence number have to be?</div>
+      <div class="q" data-reveal style="--i:0">Does my Ashwagandha product need an AYUSH licence or an FSSAI one?</div>
+      <div class="q" data-reveal style="--i:1">Summarise what changed in the last Schedule IV amendment.</div>
+      <div class="q" data-reveal style="--i:2">What are the heavy metal limits for an Ayurvedic supplement?</div>
+      <div class="q" data-reveal style="--i:3">Is “supports gut health” permitted without a substantiation dossier?</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Trust ═══ -->
+<section class="sec">
+  <div class="sec-inner">
+    <div class="sec-header sec-header-center">
+      <div class="sec-tag">Why you can rely on it</div>
+      <h2 class="sec-title">An answer you can <strong>take to an auditor</strong></h2>
+    </div>
+    <div class="trust-pts">
+      <div class="trust-pt card" data-reveal style="--i:0">
+        <h3>Every answer is cited</h3>
+        <p>Rule code, regulation source and clause. If the agent cannot find a source, it says so rather than guessing.</p>
+      </div>
+      <div class="trust-pt card" data-reveal style="--i:1">
+        <h3>Grounded, not generated</h3>
+        <p>Answers are constrained to the passages actually retrieved from the knowledge bases. If the sources don't cover your question, the agent tells you instead of filling the gap with a plausible-sounding clause.</p>
+      </div>
+      <div class="trust-pt card" data-reveal style="--i:2">
+        <h3>It is an assistant, not a lawyer</h3>
+        <p>The agent accelerates the work and shows its sources. For a formal filing, Enterprise customers also get a monthly call with our regulatory expert.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block cta %}
+<section class="cta">
+  <div class="cta-inner">
+    <h2>Ask it your <strong>hardest compliance question.</strong></h2>
+    <p>Start a free 14-day trial and put the agent to work on your own products and documents. No credit card required.</p>
+    <div class="cta-btns">
+      <a href="/register" class="btn btn-white btn-xl"
+         onclick="gtag('event','sign_up_click',{event_category:'CTA',event_label:'ai_agent_bottom'})">Start free trial &rarr;</a>
+      <a href="/pricing" class="btn btn-ghost-w btn-xl">See pricing</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

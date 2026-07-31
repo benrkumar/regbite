@@ -134,6 +134,29 @@
   .feat-card h3 { font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: .45rem; }
   .feat-card p { font-size: .875rem; color: var(--n500); line-height: 1.75; }
 
+  /* Flagship spans the full row so the remaining six sit in two clean rows. */
+  .feat-card-flagship {
+    grid-column: 1 / -1;
+    display: flex; align-items: flex-start; gap: 1.5rem;
+    border-color: rgba(79,70,229,.28);
+    background:
+      linear-gradient(var(--surface), var(--surface)) padding-box,
+      radial-gradient(ellipse at 0% 0%, rgba(79,70,229,.10), transparent 60%) border-box;
+  }
+  .feat-card-flagship .icon-tile { margin-bottom: 0; flex: none; }
+  .feat-card-flagship h3 { font-size: 1.15rem; display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+  .feat-card-flagship p { max-width: 72ch; }
+  .feat-badge {
+    font-size: .6rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+    color: #fff; background: var(--grad-cta);
+    padding: .18rem .5rem; border-radius: var(--r-pill);
+  }
+  .feat-link { display: inline-block; margin-top: .85rem; font-size: .84rem; font-weight: 700; color: var(--brand-2); }
+  .feat-card-flagship:hover .feat-link { text-decoration: underline; text-underline-offset: 3px; }
+  @media (max-width: 640px) {
+    .feat-card-flagship { flex-direction: column; gap: 1rem; }
+  }
+
   /* ── Testimonials ── */
   .testimonial-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
   .testimonial-quote { font-size: .92rem; color: var(--n600); line-height: 1.8; margin-bottom: 1.2rem; }
@@ -408,6 +431,14 @@
     </div>
 
     <div class="feat-grid">
+      <a href="/features/ai-agent" class="feat-card feat-card-flagship card card-hover" data-reveal style="--i:0">
+        <span class="icon-tile icon-tile-grad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a4 4 0 0 1 4 4v1a4 4 0 0 1 0 8v1a4 4 0 0 1-8 0v-1a4 4 0 0 1 0-8V7a4 4 0 0 1 4-4Z"/><path d="M12 3v18M8 8h8M8 16h8"/></svg></span>
+        <div>
+          <h3>AI compliance agent <span class="feat-badge">Flagship</span></h3>
+          <p>Ask a question in plain English and get a cited answer &mdash; across FSSAI regulations, your own product portfolio, and your compliance documents. Every answer names the rule code it came from, so you can verify it rather than trust it.</p>
+          <span class="feat-link">Explore the AI agent &rarr;</span>
+        </div>
+      </a>
       <div class="feat-card card card-hover" data-reveal style="--i:0">
         <span class="icon-tile icon-tile-grad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2Z"/><path d="M18 8a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6Z"/></svg></span>
         <h3>Real-time compliance score</h3>
