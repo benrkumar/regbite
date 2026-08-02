@@ -65,27 +65,11 @@
 
   --nav-h: 64px;
   --maxw: 1120px;
-
-  /* ── Legacy aliases ───────────────────────────────────────────────────
-     The older marketing pages (help, blog, legal, changelog) still declare
-     CSS against the previous token names. Mapping them here keeps those
-     pages coherent on the new palette without rewriting each one. Prefer
-     the names above for anything new. */
-  --white: var(--surface);
-  --bg: var(--canvas);
-  --g50: var(--n50);
-  --g100: var(--n100);
-  --g200: var(--n200);
-  --g300: var(--n300);
-  --g400: var(--n400);
-  --g500: var(--n500);
-  --g600: var(--n600);
-  --g700: var(--n700);
-  --g900: var(--ink);
-  --primary: var(--brand-1);
-  --primary-dark: #0B2A4A;
-  --primary-light: #EEF0FB;
 }
+/* The legacy alias block that used to live here (--g100, --white, --primary …)
+   has been removed: every public template now declares against the tokens
+   above. Re-introducing an old name will now visibly fail rather than
+   silently resolve, which is the point. */
 
 html { font-size: 16px; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 
@@ -506,6 +490,11 @@ button { font-family: inherit; }
 .faq-q[aria-expanded="true"] .faq-icon::before,
 .faq-q[aria-expanded="true"] .faq-icon::after { background: var(--brand-2); }
 
+/* Disclosure body — grid 0fr -> 1fr, which animates to the content's natural
+   height with correct easing (a max-height cap would spend the whole duration
+   travelling to a number far larger than the content, so short answers ease
+   badly). If an engine won't interpolate the fr track it simply snaps open
+   instead of animating — the content is still shown, never hidden. */
 .faq-a {
   display: grid; grid-template-rows: 0fr;
   transition: grid-template-rows var(--t-base) var(--e-out);
@@ -570,6 +559,107 @@ button { font-family: inherit; }
 .skip-link:focus { left: 0; }
 
 /* ===========================================================================
+   LEGAL / LONG-FORM PROSE
+   Shared by terms.html and privacy.html, which previously declared this block
+   verbatim in each template.
+   =========================================================================== */
+
+.legal-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 4rem; }
+.legal-body h2 { font-size: 1.2rem; font-weight: 700; color: var(--ink); margin: 2.75rem 0 .8rem; letter-spacing: -0.02em; }
+.legal-body h3 { font-size: 1rem; font-weight: 700; color: var(--ink); margin: 1.6rem 0 .5rem; }
+.legal-body p { font-size: .92rem; color: var(--n600); line-height: 1.85; margin-bottom: 1rem; }
+.legal-body ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+.legal-body ul li { font-size: .92rem; color: var(--n600); line-height: 1.75; margin-bottom: .35rem; }
+.legal-body a { color: var(--brand-2); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.legal-body strong { font-weight: 700; color: var(--ink); }
+.legal-updated { font-size: .78rem; color: var(--n400); margin-bottom: 2rem; }
+
+/* ===========================================================================
+   BENTO GRID
+   ---------------------------------------------------------------------------
+   A 6-column bed that mixed-size tiles span, so feature and stat sections stop
+   reading as uniform 3-up card rows. Spans are expressed in halves/thirds of
+   the bed so they compose cleanly:
+     .b-6 full row · .b-4 two-thirds · .b-3 half · .b-2 one-third
+   Rows are auto-height by default; .bento-tall spans two rows for a feature
+   tile. Collapses to 3 columns on tablet and 1 on mobile.
+
+   IMPORTANT: never put overflow:hidden on .bento or .bento-item — .cta-glow's
+   blurred ::before sits outside its box and would be clipped.
+   =========================================================================== */
+
+.bento { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1.25rem; }
+.bento-item { min-width: 0; }          /* min-width:0 so long words can't blow out a track */
+.b-2 { grid-column: span 2; }
+.b-3 { grid-column: span 3; }
+.b-4 { grid-column: span 4; }
+.b-6 { grid-column: span 6; }
+.bento-tall { grid-row: span 2; }
+
+/* A tile that leads a section: larger type, gradient-tinted border. */
+.bento-feature {
+  border-color: rgba(79,70,229,.28);
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    radial-gradient(ellipse at 0% 0%, rgba(79,70,229,.10), transparent 60%) border-box;
+}
+.bento-feature h3 { font-size: 1.15rem; }
+
+@media (max-width: 900px) {
+  .bento { grid-template-columns: repeat(3, 1fr); }
+  .b-2, .b-3, .b-4, .b-6 { grid-column: span 3; }
+  .bento-tall { grid-row: auto; }
+}
+@media (max-width: 640px) {
+  .bento { grid-template-columns: 1fr; gap: 1rem; }
+  .b-2, .b-3, .b-4, .b-6 { grid-column: span 1; }
+}
+
+/* ===========================================================================
+   RICHER MOTION
+   ---------------------------------------------------------------------------
+   Layered on the existing [data-reveal] sweep rather than a parallel system.
+   Everything animates opacity/transform only, and the reduced-motion block
+   below neutralises all of it.
+   =========================================================================== */
+
+/* Card hover lift — a touch more depth than .card-hover, for bento tiles. */
+.lift { transition: transform var(--t-base) var(--e-out), box-shadow var(--t-base) var(--e-out), border-color var(--t-base) var(--e-out); }
+.lift:hover { transform: translateY(-4px); box-shadow: var(--sh-xl); border-color: var(--n200); }
+
+/* Icon tiles tilt slightly when their card is hovered. */
+.card:hover .icon-tile,
+.bento-item:hover .icon-tile { transform: rotate(-6deg) scale(1.06); }
+.icon-tile { transition: transform var(--t-base) var(--e-spring); }
+
+/* Sheen that sweeps a tile on hover. Pure transform, no layout cost. */
+.sheen { position: relative; overflow: hidden; }
+.sheen::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
+  transform: translateX(0); opacity: 0;
+  transition: transform 700ms var(--e-out), opacity 200ms var(--e-out);
+  pointer-events: none;
+}
+.sheen:hover::after { transform: translateX(420%); opacity: 1; }
+
+/* Parallax depth. --par is set per element; the shell writes --sy on scroll. */
+.parallax { will-change: transform; transform: translate3d(0, calc(var(--sy, 0px) * var(--par, .06)), 0); }
+
+/* Count-up: the final value is the element's text content, so with JS off or
+   reduced motion the correct number is simply what is already rendered. */
+.countup { font-variant-numeric: tabular-nums; }
+
+/* Underline that draws in on hover, for inline links. */
+.link-draw { position: relative; }
+.link-draw::after {
+  content: ''; position: absolute; left: 0; right: 100%; bottom: -2px; height: 1.5px;
+  background: var(--grad-cta); border-radius: 2px;
+  transition: right var(--t-base) var(--e-out);
+}
+.link-draw:hover::after { right: 0; }
+
+/* ===========================================================================
    REDUCED MOTION — must also neutralise scroll-behavior:smooth
    =========================================================================== */
 
@@ -582,6 +672,12 @@ button { font-family: inherit; }
   html { scroll-behavior: auto !important; }
   .js [data-reveal] { opacity: 1 !important; transform: none !important; }
   .cta-glow::before { opacity: .45 !important; }
+  /* Neutralise the richer-motion layer too: no lift, no tilt, no sheen sweep,
+     and parallax pinned to its untranslated position. */
+  .lift:hover { transform: none !important; }
+  .card:hover .icon-tile, .bento-item:hover .icon-tile { transform: none !important; }
+  .sheen::after { display: none !important; }
+  .parallax { transform: none !important; }
 }
 
 @media (max-width: 640px) {

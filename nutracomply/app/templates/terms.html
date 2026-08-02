@@ -3,14 +3,8 @@
 {% block description %}Regbite Terms of Service — usage terms, limitations, and legal agreements for the FSSAI compliance platform.{% endblock %}
 
 {% block extra_css %}
-  .legal-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 4rem; }
-  .legal-body h2 { font-size: 1.1rem; font-weight: 600; color: var(--ink); margin: 2.5rem 0 0.75rem; letter-spacing: -0.01em; }
-  .legal-body h3 { font-size: 0.95rem; font-weight: 500; color: var(--ink); margin: 1.5rem 0 0.5rem; }
-  .legal-body p { font-size: 0.88rem; color: var(--g600); line-height: 1.8; margin-bottom: 1rem; }
-  .legal-body ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
-  .legal-body ul li { font-size: 0.88rem; color: var(--g600); line-height: 1.7; margin-bottom: 0.3rem; }
-  .legal-body a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
-  .legal-updated { font-size: 0.78rem; color: var(--g400); margin-bottom: 2rem; }
+  /* .legal-body and .legal-updated live in public.css — shared with the
+     other legal page, which previously duplicated this block verbatim. */
 {% endblock %}
 
 {% block content %}

@@ -158,7 +158,7 @@
       <a href="/about">About</a>
       <a href="/blog">Blog</a>
       <a href="/contact">Contact</a>
-      <a href="/help">Help / FAQ</a>
+      <a href="/faq">Help / FAQ</a>
     </div>
     <div class="footer-col">
       <h4>Legal</h4>
@@ -259,6 +259,90 @@
   window.addEventListener('scroll',request,{passive:true});
   window.addEventListener('resize',request);
   sweep();
+}();
+
+/* ── Count-up ──────────────────────────────────────────────────────────
+   Animates to the number ALREADY in the element's text, so with JS off, with
+   reduced motion, or if this script never runs, the correct final value is
+   simply what the server rendered. Any surrounding characters (₹, +, L, /7)
+   are preserved by only swapping the numeric run. */
+!function(){
+  var els=[].slice.call(document.querySelectorAll('.countup'));
+  if(!els.length)return;
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+
+  els.forEach(function(el){
+    var raw=el.textContent;
+    var m=raw.match(/([\d.,]+)/);
+    if(!m)return;
+    var target=parseFloat(m[1].replace(/,/g,''));
+    if(!isFinite(target))return;
+    el.dataset.cuRaw=raw; el.dataset.cuTarget=String(target); el.dataset.cuMatch=m[1];
+  });
+
+  var animate=function(el){
+    var target=parseFloat(el.dataset.cuTarget);
+    var raw=el.dataset.cuRaw, match=el.dataset.cuMatch;
+    var decimals=(match.split('.')[1]||'').length;
+    var grouped=match.indexOf(',')>-1;
+    var start=performance.now(), dur=1100;
+    var fmt=function(v){
+      var s=v.toFixed(decimals);
+      if(grouped) s=Number(s).toLocaleString('en-IN',{minimumFractionDigits:decimals,maximumFractionDigits:decimals});
+      return s;
+    };
+    var step=function(now){
+      var p=Math.min(1,(now-start)/dur);
+      var eased=1-Math.pow(1-p,3);           // ease-out cubic
+      el.textContent=raw.replace(match, fmt(target*eased));
+      if(p<1) requestAnimationFrame(step);
+      else el.textContent=raw;               // land exactly on the server value
+    };
+    requestAnimationFrame(step);
+  };
+
+  var pending=els.filter(function(e){return e.dataset.cuTarget});
+  var queued=false;
+  var sweep=function(){
+    queued=false;
+    var line=window.innerHeight*0.9;
+    pending=pending.filter(function(e){
+      var r=e.getBoundingClientRect();
+      if(r.top<line&&r.bottom>0){animate(e);return false}
+      if(r.top<0){return false}              // already scrolled past — leave as-is
+      return true;
+    });
+    if(!pending.length){
+      window.removeEventListener('scroll',request);
+      window.removeEventListener('resize',request);
+    }
+  };
+  var request=function(){ if(queued)return; queued=true; requestAnimationFrame(sweep); };
+  window.addEventListener('scroll',request,{passive:true});
+  window.addEventListener('resize',request);
+  sweep();
+}();
+
+/* ── Parallax ──────────────────────────────────────────────────────────
+   Publishes scroll offset as a CSS variable; each .parallax element scales it
+   by its own --par. Skipped entirely under reduced motion. */
+!function(){
+  var els=document.querySelectorAll('.parallax');
+  if(!els.length)return;
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var queued=false;
+  var apply=function(){
+    queued=false;
+    var y=window.scrollY;
+    els.forEach(function(e){
+      var top=e.getBoundingClientRect().top+y;
+      e.style.setProperty('--sy',(y-top)+'px');
+    });
+  };
+  var request=function(){ if(queued)return; queued=true; requestAnimationFrame(apply); };
+  window.addEventListener('scroll',request,{passive:true});
+  window.addEventListener('resize',request);
+  apply();
 }();
 
 /* ── FAQ accordion (single implementation, keyboard-accessible) ──────── */

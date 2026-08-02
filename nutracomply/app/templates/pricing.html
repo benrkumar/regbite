@@ -5,82 +5,109 @@
 {% block extra_css %}
   /* ── Billing toggle ── */
   .billing-toggle {
-    display: inline-flex; align-items: center; gap: 0.65rem;
-    background: #FFFFFF; border: 1px solid var(--g200);
-    border-radius: 999px; padding: 0.35rem 1rem;
-    font-size: 0.82rem; font-weight: 400; color: var(--g600);
+    display: inline-flex; align-items: center; gap: .65rem;
+    background: var(--surface); border: 1px solid var(--n200);
+    border-radius: var(--r-pill); padding: .4rem 1.05rem;
+    font-size: .84rem; font-weight: 500; color: var(--n600);
     cursor: pointer; user-select: none;
+    transition: border-color var(--t-fast) var(--e-out), box-shadow var(--t-fast) var(--e-out);
   }
-  .billing-toggle-lbl { font-weight: 500; color: var(--ink); }
-  .toggle-switch { position: relative; width: 36px; height: 20px; }
+  .billing-toggle:hover { border-color: var(--n300); box-shadow: var(--sh-sm); }
+  .billing-toggle-lbl { font-weight: 700; color: var(--ink); }
+  .toggle-switch { position: relative; width: 38px; height: 21px; }
   .toggle-switch input { opacity: 0; width: 0; height: 0; }
   .toggle-slider {
     position: absolute; cursor: pointer; inset: 0;
-    background: var(--g300); border-radius: 999px; transition: background 0.2s;
+    background: var(--n300); border-radius: var(--r-pill);
+    transition: background var(--t-base) var(--e-out);
   }
   .toggle-slider::before {
     content: ''; position: absolute;
-    width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF;
-    left: 3px; top: 3px; transition: transform 0.2s;
+    width: 15px; height: 15px; border-radius: 50%; background: #fff;
+    left: 3px; top: 3px; transition: transform var(--t-base) var(--e-spring);
+    box-shadow: 0 1px 2px rgba(18,18,18,.25);
   }
-  .toggle-switch input:checked + .toggle-slider { background: var(--ink); }
-  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
+  .toggle-switch input:checked + .toggle-slider { background: var(--brand-2); }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(17px); }
+  .toggle-switch input:focus-visible + .toggle-slider { box-shadow: var(--focus); }
   .save-badge {
-    font-size: 0.68rem; font-weight: 600; color: #262626;
-    background: var(--g100); padding: 0.1rem 0.45rem; border-radius: 999px;
+    font-size: .68rem; font-weight: 700; color: #fff;
+    background: var(--grad-cta); padding: .14rem .5rem; border-radius: var(--r-pill);
+    letter-spacing: .02em;
   }
 
-  /* ── Pricing cards ── */
-  .pricing-grid {
-    max-width: 1000px; margin: 0 auto;
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; align-items: stretch;
-  }
+  /* ── Pricing cards (bento: 2 + 2 + 2 of a 6-col bed) ── */
+  .pricing-grid { max-width: 1040px; margin: 0 auto; align-items: stretch; }
   .pricing-card {
-    background: #FFFFFF; border: 1px solid var(--g200); border-radius: 8px;
-    padding: 1.75rem; display: flex; flex-direction: column; position: relative;
-    transition: box-shadow 0.12s;
+    background: var(--surface); border: 1px solid var(--n100); border-radius: var(--r-lg);
+    padding: 1.9rem; display: flex; flex-direction: column; position: relative;
   }
-  .pricing-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-  .pricing-card.popular { border-color: var(--ink); border-width: 1.5px; }
+  .pricing-card.popular {
+    border-color: rgba(79,70,229,.35);
+    box-shadow: 0 12px 40px rgba(79,70,229,.14);
+  }
   .popular-ribbon {
-    position: absolute; top: -1px; right: 1.25rem;
-    background: var(--ink); color: #FFFFFF;
-    font-size: 0.65rem; font-weight: 600; padding: 0.25rem 0.65rem;
-    border-radius: 0 0 5px 5px; letter-spacing: 0.04em;
+    position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+    background: var(--grad-cta); color: #fff;
+    font-size: .64rem; font-weight: 800; padding: .24rem .7rem;
+    border-radius: var(--r-pill); letter-spacing: .08em; text-transform: uppercase;
+    white-space: nowrap;
   }
-  .plan-name  { font-size: 1.1rem; font-weight: 500; color: var(--ink); margin-bottom: 0.55rem; letter-spacing: -0.02em; }
-  .plan-price { display: flex; align-items: baseline; gap: 0.25rem; margin-bottom: 0.3rem; }
-  .plan-price-currency { font-size: 1rem; font-weight: 500; color: var(--g500); }
-  .plan-price-amount  { font-size: 2.2rem; font-weight: 700; color: var(--ink); letter-spacing: -0.03em; line-height: 1; }
-  .plan-price-amount.custom { font-size: 1.4rem; font-weight: 400; }
-  .plan-price-period  { font-size: 0.78rem; color: var(--g400); }
-  .plan-desc { font-size: 0.8rem; color: var(--g400); margin-bottom: 1.25rem; min-height: 1.1rem; }
-  .plan-divider { height: 1px; background: var(--g200); margin-bottom: 1.1rem; }
-  .plan-limit { font-size: 0.8rem; font-weight: 600; color: var(--ink); margin-bottom: 0.75rem; }
-  .plan-features { list-style: none; display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 1.5rem; flex: 1; }
-  .plan-features li { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.845rem; color: var(--g600); }
+  .plan-name  { font-size: .78rem; font-weight: 700; color: var(--n400); margin-bottom: .8rem; letter-spacing: .1em; text-transform: uppercase; }
+  .plan-price { display: flex; align-items: baseline; gap: .25rem; margin-bottom: .3rem; }
+  .plan-price-currency { font-size: 1.1rem; font-weight: 600; color: var(--n500); }
+  .plan-price-amount  { font-size: 2.4rem; font-weight: 800; color: var(--ink); letter-spacing: -0.045em; line-height: 1; }
+  .plan-price-amount.custom { font-size: 1.6rem; font-weight: 800; }
+  .plan-price-period  { font-size: .78rem; color: var(--n400); }
+  .plan-desc { font-size: .8rem; color: var(--n400); margin-bottom: 1.3rem; min-height: 1.1rem; }
+  .plan-divider { height: 1px; background: var(--n100); margin-bottom: 1.15rem; }
+  .plan-limit { font-size: .82rem; font-weight: 700; color: var(--brand-2); margin-bottom: .85rem; }
+  .plan-features { list-style: none; display: flex; flex-direction: column; gap: .6rem; margin-bottom: 1.6rem; flex: 1; }
+  .plan-features li { display: flex; align-items: flex-start; gap: .55rem; font-size: .865rem; color: var(--n600); line-height: 1.55; }
   .plan-features li .check {
-    width: 16px; height: 16px; border-radius: 50%; background: var(--g100);
+    width: 17px; height: 17px; border-radius: 50%; background: var(--grad-cta);
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.55rem; color: #262626; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+    font-size: .55rem; color: #fff; font-weight: 700; flex-shrink: 0; margin-top: 2px;
   }
   .plan-cta { margin-top: auto; }
-  .plan-trial-note { text-align: center; font-size: 0.72rem; color: var(--g400); margin-top: 0.45rem; }
+  .plan-trial-note { text-align: center; font-size: .72rem; color: var(--n400); margin-top: .5rem; }
 
   /* ── Comparison table ── */
-  .compare-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; margin-top: 2rem; }
-  .compare-table th { font-weight: 600; color: var(--ink); padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid var(--g200); }
+  .compare-wrap { overflow-x: auto; border: 1px solid var(--n100); border-radius: var(--r-lg); margin-top: 2rem; }
+  .compare-table { width: 100%; border-collapse: collapse; font-size: .865rem; }
+  .compare-table th { font-weight: 700; color: var(--ink); padding: .9rem 1rem; text-align: left; border-bottom: 1px solid var(--n200); background: var(--canvas); }
   .compare-table th:not(:first-child) { text-align: center; }
-  .compare-table td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--g100); color: var(--g600); }
+  .compare-table td { padding: .75rem 1rem; border-bottom: 1px solid var(--n100); color: var(--n600); }
   .compare-table td:not(:first-child) { text-align: center; }
-  .compare-table tr:hover td { background: var(--g50); }
-  .check-yes { color: #357266; font-weight: 700; }
-  .check-no  { color: var(--g300); }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table tbody tr { transition: background var(--t-fast) var(--e-out); }
+  .compare-table tbody tr:hover td { background: var(--n50); }
+  .check-yes { color: var(--ok-fg); font-weight: 700; }
+  .check-no  { color: var(--n300); }
 
-  /* ── FAQ ── */
+  /* ── ROI / The Math ── */
+  .roi-inner { max-width: 940px; }
+  .roi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: start; }
+  .roi-title { font-size: clamp(1.35rem, 2.4vw, 1.75rem); }
+  .roi-p { font-size: .92rem; color: var(--n500); line-height: 1.8; margin-top: .7rem; }
+  .roi-box { background: var(--surface); border: 1px solid var(--n100); border-radius: var(--r-lg); padding: 1.75rem; }
+  .roi-kicker { font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--n400); margin-bottom: 1.1rem; }
+  .roi-list { list-style: none; display: flex; flex-direction: column; gap: .75rem; }
+  .roi-list li { font-size: .87rem; color: var(--n600); line-height: 1.6; padding-left: 1.5rem; position: relative; }
+  .roi-list li::before { content: '✓'; position: absolute; left: 0; color: var(--brand-2); font-weight: 700; }
 
-  @media (max-width: 900px) { .pricing-grid { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; } }
-  @media (max-width: 640px) { .compare-wrap { overflow-x: auto; } }
+  /* ── Shared layout helpers ── */
+  .toggle-row { margin-top: 1.6rem; }
+  .narrow { max-width: 720px; }
+  .center { text-align: center; }
+  .tight { margin-bottom: 2rem; }
+  .lead-p { font-size: .95rem; color: var(--n500); line-height: 1.75; margin-bottom: 1.6rem; }
+  .btn-row { display: flex; gap: .7rem; justify-content: center; flex-wrap: wrap; }
+
+  @media (max-width: 900px) {
+    .pricing-grid { max-width: 420px; }
+    .roi-grid { grid-template-columns: 1fr; gap: 2rem; }
+  }
 {% endblock %}
 
 {% block content %}
@@ -91,7 +118,7 @@
     <div class="sec-tag">Pricing</div>
     <h1>Simple, <strong>transparent pricing</strong></h1>
     <p>14-day free trial on all plans. No hidden fees. Cancel anytime.</p>
-    <div style="margin-top:1.5rem;">
+    <div class="toggle-row">
       <label class="billing-toggle" onclick="toggleBilling()">
         <span class="billing-toggle-lbl">Monthly</span>
         <div class="toggle-switch">
@@ -106,22 +133,22 @@
 </div>
 
 {# ── ROI / The Math ── #}
-<section class="sec sec-alt" style="padding-top:3rem;padding-bottom:3rem;">
-  <div class="sec-inner" style="max-width:900px;">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start;">
+<section class="sec-sm sec-alt">
+  <div class="sec-inner roi-inner">
+    <div class="roi-grid">
       <div>
         <div class="sec-tag">The Math</div>
-        <h2 class="sec-title" style="font-size:1.35rem;">Plans that pay for themselves<br><strong>in month one</strong></h2>
-        <p style="font-size:0.88rem;color:var(--g500);line-height:1.7;margin-top:0.5rem;">Starter plan: &#8377;7,999/month vs average FSSAI consultant visit: &#8377;5,000&ndash;&#8377;8,000 per call. Regbite runs 24/7. A consultant takes your call during business hours.</p>
-        <p style="font-size:0.88rem;color:var(--g500);line-height:1.7;margin-top:0.5rem;">Most customers recover the annual subscription cost within the first 60 days &mdash; from a single avoided label reprint, consultant call, or FoSCoS penalty.</p>
+        <h2 class="sec-title roi-title">Plans that pay for themselves<br><strong>in month one</strong></h2>
+        <p class="roi-p">Starter plan: &#8377;7,999/month vs average FSSAI consultant visit: &#8377;5,000&ndash;&#8377;8,000 per call. Regbite runs 24/7. A consultant takes your call during business hours.</p>
+        <p class="roi-p">Most customers recover the annual subscription cost within the first 60 days &mdash; from a single avoided label reprint, consultant call, or FoSCoS penalty.</p>
       </div>
-      <div style="background:var(--white);border:1px solid var(--g200);border-radius:8px;padding:1.5rem;">
-        <div style="font-size:0.7rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--g400);margin-bottom:1rem;">Annual vs Monthly &mdash; Why Annual Wins</div>
-        <ul style="list-style:none;display:flex;flex-direction:column;gap:0.65rem;">
-          <li style="display:flex;gap:0.6rem;font-size:0.84rem;color:var(--g600);line-height:1.55;"><span style="color:var(--ink);font-weight:700;flex-shrink:0;">&#10003;</span> Annual billing saves 2&ndash;3 months of subscription cost depending on plan</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.84rem;color:var(--g600);line-height:1.55;"><span style="color:var(--ink);font-weight:700;flex-shrink:0;">&#10003;</span> Price never increases &mdash; your rate at signup is your rate for life on annual billing</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.84rem;color:var(--g600);line-height:1.55;"><span style="color:var(--ink);font-weight:700;flex-shrink:0;">&#10003;</span> Annual subscribers are prioritised for new feature access</li>
-          <li style="display:flex;gap:0.6rem;font-size:0.84rem;color:var(--g600);line-height:1.55;"><span style="color:var(--ink);font-weight:700;flex-shrink:0;">&#10003;</span> Book the full annual amount as a business expense before March 31</li>
+      <div class="roi-box lift">
+        <div class="roi-kicker">Annual vs Monthly &mdash; Why Annual Wins</div>
+        <ul class="roi-list">
+          <li>Annual billing saves 2&ndash;3 months of subscription cost depending on plan</li>
+          <li>Price never increases &mdash; your rate at signup is your rate for life on annual billing</li>
+          <li>Annual subscribers are prioritised for new feature access</li>
+          <li>Book the full annual amount as a business expense before March 31</li>
         </ul>
       </div>
     </div>
@@ -131,10 +158,10 @@
 {# ── Pricing Cards ── #}
 <section class="sec">
   <div class="sec-inner">
-    <div class="pricing-grid">
+    <div class="pricing-grid bento">
 
       {# Starter #}
-      <div class="pricing-card">
+      <div class="pricing-card bento-item b-2 lift">
         <div class="plan-name">Starter</div>
         <div class="plan-price">
           <span class="plan-price-currency">&#8377;</span>
@@ -154,7 +181,7 @@
         </ul>
         <div class="plan-cta">
           <a href="/register" class="btn btn-ghost btn-xl"
-             style="width:100%;justify-content:center;"
+             class="btn-block"
              onclick="gtag('event','sign_up_click',{event_category:'Pricing',event_label:'starter'})">
             Get Started &rarr;
           </a>
@@ -162,7 +189,7 @@
       </div>
 
       {# Growth #}
-      <div class="pricing-card popular">
+      <div class="pricing-card popular bento-item b-2 lift">
         <div class="popular-ribbon">&#11088; Most Popular</div>
         <div class="plan-name">Growth</div>
         <div class="plan-price">
@@ -183,7 +210,7 @@
         </ul>
         <div class="plan-cta">
           <a href="/register" class="btn btn-primary btn-xl"
-             style="width:100%;justify-content:center;"
+             class="btn-block"
              onclick="gtag('event','begin_checkout',{currency:'INR',value:21999,items:[{item_id:'growth',item_name:'Growth Plan',price:21999}]})">
             Start Free Trial &rarr;
           </a>
@@ -192,7 +219,7 @@
       </div>
 
       {# Enterprise #}
-      <div class="pricing-card">
+      <div class="pricing-card bento-item b-2 lift">
         <div class="plan-name">Enterprise</div>
         <div class="plan-price">
           <span class="plan-price-currency">&#8377;</span>
@@ -212,7 +239,7 @@
         </ul>
         <div class="plan-cta">
           <a href="/contact" class="btn btn-ghost btn-xl"
-             style="width:100%;justify-content:center;"
+             class="btn-block"
              onclick="gtag('event','generate_lead',{event_category:'Pricing',event_label:'enterprise'})">
             Contact Sales &rarr;
           </a>
@@ -226,7 +253,7 @@
 {# ── Comparison Table ── #}
 <section class="sec sec-alt">
   <div class="sec-inner">
-    <div class="sec-header sec-header-center" style="margin-bottom:2rem;">
+    <div class="sec-header sec-header-center tight">
       <div class="sec-tag">Compare Plans</div>
       <h2 class="sec-title">Everything you need, <strong>nothing you don't</strong></h2>
     </div>
@@ -264,8 +291,8 @@
 
 {# ── FAQ ── #}
 <section class="sec">
-  <div class="sec-inner" style="max-width:700px;">
-    <div class="sec-header sec-header-center" style="margin-bottom:2rem;">
+  <div class="sec-inner narrow">
+    <div class="sec-header sec-header-center tight">
       <div class="sec-tag">FAQ</div>
       <h2 class="sec-title">Frequently asked <strong>questions</strong></h2>
     </div>
@@ -331,18 +358,18 @@
         What is the Founding Customer offer?
         <span class="faq-icon" aria-hidden="true"></span>
       </button>
-      <div class="faq-a"><div><p>The first 20 customers who sign an annual plan receive Growth features at Starter pricing &mdash; &#8377;5,999/month permanently locked. This offer closes the moment 20 Founding Members are confirmed. <a href="/contact" style="color:var(--ink);font-weight:500;">Ask us if spots are still available &rarr;</a></p></div></div>
+      <div class="faq-a"><div><p>The first 20 customers who sign an annual plan receive Growth features at Starter pricing &mdash; &#8377;5,999/month permanently locked. This offer closes the moment 20 Founding Members are confirmed. <a href="/contact" class="link-draw" style="color:var(--brand-2);font-weight:700;">Ask us if spots are still available &rarr;</a></p></div></div>
     </div>
   </div>
 </section>
 
 {# ── Navneet CTA ── #}
-<section class="sec sec-alt" style="padding-top:3rem;padding-bottom:3rem;">
-  <div class="sec-inner" style="max-width:700px;text-align:center;">
+<section class="sec-sm sec-alt">
+  <div class="sec-inner narrow center">
     <div class="sec-tag">Still deciding?</div>
-    <h2 class="sec-title" style="margin-bottom:0.6rem;">Talk to <strong>Navneet directly</strong></h2>
-    <p style="font-size:0.92rem;color:var(--g500);line-height:1.7;margin-bottom:1.5rem;">She will walk you through which plan fits your portfolio and run a live compliance check on one of your products. No sales script. No waiting queue.</p>
-    <div style="display:flex;gap:0.6rem;justify-content:center;flex-wrap:wrap;">
+    <h2 class="sec-title">Talk to <strong>Navneet directly</strong></h2>
+    <p class="lead-p">She will walk you through which plan fits your portfolio and run a live compliance check on one of your products. No sales script. No waiting queue.</p>
+    <div class="btn-row">
       <a href="/contact" class="btn btn-primary btn-lg">Get in Touch &rarr;</a>
       <a href="/register" class="btn btn-ghost btn-lg">Start Free Trial &rarr;</a>
     </div>

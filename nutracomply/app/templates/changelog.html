@@ -4,23 +4,23 @@
 
 {% block extra_css %}
   .changelog-body { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 4rem; }
-  .cl-entry { padding: 2rem 0; border-bottom: 1px solid var(--g200); }
+  .cl-entry { padding: 2rem 0; border-bottom: 1px solid var(--n200); }
   .cl-entry:last-child { border-bottom: none; }
-  .cl-date { font-size: 0.72rem; font-weight: 600; color: var(--g400); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.5rem; }
-  .cl-version { display: inline-flex; padding: 0.12rem 0.45rem; border-radius: 3px; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.04em; margin-left: 0.5rem; }
-  .cl-major { background: var(--ink); color: var(--white); }
-  .cl-minor { background: var(--g100); color: var(--g600); border: 1px solid var(--g200); }
+  .cl-date { font-size: 0.72rem; font-weight: 600; color: var(--n400); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.5rem; }
+  .cl-version { display: inline-flex; padding: 0.12rem 0.45rem; border-radius: var(--r-sm); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.04em; margin-left: 0.5rem; }
+  .cl-major { background: var(--ink); color: var(--surface); }
+  .cl-minor { background: var(--n100); color: var(--n600); border: 1px solid var(--n200); }
   .cl-title { font-size: 1.1rem; font-weight: 500; color: var(--ink); margin-bottom: 0.6rem; letter-spacing: -0.01em; }
   .cl-changes { list-style: none; }
-  .cl-changes li { font-size: 0.85rem; color: var(--g600); line-height: 1.7; padding: 0.2rem 0; display: flex; gap: 0.6rem; }
-  .cl-tag { display: inline-flex; padding: 0.08rem 0.4rem; border-radius: 3px; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.04em; flex-shrink: 0; margin-top: 0.25rem; }
-  .cl-new { background: #F5F5F5; color: #262626; }
-  .cl-improved { background: #F5F5F5; color: #525252; }
-  .cl-fixed { background: #F5F5F5; color: #525252; }
+  .cl-changes li { font-size: 0.85rem; color: var(--n600); line-height: 1.7; padding: 0.2rem 0; display: flex; gap: 0.6rem; }
+  .cl-tag { display: inline-flex; padding: 0.08rem 0.4rem; border-radius: var(--r-sm); font-size: 0.62rem; font-weight: 600; letter-spacing: 0.04em; flex-shrink: 0; margin-top: 0.25rem; }
+  .cl-new { background: rgba(79,70,229,.10); color: var(--brand-2); }
+  .cl-improved { background: var(--ok-bg); color: var(--ok-fg); }
+  .cl-fixed { background: var(--warn-bg); color: var(--warn-fg); }
 
-  .cl-subscribe { text-align: center; padding: 2rem; background: var(--g50); border: 1px solid var(--g200); border-radius: 8px; margin-top: 2rem; }
+  .cl-subscribe { text-align: center; padding: 2rem; background: var(--n50); border: 1px solid var(--n200); border-radius: var(--r-lg); margin-top: 2rem; }
   .cl-subscribe h3 { font-size: 0.95rem; font-weight: 500; color: var(--ink); margin-bottom: 0.35rem; }
-  .cl-subscribe p { font-size: 0.82rem; color: var(--g500); margin-bottom: 1rem; }
+  .cl-subscribe p { font-size: 0.82rem; color: var(--n500); margin-bottom: 1rem; }
 {% endblock %}
 
 {% block content %}

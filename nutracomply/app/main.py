@@ -843,7 +843,7 @@ templates.env.globals["csrf_input"] = _csrf_input
 
 # Cache-busting stamp for static assets. There is no build step, so this is a
 # manual constant — bump it whenever public.css or an icon changes.
-templates.env.globals["asset_v"] = "20260731"
+templates.env.globals["asset_v"] = "20260801"
 # Canonical origin for <link rel=canonical> / og:url. Building these from
 # request.url.netloc leaks the internal hostname when behind the Railway proxy.
 templates.env.globals["site_origin"] = settings.app_base_url.rstrip("/")
@@ -1225,9 +1225,19 @@ async def contact_submit(request: Request):
     )
 
 
-@app.get("/help")
-async def help_page(request: Request):
-    return templates.TemplateResponse("help.html", {"request": request, "user": _get_optional_user(request), "active_page": "help"})
+@app.get("/faq")
+async def faq_page(request: Request):
+    """
+    Public marketing FAQ.
+
+    Deliberately NOT /help: app/routes/help.py registers APIRouter(prefix="/help")
+    earlier in the startup sequence, and FastAPI matches routes in registration
+    order — so its auth-gated hub always won and this template never rendered.
+    /help stayed a 302 to /login for every anonymous visitor and every crawler,
+    while sitemap.xml advertised it. /help remains the signed-in documentation
+    hub; the public FAQ lives here.
+    """
+    return templates.TemplateResponse("help.html", {"request": request, "user": _get_optional_user(request), "active_page": "faq"})
 
 
 @app.get("/terms")
@@ -1259,7 +1269,7 @@ async def sitemap_xml():
         (base + "/about",      "monthly", "0.6"),
         (base + "/blog",       "weekly",  "0.7"),
         (base + "/contact",    "monthly", "0.5"),
-        (base + "/help",       "monthly", "0.6"),
+        (base + "/faq",        "monthly", "0.6"),
         (base + "/terms",      "yearly",  "0.3"),
         (base + "/privacy",    "yearly",  "0.3"),
         (base + "/changelog",  "monthly", "0.5"),

@@ -66,6 +66,15 @@
   .hc-upload-icon svg { width: 22px; height: 22px; }
   .hc-upload-text { font-size: .84rem; color: var(--n600); margin-bottom: .2rem; }
   .hc-upload-text strong { color: var(--brand-2); font-weight: 700; }
+  .hc-browse { color: var(--brand-2); font-weight: 700; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  /* Visually hidden but still focusable, so the field stays keyboard- and
+     screen-reader-reachable (display:none would remove it from the tab order). */
+  .hc-file-input {
+    position: absolute; width: 1px; height: 1px;
+    opacity: 0; overflow: hidden; white-space: nowrap;
+  }
+  .hc-file-input:focus-visible + * , .hc-upload-zone:focus-within { outline: none; }
+  .hc-upload-zone:focus-within { border-color: var(--brand-2); box-shadow: var(--focus); }
   .hc-upload-hint { font-size: .72rem; color: var(--n400); }
 
   .hc-file-preview {
@@ -256,19 +265,24 @@
            the redirect and navigate away; this form needs inline state instead. #}
         <form method="post" action="/checker/upload" enctype="multipart/form-data"
               id="hc-upload-form" data-no-intercept>
+          {# The drop zone is a mouse/drag affordance. The keyboard path is the
+             real <label for> + focusable input inside it — a div[onclick] with
+             a display:none input left keyboard users unable to reach the
+             uploader at all, on the site's primary conversion element. #}
           <div class="hc-upload-zone" id="hc-drop-zone"
-               onclick="document.getElementById('hc-file-input').click()"
                ondragover="event.preventDefault();this.classList.add('dragover')"
                ondragleave="this.classList.remove('dragover')"
                ondrop="event.preventDefault();this.classList.remove('dragover');handleCheckerDrop(event)">
-            <div class="hc-upload-icon">
+            <div class="hc-upload-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             </div>
-            <div class="hc-upload-text">Drag &amp; drop your label here or <strong>browse files</strong></div>
+            <div class="hc-upload-text">Drag &amp; drop your label here or
+              <label for="hc-file-input" class="hc-browse">browse files</label>
+            </div>
             <div class="hc-upload-hint">JPG, PNG, PDF, TIFF, WebP &mdash; up to 10 MB</div>
             <input type="file" name="file" id="hc-file-input"
                    accept=".jpg,.jpeg,.png,.pdf,.tiff,.tif,.webp"
-                   style="display:none" onchange="handleCheckerFile(this)" />
+                   class="hc-file-input" onchange="handleCheckerFile(this)" />
           </div>
           <div class="hc-file-preview" id="hc-file-preview">
             <span class="hc-file-name" id="hc-file-name"></span>
