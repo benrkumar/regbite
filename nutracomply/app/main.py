@@ -81,6 +81,7 @@ def _run_all_startup_tasks():
         (_check_trial_expiry,      "check_trial_expiry"),
         (_activate_lm_rules,       "activate_lm_rules"),
         (_auto_seed_kb_if_empty,   "auto_seed_kb"),
+        (_seed_trending_blog_posts, "seed_trending_blog"),
         (_cleanup_unknown_alerts,  "cleanup_unknown_alerts"),
     ]
     for fn, name in tasks:
@@ -636,6 +637,25 @@ def _check_trial_expiry():
         )
     except Exception as exc:
         log.error("[startup] check_trial_expiry error: %s", exc)
+    finally:
+        db.close()
+
+
+def _seed_trending_blog_posts():
+    """
+    Publish the trending-topic blog posts on startup.
+
+    Idempotent by slug, so redeploys are a no-op once they exist. Runs here
+    rather than behind the admin endpoint so a deploy actually puts them live
+    without someone having to log in and POST.
+    """
+    from app.services.blog_seed import seed_trending_posts
+    db = SessionLocal()
+    try:
+        res = seed_trending_posts(db)
+        if res["created"]:
+            log.info("[blog] published %d trending posts as %s: %s",
+                     len(res["created"]), res["author"], ", ".join(res["created"]))
     finally:
         db.close()
 
