@@ -56,6 +56,7 @@ ARTICLES = [
     {
         "title": "FSSAI Just Took “Energy Drink” Off the Label. If You Sell Caffeine, Read This.",
         "slug": "fssai-energy-drink-label-ban-2026",
+        "image": "/static/img/blog/blog-energy-drink.png",
         "cat": ("FSSAI Compliance", "fssai-compliance"),
         "tags": "FSSAI, energy drinks, caffeine, labelling, health claims, enforcement",
         "meta_title": "FSSAI Energy Drink Label Ban 2026 — What Changed | Regbite",
@@ -113,6 +114,7 @@ ARTICLES = [
     {
         "title": "Old Monk, Royal Challenge, Bagpiper: What the Liquor Crackdown Should Teach Supplement Brands",
         "slug": "fssai-liquor-crackdown-lesson-supplement-brands-2026",
+        "image": "/static/img/blog/blog-liquor-crackdown.png",
         "cat": ("FSSAI Compliance", "fssai-compliance"),
         "tags": "FSSAI, alcoholic beverages, labelling deadline, enforcement, Old Monk",
         "meta_title": "FSSAI Liquor Crackdown 2026 — The Lesson for Supplement Brands | Regbite",
@@ -168,6 +170,7 @@ ARTICLES = [
     {
         "title": "FSSAI Is Coming for Protein Supplements. Fix These Four Things First.",
         "slug": "fssai-protein-supplement-crackdown-2026",
+        "image": "/static/img/blog/blog-protein.png",
         "cat": ("Nutraceuticals", "nutraceuticals"),
         "tags": "FSSAI, protein supplements, nutrition claims, label accuracy, nitrogen spiking",
         "meta_title": "FSSAI Protein Supplement Crackdown 2026 — What to Fix | Regbite",
@@ -226,6 +229,7 @@ ARTICLES = [
     {
         "title": "Front-of-Pack Labelling Has Been “Coming Soon” Since 2022. Here's What to Actually Do About It.",
         "slug": "fssai-front-of-pack-labelling-fopnl-2026",
+        "image": "/static/img/blog/blog-fopnl.png",
         "cat": ("Regulatory Intelligence", "regulatory-intelligence"),
         "tags": "FSSAI, FOPNL, front of pack, Health Star Rating, HFSS, labelling",
         "meta_title": "FSSAI Front-of-Pack Labelling (FOPNL) 2026 Status | Regbite",
@@ -288,9 +292,17 @@ def seed_trending_posts(db) -> dict:
     author = _get_author(db)
     created, skipped = [], []
 
+    updated = []
     for art in ARTICLES:
-        if db.query(BlogPost).filter(BlogPost.slug == art["slug"]).first():
-            skipped.append(art["slug"])
+        existing = db.query(BlogPost).filter(BlogPost.slug == art["slug"]).first()
+        if existing:
+            # These posts shipped before the cover images existed, so a plain
+            # skip would leave them permanently image-less in production.
+            if art.get("image") and existing.featured_image != art["image"]:
+                existing.featured_image = art["image"]
+                updated.append(art["slug"])
+            else:
+                skipped.append(art["slug"])
             continue
 
         cat_name, cat_slug = art["cat"]
@@ -311,10 +323,12 @@ def seed_trending_posts(db) -> dict:
             tags=art["tags"],
             meta_title=art["meta_title"],
             meta_description=art["meta_description"],
+            featured_image=art.get("image"),
             is_featured=False,
             published_at=datetime.utcnow(),
         ))
         created.append(art["slug"])
 
     db.commit()
-    return {"created": created, "skipped": skipped, "author": author.name}
+    return {"created": created, "updated": updated, "skipped": skipped,
+            "author": author.name}

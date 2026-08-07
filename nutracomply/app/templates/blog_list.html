@@ -18,6 +18,10 @@
   .featured-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 3rem; }
   .featured-card { background: var(--surface); border: 1px solid var(--n200); border-radius: var(--r-md); overflow: hidden; transition: box-shadow 0.12s; }
   .featured-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+  /* .post-card sets padding:1.5rem, so bleed the thumb out by exactly that. */
+  .post-thumb-link { display: block; margin: -1.5rem -1.5rem 1.1rem; border-radius: var(--r-md) var(--r-md) 0 0; overflow: hidden; }
+  .post-thumb { width: 100%; height: 158px; object-fit: cover; display: block; transition: transform var(--t-slow) var(--e-out); }
+  .post-card:hover .post-thumb { transform: scale(1.03); }
   .featured-img { width: 100%; height: 180px; background: var(--n100); object-fit: cover; }
   .featured-img-placeholder { width: 100%; height: 180px; background: var(--n100); display: flex; align-items: center; justify-content: center; color: var(--n300); font-size: 2rem; }
   .featured-body { padding: 1.25rem; }
@@ -113,6 +117,11 @@
     <div class="posts-grid">
       {% for post in posts %}
       <div class="post-card">
+        {% if post.featured_image %}
+        <a href="/blog/{{ post.slug }}" class="post-thumb-link" tabindex="-1" aria-hidden="true">
+          <img src="{{ post.featured_image }}" alt="" class="post-thumb" loading="lazy" />
+        </a>
+        {% endif %}
         {% if post.category %}<div class="post-cat">{{ post.category.name }}</div>{% endif %}
         <div class="post-title"><a href="/blog/{{ post.slug }}">{{ post.title }}</a></div>
         {% if post.excerpt %}<div class="post-excerpt">{{ post.excerpt }}</div>{% endif %}

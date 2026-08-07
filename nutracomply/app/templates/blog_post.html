@@ -1,6 +1,7 @@
 {% extends "public_base.html" %}
 {% block title %}{{ post.meta_title or post.title }}{% endblock %}
 {% block description %}{{ post.meta_description or post.excerpt or 'Read this article on Regbite Blog.' }}{% endblock %}
+{% if post.featured_image %}{% block og_image %}{{ site_origin }}{{ post.featured_image }}{% endblock %}{% endif %}
 
 {% block extra_css %}
   .article-hero { padding: 56px 2rem 0; background: var(--n50); border-bottom: 1px solid var(--n200); }
