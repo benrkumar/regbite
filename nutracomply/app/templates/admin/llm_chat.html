@@ -179,7 +179,7 @@
         {% else %}
         <div class="msg-bubble">{{ msg.content }}</div>
         {% endif %}
-        <div class="msg-meta">{{ 'You' if msg.role == 'user' else 'RegBite AI · Gemma 4' }}</div>
+        <div class="msg-meta">{{ 'You' if msg.role == 'user' else 'Regbite AI · Gemma 4' }}</div>
       </div>
     </div>
     {% endfor %}
@@ -235,10 +235,10 @@ function escapeHtml(text) {
 
 function providerLabel(provider, modelHint) {
   const m = modelHint || MODEL_NAME;
-  if (provider === "gemma")  return `RegBite AI · ${m}`;
-  if (provider === "claude") return `RegBite AI · ${m} (fallback)`;
-  if (provider === "gemini") return `RegBite AI · ${m} (fallback)`;
-  return `RegBite AI · ${m}`;
+  if (provider === "gemma")  return `Regbite AI · ${m}`;
+  if (provider === "claude") return `Regbite AI · ${m} (fallback)`;
+  if (provider === "gemini") return `Regbite AI · ${m} (fallback)`;
+  return `Regbite AI · ${m}`;
 }
 
 function updateHeaderModel(provider, modelHint) {
