@@ -151,7 +151,8 @@
 {% set ns = namespace(prev_company=None, count=0) %}
 
 <div id="umList">
-{% for row in user_stats|sort(attribute='user.company_name') %}
+{# Already sorted by the route (None-safe). Do not re-add |sort here. #}
+{% for row in user_stats %}
 {% set u = row.user %}
 {% set company = u.company_name or '' %}
 

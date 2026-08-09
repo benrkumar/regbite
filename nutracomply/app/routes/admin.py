@@ -181,6 +181,15 @@ async def admin_users(request: Request, db: Session = Depends(get_db)):
             "is_demo": u.email in DEMO_EMAILS,
         })
 
+    # Sort here rather than with Jinja's |sort(attribute='user.company_name').
+    # That filter compares raw values, so the moment one user has a NULL
+    # company_name — any signup that has not finished onboarding — it raises
+    # "'<' not supported between instances of 'str' and 'NoneType'" and the
+    # whole page 500s. Coalescing to "" keeps it total, and lower() makes the
+    # grouping case-insensitive.
+    user_stats.sort(key=lambda r: ((r["user"].company_name or "").lower(),
+                                   (r["user"].name or "").lower()))
+
     unread_alerts = db.query(Alert).filter(Alert.status == AlertStatus.UNREAD).count()
 
     return templates.TemplateResponse("admin/users.html", {
