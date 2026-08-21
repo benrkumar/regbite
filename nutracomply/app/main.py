@@ -871,7 +871,7 @@ templates.env.globals["site_origin"] = settings.app_base_url.rstrip("/")
 # Register routers
 # NOTE: import settings route as settings_router to avoid shadowing the
 # module-level `settings = get_settings()` config object.
-from app.routes import auth, products, labels, alerts, regulations, admin
+from app.routes import auth, products, labels, alerts, regulations, admin, discovery
 from app.routes import settings as settings_router
 from app.routes import renewals as renewals_router
 from app.routes import reports as reports_router
@@ -898,6 +898,7 @@ app.include_router(onboarding_router.router)
 app.include_router(billing_router.router)
 app.include_router(notifications_router.router)
 app.include_router(help_router.router)
+app.include_router(discovery.router)   # llms.txt + blog RSS feed
 app.include_router(blog_router.router)
 
 try:
@@ -1276,8 +1277,9 @@ async def changelog_page(request: Request):
 
 
 @app.get("/sitemap.xml", include_in_schema=False)
-async def sitemap_xml():
-    """XML sitemap for search engine crawlers."""
+async def sitemap_xml(db: Session = Depends(get_db)):
+    """XML sitemap. Includes every published blog post — the listing page
+    alone told crawlers nothing about the articles themselves."""
     import datetime as _datetime
     from fastapi.responses import Response as _Resp
     base = "https://regbite.com"
@@ -1294,6 +1296,21 @@ async def sitemap_xml():
         (base + "/privacy",    "yearly",  "0.3"),
         (base + "/changelog",  "monthly", "0.5"),
     ]
+    # Individual posts. Without these, crawlers and AI indexers only ever saw
+    # /blog and had to discover articles by following links.
+    try:
+        from app.models import BlogPost, BlogPostStatus
+        posts = (
+            db.query(BlogPost)
+            .filter(BlogPost.status == BlogPostStatus.PUBLISHED)
+            .order_by(BlogPost.published_at.desc())
+            .all()
+        )
+        for post in posts:
+            urls.append((f"{base}/blog/{post.slug}", "monthly", "0.7"))
+    except Exception as exc:
+        log.error("[sitemap] could not add blog posts: %s", exc)
+
     today = _datetime.date.today().isoformat()
     items = "\n".join(
         f"  <url><loc>{loc}</loc><lastmod>{today}</lastmod>"
@@ -1350,7 +1367,18 @@ async def robots_txt():
         "Disallow: /settings\n"
         "Disallow: /billing\n"
         "Disallow: /api/\n\n"
+        # AI and LLM crawlers welcomed explicitly on the public pages. Several
+        # honour their own named token and would otherwise be ambiguous under
+        # the wildcard rule above.
+        "User-agent: GPTBot\nAllow: /\nDisallow: /admin\n\n"
+        "User-agent: ClaudeBot\nAllow: /\nDisallow: /admin\n\n"
+        "User-agent: anthropic-ai\nAllow: /\nDisallow: /admin\n\n"
+        "User-agent: PerplexityBot\nAllow: /\nDisallow: /admin\n\n"
+        "User-agent: Google-Extended\nAllow: /\nDisallow: /admin\n\n"
+        "User-agent: Applebot-Extended\nAllow: /\nDisallow: /admin\n\n"
+        "User-agent: CCBot\nAllow: /\nDisallow: /admin\n\n"
         "Sitemap: https://regbite.com/sitemap.xml\n"
+        "Sitemap: https://regbite.com/blog/feed.xml\n"
     )
     return _Resp(content, media_type="text/plain")
 

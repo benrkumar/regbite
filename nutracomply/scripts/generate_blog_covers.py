@@ -276,6 +276,106 @@ def art_fopnl(d, img, s):
     d.text((bx + 18 * s, by + 8 * s), chip, font=fc, fill=LIGHT)
 
 
+
+def art_licence(d, img, s):
+    """A licence card whose expiry has become an infinity symbol."""
+    cx, cy = 895 * s, 285 * s
+    d.rounded_rectangle([cx - 120 * s, cy - 86 * s, cx + 120 * s, cy + 86 * s],
+                        radius=18 * s, fill=(255, 255, 255, 18),
+                        outline=LIGHT + (200,), width=3 * s)
+    f = font("segoeuib.ttf", 15 * s)
+    d.text((cx - 100 * s, cy - 66 * s), "FSSAI LICENCE", font=f, fill=MUTED)
+    fn = font("seguibl.ttf", 21 * s)
+    d.text((cx - 100 * s, cy - 40 * s), "1001904200 0241", font=fn, fill=LIGHT)
+    d.text((cx - 100 * s, cy + 6 * s), "VALID UNTIL", font=f, fill=MUTED)
+    # infinity, drawn as two rings
+    ix, iy = cx - 96 * s, cy + 44 * s
+    for off in (0, 30 * s):
+        d.ellipse([ix + off, iy, ix + off + 30 * s, iy + 26 * s],
+                  outline=OK, width=5 * s)
+    chip = "FEE STILL DUE"
+    fc = font("seguibl.ttf", 18 * s)
+    tw = d.textlength(chip, font=fc)
+    bx, by = cx - tw / 2 - 18 * s, cy + 116 * s
+    d.rounded_rectangle([bx, by, bx + tw + 36 * s, by + 40 * s], radius=20 * s, fill=WARN)
+    d.text((bx + 18 * s, by + 9 * s), chip, font=fc, fill=(45, 33, 0))
+
+
+def art_claims(d, img, s):
+    """A pack panel with 100% NATURAL struck through."""
+    cx, cy = 895 * s, 280 * s
+    d.rounded_rectangle([cx - 110 * s, cy - 130 * s, cx + 110 * s, cy + 130 * s],
+                        radius=20 * s, fill=(255, 255, 255, 16),
+                        outline=LIGHT + (190,), width=3 * s)
+    fw = font("seguibl.ttf", 27 * s)
+    for i, line in enumerate(["100%", "NATURAL"]):
+        tw = d.textlength(line, font=fw)
+        d.text((cx - tw / 2, cy - 56 * s + i * 34 * s), line, font=fw, fill=LIGHT)
+    d.line([cx - 96 * s, cy + 6 * s, cx + 96 * s, cy - 44 * s], fill=BAD, width=8 * s)
+    fs = font("segoeuib.ttf", 15 * s)
+    for i, t in enumerate(["substantiate", "or remove"]):
+        tw = d.textlength(t, font=fs)
+        d.text((cx - tw / 2, cy + 44 * s + i * 22 * s), t, font=fs, fill=MUTED)
+    chip = "UP TO ₹10 LAKH"
+    fc = font("seguibl.ttf", 18 * s)
+    tw = d.textlength(chip, font=fc)
+    bx, by = cx - tw / 2 - 18 * s, cy + 158 * s
+    d.rounded_rectangle([bx, by, bx + tw + 36 * s, by + 40 * s], radius=20 * s, fill=BAD)
+    d.text((bx + 18 * s, by + 9 * s), chip, font=fc, fill=(255, 255, 255))
+
+
+def art_packaging(d, img, s):
+    """A bottle with unknown substances migrating out of the wall."""
+    cx, cy = 895 * s, 275 * s
+    d.rounded_rectangle([cx - 60 * s, cy - 120 * s, cx + 60 * s, cy + 120 * s],
+                        radius=22 * s, fill=(255, 255, 255, 16),
+                        outline=LIGHT + (200,), width=3 * s)
+    d.rounded_rectangle([cx - 34 * s, cy - 142 * s, cx + 34 * s, cy - 114 * s],
+                        radius=10 * s, fill=LIGHT + (160,))
+    # migrating particles
+    for i, (dx, dy, r) in enumerate([(84, -60, 7), (110, -18, 5), (96, 30, 8), (122, 74, 5)]):
+        d.ellipse([cx + dx * s - r * s, cy + dy * s - r * s,
+                   cx + dx * s + r * s, cy + dy * s + r * s], fill=WARN)
+    f = font("seguibl.ttf", 24 * s)
+    d.text((cx + 76 * s, cy + 104 * s), "NIAS", font=f, fill=WARN)
+    fs = font("segoeuib.ttf", 14 * s)
+    d.text((cx + 76 * s, cy + 134 * s), "not in your recipe", font=fs, fill=MUTED)
+    chip = "DRAFT"
+    fc = font("seguibl.ttf", 18 * s)
+    tw = d.textlength(chip, font=fc)
+    bx, by = cx - 60 * s, cy + 156 * s
+    d.rounded_rectangle([bx, by, bx + tw + 36 * s, by + 40 * s], radius=20 * s,
+                        fill=(255, 255, 255, 26), outline=LIGHT + (140,), width=2 * s)
+    d.text((bx + 18 * s, by + 9 * s), chip, font=fc, fill=LIGHT)
+
+
+def art_labelling(d, img, s):
+    """A calendar pinned to 1 July."""
+    cx, cy = 895 * s, 280 * s
+    d.rounded_rectangle([cx - 100 * s, cy - 110 * s, cx + 100 * s, cy + 110 * s],
+                        radius=20 * s, fill=(255, 255, 255, 16),
+                        outline=LIGHT + (200,), width=3 * s)
+    # calendar header band
+    d.rounded_rectangle([cx - 100 * s, cy - 110 * s, cx + 100 * s, cy - 62 * s],
+                        radius=20 * s, fill=(79, 70, 229, 210))
+    fh = font("seguibl.ttf", 20 * s)
+    tw = d.textlength("JULY", font=fh)
+    d.text((cx - tw / 2, cy - 100 * s), "JULY", font=fh, fill=LIGHT)
+    fd = font("seguibl.ttf", 62 * s)
+    tw = d.textlength("1", font=fd)
+    d.text((cx - tw / 2, cy - 42 * s), "1", font=fd, fill=LIGHT)
+    fs = font("segoeuib.ttf", 15 * s)
+    tw = d.textlength("every year", font=fs)
+    d.text((cx - tw / 2, cy + 40 * s), "every year", font=fs, fill=MUTED)
+    chip = "IN FORCE 2027"
+    fc = font("seguibl.ttf", 17 * s)
+    tw = d.textlength(chip, font=fc)
+    bx, by = cx - tw / 2 - 18 * s, cy + 136 * s
+    d.rounded_rectangle([bx, by, bx + tw + 36 * s, by + 38 * s], radius=19 * s,
+                        fill=(255, 255, 255, 26), outline=LIGHT + (140,), width=2 * s)
+    d.text((bx + 18 * s, by + 8 * s), chip, font=fc, fill=LIGHT)
+
+
 COVERS = [
     ("blog-energy-drink.png", "FSSAI Compliance",
      "The drinks weren’t banned. The word was.",
@@ -293,6 +393,22 @@ COVERS = [
      "“Coming soon” since 2022.",
      "Front-of-pack labelling is still un-notified. What to prepare — and what not to spend money on yet.",
      art_fopnl),
+    ("blog-licensing.png", "FSSAI Compliance",
+     "Perpetual is not permanent.",
+     "Licences no longer expire — but the annual fee still falls due, and nothing prompts you any more.",
+     art_licence),
+    ("blog-claims.png", "Nutraceuticals",
+     "“100% Natural” is now a liability.",
+     "Absolute claims need unequivocal substantiation. Penalties run to ₹10 lakh per offence.",
+     art_claims),
+    ("blog-packaging.png", "Regulatory Intelligence",
+     "The substances you never added.",
+     "FSSAI's draft packaging amendment defines NIAS — and you cannot check them against your own recipe.",
+     art_packaging),
+    ("blog-labelling.png", "FSSAI Compliance",
+     "One deadline for everything.",
+     "FSSAI is consolidating labelling enforcement onto 1 July each year. Batch your artwork around it.",
+     art_labelling),
 ]
 
 

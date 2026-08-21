@@ -1,7 +1,61 @@
 {% extends "public_base.html" %}
-{% block title %}{{ post.meta_title or post.title }}{% endblock %}
+{# page_title owns the WHOLE <title>. Overriding `title` instead made the
+   shell append its brand suffix to a meta_title that already ends in
+   "| Regbite", producing a doubled, truncated SERP title. #}
+{% block page_title %}{{ post.meta_title or (post.title ~ ' | Regbite') }}{% endblock %}
+{% block title %}{{ post.title }}{% endblock %}
 {% block description %}{{ post.meta_description or post.excerpt or 'Read this article on Regbite Blog.' }}{% endblock %}
 {% if post.featured_image %}{% block og_image %}{{ site_origin }}{{ post.featured_image }}{% endblock %}{% endif %}
+
+{% block extra_head %}
+<link rel="alternate" type="application/rss+xml" title="Regbite — FSSAI Regulatory Guidance" href="/blog/feed.xml" />
+{# BlogPosting + BreadcrumbList. article:* OG tags let social and AI crawlers
+   read authorship and dates without parsing the page body. #}
+<meta property="article:published_time" content="{{ post.published_at.isoformat() if post.published_at else '' }}" />
+<meta property="article:author" content="{{ post.author.name if post.author else 'Regbite' }}" />
+{% if post.category %}<meta property="article:section" content="{{ post.category.name }}" />{% endif %}
+{% if post.tags %}{% for t in post.tags.split(',') %}<meta property="article:tag" content="{{ t.strip() }}" />
+{% endfor %}{% endif %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": {{ post.title | tojson }},
+  "description": {{ (post.meta_description or post.excerpt or '') | tojson }},
+  "image": "{{ site_origin }}{{ post.featured_image or '/static/img/og-image.png' }}",
+  "datePublished": "{{ post.published_at.isoformat() if post.published_at else '' }}",
+  "dateModified": "{{ post.published_at.isoformat() if post.published_at else '' }}",
+  "author": {
+    "@type": "Person",
+    "name": {{ (post.author.name if post.author else 'Regbite') | tojson }},
+    "jobTitle": "Chief Regulatory Expert",
+    "worksFor": { "@type": "Organization", "name": "Regbite", "url": "{{ site_origin }}" }
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Regbite",
+    "url": "{{ site_origin }}",
+    "logo": { "@type": "ImageObject", "url": "{{ site_origin }}/static/img/favicon-512.png" }
+  },
+  "mainEntityOfPage": { "@type": "WebPage", "@id": "{{ site_origin }}/blog/{{ post.slug }}" },
+  {% if post.category %}"articleSection": {{ post.category.name | tojson }},{% endif %}
+  {% if post.tags %}"keywords": {{ post.tags | tojson }},{% endif %}
+  "inLanguage": "en-IN",
+  "isAccessibleForFree": true
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "{{ site_origin }}/" },
+    { "@type": "ListItem", "position": 2, "name": "Blog", "item": "{{ site_origin }}/blog" }{% if post.category %},
+    { "@type": "ListItem", "position": 3, "name": {{ post.category.name | tojson }}, "item": "{{ site_origin }}/blog?category={{ post.category.slug }}" }{% endif %}
+  ]
+}
+</script>
+{% endblock %}
 
 {% block extra_css %}
   .article-hero { padding: 56px 2rem 0; background: var(--n50); border-bottom: 1px solid var(--n200); }
@@ -63,6 +117,31 @@
     .related-grid { grid-template-columns: 1fr; }
     .article-body, .article-featured, .related-section { padding-left: 1.25rem; padding-right: 1.25rem; }
   }
+  .crumbs { font-size: .78rem; color: var(--n400); margin-bottom: 1rem; display: flex; gap: .4rem; justify-content: center; flex-wrap: wrap; }
+  .crumbs a { color: var(--n500); }
+  .crumbs a:hover { color: var(--brand-2); }
+
+  .toc { background: var(--canvas); border: 1px solid var(--n100); border-radius: var(--r-md); padding: 1.1rem 1.35rem; margin-bottom: 2rem; }
+  .toc-label { font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--n400); margin-bottom: .6rem; }
+  .toc ol { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: .35rem; }
+  .toc li { font-size: .88rem; line-height: 1.5; }
+  .toc a { color: var(--n600); }
+  .toc a:hover { color: var(--brand-2); text-decoration: underline; text-underline-offset: 2px; }
+  .article-content h2 { scroll-margin-top: calc(var(--nav-h) + 1rem); }
+
+  .author-box { display: flex; gap: 1.1rem; align-items: flex-start; max-width: 760px; margin: 2.5rem auto 0; padding: 1.4rem; background: var(--surface); border: 1px solid var(--n100); border-radius: var(--r-lg); }
+  .author-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--grad-cta); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.15rem; flex: none; }
+  .author-name { font-weight: 800; letter-spacing: -0.02em; }
+  .author-role { font-size: .76rem; font-weight: 700; color: var(--brand-2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .5rem; }
+  .author-bio { font-size: .88rem; color: var(--n500); line-height: 1.7; }
+
+  .post-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 760px; margin: 1.25rem auto 0; }
+  .post-nav-item { display: flex; flex-direction: column; gap: .3rem; padding: 1rem 1.2rem; background: var(--surface); border: 1px solid var(--n100); border-radius: var(--r-md); transition: border-color var(--t-base) var(--e-out), box-shadow var(--t-base) var(--e-out); }
+  .post-nav-item:hover { border-color: var(--n200); box-shadow: var(--sh); }
+  .post-nav-next { text-align: right; }
+  .post-nav-dir { font-size: .7rem; font-weight: 700; color: var(--brand-2); text-transform: uppercase; letter-spacing: .06em; }
+  .post-nav-title { font-size: .88rem; font-weight: 600; color: var(--ink); line-height: 1.45; }
+  @media (max-width: 640px) { .post-nav { grid-template-columns: 1fr; } .post-nav-next { text-align: left; } }
 {% endblock %}
 
 {% block content %}
@@ -70,13 +149,20 @@
 <section class="article-hero">
   <div class="article-hero-inner">
     <a href="/blog" class="article-back">&larr; Back to Blog</a>
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a href="/">Home</a> <span aria-hidden="true">/</span>
+      <a href="/blog">Blog</a>
+      {% if post.category %}<span aria-hidden="true">/</span>
+      <a href="/blog?category={{ post.category.slug }}">{{ post.category.name }}</a>{% endif %}
+    </nav>
     {% if post.category %}
     <div class="article-cat"><a href="/blog?category={{ post.category.slug }}">{{ post.category.name }}</a></div>
     {% endif %}
     <h1>{{ post.title }}</h1>
     <div class="article-meta">
       <span class="article-meta-author">{{ post.author.name if post.author else 'Regbite' }}</span>
-      <span>{{ post.published_at.strftime('%B %d, %Y') if post.published_at else '' }}</span>
+      <time datetime="{{ post.published_at.isoformat() if post.published_at else '' }}">{{ post.published_at.strftime('%B %d, %Y') if post.published_at else '' }}</time>
+      <span>{{ reading_time }} min read</span>
       <span>{{ post.views or 0 }} views</span>
     </div>
     {% if post.tags %}
@@ -97,8 +183,17 @@
 
 <!-- Article Body -->
 <article class="article-body">
+  {% if headings and headings|length > 2 %}
+  <nav class="toc" aria-label="On this page">
+    <div class="toc-label">On this page</div>
+    <ol>
+      {% for h in headings %}<li><a href="#{{ h.slug }}">{{ h.text }}</a></li>{% endfor %}
+    </ol>
+  </nav>
+  {% endif %}
+
   <div class="article-content">
-    {{ post.content | safe }}
+    {{ body_html | safe }}
   </div>
 
   <div class="article-share">
@@ -106,6 +201,36 @@
     <button class="share-btn" onclick="navigator.clipboard.writeText(window.location.href);this.textContent='Copied!'">Copy Link</button>
   </div>
 </article>
+
+{# Author box. For regulatory guidance this is not decoration: search engines
+   and readers both weigh who is making the claim. #}
+<aside class="author-box">
+  <div class="author-avatar">{{ (post.author.name if post.author else 'R')[0] }}</div>
+  <div>
+    <div class="author-name">{{ post.author.name if post.author else 'Regbite' }}</div>
+    <div class="author-role">Chief Regulatory Expert, Regbite</div>
+    <p class="author-bio">Navneet maintains the 64-rule compliance database behind Regbite,
+      spanning FSSAI, Legal Metrology and AYUSH. Every alert Regbite sends has been
+      validated by her.</p>
+  </div>
+</aside>
+
+{% if prev_post or next_post %}
+<nav class="post-nav" aria-label="More articles">
+  {% if prev_post %}
+  <a class="post-nav-item" href="/blog/{{ prev_post.slug }}">
+    <span class="post-nav-dir">&larr; Previous</span>
+    <span class="post-nav-title">{{ prev_post.title }}</span>
+  </a>
+  {% else %}<span></span>{% endif %}
+  {% if next_post %}
+  <a class="post-nav-item post-nav-next" href="/blog/{{ next_post.slug }}">
+    <span class="post-nav-dir">Next &rarr;</span>
+    <span class="post-nav-title">{{ next_post.title }}</span>
+  </a>
+  {% endif %}
+</nav>
+{% endif %}
 
 {% if related %}
 <!-- Related Posts -->

@@ -287,6 +287,12 @@ ARTICLES = [
 ]
 
 
+# 2026 news posts live in their own module so the article bodies do not
+# drown the seeding logic here.
+from app.services.blog_news_2026 import NEWS_ARTICLES  # noqa: E402
+ARTICLES = ARTICLES + NEWS_ARTICLES
+
+
 def seed_trending_posts(db) -> dict:
     """Idempotent by slug. Safe to call on every startup."""
     author = _get_author(db)

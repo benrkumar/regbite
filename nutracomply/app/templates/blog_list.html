@@ -63,6 +63,21 @@
   }
 {% endblock %}
 
+{% block extra_head %}
+<link rel="alternate" type="application/rss+xml" title="Regbite — FSSAI Regulatory Guidance" href="/blog/feed.xml" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  "name": "Regbite — FSSAI Regulatory Guidance",
+  "url": "{{ site_origin }}/blog",
+  "description": "FSSAI, Legal Metrology and AYUSH compliance guidance for India's nutraceutical and health supplement industry.",
+  "inLanguage": "en-IN",
+  "publisher": { "@type": "Organization", "name": "Regbite", "url": "{{ site_origin }}" }
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <!-- Hero -->
 <section class="blog-hero">

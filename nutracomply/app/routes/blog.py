@@ -2,6 +2,7 @@
 Blog routes — public blog listing + post detail, and admin blog management.
 """
 import uuid
+import re
 from datetime import datetime
 
 from fastapi import APIRouter, Request, Depends, Form, UploadFile, File
@@ -137,6 +138,51 @@ async def blog_listing(request: Request, db: Session = Depends(get_db)):
     })
 
 
+
+def _reading_time(html: str) -> int:
+    """Whole minutes at 220 wpm, floored to 1."""
+    text = re.sub(r"<[^>]+>", " ", html or "")
+    words = len(text.split())
+    return max(1, round(words / 220))
+
+
+def _headings(html: str):
+    """
+    Pull <h2> text out of the post body for a table of contents, and hand back
+    a slug for each so the template can anchor to it.
+
+    The ids are injected into the rendered HTML by the same pass, so the anchors
+    and the list cannot drift apart.
+    """
+    out = []
+    seen = set()
+    for m in re.finditer(r"<h2[^>]*>(.*?)</h2>", html or "", re.S | re.I):
+        text = re.sub(r"<[^>]+>", "", m.group(1)).strip()
+        if not text:
+            continue
+        slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60] or "section"
+        base, n = slug, 2
+        while slug in seen:
+            slug, n = f"{base}-{n}", n + 1
+        seen.add(slug)
+        out.append({"text": text, "slug": slug})
+    return out
+
+
+def _with_heading_ids(html: str, headings):
+    """Add id= to each <h2> so the table of contents can link to it."""
+    it = iter(headings)
+
+    def repl(m):
+        try:
+            h = next(it)
+        except StopIteration:
+            return m.group(0)
+        return f'<h2 id="{h["slug"]}">{m.group(1)}</h2>'
+
+    return re.sub(r"<h2[^>]*>(.*?)</h2>", repl, html or "", flags=re.S | re.I)
+
+
 @router.get("/blog/{slug}")
 async def blog_post(slug: str, request: Request, db: Session = Depends(get_db)):
     post = db.query(BlogPost).filter(
@@ -177,11 +223,41 @@ async def blog_post(slug: str, request: Request, db: Session = Depends(get_db)):
     except Exception:
         user = None
 
+    headings = _headings(post.content)
+    body_html = _with_heading_ids(post.content, headings)
+
+    # Previous / next by publication date, so a reader can walk the archive.
+    prev_post = (
+        db.query(BlogPost)
+        .filter(
+            BlogPost.status == BlogPostStatus.PUBLISHED,
+            BlogPost.published_at < post.published_at,
+        )
+        .order_by(BlogPost.published_at.desc())
+        .first()
+        if post.published_at else None
+    )
+    next_post = (
+        db.query(BlogPost)
+        .filter(
+            BlogPost.status == BlogPostStatus.PUBLISHED,
+            BlogPost.published_at > post.published_at,
+        )
+        .order_by(BlogPost.published_at.asc())
+        .first()
+        if post.published_at else None
+    )
+
     return templates.TemplateResponse("blog_post.html", {
         "request": request,
         "user": user,
         "post": post,
         "related": related,
+        "body_html": body_html,
+        "headings": headings,
+        "reading_time": _reading_time(post.content),
+        "prev_post": prev_post,
+        "next_post": next_post,
     })
 
 
