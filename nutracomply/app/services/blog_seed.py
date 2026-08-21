@@ -11,6 +11,7 @@ Seeding is idempotent by slug and runs at startup, so a deploy publishes these
 without anyone having to hit an admin endpoint.
 """
 
+import html as _html
 from datetime import datetime
 
 from app.models import BlogCategory, BlogPost, BlogPostStatus, User
@@ -293,9 +294,39 @@ from app.services.blog_news_2026 import NEWS_ARTICLES  # noqa: E402
 ARTICLES = ARTICLES + NEWS_ARTICLES
 
 
+
+def _unescape_fields(db) -> list:
+    """
+    Repair HTML entities that leaked into auto-escaped fields.
+
+    Entities are correct inside `content` (rendered with |safe) but wrong in
+    title/excerpt/meta, which Jinja escapes — so "&ldquo;" renders as literal
+    text on the page. Unescaping a plain-text field is always safe, so this can
+    run on every post rather than only the seeded ones, and it cannot clobber a
+    legitimate edit made through the admin editor.
+    """
+    fixed = []
+    for post in db.query(BlogPost).all():
+        changed = False
+        for field in ("title", "excerpt", "meta_title", "meta_description"):
+            value = getattr(post, field, None)
+            if not value:
+                continue
+            clean = _html.unescape(value)
+            if clean != value:
+                setattr(post, field, clean)
+                changed = True
+        if changed:
+            fixed.append(post.slug)
+    if fixed:
+        db.commit()
+    return fixed
+
+
 def seed_trending_posts(db) -> dict:
     """Idempotent by slug. Safe to call on every startup."""
     author = _get_author(db)
+    entity_fixes = _unescape_fields(db)
     created, skipped = [], []
 
     updated = []
@@ -304,8 +335,16 @@ def seed_trending_posts(db) -> dict:
         if existing:
             # These posts shipped before the cover images existed, so a plain
             # skip would leave them permanently image-less in production.
+            touched = False
             if art.get("image") and existing.featured_image != art["image"]:
                 existing.featured_image = art["image"]
+                touched = True
+            # Titles are auto-escaped on render, so a source correction has
+            # to reach the stored row or the page keeps showing the old text.
+            if existing.title != art["title"]:
+                existing.title = art["title"]
+                touched = True
+            if touched:
                 updated.append(art["slug"])
             else:
                 skipped.append(art["slug"])
@@ -337,4 +376,4 @@ def seed_trending_posts(db) -> dict:
 
     db.commit()
     return {"created": created, "updated": updated, "skipped": skipped,
-            "author": author.name}
+            "entity_fixes": entity_fixes, "author": author.name}

@@ -69,7 +69,7 @@ NEWS_ARTICLES = [
 
     # ── Advertising & Claims ────────────────────────────────────────────────
     {
-        "title": "&ldquo;100% Natural&rdquo; Is Now a Liability. FSSAI Finalised the Claims Rules.",
+        "title": "“100% Natural” Is Now a Liability. FSSAI Finalised the Claims Rules.",
         "slug": "fssai-advertising-claims-amendment-2026",
         "image": "/static/img/blog/blog-claims.png",
         "cat": ("Nutraceuticals", "nutraceuticals"),
