@@ -44,6 +44,7 @@
       </div>
       {% endif %}
 
+      {% if notice %}<div class="alert alert-ok">{{ notice }}</div>{% endif %}
       {% if error %}<div class="alert alert-bad">{{ error }}</div>{% endif %}
 
       <form method="post" action="/login">
@@ -53,7 +54,10 @@
                  placeholder="you@company.com" required autofocus autocomplete="username" />
         </div>
         <div class="field">
-          <label class="field-label" for="password">Password</label>
+          <div class="field-label-row">
+            <label class="field-label" for="password">Password</label>
+            <a class="field-label-link" href="/forgot-password">Forgot password?</a>
+          </div>
           <input class="input" type="password" id="password" name="password"
                  placeholder="Your password" required autocomplete="current-password" />
         </div>

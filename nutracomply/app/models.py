@@ -247,6 +247,29 @@ class LabelVersion(Base):
     alerts = relationship("Alert", back_populates="label_version")
 
 
+class PasswordResetToken(Base):
+    """
+    A single-use, time-limited password reset grant.
+
+    Only the SHA-256 of the token is stored. A reset link is a bearer credential
+    for an account, so a DB read — a log leak, a backup, an admin running a
+    query — must not yield anything that can be replayed.
+    """
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    token_hash = Column(String(64), unique=True, index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    used_at = Column(DateTime, nullable=True)
+    ip_hash = Column(String(64), nullable=True)   # salted, for abuse accounting only
+
+    __table_args__ = (
+        Index("ix_pwreset_unused", "user_id", "used_at"),
+    )
+
+
 class PendingUpload(Base):
     """
     A label uploaded by an anonymous visitor, held until they create an account

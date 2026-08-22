@@ -288,6 +288,51 @@ def send_team_invite_email(invite_email: str, inviter_name: str, role: str, invi
     _send_email(subject, body, _send_to([invite_email]))
 
 
+# ── Password Reset ───────────────────────────────────────────────────────────
+
+def send_password_reset_email(user, reset_url: str, ttl_minutes: int = 60):
+    """
+    Send the reset link.
+
+    Deliberately says what to do if the recipient did NOT request it, because
+    an unexpected reset email is the first signal a user gets that someone is
+    probing their account.
+    """
+    subject = "Reset your Regbite password"
+    body = f"""
+    <h2 style='color:#111;margin:0 0 8px;'>Reset your password</h2>
+    <p>Hi {user.name or 'there'}, we received a request to reset the password for
+       the Regbite account registered to <strong>{user.email}</strong>.</p>
+
+    <p style='margin:24px 0;'>
+        <a href='{reset_url}'
+           style='display:inline-block;padding:12px 28px;background:#111;color:#fff;
+                  text-decoration:none;border-radius:6px;font-weight:600;font-size:1.05em;'>
+            Choose a new password
+        </a>
+    </p>
+
+    <p style='color:#6b7280;font-size:0.85em;'>
+        This link expires in {ttl_minutes} minutes and can only be used once.
+    </p>
+
+    <div style='background:#fef2f2;border-left:4px solid #dc2626;padding:12px 16px;margin:20px 0;border-radius:4px;'>
+        <p style='margin:0;font-size:0.9em;'>
+            <strong>Didn't request this?</strong> You can safely ignore this email —
+            your password will not change. If you keep receiving these, someone may
+            be trying to access your account; reply to this email and we will look
+            into it.
+        </p>
+    </div>
+
+    <p style='color:#6b7280;font-size:0.8em;'>
+        If the button does not work, copy and paste this link into your browser:<br>
+        <span style='word-break:break-all;'>{reset_url}</span>
+    </p>
+    """
+    _send_email(subject, body, _send_to([user.email]))
+
+
 # ── 5. Invite Accepted ───────────────────────────────────────────────────────
 
 def send_invite_accepted_email(inviter, new_member_name: str, new_member_email: str, role: str):

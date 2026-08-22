@@ -519,6 +519,21 @@ button { font-family: inherit; }
   padding: .65rem .85rem; line-height: 1.5;
   transition: border-color var(--t-fast) var(--e-out), box-shadow var(--t-fast) var(--e-out);
 }
+/* Label with a trailing action, e.g. Password … Forgot password? */
+.field-label-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+}
+.field-label-row .field-label { margin-bottom: .4rem; }
+.field-label-link {
+  font-size: .78rem; font-weight: 600; color: var(--brand-2);
+  text-decoration: none; white-space: nowrap;
+}
+.field-label-link:hover { text-decoration: underline; }
+
+.field-hint {
+  display: block; font-size: .74rem; color: var(--n500);
+  margin-top: .4rem; line-height: 1.5;
+}
 .input::placeholder, .textarea::placeholder { color: var(--n400); }
 .input:focus, .select:focus, .textarea:focus {
   outline: none; border-color: var(--brand-2); box-shadow: var(--focus);

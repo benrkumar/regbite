@@ -53,15 +53,17 @@
       <form method="post" action="/register">
         <div class="field">
           <label class="field-label" for="name">Full name</label>
-          <input class="input" type="text" id="name" name="name" placeholder="Regulatory Affairs Manager" required autofocus autocomplete="name" />
+          <input class="input" type="text" id="name" name="name" placeholder="Regulatory Affairs Manager" value="{{ name or '' }}" required autofocus autocomplete="name" />
         </div>
         <div class="field">
           <label class="field-label" for="email">Work email</label>
-          <input class="input" type="email" id="email" name="email" placeholder="you@company.com" required autocomplete="email" />
+          <input class="input" type="email" id="email" name="email" placeholder="you@company.com" value="{{ email or '' }}" required autocomplete="email" aria-describedby="email-hint" />
+          <span class="field-hint" id="email-hint">Please use your company email — we can't accept Gmail, Yahoo, Outlook or other personal addresses.</span>
         </div>
         <div class="field">
           <label class="field-label" for="password">Password</label>
-          <input class="input" type="password" id="password" name="password" placeholder="Min 8 characters" required minlength="8" autocomplete="new-password" />
+          <input class="input" type="password" id="password" name="password" placeholder="At least 10 characters" required minlength="10" autocomplete="new-password" aria-describedby="pw-rules" />
+          <span class="field-hint" id="pw-rules">At least 10 characters, with an uppercase letter, a lowercase letter and a number.</span>
         </div>
         <div class="field" style="margin-top:1rem;">
           <label class="auth-terms">

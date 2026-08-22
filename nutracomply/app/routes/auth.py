@@ -420,9 +420,17 @@ def _claim_target(request: Request, db: Session, user, fallback: str) -> tuple[s
 
 @router.get("/login")
 async def login_page(request: Request, db: Session = Depends(get_db)):
+    # `?reset=1` is set by the reset flow, which deliberately does not sign the
+    # user in — completing a reset proves mailbox access, not that the account
+    # owner is at this browser. The notice explains why they're back here.
+    notice = None
+    if request.query_params.get("reset") == "1":
+        notice = "Your password has been changed. Sign in with your new password."
+
     return templates.TemplateResponse("login.html", {
         "request": request,
         "error": None,
+        "notice": notice,
         "stashed_file": _stashed_file(request, db),
     })
 
@@ -490,6 +498,145 @@ async def logout(request: Request, db: Session = Depends(get_db)):
     return response
 
 
+# ── Password reset ───────────────────────────────────────────────────────────
+#
+# Two rules shape this flow:
+#   1. It must never reveal whether an email is registered. Every outcome of
+#      POST /forgot-password — unknown address, inactive account, cooldown hit,
+#      SMTP failure — renders the identical confirmation page.
+#   2. A token is a bearer credential for an account, so it is single-use,
+#      expires in an hour, and is stored only as a hash.
+
+_RESET_SENT_COPY = (
+    "If an account exists for that address, we've sent a password reset link. "
+    "It expires in 60 minutes. Check your spam folder if it hasn't arrived in a few minutes."
+)
+
+
+@router.get("/forgot-password")
+async def forgot_password_page(request: Request):
+    return templates.TemplateResponse("forgot_password.html", {
+        "request": request, "error": None, "sent": False,
+    })
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    request: Request,
+    email: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    from app.services import password_reset as pr
+
+    client_ip = request.client.host if request.client else "unknown"
+    email_norm = (email or "").strip().lower()
+
+    def sent_page(status: int = 200):
+        # One response for every path through this handler. Do not add branches
+        # here that a caller could use to probe which addresses exist.
+        return templates.TemplateResponse("forgot_password.html", {
+            "request": request, "error": None, "sent": True, "message": _RESET_SENT_COPY,
+        }, status_code=status)
+
+    # Rate limit on IP and on the address, so neither a scattergun nor a
+    # sustained attack on one mailbox gets far. A limiter failure denies.
+    try:
+        from app.services.rate_limiter import limiter
+        for ns, key, lim, win in (
+            ("pwreset_ip", client_ip, 8, 3600),
+            ("pwreset_email", email_norm or "blank", 4, 3600),
+        ):
+            allowed, _retry = limiter.check(ns, key, limit=lim, window=win)
+            if not allowed:
+                return sent_page()          # same page — no signal
+    except Exception:
+        return sent_page()
+
+    pr.purge_expired(db, limit=200)
+
+    user = db.query(User).filter(User.email == email_norm).first()
+    if user and user.is_active and not pr.recently_requested(db, user):
+        try:
+            raw = pr.issue_token(db, user, ip=client_ip)
+            reset_url = f"{settings.app_base_url.rstrip('/')}/reset-password/{raw}"
+            from app.services.notification import send_password_reset_email
+            send_password_reset_email(user, reset_url, pr.TOKEN_TTL_MINUTES)
+        except Exception as e:
+            # Never surface this: a send failure must look like a send success.
+            print(f"[auth] password reset send failed: {e}")
+
+    return sent_page()
+
+
+@router.get("/reset-password/{token}")
+async def reset_password_page(token: str, request: Request, db: Session = Depends(get_db)):
+    from app.services import password_reset as pr
+    user = pr.peek_token(db, token)
+    return templates.TemplateResponse("reset_password.html", {
+        "request": request,
+        "token": token,
+        "valid": user is not None,
+        "error": None,
+    })
+
+
+@router.post("/reset-password/{token}")
+async def reset_password(
+    token: str,
+    request: Request,
+    password: str = Form(...),
+    confirm_password: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    from app.services import password_reset as pr
+
+    def form_error(msg: str):
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request, "token": token, "valid": True, "error": msg,
+        }, status_code=400)
+
+    if confirm_password and password != confirm_password:
+        return form_error("Those passwords don't match.")
+
+    pw_error = _validate_password(password)
+    if pw_error:
+        return form_error(pw_error)
+
+    # Validate the password BEFORE consuming the token, so a weak password does
+    # not burn the user's only link and force them to request another.
+    if pr.peek_token(db, token) is None:
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request, "token": token, "valid": False, "error": None,
+        }, status_code=400)
+
+    user = pr.consume_token(db, token)
+    if user is None:
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request, "token": token, "valid": False, "error": None,
+        }, status_code=400)
+
+    user.hashed_password = hash_password(password)
+    db.commit()
+
+    try:
+        from app.services.notification import send_password_changed_email
+        send_password_changed_email(user)
+    except Exception as e:
+        print(f"[auth] password changed notice failed: {e}")
+
+    try:
+        from app.services.activity_service import log_action
+        log_action(user.id, "password_reset", detail="Password reset via email link",
+                   ip_address=request.client.host if request.client else None)
+    except Exception:
+        pass
+
+    # Deliberately not signing them in. Whoever completed the reset proved
+    # mailbox access, not that they are the account owner sitting at this
+    # browser; make them log in with the new password.
+    return RedirectResponse(url="/login?reset=1", status_code=302)
+
+
 @router.get("/register")
 async def register_page(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("register.html", {
@@ -508,27 +655,41 @@ async def register(
     agree_terms: str = Form(None),
     db: Session = Depends(get_db),
 ):
-    # Validate terms agreement
-    if not agree_terms:
+    def _error(msg: str):
+        # Re-render with the form's own state intact. `stashed_file` matters most
+        # here: someone who uploaded a label anonymously and then tripped a
+        # validation rule must still see that their file is being held, or the
+        # page looks like it silently lost their work.
         return templates.TemplateResponse("register.html", {
             "request": request,
-            "error": "You must agree to the Terms of Service and Privacy Policy to create an account.",
+            "error": msg,
+            "name": name,
+            "email": email,
+            "stashed_file": _stashed_file(request, db),
         })
+
+    # Validate terms agreement
+    if not agree_terms:
+        return _error(
+            "You must agree to the Terms of Service and Privacy Policy to create an account."
+        )
+
+    # Business email only — Regbite accounts are for registered food businesses.
+    # Runs before the duplicate check so we never confirm to a stranger whether a
+    # given consumer address is already registered here.
+    from app.utils.email_domain import validate_business_email
+    email_error = validate_business_email(email)
+    if email_error:
+        return _error(email_error)
 
     # Check if email already taken
     existing = db.query(User).filter(User.email == email.lower().strip()).first()
     if existing:
-        return templates.TemplateResponse("register.html", {
-            "request": request,
-            "error": "An account with that email already exists. Please sign in.",
-        })
+        return _error("An account with that email already exists. Please sign in.")
 
     pw_error = _validate_password(password)
     if pw_error:
-        return templates.TemplateResponse("register.html", {
-            "request": request,
-            "error": pw_error,
-        })
+        return _error(pw_error)
 
     is_admin = bool(settings.admin_email and email.lower().strip() == settings.admin_email.lower().strip())
 

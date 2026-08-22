@@ -57,6 +57,12 @@ class Settings(BaseSettings):
     # Admin
     admin_email: str = ""
 
+    # Signup gating — Regbite sells to registered food businesses, so consumer
+    # mailboxes are refused at /register. Both of these exist so sales can react
+    # without a deploy: flip the gate off entirely, or admit specific addresses.
+    block_free_email_signups: bool = True
+    free_email_allowlist: str = ""   # comma-separated addresses, e.g. "a@gmail.com,b@yahoo.in"
+
     # Public base URL — used in notification emails so links resolve correctly.
     # Override with APP_BASE_URL env var in staging/production environments.
     app_base_url: str = "https://regbite.com"
