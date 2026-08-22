@@ -37,6 +37,23 @@ def _require_admin(request: Request, db: Session):
 
 # ── Root redirect ────────────────────────────────────────────────────────────
 
+
+# IST is UTC+5:30 and uploaded_at is stored in UTC, so every "per day" and
+# "per hour" figure on the API-usage page has to be shifted before it is
+# grouped. Postgres takes an INTERVAL literal; SQLite has no INTERVAL type and
+# raises a syntax error on it, which made this page a hard 500 on any local
+# SQLite run. Same arithmetic, expressed per dialect.
+IST_SHIFT_SQL = "INTERVAL '5 hours 30 minutes'"
+
+
+def _ist_expr(db, col):
+    """`col` shifted from UTC into IST, in whatever dialect this session speaks."""
+    from sqlalchemy import text as _t
+    if db.bind is not None and db.bind.dialect.name == "sqlite":
+        return func.datetime(col, "+5 hours", "+30 minutes")
+    return col + _t(IST_SHIFT_SQL)
+
+
 @router.get("")
 async def admin_root(request: Request):
     return RedirectResponse(url="/admin/dashboard")
@@ -946,8 +963,7 @@ async def admin_api_usage(
     provider_stats.sort(key=lambda x: x["cost_usd"], reverse=True)
 
     # Daily breakdown
-    from sqlalchemy import text as _sa_text
-    _ist_date = func.date(LabelVersion.uploaded_at + _sa_text("INTERVAL '5 hours 30 minutes'"))
+    _ist_date = func.date(_ist_expr(db, LabelVersion.uploaded_at))
     daily_rows = (
         db.query(
             _ist_date.label("day"),
@@ -986,8 +1002,7 @@ async def admin_api_usage(
     if period == "today":
         try:
             from sqlalchemy import extract as sa_extract
-            from sqlalchemy import text as _sa_text2
-            _ist_ts = LabelVersion.uploaded_at + _sa_text2("INTERVAL '5 hours 30 minutes'")
+            _ist_ts = _ist_expr(db, LabelVersion.uploaded_at)
             hourly_rows = (
                 db.query(
                     sa_extract("hour", _ist_ts).label("hr"),

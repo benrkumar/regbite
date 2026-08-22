@@ -5,7 +5,7 @@
 {% block content %}
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.75rem;">
-  <p style="margin:0;color:#737373;font-size:0.86rem;">{{ rules|length }} total rules</p>
+  <p style="margin:0;color:var(--gray-500);font-size:0.86rem;">{{ rules|length }} total rules</p>
   <div style="display:flex;gap:0.5rem;align-items:center;">
     <span class="adm-badge badge-green">{{ rules | selectattr('active') | list | length }} Active</span>
     <span class="adm-badge badge-gray">{{ rules | rejectattr('active') | list | length }} Disabled</span>
@@ -20,9 +20,9 @@
     {% if ns.current_cat != '' %}</tbody></table></div>{% endif %}
     {% set ns.current_cat = rule.category.value %}
 
-    <h4 style="margin:1.5rem 0 0.75rem;color:#262626;font-size:0.95rem;">
+    <h4 style="margin:1.5rem 0 0.75rem;color:var(--gray-800);font-size:0.95rem;">
       {{ rule.category.value.replace('_', ' ') | title }}
-      <span style="font-size:0.72rem;font-weight:500;color:#737373;margin-left:0.5rem;">
+      <span style="font-size:0.72rem;font-weight:500;color:var(--gray-500);margin-left:0.5rem;">
         ({{ rules | selectattr('category.value','equalto',ns.current_cat) | list | length }} rules)
       </span>
     </h4>
@@ -42,14 +42,14 @@
 
   <tr style="{% if not rule.active %}opacity:0.55;{% endif %}">
     <td>
-      <code style="font-size:0.75rem;background:#F5F5F5;padding:0.15rem 0.4rem;border-radius:5px;color:#525252;">{{ rule.rule_code }}</code>
+      <code style="font-size:0.75rem;background:var(--gray-50);padding:0.15rem 0.4rem;border-radius:5px;color:var(--gray-600);">{{ rule.rule_code }}</code>
     </td>
     <td>
-      <div style="font-size:0.85rem;font-weight:500;color:#262626;">{{ rule.description }}</div>
+      <div style="font-size:0.85rem;font-weight:500;color:var(--gray-800);">{{ rule.description }}</div>
       {% if rule.remediation_template %}
       <details style="margin-top:0.3rem;">
-        <summary style="font-size:0.76rem;color:#525252;cursor:pointer;list-style:none;">Remediation &darr;</summary>
-        <p style="font-size:0.78rem;color:#737373;margin:0.3rem 0 0;line-height:1.5;">{{ rule.remediation_template }}</p>
+        <summary style="font-size:0.76rem;color:var(--gray-600);cursor:pointer;list-style:none;">Remediation &darr;</summary>
+        <p style="font-size:0.78rem;color:var(--gray-500);margin:0.3rem 0 0;line-height:1.5;">{{ rule.remediation_template }}</p>
       </details>
       {% endif %}
     </td>
@@ -74,11 +74,11 @@
       {# Quick severity edit #}
       <details style="display:inline-block;margin-left:0.35rem;">
         <summary style="list-style:none;cursor:pointer;" class="adm-btn" style="font-size:0.72rem;padding:0.22rem 0.55rem;">Edit</summary>
-        <div style="position:absolute;background:#fff;border:1px solid #EBEBEB;border-radius:10px;padding:1rem;box-shadow:0 8px 32px rgba(0,0,0,0.12);z-index:100;min-width:240px;margin-top:0.3rem;">
+        <div style="position:absolute;background:var(--white);border:1px solid var(--border);border-radius:10px;padding:1rem;box-shadow:0 8px 32px rgba(0,0,0,0.12);z-index:100;min-width:240px;margin-top:0.3rem;">
           <form method="post" action="/admin/rules/{{ rule.id }}/edit">
             <div style="margin-bottom:0.6rem;">
-              <label style="font-size:0.75rem;font-weight:600;color:#525252;display:block;margin-bottom:0.2rem;">Severity</label>
-              <select name="severity" style="width:100%;padding:0.4rem 0.6rem;border:1px solid #EBEBEB;border-radius:6px;font-size:0.82rem;">
+              <label style="font-size:0.75rem;font-weight:600;color:var(--gray-600);display:block;margin-bottom:0.2rem;">Severity</label>
+              <select name="severity" style="width:100%;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;">
                 <option value="">— keep current —</option>
                 <option value="CRITICAL" {% if rule.severity.value == 'CRITICAL' %}selected{% endif %}>CRITICAL</option>
                 <option value="HIGH"     {% if rule.severity.value == 'HIGH'     %}selected{% endif %}>HIGH</option>
@@ -96,7 +96,7 @@
 {% if rules %}</tbody></table></div>{% endif %}
 
 {% if not rules %}
-<div style="text-align:center;padding:3rem;color:#A3A3A3;">
+<div style="text-align:center;padding:3rem;color:var(--gray-400);">
   No compliance rules in the database yet.
 </div>
 {% endif %}

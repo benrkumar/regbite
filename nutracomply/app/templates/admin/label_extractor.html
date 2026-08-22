@@ -15,8 +15,8 @@
   }
 
   .lex-card {
-    background: #FFFFFF;
-    border: 1px solid #EBEBEB;
+    background: var(--white);
+    border: 1px solid var(--border);
     border-radius: 0.75rem;
     padding: 1.5rem;
     margin-bottom: 1.25rem;
@@ -26,12 +26,12 @@
   .lex-card-title {
     font-size: 0.82rem;
     font-weight: 600;
-    color: #262626;
+    color: var(--gray-800);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     margin: 0 0 1.1rem;
     padding-bottom: 0.65rem;
-    border-bottom: 1px solid #F0F0F0;
+    border-bottom: 1px solid var(--gray-50);
   }
 
   /* Pipeline steps */
@@ -41,7 +41,7 @@
     align-items: flex-start;
     gap: 0.65rem;
     padding: 0.55rem 0;
-    border-bottom: 1px solid #F5F5F5;
+    border-bottom: 1px solid var(--gray-50);
     font-size: 0.8rem;
     transition: background 0.2s, padding-left 0.2s;
   }
@@ -53,18 +53,18 @@
     flex-shrink: 0;
     margin-top: 0.22rem;
   }
-  .step-dot-active { background: #111111; }
-  .step-dot-inactive { background: #D4D4D4; }
+  .step-dot-active { background: var(--ink); }
+  .step-dot-inactive { background: var(--gray-300); }
   .step-num {
     font-size: 0.67rem;
-    color: #A3A3A3;
+    color: var(--gray-400);
     min-width: 1.8rem;
     flex-shrink: 0;
     padding-top: 0.05rem;
   }
   .step-body { flex: 1; min-width: 0; }
-  .step-label { font-weight: 500; color: #262626; }
-  .step-desc { color: #737373; font-size: 0.75rem; margin-top: 0.1rem; }
+  .step-label { font-weight: 500; color: var(--gray-800); }
+  .step-desc { color: var(--gray-500); font-size: 0.75rem; margin-top: 0.1rem; }
   .step-status {
     flex-shrink: 0;
     font-size: 0.67rem;
@@ -73,22 +73,22 @@
     border-radius: 3px;
     white-space: nowrap;
   }
-  .step-status-ok  { background: #F5F5F5; color: #262626; }
-  .step-status-off { background: #F5F5F5; color: #A3A3A3; }
+  .step-status-ok  { background: var(--gray-50); color: var(--gray-800); }
+  .step-status-off { background: var(--gray-50); color: var(--gray-400); }
 
   /* Running step highlight */
   .pipeline-step.step-running {
-    background: #F0F9F8;
-    border-left: 3px solid #111111;
+    background: var(--primary-light);
+    border-left: 3px solid var(--ink);
     border-radius: 0.25rem;
     padding-left: 0.75rem;
     margin-left: -0.75rem;
   }
-  .pipeline-step.step-running .step-dot { background: #111111; animation: pulse 1s infinite; }
+  .pipeline-step.step-running .step-dot { background: var(--ink); animation: pulse 1s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
   .step-status-label {
     font-size: 0.7rem;
-    color: #111111;
+    color: var(--ink);
     font-style: italic;
     display: none;
   }
@@ -96,38 +96,38 @@
 
   /* Formats */
   .fmt-group { margin-bottom: 0.65rem; }
-  .fmt-label { font-size: 0.72rem; font-weight: 600; color: #737373; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.3rem; }
+  .fmt-label { font-size: 0.72rem; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.3rem; }
   .fmt-pills { display: flex; gap: 0.4rem; flex-wrap: wrap; }
   .fmt-pill {
     font-size: 0.72rem; font-weight: 500; padding: 0.15rem 0.5rem;
-    border-radius: 3px; background: #F5F5F5; color: #525252; border: 1px solid #E5E5E5;
+    border-radius: 3px; background: var(--gray-50); color: var(--gray-600); border: 1px solid var(--gray-200);
   }
 
   /* Tabs */
   .tab-bar { display:flex; gap:0.5rem; margin-bottom:1.25rem; }
-  .tab-btn { padding:0.4rem 1rem; border:1px solid #EBEBEB; background:#F8F8F8; border-radius:0.4rem; cursor:pointer; font-size:0.82rem; color:#525252; }
-  .tab-btn.active { background:#111111; color:#fff; border-color:#111111; }
+  .tab-btn { padding:0.4rem 1rem; border:1px solid var(--border); background:var(--bg); border-radius:0.4rem; cursor:pointer; font-size:0.82rem; color:var(--gray-600); }
+  .tab-btn.active { background:var(--ink); color:var(--white); border-color:var(--ink); }
   .tab-panel.hidden { display:none; }
 
   /* Drop zone */
   .drop-zone {
-    border: 2px dashed #D4D4D4;
+    border: 2px dashed var(--gray-300);
     border-radius: 0.5rem;
     padding: 2rem 1.5rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.15s;
-    background: #FAFAFA;
+    background: var(--bg);
     margin-bottom: 1rem;
   }
   .drop-zone:hover, .drop-zone.drag-over {
-    border-color: #111111;
-    background: #F0F0F0;
+    border-color: var(--ink);
+    background: var(--gray-50);
   }
-  .drop-zone-icon { font-size: 2rem; color: #A3A3A3; margin-bottom: 0.5rem; }
-  .drop-zone-text { font-size: 0.82rem; color: #737373; }
-  .drop-zone-sub  { font-size: 0.72rem; color: #A3A3A3; margin-top: 0.25rem; }
-  .drop-zone-file { font-size: 0.82rem; color: #111111; font-weight: 500; margin-top: 0.4rem; }
+  .drop-zone-icon { font-size: 2rem; color: var(--gray-400); margin-bottom: 0.5rem; }
+  .drop-zone-text { font-size: 0.82rem; color: var(--gray-500); }
+  .drop-zone-sub  { font-size: 0.72rem; color: var(--gray-400); margin-top: 0.25rem; }
+  .drop-zone-file { font-size: 0.82rem; color: var(--ink); font-weight: 500; margin-top: 0.4rem; }
 
   /* Results */
   .result-hidden { display: none; }
@@ -144,47 +144,47 @@
     font-size: 0.82rem;
     font-weight: 700;
   }
-  .conf-green  { background: #F5F5F5; color: #262626; }
-  .conf-amber  { background: #F5F5F5; color: #525252; }
-  .conf-red    { background: #EBEBEB; color: #111111; }
+  .conf-green  { background: var(--gray-50); color: var(--gray-800); }
+  .conf-amber  { background: var(--gray-50); color: var(--gray-600); }
+  .conf-red    { background: var(--border); color: var(--ink); }
   .source-badge {
     padding: 0.2rem 0.65rem;
     border-radius: 4px;
     font-size: 0.78rem;
     font-weight: 600;
-    background: #F0F0F0;
-    color: #111111;
+    background: var(--gray-50);
+    color: var(--ink);
   }
   .meta-chip {
     font-size: 0.75rem;
-    color: #737373;
-    background: #F5F5F5;
+    color: var(--gray-500);
+    background: var(--gray-50);
     padding: 0.15rem 0.5rem;
     border-radius: 3px;
-    border: 1px solid #EBEBEB;
+    border: 1px solid var(--border);
   }
 
   .field-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
   .field-table th {
     text-align: left;
     padding: 0.45rem 0.75rem;
-    background: #FAFAFA;
+    background: var(--bg);
     font-size: 0.67rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #A3A3A3;
-    border-bottom: 1px solid #EBEBEB;
+    color: var(--gray-400);
+    border-bottom: 1px solid var(--border);
   }
   .field-table td {
     padding: 0.45rem 0.75rem;
-    border-bottom: 1px solid #F5F5F5;
+    border-bottom: 1px solid var(--gray-50);
     vertical-align: top;
-    color: #262626;
+    color: var(--gray-800);
   }
-  .field-table td:first-child { color: #525252; font-weight: 500; white-space: nowrap; }
+  .field-table td:first-child { color: var(--gray-600); font-weight: 500; white-space: nowrap; }
   .field-table tr:last-child td { border-bottom: none; }
-  .field-val-null { color: #D4D4D4; font-style: italic; }
+  .field-val-null { color: var(--gray-300); font-style: italic; }
 
   /* Bar charts */
   .bar-row {
@@ -194,10 +194,10 @@
     margin-bottom: 0.55rem;
     font-size: 0.78rem;
   }
-  .bar-label { min-width: 7rem; color: #525252; font-weight: 500; }
-  .bar-track { flex: 1; height: 0.55rem; background: #F0F0F0; border-radius: 2px; overflow: hidden; }
-  .bar-fill  { height: 100%; background: #404040; border-radius: 2px; transition: width 0.4s ease; }
-  .bar-val   { min-width: 3rem; text-align: right; color: #737373; }
+  .bar-label { min-width: 7rem; color: var(--gray-600); font-weight: 500; }
+  .bar-track { flex: 1; height: 0.55rem; background: var(--gray-50); border-radius: 2px; overflow: hidden; }
+  .bar-fill  { height: 100%; background: var(--gray-700); border-radius: 2px; transition: width 0.4s ease; }
+  .bar-val   { min-width: 3rem; text-align: right; color: var(--gray-500); }
 
   .stat-summary {
     display: flex;
@@ -206,14 +206,14 @@
     flex-wrap: wrap;
   }
   .stat-chip { text-align: center; }
-  .stat-chip-val { font-size: 1.5rem; font-weight: 700; color: #111111; line-height: 1; }
-  .stat-chip-lbl { font-size: 0.68rem; color: #A3A3A3; margin-top: 0.2rem; }
+  .stat-chip-val { font-size: 1.5rem; font-weight: 700; color: var(--ink); line-height: 1; }
+  .stat-chip-lbl { font-size: 0.68rem; color: var(--gray-400); margin-top: 0.2rem; }
 
   .warnings-list { margin: 0.75rem 0 0; padding: 0; list-style: none; }
   .warnings-list li {
     font-size: 0.78rem;
-    color: #525252;
-    background: #F5F5F5;
+    color: var(--gray-600);
+    background: var(--gray-50);
     padding: 0.35rem 0.65rem;
     border-radius: 3px;
     margin-bottom: 0.3rem;
@@ -223,8 +223,8 @@
   .spinner {
     display: inline-block;
     width: 1rem; height: 1rem;
-    border: 2px solid #E5E5E5;
-    border-top-color: #111111;
+    border: 2px solid var(--gray-200);
+    border-top-color: var(--ink);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
     vertical-align: middle;
@@ -234,19 +234,19 @@
 
   /* LLM concept card */
   .llm-concept-card {
-    background: #F8F8F8;
-    border: 1px solid #EBEBEB;
+    background: var(--bg);
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     padding: 1.25rem;
     margin-bottom: 1.5rem;
     font-size: 0.82rem;
-    color: #525252;
+    color: var(--gray-600);
     line-height: 1.6;
   }
   .llm-concept-card h4 {
     font-size: 0.88rem;
     font-weight: 600;
-    color: #262626;
+    color: var(--gray-800);
     margin: 0 0 0.75rem;
   }
   .llm-concept-card .llm-stat-row {
@@ -256,16 +256,16 @@
     flex-wrap: wrap;
   }
   .llm-stat-item { text-align: center; }
-  .llm-stat-val { font-size: 1.3rem; font-weight: 700; color: #111111; line-height: 1; }
-  .llm-stat-lbl { font-size: 0.68rem; color: #A3A3A3; margin-top: 0.2rem; }
+  .llm-stat-val { font-size: 1.3rem; font-weight: 700; color: var(--ink); line-height: 1; }
+  .llm-stat-lbl { font-size: 0.68rem; color: var(--gray-400); margin-top: 0.2rem; }
   .llm-how-it-works {
-    background: #fff;
-    border: 1px solid #EBEBEB;
+    background: var(--white);
+    border: 1px solid var(--border);
     border-radius: 0.4rem;
     padding: 0.85rem 1rem;
     margin-top: 0.85rem;
     font-size: 0.78rem;
-    color: #525252;
+    color: var(--gray-600);
   }
   .llm-how-it-works p { margin: 0 0 0.5rem; }
   .llm-how-it-works p:last-child { margin: 0; }
@@ -274,56 +274,56 @@
   .pattern-search {
     width: 100%;
     padding: 0.4rem 0.75rem;
-    border: 1px solid #EBEBEB;
+    border: 1px solid var(--border);
     border-radius: 0.4rem;
     font-size: 0.82rem;
-    color: #262626;
-    background: #FAFAFA;
+    color: var(--gray-800);
+    background: var(--bg);
     margin-bottom: 0.85rem;
     box-sizing: border-box;
   }
-  .pattern-search:focus { outline: none; border-color: #111111; background: #fff; }
+  .pattern-search:focus { outline: none; border-color: var(--ink); background: var(--white); }
   .plib-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
   .plib-table th {
     text-align: left;
     padding: 0.4rem 0.65rem;
-    background: #FAFAFA;
+    background: var(--bg);
     font-size: 0.65rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #A3A3A3;
-    border-bottom: 1px solid #EBEBEB;
+    color: var(--gray-400);
+    border-bottom: 1px solid var(--border);
   }
   .plib-table td {
     padding: 0.38rem 0.65rem;
-    border-bottom: 1px solid #F5F5F5;
-    color: #262626;
+    border-bottom: 1px solid var(--gray-50);
+    color: var(--gray-800);
     vertical-align: middle;
   }
   .plib-table tr:last-child td { border-bottom: none; }
-  .plib-conf-green { color: #262626; font-weight: 600; }
-  .plib-conf-amber { color: #525252; font-weight: 600; }
-  .plib-conf-red   { color: #111111; font-weight: 600; }
+  .plib-conf-green { color: var(--gray-800); font-weight: 600; }
+  .plib-conf-amber { color: var(--gray-600); font-weight: 600; }
+  .plib-conf-red   { color: var(--ink); font-weight: 600; }
   .plib-pagination {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     margin-top: 0.85rem;
     font-size: 0.78rem;
-    color: #737373;
+    color: var(--gray-500);
   }
   .plib-page-btn {
     padding: 0.2rem 0.6rem;
-    border: 1px solid #EBEBEB;
+    border: 1px solid var(--border);
     border-radius: 3px;
-    background: #F8F8F8;
+    background: var(--bg);
     cursor: pointer;
     font-size: 0.75rem;
-    color: #525252;
+    color: var(--gray-600);
   }
   .plib-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .plib-page-btn:not(:disabled):hover { background: #111111; color: #fff; border-color: #111111; }
+  .plib-page-btn:not(:disabled):hover { background: var(--ink); color: var(--white); border-color: var(--ink); }
 </style>
 
 <div class="lex-grid">
@@ -523,7 +523,7 @@
 
         {% if source_stats %}
         <div style="margin-bottom:1rem;">
-          <div style="font-size:0.72rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.65rem;">Scans by Source</div>
+          <div style="font-size:0.72rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.65rem;">Scans by Source</div>
           {% for src, count in source_stats.items() %}
           {% set pct = (count / total_scans * 100) | round(1) if total_scans > 0 else 0 %}
           <div class="bar-row">
@@ -531,25 +531,25 @@
             <div class="bar-track">
               <div class="bar-fill" style="width:{{ pct }}%;"></div>
             </div>
-            <span class="bar-val">{{ count }} <span style="color:#D4D4D4;">({{ pct }}%)</span></span>
+            <span class="bar-val">{{ count }} <span style="color:var(--gray-300);">({{ pct }}%)</span></span>
           </div>
           {% endfor %}
         </div>
 
         <div>
-          <div style="font-size:0.72rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.65rem;">Avg Confidence by Source</div>
+          <div style="font-size:0.72rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.65rem;">Avg Confidence by Source</div>
           {% for src, conf in conf_stats.items() %}
           <div class="bar-row">
             <span class="bar-label">{{ src | capitalize }}</span>
             <div class="bar-track">
-              <div class="bar-fill" style="width:{{ (conf * 100) | round(1) }}%;background:{% if conf >= 0.8 %}#404040{% elif conf >= 0.6 %}#F0C070{% else %}#E89898{% endif %};"></div>
+              <div class="bar-fill" style="width:{{ (conf * 100) | round(1) }}%;background:{% if conf >= 0.8 %}var(--gray-700){% elif conf >= 0.6 %}#F0C070{% else %}#E89898{% endif %};"></div>
             </div>
             <span class="bar-val">{{ conf }}</span>
           </div>
           {% endfor %}
         </div>
         {% else %}
-        <p style="font-size:0.82rem;color:#A3A3A3;text-align:center;padding:1.5rem 0;">No extraction data yet. Run the first test above.</p>
+        <p style="font-size:0.82rem;color:var(--gray-400);text-align:center;padding:1.5rem 0;">No extraction data yet. Run the first test above.</p>
         {% endif %}
       </div>
 
@@ -591,7 +591,7 @@
 
         {% if field_patterns %}
         <div style="margin-top:0.5rem;">
-          <div style="font-size:0.72rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.65rem;">Top Fields by Pattern Count</div>
+          <div style="font-size:0.72rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.65rem;">Top Fields by Pattern Count</div>
           {% set max_fp = field_patterns[0][1] if field_patterns else 1 %}
           {% for field, cnt in field_patterns %}
           <div class="bar-row">
@@ -636,7 +636,7 @@
                     {{ (c * 100) | round(0) | int }}%
                   </span>
                 </td>
-                <td style="white-space:nowrap;color:#A3A3A3;font-size:0.73rem;">
+                <td style="white-space:nowrap;color:var(--gray-400);font-size:0.73rem;">
                   {{ p.created_at.strftime('%Y-%m-%d') if p.created_at else '—' }}
                 </td>
               </tr>
@@ -653,7 +653,7 @@
         </div>
 
         {% else %}
-        <p style="font-size:0.82rem;color:#A3A3A3;text-align:center;padding:2rem 0;">
+        <p style="font-size:0.82rem;color:var(--gray-400);text-align:center;padding:2rem 0;">
           No patterns learned yet — scan labels to start training.
         </p>
         {% endif %}
@@ -665,32 +665,32 @@
     <div id="tab-benchmark" class="tab-panel hidden">
       <div class="lex-card">
         <div class="lex-card-title">AI Model Benchmark</div>
-        <p style="font-size:0.82rem;color:#525252;margin:0 0 1rem;line-height:1.6;">
+        <p style="font-size:0.82rem;color:var(--gray-600);margin:0 0 1rem;line-height:1.6;">
           Upload a label image or PDF to run it through <strong>all configured AI providers simultaneously</strong>
           and compare speed, accuracy, and cost. Use this to decide which provider gives the best
           results for your labels.
         </p>
 
         {# Upload zone #}
-        <div id="bmDropZone" style="border:2px dashed #D4D4D4;border-radius:0.6rem;padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem;transition:border-color 0.2s;"
+        <div id="bmDropZone" style="border:2px dashed var(--gray-300);border-radius:0.6rem;padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem;transition:border-color 0.2s;"
              onclick="document.getElementById('bmFileInput').click()"
-             ondragover="event.preventDefault();this.style.borderColor='#111111'"
-             ondragleave="this.style.borderColor='#D4D4D4'"
-             ondrop="event.preventDefault();this.style.borderColor='#D4D4D4';handleBmFile(event.dataTransfer.files[0])">
+             ondragover="event.preventDefault();this.style.borderColor='#121212'"
+             ondragleave="this.style.borderColor='#C2C2C7'"
+             ondrop="event.preventDefault();this.style.borderColor='#C2C2C7';handleBmFile(event.dataTransfer.files[0])">
           <div style="display:flex;justify-content:center;margin-bottom:0.5rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
-          <div style="font-size:0.88rem;font-weight:600;color:#525252;">Drop file here or click to browse</div>
-          <div id="bmFileName" style="font-size:0.75rem;color:#111111;margin-top:0.4rem;"></div>
+          <div style="font-size:0.88rem;font-weight:600;color:var(--gray-600);">Drop file here or click to browse</div>
+          <div id="bmFileName" style="font-size:0.75rem;color:var(--ink);margin-top:0.4rem;"></div>
           <input type="file" id="bmFileInput" accept=".jpg,.jpeg,.png,.webp,.pdf" style="display:none" onchange="handleBmFile(this.files[0])">
         </div>
         <button id="bmRunBtn" class="adm-btn adm-btn-primary" onclick="runBenchmark()" disabled style="width:100%;margin-bottom:1rem;">Run Benchmark</button>
-        <div id="bmStatus" style="display:none;font-size:0.82rem;color:#111111;text-align:center;padding:0.5rem;"></div>
+        <div id="bmStatus" style="display:none;font-size:0.82rem;color:var(--ink);text-align:center;padding:0.5rem;"></div>
       </div>
 
       {# Results table #}
       <div id="bmResults" class="lex-card" style="display:none;">
         <div class="lex-card-title">Benchmark Results</div>
         <div id="bmResultsInner"></div>
-        <p style="font-size:0.72rem;color:#A3A3A3;margin:1rem 0 0;line-height:1.5;">
+        <p style="font-size:0.72rem;color:var(--gray-400);margin:1rem 0 0;line-height:1.5;">
           &#11088; = best in category. Cost is estimated based on token usage &times; published API rates.
           Run multiple times for more reliable averages.
         </p>
@@ -1006,7 +1006,7 @@ function renderBmResults(results, final) {
   var box = document.getElementById('bmResults');
   box.style.display = 'block';
   if (!results || !results.length) {
-    document.getElementById('bmResultsInner').innerHTML = '<p style="color:#A3A3A3;text-align:center;">No results yet\u2026</p>';
+    document.getElementById('bmResultsInner').innerHTML = '<p style="color:#9A9AA1;text-align:center;">No results yet\u2026</p>';
     return;
   }
 
@@ -1019,9 +1019,9 @@ function renderBmResults(results, final) {
   var bestFields = successes.length ? Math.max.apply(null, successes.map(function(r) { return r.field_count; })) : 0;
 
   var html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:0.82rem;">';
-  html += '<thead><tr style="border-bottom:2px solid #EBEBEB;">';
+  html += '<thead><tr style="border-bottom:2px solid #ECECEE;">';
   ['Provider','Status','Time','Confidence','Fields','Tokens In','Est. Cost',''].forEach(function(h) {
-    html += '<th style="text-align:left;padding:0.5rem 0.6rem;font-size:0.72rem;color:#737373;font-weight:600;white-space:nowrap;">' + h + '</th>';
+    html += '<th style="text-align:left;padding:0.5rem 0.6rem;font-size:0.72rem;color:#6F6F77;font-weight:600;white-space:nowrap;">' + h + '</th>';
   });
   html += '</tr></thead><tbody>';
 
@@ -1032,32 +1032,32 @@ function renderBmResults(results, final) {
     var isBestCost  = isSuccess && r.cost_usd === bestCost && bestCost > 0;
     var isBestFields = isSuccess && r.field_count === bestFields && bestFields > 0;
 
-    var confColor = r.confidence >= 0.8 ? '#3D7A4A' : r.confidence >= 0.6 ? '#8B6A00' : '#111111';
+    var confColor = r.confidence >= 0.8 ? '#047857' : r.confidence >= 0.6 ? '#92400E' : '#121212';
     var statusBadge = isSuccess
-      ? '<span style="background:#DCFCE7;color:#3D7A4A;border-radius:99px;padding:0.1rem 0.5rem;font-size:0.7rem;font-weight:600;">\u2713 OK</span>'
-      : '<span style="background:#FEE2E2;color:#DC2626;border-radius:99px;padding:0.1rem 0.5rem;font-size:0.7rem;font-weight:600;">\u2717 Error</span>';
+      ? '<span style="background:#DCFCE7;color:#047857;border-radius:99px;padding:0.1rem 0.5rem;font-size:0.7rem;font-weight:600;">\u2713 OK</span>'
+      : '<span style="background:#FEE2E2;color:#B91C1C;border-radius:99px;padding:0.1rem 0.5rem;font-size:0.7rem;font-weight:600;">\u2717 Error</span>';
 
-    html += '<tr style="border-bottom:1px solid #F5F5F5;">' +
+    html += '<tr style="border-bottom:1px solid #F4F4F5;">' +
       '<td style="padding:0.6rem;font-weight:600;">' + r.provider + '</td>' +
-      '<td style="padding:0.6rem;">' + (isSuccess ? statusBadge : statusBadge + '<div style="font-size:0.68rem;color:#DC2626;margin-top:0.2rem;">' + (r.error || '') + '</div>') + '</td>' +
+      '<td style="padding:0.6rem;">' + (isSuccess ? statusBadge : statusBadge + '<div style="font-size:0.68rem;color:#B91C1C;margin-top:0.2rem;">' + (r.error || '') + '</div>') + '</td>' +
       '<td style="padding:0.6rem;">' + (isBestSpeed ? '\u2b50 ' : '') + r.elapsed + 's</td>' +
       '<td style="padding:0.6rem;color:' + confColor + ';font-weight:600;">' + (isBestConf ? '\u2b50 ' : '') + Math.round(r.confidence * 100) + '%</td>' +
       '<td style="padding:0.6rem;">' + (isBestFields ? '\u2b50 ' : '') + r.field_count + '</td>' +
-      '<td style="padding:0.6rem;color:#737373;">' + r.tokens_in.toLocaleString() + '</td>' +
+      '<td style="padding:0.6rem;color:#6F6F77;">' + r.tokens_in.toLocaleString() + '</td>' +
       '<td style="padding:0.6rem;font-family:monospace;">' + (isBestCost ? '\u2b50 ' : '') + '$' + r.cost_usd.toFixed(6) + '</td>' +
       '<td style="padding:0.6rem;"></td>' +
       '</tr>';
   });
 
   if (!final) {
-    html += '<tr><td colspan="8" style="padding:0.5rem;text-align:center;color:#A3A3A3;font-size:0.75rem;">More providers running\u2026</td></tr>';
+    html += '<tr><td colspan="8" style="padding:0.5rem;text-align:center;color:#9A9AA1;font-size:0.75rem;">More providers running\u2026</td></tr>';
   }
   html += '</tbody></table></div>';
 
   // Winner summary if done
   if (final && successes.length > 0) {
     var winner = successes.reduce(function(a, b) { return b.confidence > a.confidence ? b : a; });
-    html += '<div style="margin-top:1rem;padding:0.75rem 1rem;background:#F0F9F8;border:1px solid #111111;border-radius:0.5rem;font-size:0.82rem;">' +
+    html += '<div style="margin-top:1rem;padding:0.75rem 1rem;background:#EEF0FB;border:1px solid #121212;border-radius:0.5rem;font-size:0.82rem;">' +
       '\ud83c\udfc6 <strong>Recommended:</strong> <strong>' + winner.provider + '</strong> \u2014 highest confidence (' + Math.round(winner.confidence * 100) + '%)' +
       ' with ' + winner.field_count + ' fields extracted in ' + winner.elapsed + 's.' +
       '</div>';

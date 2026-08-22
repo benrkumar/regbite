@@ -44,7 +44,7 @@
       <a href="/admin/alerts" class="adm-nav-link {% if '/admin/alerts' in request.url.path %}active{% endif %}">
         <span class="adm-nav-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> Customer Alerts
         {% if unread_alerts is defined and unread_alerts > 0 %}
-        <span style="margin-left:auto;background:#DF2935;color:#fff;border-radius:99px;padding:0.05rem 0.45rem;font-size:0.65rem;font-weight:700;">{{ unread_alerts }}</span>
+        <span style="margin-left:auto;background:var(--danger);color:var(--white);border-radius:99px;padding:0.05rem 0.45rem;font-size:0.65rem;font-weight:700;">{{ unread_alerts }}</span>
         {% endif %}
       </a>
 
@@ -91,7 +91,7 @@
       </a>
     </nav>
     <div class="adm-sidebar-footer">
-      <div style="font-weight:500;color:#525252;margin-bottom:0.3rem;">{{ user.name }}</div>
+      <div style="font-weight:500;color:var(--gray-600);margin-bottom:0.3rem;">{{ user.name }}</div>
       <a href="/dashboard">← Back to App</a> &nbsp;&middot;&nbsp;
       <a href="/logout">Sign out</a>
     </div>
@@ -109,7 +109,7 @@
       </div>
       <div style="display:flex;align-items:center;gap:1.2rem;">
         {% if unread_alerts is defined and unread_alerts > 0 %}
-        <a href="/alerts" style="font-size:0.82rem;color:#DF2935;font-weight:500;text-decoration:none;">
+        <a href="/alerts" style="font-size:0.82rem;color:var(--danger);font-weight:500;text-decoration:none;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> {{ unread_alerts }} unread
         </a>
         {% endif %}

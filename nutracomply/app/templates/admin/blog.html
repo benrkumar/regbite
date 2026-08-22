@@ -6,15 +6,15 @@
   .blog-actions { display:flex; gap:0.5rem; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; }
   .blog-filter { display:flex; align-items:center; gap:0.5rem; margin-left:auto; }
   .blog-filter select {
-    padding:0.35rem 0.6rem; border:1px solid #EBEBEB; border-radius:4px;
-    font-size:0.8rem; font-family:'Noto Sans JP'; color:#525252; background:#FFFFFF;
+    padding:0.35rem 0.6rem; border:1px solid var(--border); border-radius:4px;
+    font-size:0.8rem; font-family:'Noto Sans JP'; color:var(--gray-600); background:var(--white);
     outline:none; appearance:none; cursor:pointer; min-width:140px;
   }
-  .blog-filter select:focus { border-color:#404040; }
-  .blog-title-cell { font-weight:500; color:#262626; }
-  .blog-title-cell a { color:#262626; text-decoration:none; }
+  .blog-filter select:focus { border-color:var(--gray-700); }
+  .blog-title-cell { font-weight:500; color:var(--gray-800); }
+  .blog-title-cell a { color:var(--gray-800); text-decoration:none; }
   .blog-title-cell a:hover { text-decoration:underline; }
-  .blog-excerpt { font-size:0.72rem; color:#A3A3A3; margin-top:0.15rem; }
+  .blog-excerpt { font-size:0.72rem; color:var(--gray-400); margin-top:0.15rem; }
   .td-actions { display:flex; gap:0.3rem; flex-wrap:wrap; }
   @media (max-width:768px) {
     .blog-actions { flex-direction:column; align-items:stretch; }
@@ -121,7 +121,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="7" style="text-align:center;padding:2rem;color:#A3A3A3;">No blog posts yet. Create your first post.</td>
+        <td colspan="7" style="text-align:center;padding:2rem;color:var(--gray-400);">No blog posts yet. Create your first post.</td>
       </tr>
       {% endfor %}
     </tbody>

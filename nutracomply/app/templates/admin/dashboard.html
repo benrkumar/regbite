@@ -11,7 +11,7 @@
     <div class="adm-stat-lbl">Total Users</div>
   </div>
   <div class="adm-stat">
-    <div class="adm-stat-val" style="color:#262626;">{{ stats.active_users }}</div>
+    <div class="adm-stat-val" style="color:var(--gray-800);">{{ stats.active_users }}</div>
     <div class="adm-stat-lbl">Active Users</div>
   </div>
   <a href="/admin/products" class="adm-stat" style="text-decoration:none;color:inherit;">
@@ -23,11 +23,11 @@
     <div class="adm-stat-lbl">Labels Analysed</div>
   </div>
   <div class="adm-stat">
-    <div class="adm-stat-val" style="color:{% if stats.compliance_rate >= 80 %}#262626{% elif stats.compliance_rate >= 50 %}#525252{% else %}#111111{% endif %};">{{ stats.compliance_rate }}%</div>
+    <div class="adm-stat-val" style="color:{% if stats.compliance_rate >= 80 %}var(--gray-800){% elif stats.compliance_rate >= 50 %}var(--gray-600){% else %}var(--ink){% endif %};">{{ stats.compliance_rate }}%</div>
     <div class="adm-stat-lbl">Compliance Rate</div>
   </div>
-  <div class="adm-stat" style="border-color:{% if stats.unread_alerts > 0 %}#D4D4D4{% else %}#EBEBEB{% endif %};">
-    <div class="adm-stat-val" style="color:{% if stats.unread_alerts > 0 %}#111111{% else %}#111111{% endif %};">{{ stats.unread_alerts }}</div>
+  <div class="adm-stat" style="border-color:{% if stats.unread_alerts > 0 %}var(--gray-300){% else %}var(--border){% endif %};">
+    <div class="adm-stat-val" style="color:{% if stats.unread_alerts > 0 %}var(--ink){% else %}var(--ink){% endif %};">{{ stats.unread_alerts }}</div>
     <div class="adm-stat-lbl">Unread Alerts</div>
   </div>
   <div class="adm-stat">
@@ -61,8 +61,8 @@
           {% for u in recent_users %}
           <tr>
             <td>
-              <div style="font-weight:600;color:#111111;font-size:0.86rem;">{{ u.name }}</div>
-              <div style="font-size:0.75rem;color:#737373;">{{ u.email }}</div>
+              <div style="font-weight:600;color:var(--ink);font-size:0.86rem;">{{ u.name }}</div>
+              <div style="font-size:0.75rem;color:var(--gray-500);">{{ u.email }}</div>
             </td>
             <td>
               {% if u.is_admin %}
@@ -71,10 +71,10 @@
               <span class="adm-badge badge-gray">User</span>
               {% endif %}
             </td>
-            <td style="color:#737373;font-size:0.78rem;">{{ u.created_at.strftime('%d %b %Y') }}</td>
+            <td style="color:var(--gray-500);font-size:0.78rem;">{{ u.created_at.strftime('%d %b %Y') }}</td>
           </tr>
           {% else %}
-          <tr><td colspan="3" style="text-align:center;color:#A3A3A3;padding:1.5rem;">No users yet</td></tr>
+          <tr><td colspan="3" style="text-align:center;color:var(--gray-400);padding:1.5rem;">No users yet</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -100,8 +100,8 @@
           {% for a in recent_alerts %}
           <tr>
             <td>
-              <div style="font-weight:600;color:#111111;font-size:0.83rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ a.title }}">{{ a.title }}</div>
-              <div style="font-size:0.72rem;color:#737373;">{{ a.created_at.strftime('%d %b %Y') }}</div>
+              <div style="font-weight:600;color:var(--ink);font-size:0.83rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ a.title }}">{{ a.title }}</div>
+              <div style="font-size:0.72rem;color:var(--gray-500);">{{ a.created_at.strftime('%d %b %Y') }}</div>
             </td>
             <td>
               {% if a.severity.value == 'CRITICAL' %}<span class="adm-badge badge-red">CRITICAL</span>
@@ -118,7 +118,7 @@
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="3" style="text-align:center;color:#A3A3A3;padding:1.5rem;">No alerts yet</td></tr>
+          <tr><td colspan="3" style="text-align:center;color:var(--gray-400);padding:1.5rem;">No alerts yet</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -128,7 +128,7 @@
 </div>
 
 {# ── Quick Actions ── #}
-<div style="margin-top:1.75rem;background:#fff;border:1px solid #EBEBEB;border-radius:12px;padding:1.2rem 1.5rem;">
+<div style="margin-top:1.75rem;background:var(--white);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.5rem;">
   <h4 class="adm-section-title">Quick Actions</h4>
   <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
     <form method="post" action="/admin/trigger-scrape" style="margin:0;">
@@ -154,11 +154,11 @@
       <div class="adm-stat-lbl">Total Users</div>
     </div>
     <div class="adm-stat">
-      <div class="adm-stat-val" style="color:#262626;">{{ stats.active_users }}</div>
+      <div class="adm-stat-val" style="color:var(--gray-800);">{{ stats.active_users }}</div>
       <div class="adm-stat-lbl">Active Users</div>
     </div>
     <div class="adm-stat">
-      <div class="adm-stat-val" style="color:#525252;">{{ stats.growth_users }}</div>
+      <div class="adm-stat-val" style="color:var(--gray-600);">{{ stats.growth_users }}</div>
       <div class="adm-stat-lbl">Growth Plan</div>
     </div>
     <div class="adm-stat">
@@ -173,8 +173,8 @@
       <div class="adm-stat-val">{{ stats.total_reports }}</div>
       <div class="adm-stat-lbl">Total Reports</div>
     </div>
-    <div class="adm-stat" style="border-color:#F5F5F5;">
-      <div class="adm-stat-val" style="color:#262626;">&#x20B9;{{ '{:,}'.format(stats.revenue_estimate) }}</div>
+    <div class="adm-stat" style="border-color:var(--gray-50);">
+      <div class="adm-stat-val" style="color:var(--gray-800);">&#x20B9;{{ '{:,}'.format(stats.revenue_estimate) }}</div>
       <div class="adm-stat-lbl">Revenue Est./mo</div>
     </div>
   </div>
@@ -199,8 +199,8 @@
       <tbody>
         {% for u in recent_signups %}
         <tr>
-          <td style="font-weight:600;color:#111111;font-size:0.86rem;">{{ u.name }}</td>
-          <td style="font-size:0.8rem;color:#737373;">{{ u.email }}</td>
+          <td style="font-weight:600;color:var(--ink);font-size:0.86rem;">{{ u.name }}</td>
+          <td style="font-size:0.8rem;color:var(--gray-500);">{{ u.email }}</td>
           <td>
             {% if u.is_admin %}
             <span class="adm-badge badge-purple">Admin</span>
@@ -210,10 +210,10 @@
             <span class="adm-badge badge-gray">User</span>
             {% endif %}
           </td>
-          <td style="color:#737373;font-size:0.78rem;">{{ u.created_at.strftime('%d %b %Y') }}</td>
+          <td style="color:var(--gray-500);font-size:0.78rem;">{{ u.created_at.strftime('%d %b %Y') }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="4" style="text-align:center;color:#A3A3A3;padding:1.5rem;">No users yet</td></tr>
+        <tr><td colspan="4" style="text-align:center;color:var(--gray-400);padding:1.5rem;">No users yet</td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -223,14 +223,14 @@
 {# ── Platform Analytics: Top Violated Rules + Avg Score by Category ── #}
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:2rem;">
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:12px;padding:1.2rem 1.5rem;">
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.5rem;">
     <h4 class="adm-section-title" style="margin-bottom:0.75rem;">Top Violated Rules</h4>
     {% if top_violated %}
       {% for rule, fail_count in top_violated %}
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid #F5F5F5;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid var(--gray-50);">
         <div style="flex:1;min-width:0;margin-right:0.75rem;">
-          <div style="font-size:0.78rem;font-weight:600;color:#262626;">{{ rule.rule_code }}</div>
-          <div style="font-size:0.73rem;color:#737373;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ rule.description[:65] }}{% if rule.description|length > 65 %}…{% endif %}</div>
+          <div style="font-size:0.78rem;font-weight:600;color:var(--gray-800);">{{ rule.rule_code }}</div>
+          <div style="font-size:0.73rem;color:var(--gray-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ rule.description[:65] }}{% if rule.description|length > 65 %}…{% endif %}</div>
         </div>
         <div style="flex-shrink:0;">
           {% if rule.severity.value == 'CRITICAL' %}<span class="adm-badge badge-red">{{ fail_count }}</span>
@@ -241,27 +241,27 @@
       </div>
       {% endfor %}
     {% else %}
-    <p style="color:#A3A3A3;font-size:0.83rem;text-align:center;padding:1rem 0;">No compliance check data yet.</p>
+    <p style="color:var(--gray-400);font-size:0.83rem;text-align:center;padding:1rem 0;">No compliance check data yet.</p>
     {% endif %}
   </div>
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:12px;padding:1.2rem 1.5rem;">
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.5rem;">
     <h4 class="adm-section-title" style="margin-bottom:0.75rem;">Avg Score by Category</h4>
     {% if category_scores %}
       {% for c in category_scores %}
       <div style="margin-bottom:0.65rem;">
         <div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:0.82rem;">
-          <span style="color:#262626;">{{ c.category }}</span>
-          <span style="font-weight:700;color:{% if c.avg >= 80 %}#16A34A{% elif c.avg >= 50 %}#CA8A04{% else %}#DC2626{% endif %};">{{ c.avg }}%</span>
+          <span style="color:var(--gray-800);">{{ c.category }}</span>
+          <span style="font-weight:700;color:{% if c.avg >= 80 %}var(--success){% elif c.avg >= 50 %}#CA8A04{% else %}var(--danger){% endif %};">{{ c.avg }}%</span>
         </div>
-        <div style="height:4px;background:#F5F5F5;border-radius:2px;">
-          <div style="width:{{ c.avg }}%;height:100%;background:{% if c.avg >= 80 %}#16A34A{% elif c.avg >= 50 %}#CA8A04{% else %}#DC2626{% endif %};border-radius:2px;"></div>
+        <div style="height:4px;background:var(--gray-50);border-radius:2px;">
+          <div style="width:{{ c.avg }}%;height:100%;background:{% if c.avg >= 80 %}var(--success){% elif c.avg >= 50 %}#CA8A04{% else %}var(--danger){% endif %};border-radius:2px;"></div>
         </div>
-        <div style="font-size:0.69rem;color:#A3A3A3;margin-top:2px;">{{ c.count }} product{{ 's' if c.count != 1 }}</div>
+        <div style="font-size:0.69rem;color:var(--gray-400);margin-top:2px;">{{ c.count }} product{{ 's' if c.count != 1 }}</div>
       </div>
       {% endfor %}
     {% else %}
-    <p style="color:#A3A3A3;font-size:0.83rem;text-align:center;padding:1rem 0;">No product data yet.</p>
+    <p style="color:var(--gray-400);font-size:0.83rem;text-align:center;padding:1rem 0;">No product data yet.</p>
     {% endif %}
   </div>
 
@@ -293,22 +293,22 @@
             {% else %}<span class="adm-badge badge-red">● Critical</span>{% endif %}
           </td>
           <td>
-            <div style="font-weight:600;color:#111111;font-size:0.86rem;">{{ a.user.name or a.user.email }}</div>
-            <div style="font-size:0.74rem;color:#737373;">{{ a.user.email }}</div>
+            <div style="font-weight:600;color:var(--ink);font-size:0.86rem;">{{ a.user.name or a.user.email }}</div>
+            <div style="font-size:0.74rem;color:var(--gray-500);">{{ a.user.email }}</div>
           </td>
-          <td style="font-size:0.83rem;color:#525252;">{{ a.scanned }}/{{ a.products }} scanned</td>
+          <td style="font-size:0.83rem;color:var(--gray-600);">{{ a.scanned }}/{{ a.products }} scanned</td>
           <td>
             {% if a.avg_score is not none %}
-            <span style="font-weight:700;color:{% if a.avg_score >= 80 %}#16A34A{% elif a.avg_score >= 50 %}#CA8A04{% else %}#DC2626{% endif %};">{{ a.avg_score }}%</span>
-            {% else %}<span style="color:#A3A3A3;">—</span>{% endif %}
+            <span style="font-weight:700;color:{% if a.avg_score >= 80 %}var(--success){% elif a.avg_score >= 50 %}#CA8A04{% else %}var(--danger){% endif %};">{{ a.avg_score }}%</span>
+            {% else %}<span style="color:var(--gray-400);">—</span>{% endif %}
           </td>
           <td>
             {% if a.crit_alerts > 0 %}
-            <span style="color:#DC2626;font-weight:700;font-size:0.9rem;">{{ a.crit_alerts }}</span>
-            {% else %}<span style="color:#A3A3A3;font-size:0.83rem;">0</span>{% endif %}
+            <span style="color:var(--danger);font-weight:700;font-size:0.9rem;">{{ a.crit_alerts }}</span>
+            {% else %}<span style="color:var(--gray-400);font-size:0.83rem;">0</span>{% endif %}
           </td>
-          <td style="font-size:0.78rem;color:#737373;">
-            {% if a.last_scan %}{{ a.days_since }}d ago{% else %}<em style="color:#A3A3A3;">Never</em>{% endif %}
+          <td style="font-size:0.78rem;color:var(--gray-500);">
+            {% if a.last_scan %}{{ a.days_since }}d ago{% else %}<em style="color:var(--gray-400);">Never</em>{% endif %}
           </td>
           <td>
             <a href="/admin/users/{{ a.user.id }}" class="adm-btn" style="font-size:0.72rem;padding:0.22rem 0.55rem;">View →</a>

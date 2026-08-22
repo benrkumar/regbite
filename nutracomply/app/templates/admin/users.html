@@ -10,10 +10,10 @@
   gap:0.75rem; margin-bottom:1.25rem; flex-wrap:wrap;
 }
 .um-search {
-  padding:0.4rem 0.85rem; border:1px solid #EBEBEB; border-radius:6px;
+  padding:0.4rem 0.85rem; border:1px solid var(--border); border-radius:6px;
   font-size:0.82rem; width:220px; outline:none; transition:border-color 0.15s;
 }
-.um-search:focus { border-color:#111111; }
+.um-search:focus { border-color:var(--ink); }
 
 /* ── Company group header ── */
 .um-company-group { margin-bottom:1.5rem; }
@@ -22,41 +22,41 @@
   margin-bottom:0.5rem; padding:0 0.25rem;
 }
 .um-company-name {
-  font-size:0.72rem; font-weight:700; color:#737373;
+  font-size:0.72rem; font-weight:700; color:var(--gray-500);
   letter-spacing:0.06em; text-transform:uppercase;
 }
 .um-company-count {
-  font-size:0.68rem; color:#A3A3A3;
-  background:#F5F5F5; border-radius:10px;
+  font-size:0.68rem; color:var(--gray-400);
+  background:var(--gray-50); border-radius:10px;
   padding:0.05rem 0.5rem;
 }
 .um-company-line {
-  flex:1; height:1px; background:#EBEBEB;
+  flex:1; height:1px; background:var(--border);
 }
 
 /* ── User row card ── */
 .um-row {
-  background:#fff; border:1px solid #EBEBEB; border-radius:8px;
+  background:var(--white); border:1px solid var(--border); border-radius:8px;
   padding:0.75rem 1rem; margin-bottom:0.4rem;
   display:grid; align-items:center;
   grid-template-columns: 2fr 1fr 1fr auto;
   gap:0.75rem;
   transition:box-shadow 0.15s, border-color 0.15s;
 }
-.um-row:hover { box-shadow:0 2px 8px rgba(0,0,0,0.06); border-color:#D4D4D4; }
+.um-row:hover { box-shadow:0 2px 8px rgba(0,0,0,0.06); border-color:var(--gray-300); }
 .um-row.inactive { opacity:0.55; }
 
 /* ── User identity cell ── */
 .um-identity {}
 .um-name {
-  font-weight:600; font-size:0.86rem; color:#262626;
+  font-weight:600; font-size:0.86rem; color:var(--gray-800);
   text-decoration:none; transition:color 0.12s;
 }
-.um-name:hover { color:#111111; }
-.um-email { font-size:0.72rem; color:#A3A3A3; margin-top:0.05rem; }
+.um-name:hover { color:var(--ink); }
+.um-email { font-size:0.72rem; color:var(--gray-400); margin-top:0.05rem; }
 .um-company-tag {
   display:inline-block; margin-top:0.2rem;
-  font-size:0.65rem; font-weight:600; color:#404040;
+  font-size:0.65rem; font-weight:600; color:var(--gray-700);
   background:#EBF3FB; border-radius:3px;
   padding:0.08rem 0.45rem; letter-spacing:0.02em;
 }
@@ -65,25 +65,25 @@
 .um-role-cell { display:flex; flex-direction:column; gap:0.3rem; align-items:flex-start; }
 
 /* ── Stats cell ── */
-.um-stats { display:flex; gap:0.75rem; font-size:0.78rem; color:#737373; }
+.um-stats { display:flex; gap:0.75rem; font-size:0.78rem; color:var(--gray-500); }
 .um-stat { display:flex; flex-direction:column; align-items:center; gap:0.05rem; }
-.um-stat-val { font-weight:700; color:#262626; font-size:0.88rem; }
-.um-stat-lbl { font-size:0.63rem; color:#A3A3A3; }
+.um-stat-val { font-weight:700; color:var(--gray-800); font-size:0.88rem; }
+.um-stat-lbl { font-size:0.63rem; color:var(--gray-400); }
 
 /* ── Actions cell ── */
 .um-actions { display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; justify-content:flex-end; }
 
 /* ── Role select ── */
 .um-role-select {
-  padding:0.25rem 0.4rem; border:1px solid #EBEBEB; border-radius:4px;
-  font-size:0.72rem; color:#525252; background:#FAFAFA;
+  padding:0.25rem 0.4rem; border:1px solid var(--border); border-radius:4px;
+  font-size:0.72rem; color:var(--gray-600); background:var(--bg);
   cursor:pointer; outline:none; transition:border-color 0.12s;
 }
-.um-role-select:focus { border-color:#111111; }
+.um-role-select:focus { border-color:var(--ink); }
 
 /* ── Add user panel ── */
 .um-add-panel {
-  background:#fff; border:1px solid #EBEBEB; border-radius:8px;
+  background:var(--white); border:1px solid var(--border); border-radius:8px;
   padding:1.25rem 1.5rem; margin-bottom:1.5rem;
   display:none; animation:slideDown 0.18s ease;
 }
@@ -101,7 +101,7 @@
 {# Header #}
 <div class="um-header">
   <div style="display:flex;align-items:center;gap:0.75rem;">
-    <p style="margin:0;color:#737373;font-size:0.86rem;">
+    <p style="margin:0;color:var(--gray-500);font-size:0.86rem;">
       {{ user_stats|length }} user{{ 's' if user_stats|length != 1 }}
     </p>
     <input class="um-search" id="umSearch" type="text"
@@ -118,19 +118,19 @@
   <form method="post" action="/admin/users/create"
         style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem 1rem;align-items:end;">
     <div>
-      <label style="display:block;font-size:0.72rem;font-weight:500;color:#737373;margin-bottom:0.2rem;">Full Name *</label>
+      <label style="display:block;font-size:0.72rem;font-weight:500;color:var(--gray-500);margin-bottom:0.2rem;">Full Name *</label>
       <input type="text" name="name" required placeholder="Priya Sharma" class="adm-input" style="width:100%;padding:0.4rem 0.6rem;font-size:0.82rem;" />
     </div>
     <div>
-      <label style="display:block;font-size:0.72rem;font-weight:500;color:#737373;margin-bottom:0.2rem;">Email *</label>
+      <label style="display:block;font-size:0.72rem;font-weight:500;color:var(--gray-500);margin-bottom:0.2rem;">Email *</label>
       <input type="email" name="email" required placeholder="priya@company.com" class="adm-input" style="width:100%;padding:0.4rem 0.6rem;font-size:0.82rem;" />
     </div>
     <div>
-      <label style="display:block;font-size:0.72rem;font-weight:500;color:#737373;margin-bottom:0.2rem;">Password *</label>
+      <label style="display:block;font-size:0.72rem;font-weight:500;color:var(--gray-500);margin-bottom:0.2rem;">Password *</label>
       <input type="password" name="password" required minlength="8" placeholder="Min 8 characters" class="adm-input" style="width:100%;padding:0.4rem 0.6rem;font-size:0.82rem;" />
     </div>
     <div>
-      <label style="display:block;font-size:0.72rem;font-weight:500;color:#737373;margin-bottom:0.2rem;">Access Level</label>
+      <label style="display:block;font-size:0.72rem;font-weight:500;color:var(--gray-500);margin-bottom:0.2rem;">Access Level</label>
       <select name="role" class="adm-input" style="width:100%;padding:0.4rem 0.6rem;font-size:0.82rem;">
         <option value="viewer">Viewer — read-only</option>
         <option value="editor">Editor — add/edit products</option>
@@ -142,7 +142,7 @@
     <div style="grid-column:1/-1;display:flex;gap:0.5rem;align-items:center;margin-top:0.25rem;">
       <button type="submit" class="adm-btn adm-btn-primary">Create User</button>
       <button type="button" class="adm-btn" onclick="toggleAddPanel()">Cancel</button>
-      <span style="font-size:0.72rem;color:#A3A3A3;margin-left:auto;">Active immediately</span>
+      <span style="font-size:0.72rem;color:var(--gray-400);margin-left:auto;">Active immediately</span>
     </div>
   </form>
 </div>
@@ -188,7 +188,7 @@
     {% if u.company_name %}
     <span class="um-company-tag" style="display:inline-flex;align-items:center;gap:0.25rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg> {{ u.company_name }}</span>
     {% endif %}
-    <div style="font-size:0.68rem;color:#A3A3A3;margin-top:0.15rem;">
+    <div style="font-size:0.68rem;color:var(--gray-400);margin-top:0.15rem;">
       Joined {{ u.created_at.strftime('%d %b %Y') }}
     </div>
   </div>
@@ -239,7 +239,7 @@
       </button>
     </form>
     {% else %}
-    <span style="font-size:0.76rem;color:#A3A3A3;">(you)</span>
+    <span style="font-size:0.76rem;color:var(--gray-400);">(you)</span>
     {% endif %}
   </div>
 
@@ -249,14 +249,14 @@
 </div>{# #umList #}
 
 {# Dynamic empty state for search — hidden by default, shown via JS when no results #}
-<div id="umNoResults" style="display:none;text-align:center;padding:3rem;color:#A3A3A3;">
-  <div style="display:flex;justify-content:center;margin-bottom:0.5rem;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
-  <div style="font-size:0.9rem;color:#737373;">No users match your search</div>
+<div id="umNoResults" style="display:none;text-align:center;padding:3rem;color:var(--gray-400);">
+  <div style="display:flex;justify-content:center;margin-bottom:0.5rem;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#C2C2C7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+  <div style="font-size:0.9rem;color:var(--gray-500);">No users match your search</div>
 </div>
 
 {% if not user_stats %}
-<div style="text-align:center;padding:3rem;color:#A3A3A3;">
-  <div style="display:flex;justify-content:center;margin-bottom:0.5rem;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4D4D4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+<div style="text-align:center;padding:3rem;color:var(--gray-400);">
+  <div style="display:flex;justify-content:center;margin-bottom:0.5rem;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#C2C2C7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
   No users found
 </div>
 {% endif %}

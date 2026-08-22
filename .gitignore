@@ -40,3 +40,14 @@ pnpm-debug.log*
 
 # Sentry
 .sentryclirc
+
+# Python (the app in nutracomply/ — this file was JS-only until now, which is
+# why __pycache__ kept showing up as untracked)
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+venv/
+.venv/

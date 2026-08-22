@@ -859,14 +859,47 @@ def _csrf_input(request: Request) -> str:
     token = request.cookies.get(CSRF_COOKIE, generate_csrf_token())
     return f'<input type="hidden" name="csrf_token" value="{_html.escape(token, quote=True)}">'
 
-templates.env.globals["csrf_input"] = _csrf_input
+# Globals every template needs, wherever it is rendered from.
+_TEMPLATE_GLOBALS = {
+    "csrf_input": _csrf_input,
+    # Cache-busting stamp for static assets. There is no build step, so this is
+    # a manual constant — bump it whenever a stylesheet or icon changes.
+    "asset_v": "20260822",
+    # Canonical origin for <link rel=canonical> / og:url / JSON-LD @id. Building
+    # these from request.url.netloc leaks the internal hostname behind the proxy.
+    "site_origin": settings.app_base_url.rstrip("/"),
+}
+templates.env.globals.update(_TEMPLATE_GLOBALS)
 
-# Cache-busting stamp for static assets. There is no build step, so this is a
-# manual constant — bump it whenever public.css or an icon changes.
-templates.env.globals["asset_v"] = "20260801"
-# Canonical origin for <link rel=canonical> / og:url. Building these from
-# request.url.netloc leaks the internal hostname when behind the Railway proxy.
-templates.env.globals["site_origin"] = settings.app_base_url.rstrip("/")
+
+def _propagate_template_globals() -> int:
+    """
+    Push the globals into every router's Jinja2Templates instance.
+
+    Each route module constructs its own Jinja2Templates, and a Jinja Environment
+    does not share globals with any other. So setting them on the instance in
+    this module reached only the few pages main.py renders itself — everything
+    served by a router saw an undefined name, which Jinja renders as an empty
+    string rather than raising.
+
+    That was not cosmetic: site_origin is what makes the blog's canonical, og:url
+    and JSON-LD @id absolute. Empty, they rendered as bare paths, and schema.org
+    requires absolute URLs — so the BreadcrumbList was being discarded. asset_v
+    was likewise emitting "?v=" and busting no cache at all.
+    """
+    import sys as _sys
+    from fastapi.templating import Jinja2Templates as _Jinja
+
+    patched = 0
+    for mod in list(_sys.modules.values()):
+        name = getattr(mod, "__name__", "") or ""
+        if not name.startswith("app.routes"):
+            continue
+        for value in list(vars(mod).values()):
+            if isinstance(value, _Jinja):
+                value.env.globals.update(_TEMPLATE_GLOBALS)
+                patched += 1
+    return patched
 
 # Register routers
 # NOTE: import settings route as settings_router to avoid shadowing the
@@ -906,6 +939,11 @@ try:
     app.include_router(admin_llm.router)
 except Exception as _llm_err:
     log.warning("[warning] LLM Studio router failed to load: %s", _llm_err)
+
+# Must run AFTER every router is imported — it walks the imported route modules,
+# so anything registered later would be missed.
+log.info("[templates] globals propagated to %d template environments",
+         _propagate_template_globals())
 
 
 # ── Exception handlers ─────────────────────────────────────────────────────────

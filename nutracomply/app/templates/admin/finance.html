@@ -15,25 +15,25 @@
     {% set periods = [('today','Today'),('7d','7 Days'),('30d','30 Days'),('90d','90 Days'),('all','All Time')] %}
     {% for val, label in periods %}
     <button type="submit" name="period" value="{{ val }}"
-      style="padding:0.4rem 0.85rem;border-radius:5px;border:1px solid {% if period == val %}#111111{% else %}#EBEBEB{% endif %};background:{% if period == val %}#111111{% else %}#fff{% endif %};color:{% if period == val %}#fff{% else %}#525252{% endif %};font-size:0.8rem;font-weight:{% if period == val %}600{% else %}400{% endif %};cursor:pointer;font-family:inherit;">
+      style="padding:0.4rem 0.85rem;border-radius:5px;border:1px solid {% if period == val %}var(--ink){% else %}var(--border){% endif %};background:{% if period == val %}var(--ink){% else %}var(--white){% endif %};color:{% if period == val %}var(--white){% else %}var(--gray-600){% endif %};font-size:0.8rem;font-weight:{% if period == val %}600{% else %}400{% endif %};cursor:pointer;font-family:inherit;">
       {{ label }}
     </button>
     {% endfor %}
 
     <button type="button"
       onclick="document.getElementById('customRange').style.display=document.getElementById('customRange').style.display==='none'?'flex':'none'"
-      style="padding:0.4rem 0.85rem;border-radius:5px;border:1px solid {% if period == 'custom' %}#111111{% else %}#EBEBEB{% endif %};background:{% if period == 'custom' %}#111111{% else %}#fff{% endif %};color:{% if period == 'custom' %}#fff{% else %}#525252{% endif %};font-size:0.8rem;cursor:pointer;font-family:inherit;">
+      style="padding:0.4rem 0.85rem;border-radius:5px;border:1px solid {% if period == 'custom' %}var(--ink){% else %}var(--border){% endif %};background:{% if period == 'custom' %}var(--ink){% else %}var(--white){% endif %};color:{% if period == 'custom' %}var(--white){% else %}var(--gray-600){% endif %};font-size:0.8rem;cursor:pointer;font-family:inherit;">
       Custom
     </button>
 
     <div id="customRange" style="display:{% if period == 'custom' %}flex{% else %}none{% endif %};align-items:center;gap:0.4rem;flex-wrap:wrap;">
       <input type="date" name="date_from" value="{{ date_from }}"
-        style="padding:0.35rem 0.6rem;border:1px solid #EBEBEB;border-radius:5px;font-size:0.8rem;font-family:inherit;color:#111;">
-      <span style="color:#A3A3A3;font-size:0.8rem;">to</span>
+        style="padding:0.35rem 0.6rem;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;font-family:inherit;color:var(--ink);">
+      <span style="color:var(--gray-400);font-size:0.8rem;">to</span>
       <input type="date" name="date_to" value="{{ date_to }}"
-        style="padding:0.35rem 0.6rem;border:1px solid #EBEBEB;border-radius:5px;font-size:0.8rem;font-family:inherit;color:#111;">
+        style="padding:0.35rem 0.6rem;border:1px solid var(--border);border-radius:5px;font-size:0.8rem;font-family:inherit;color:var(--ink);">
       <button type="submit" name="period" value="custom"
-        style="padding:0.35rem 0.75rem;border-radius:5px;border:1px solid #111111;background:#111111;color:#fff;font-size:0.8rem;cursor:pointer;font-family:inherit;">
+        style="padding:0.35rem 0.75rem;border-radius:5px;border:1px solid var(--ink);background:var(--ink);color:var(--white);font-size:0.8rem;cursor:pointer;font-family:inherit;">
         Apply
       </button>
     </div>
@@ -44,28 +44,28 @@
 {% set conv_rate = (active_subs / total_users * 100) if total_users > 0 else 0 %}
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:1rem;margin-bottom:1rem;">
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Total Users</div>
-    <div style="font-size:1.6rem;font-weight:700;color:#111;">{{ total_users }}</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">all time</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Total Users</div>
+    <div style="font-size:1.6rem;font-weight:700;color:var(--ink);">{{ total_users }}</div>
+    <div style="font-size:0.72rem;color:var(--gray-400);">all time</div>
   </div>
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">New Signups</div>
-    <div style="font-size:1.6rem;font-weight:700;color:#111111;">{{ new_users_period }}</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">{{ date_from }} – {{ date_to }}</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">New Signups</div>
+    <div style="font-size:1.6rem;font-weight:700;color:var(--ink);">{{ new_users_period }}</div>
+    <div style="font-size:0.72rem;color:var(--gray-400);">{{ date_from }} – {{ date_to }}</div>
   </div>
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Active Subscriptions</div>
-    <div style="font-size:1.6rem;font-weight:700;color:#111;">{{ active_subs }}</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">paid plans</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Active Subscriptions</div>
+    <div style="font-size:1.6rem;font-weight:700;color:var(--ink);">{{ active_subs }}</div>
+    <div style="font-size:0.72rem;color:var(--gray-400);">paid plans</div>
   </div>
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Conversion Rate</div>
-    <div style="font-size:1.6rem;font-weight:700;color:{% if conv_rate >= 10 %}#3D7A4A{% elif conv_rate >= 3 %}#D4845A{% else %}#111111{% endif %};">{{ "%.1f"|format(conv_rate) }}%</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">active / total users</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Conversion Rate</div>
+    <div style="font-size:1.6rem;font-weight:700;color:{% if conv_rate >= 10 %}var(--success){% elif conv_rate >= 3 %}#D4845A{% else %}var(--ink){% endif %};">{{ "%.1f"|format(conv_rate) }}%</div>
+    <div style="font-size:0.72rem;color:var(--gray-400);">active / total users</div>
   </div>
 
 </div>
@@ -75,28 +75,28 @@
 {% set arpu = (period_revenue_inr / active_subs) if active_subs > 0 else 0 %}
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:1rem;margin-bottom:2rem;">
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Total Revenue</div>
-    <div style="font-size:1.6rem;font-weight:700;color:#111;">₹{{ "{:,.0f}".format(total_revenue_inr) }}</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">all time</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Total Revenue</div>
+    <div style="font-size:1.6rem;font-weight:700;color:var(--ink);">₹{{ "{:,.0f}".format(total_revenue_inr) }}</div>
+    <div style="font-size:0.72rem;color:var(--gray-400);">all time</div>
   </div>
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Period Revenue</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Period Revenue</div>
     <div style="font-size:1.6rem;font-weight:700;color:#D4845A;">₹{{ "{:,.0f}".format(period_revenue_inr) }}</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">{{ date_from }} – {{ date_to }}</div>
+    <div style="font-size:0.72rem;color:var(--gray-400);">{{ date_from }} – {{ date_to }}</div>
   </div>
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Avg Rev / Paying User</div>
-    <div style="font-size:1.6rem;font-weight:700;color:#111;">₹{{ "{:,.0f}".format(arpu) }}</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">period rev ÷ active subs</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Avg Rev / Paying User</div>
+    <div style="font-size:1.6rem;font-weight:700;color:var(--ink);">₹{{ "{:,.0f}".format(arpu) }}</div>
+    <div style="font-size:0.72rem;color:var(--gray-400);">period rev ÷ active subs</div>
   </div>
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Total Payments</div>
-    <div style="font-size:1.6rem;font-weight:700;color:#111;">{{ period_payments }}</div>
-    <div style="font-size:0.72rem;color:#A3A3A3;">paid transactions</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.7rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.35rem;">Total Payments</div>
+    <div style="font-size:1.6rem;font-weight:700;color:var(--ink);">{{ period_payments }}</div>
+    <div style="font-size:0.72rem;color:var(--gray-400);">paid transactions</div>
   </div>
 
 </div>
@@ -104,61 +104,61 @@
 {# ── Charts row ─────────────────────────────────────────────────────────────── #}
 <div style="display:grid;grid-template-columns:55fr 45fr;gap:1rem;margin-bottom:2rem;" class="finance-charts-grid">
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.25rem 1.5rem;">
-    <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">Daily Signups</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.25rem 1.5rem;">
+    <div style="font-size:0.8rem;font-weight:600;color:var(--gray-600);margin-bottom:1rem;">Daily Signups</div>
     <canvas id="signupChart" height="110"></canvas>
   </div>
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.25rem 1.5rem;">
-    <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">Daily Revenue (₹)</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.25rem 1.5rem;">
+    <div style="font-size:0.8rem;font-weight:600;color:var(--gray-600);margin-bottom:1rem;">Daily Revenue (₹)</div>
     <canvas id="revenueChart" height="110"></canvas>
   </div>
 
 </div>
 
 {# ── Subscription breakdown ──────────────────────────────────────────────────── #}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.25rem 1.5rem;margin-bottom:2rem;">
-  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">Active Subscriptions by Plan</div>
+<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.25rem 1.5rem;margin-bottom:2rem;">
+  <div style="font-size:0.8rem;font-weight:600;color:var(--gray-600);margin-bottom:1rem;">Active Subscriptions by Plan</div>
 
   {% if active_subs > 0 %}
     {% for plan, cnt in sub_by_plan.items() %}
     {% set pct = (cnt / active_subs * 100) | round(1) %}
     <div style="margin-bottom:0.75rem;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
-        <span style="font-size:0.82rem;font-weight:500;color:#111;">{{ plan }}</span>
-        <span style="font-size:0.8rem;color:#737373;">{{ cnt }} &nbsp;<span style="color:#A3A3A3;">({{ pct }}%)</span></span>
+        <span style="font-size:0.82rem;font-weight:500;color:var(--ink);">{{ plan }}</span>
+        <span style="font-size:0.8rem;color:var(--gray-500);">{{ cnt }} &nbsp;<span style="color:var(--gray-400);">({{ pct }}%)</span></span>
       </div>
-      <div style="background:#F4F4F4;border-radius:4px;height:8px;overflow:hidden;">
-        <div style="width:{{ pct }}%;height:100%;background:#111111;border-radius:4px;"></div>
+      <div style="background:var(--gray-50);border-radius:4px;height:8px;overflow:hidden;">
+        <div style="width:{{ pct }}%;height:100%;background:var(--ink);border-radius:4px;"></div>
       </div>
     </div>
     {% endfor %}
   {% else %}
-    <div style="font-size:0.85rem;color:#A3A3A3;">No active subscriptions.</div>
+    <div style="font-size:0.85rem;color:var(--gray-400);">No active subscriptions.</div>
   {% endif %}
 </div>
 
 {# ── Daily table ─────────────────────────────────────────────────────────────── #}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:8px;padding:1.25rem 1.5rem;margin-bottom:2rem;">
-  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">Daily Breakdown</div>
+<div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:1.25rem 1.5rem;margin-bottom:2rem;">
+  <div style="font-size:0.8rem;font-weight:600;color:var(--gray-600);margin-bottom:1rem;">Daily Breakdown</div>
 
   <div style="{% if daily_list|length > 14 %}max-height:420px;overflow-y:auto;{% endif %}">
     <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
       <thead>
-        <tr style="position:sticky;top:0;z-index:10;background:#F8F8F8;box-shadow:0 2px 4px rgba(0,0,0,0.04);">
-          <th style="text-align:left;padding:0.5rem 0.75rem;font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #EBEBEB;">Date</th>
-          <th style="text-align:right;padding:0.5rem 0.75rem;font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #EBEBEB;">Signups</th>
-          <th style="text-align:right;padding:0.5rem 0.75rem;font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #EBEBEB;">Revenue (₹)</th>
-          <th style="text-align:right;padding:0.5rem 0.75rem;font-size:0.7rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #EBEBEB;">Payments</th>
+        <tr style="position:sticky;top:0;z-index:10;background:var(--bg);box-shadow:0 2px 4px rgba(0,0,0,0.04);">
+          <th style="text-align:left;padding:0.5rem 0.75rem;font-size:0.7rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);">Date</th>
+          <th style="text-align:right;padding:0.5rem 0.75rem;font-size:0.7rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);">Signups</th>
+          <th style="text-align:right;padding:0.5rem 0.75rem;font-size:0.7rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);">Revenue (₹)</th>
+          <th style="text-align:right;padding:0.5rem 0.75rem;font-size:0.7rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);">Payments</th>
         </tr>
       </thead>
       <tbody>
         {% for row in daily_list %}
-        <tr style="background:{% if row.revenue_inr > 0 %}#F0FAF0{% else %}#fff{% endif %};">
-          <td style="padding:0.45rem 0.75rem;border-bottom:1px solid #F4F4F4;color:#111;font-weight:{% if row.revenue_inr > 0 %}500{% else %}400{% endif %};">{{ row.day }}</td>
-          <td style="padding:0.45rem 0.75rem;border-bottom:1px solid #F4F4F4;text-align:right;color:{% if row.signups > 0 %}#111111{% else %}#A3A3A3{% endif %};">{{ row.signups }}</td>
-          <td style="padding:0.45rem 0.75rem;border-bottom:1px solid #F4F4F4;text-align:right;color:{% if row.revenue_inr > 0 %}#D4845A{% else %}#A3A3A3{% endif %};">{% if row.revenue_inr > 0 %}₹{{ "{:,.2f}".format(row.revenue_inr) }}{% else %}—{% endif %}</td>
-          <td style="padding:0.45rem 0.75rem;border-bottom:1px solid #F4F4F4;text-align:right;color:{% if row.payments > 0 %}#111{% else %}#A3A3A3{% endif %};">{{ row.payments if row.payments > 0 else '—' }}</td>
+        <tr style="background:{% if row.revenue_inr > 0 %}#F0FAF0{% else %}var(--white){% endif %};">
+          <td style="padding:0.45rem 0.75rem;border-bottom:1px solid var(--gray-50);color:var(--ink);font-weight:{% if row.revenue_inr > 0 %}500{% else %}400{% endif %};">{{ row.day }}</td>
+          <td style="padding:0.45rem 0.75rem;border-bottom:1px solid var(--gray-50);text-align:right;color:{% if row.signups > 0 %}var(--ink){% else %}var(--gray-400){% endif %};">{{ row.signups }}</td>
+          <td style="padding:0.45rem 0.75rem;border-bottom:1px solid var(--gray-50);text-align:right;color:{% if row.revenue_inr > 0 %}#D4845A{% else %}var(--gray-400){% endif %};">{% if row.revenue_inr > 0 %}₹{{ "{:,.2f}".format(row.revenue_inr) }}{% else %}—{% endif %}</td>
+          <td style="padding:0.45rem 0.75rem;border-bottom:1px solid var(--gray-50);text-align:right;color:{% if row.payments > 0 %}var(--ink){% else %}var(--gray-400){% endif %};">{{ row.payments if row.payments > 0 else '—' }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -179,8 +179,8 @@ new Chart(document.getElementById('signupChart'), {
         datasets: [{
             label: 'Signups',
             data: daily.map(d => d.signups),
-            borderColor: '#111111',
-            backgroundColor: 'rgba(90,154,152,0.12)',
+            borderColor: '#121212',
+            backgroundColor: 'rgba(79,70,229,0.12)',
             fill: true,
             tension: 0.3,
             pointRadius: 3

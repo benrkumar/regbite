@@ -7,8 +7,8 @@
 {# ── Filter bar ── #}
 <form method="get" action="/admin/alerts" style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.2rem;">
   <div>
-    <label style="font-size:0.75rem;font-weight:600;color:#525252;display:block;margin-bottom:0.2rem;">Severity</label>
-    <select name="severity" style="padding:0.4rem 2rem 0.4rem 0.6rem;border:1px solid #EBEBEB;border-radius:7px;font-size:0.83rem;background:#fff;appearance:none;">
+    <label style="font-size:0.75rem;font-weight:600;color:var(--gray-600);display:block;margin-bottom:0.2rem;">Severity</label>
+    <select name="severity" style="padding:0.4rem 2rem 0.4rem 0.6rem;border:1px solid var(--border);border-radius:7px;font-size:0.83rem;background:var(--white);appearance:none;">
       <option value="">All Severities</option>
       <option value="CRITICAL" {% if filter_severity == 'CRITICAL' %}selected{% endif %}>CRITICAL</option>
       <option value="HIGH"     {% if filter_severity == 'HIGH'     %}selected{% endif %}>HIGH</option>
@@ -17,8 +17,8 @@
     </select>
   </div>
   <div>
-    <label style="font-size:0.75rem;font-weight:600;color:#525252;display:block;margin-bottom:0.2rem;">Type</label>
-    <select name="type" style="padding:0.4rem 2rem 0.4rem 0.6rem;border:1px solid #EBEBEB;border-radius:7px;font-size:0.83rem;background:#fff;appearance:none;">
+    <label style="font-size:0.75rem;font-weight:600;color:var(--gray-600);display:block;margin-bottom:0.2rem;">Type</label>
+    <select name="type" style="padding:0.4rem 2rem 0.4rem 0.6rem;border:1px solid var(--border);border-radius:7px;font-size:0.83rem;background:var(--white);appearance:none;">
       <option value="">All Types</option>
       {% for t in alert_types %}
       <option value="{{ t }}" {% if filter_type == t %}selected{% endif %}>{{ t.replace('_', ' ') | title }}</option>
@@ -26,8 +26,8 @@
     </select>
   </div>
   <div>
-    <label style="font-size:0.75rem;font-weight:600;color:#525252;display:block;margin-bottom:0.2rem;">Status</label>
-    <select name="status" style="padding:0.4rem 2rem 0.4rem 0.6rem;border:1px solid #EBEBEB;border-radius:7px;font-size:0.83rem;background:#fff;appearance:none;">
+    <label style="font-size:0.75rem;font-weight:600;color:var(--gray-600);display:block;margin-bottom:0.2rem;">Status</label>
+    <select name="status" style="padding:0.4rem 2rem 0.4rem 0.6rem;border:1px solid var(--border);border-radius:7px;font-size:0.83rem;background:var(--white);appearance:none;">
       <option value="">All Statuses</option>
       <option value="UNREAD"    {% if filter_status == 'UNREAD'    %}selected{% endif %}>Unread</option>
       <option value="ACKNOWLEDGED" {% if filter_status == 'ACKNOWLEDGED' %}selected{% endif %}>Acknowledged</option>
@@ -43,7 +43,7 @@
   </div>
 </form>
 
-<p style="font-size:0.85rem;color:#737373;margin-bottom:1rem;">{{ alerts|length }} alert{{ 's' if alerts|length != 1 }}</p>
+<p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:1rem;">{{ alerts|length }} alert{{ 's' if alerts|length != 1 }}</p>
 
 <div class="adm-table-wrap">
   <table class="adm-table">
@@ -61,12 +61,12 @@
       {% for a in alerts %}
       <tr style="{% if a.status.value == 'UNREAD' %}background:rgba(99,102,241,0.03);{% endif %}">
         <td>
-          <div style="font-weight:{% if a.status.value == 'UNREAD' %}700{% else %}500{% endif %};color:#262626;font-size:0.86rem;">{{ a.title }}</div>
+          <div style="font-weight:{% if a.status.value == 'UNREAD' %}700{% else %}500{% endif %};color:var(--gray-800);font-size:0.86rem;">{{ a.title }}</div>
           {% if a.message %}
-          <div style="font-size:0.76rem;color:#737373;margin-top:0.15rem;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ a.message }}</div>
+          <div style="font-size:0.76rem;color:var(--gray-500);margin-top:0.15rem;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ a.message }}</div>
           {% endif %}
           {% if a.rule_violations and a.rule_violations|length > 0 %}
-          <div style="font-size:0.72rem;color:#A3A3A3;margin-top:0.1rem;">{{ a.rule_violations|length }} violation{{ 's' if a.rule_violations|length != 1 }}</div>
+          <div style="font-size:0.72rem;color:var(--gray-400);margin-top:0.1rem;">{{ a.rule_violations|length }} violation{{ 's' if a.rule_violations|length != 1 }}</div>
           {% endif %}
         </td>
         <td>
@@ -85,7 +85,7 @@
           {% elif a.status.value == 'RESOLVED' %}<span class="adm-badge badge-green">RESOLVED</span>
           {% else %}<span class="adm-badge badge-gray">{{ a.status.value }}</span>{% endif %}
         </td>
-        <td style="font-size:0.78rem;color:#737373;">{{ a.created_at.strftime('%d %b %Y') }}</td>
+        <td style="font-size:0.78rem;color:var(--gray-500);">{{ a.created_at.strftime('%d %b %Y') }}</td>
         <td>
           {% if a.status.value == 'UNREAD' %}
           <form method="post" action="/admin/alerts/{{ a.id }}/mark-read" style="margin:0;">
@@ -99,7 +99,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="6" style="text-align:center;padding:2.5rem;color:#A3A3A3;">
+        <td colspan="6" style="text-align:center;padding:2.5rem;color:var(--gray-400);">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> No alerts match the current filters
         </td>
       </tr>

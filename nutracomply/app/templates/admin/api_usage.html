@@ -6,33 +6,33 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 
 {# ── Filter bar ────────────────────────────────────────────────────────────── #}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+<div style="background:var(--white);border:1px solid var(--border);border-radius:0.75rem;padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
   <form method="GET" id="periodForm" style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;width:100%;">
     <input type="hidden" name="period" id="periodInput" value="{{ period }}">
     {% for p, label in [("today","Today"),("7d","7 Days"),("30d","30 Days"),("90d","90 Days")] %}
     <button type="button"
       onclick="document.getElementById('periodInput').value='{{ p }}'; document.getElementById('customSection').style.display='none'; document.getElementById('periodForm').submit();"
-      style="padding:0.35rem 0.85rem;font-size:0.78rem;font-weight:600;border-radius:0.4rem;cursor:pointer;border:1px solid {% if period == p %}#111111{% else %}#EBEBEB{% endif %};background:{% if period == p %}#111111{% else %}#fff{% endif %};color:{% if period == p %}#fff{% else %}#525252{% endif %};">
+      style="padding:0.35rem 0.85rem;font-size:0.78rem;font-weight:600;border-radius:0.4rem;cursor:pointer;border:1px solid {% if period == p %}var(--ink){% else %}var(--border){% endif %};background:{% if period == p %}var(--ink){% else %}var(--white){% endif %};color:{% if period == p %}var(--white){% else %}var(--gray-600){% endif %};">
       {{ label }}
     </button>
     {% endfor %}
     <button type="button"
       onclick="document.getElementById('periodInput').value='custom'; document.getElementById('customSection').style.display='flex';"
-      style="padding:0.35rem 0.85rem;font-size:0.78rem;font-weight:600;border-radius:0.4rem;cursor:pointer;border:1px solid {% if period == 'custom' %}#111111{% else %}#EBEBEB{% endif %};background:{% if period == 'custom' %}#111111{% else %}#fff{% endif %};color:{% if period == 'custom' %}#fff{% else %}#525252{% endif %};">
+      style="padding:0.35rem 0.85rem;font-size:0.78rem;font-weight:600;border-radius:0.4rem;cursor:pointer;border:1px solid {% if period == 'custom' %}var(--ink){% else %}var(--border){% endif %};background:{% if period == 'custom' %}var(--ink){% else %}var(--white){% endif %};color:{% if period == 'custom' %}var(--white){% else %}var(--gray-600){% endif %};">
       Custom
     </button>
     <div id="customSection" style="display:{% if period == 'custom' %}flex{% else %}none{% endif %};align-items:center;gap:0.5rem;flex-wrap:wrap;">
       <input type="date" name="date_from" value="{{ date_from }}"
-        style="padding:0.3rem 0.6rem;font-size:0.78rem;border:1px solid #EBEBEB;border-radius:0.4rem;font-family:inherit;">
-      <span style="font-size:0.78rem;color:#A3A3A3;">to</span>
+        style="padding:0.3rem 0.6rem;font-size:0.78rem;border:1px solid var(--border);border-radius:0.4rem;font-family:inherit;">
+      <span style="font-size:0.78rem;color:var(--gray-400);">to</span>
       <input type="date" name="date_to" value="{{ date_to }}"
-        style="padding:0.3rem 0.6rem;font-size:0.78rem;border:1px solid #EBEBEB;border-radius:0.4rem;font-family:inherit;">
+        style="padding:0.3rem 0.6rem;font-size:0.78rem;border:1px solid var(--border);border-radius:0.4rem;font-family:inherit;">
       <button type="submit"
-        style="padding:0.35rem 0.85rem;font-size:0.78rem;font-weight:600;border-radius:0.4rem;cursor:pointer;border:1px solid #111111;background:#111111;color:#fff;">
+        style="padding:0.35rem 0.85rem;font-size:0.78rem;font-weight:600;border-radius:0.4rem;cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:var(--white);">
         Apply
       </button>
     </div>
-    <span style="margin-left:auto;font-size:0.75rem;color:#A3A3A3;">{{ date_from }} — {{ date_to }}</span>
+    <span style="margin-left:auto;font-size:0.75rem;color:var(--gray-400);">{{ date_from }} — {{ date_to }}</span>
   </form>
 </div>
 
@@ -41,34 +41,34 @@
 {% set overall_conf_pct = (overall_avg_conf * 100) | round(1) %}
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:1rem;margin-bottom:1.5rem;">
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.68rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.35rem;">Total Scans</div>
-    <div style="font-size:1.7rem;font-weight:700;color:#111;">{{ total_scans }}</div>
-    <div style="font-size:0.7rem;color:#A3A3A3;margin-top:0.2rem;">in period</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:0.75rem;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.68rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.35rem;">Total Scans</div>
+    <div style="font-size:1.7rem;font-weight:700;color:var(--ink);">{{ total_scans }}</div>
+    <div style="font-size:0.7rem;color:var(--gray-400);margin-top:0.2rem;">in period</div>
   </div>
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.68rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.35rem;">AI Cost</div>
-    <div style="font-size:1.7rem;font-weight:700;color:{% if total_combined_cost > 0.01 %}#111111{% else %}#111{% endif %};">${{ "%.4f"|format(total_combined_cost) }}</div>
-    <div style="font-size:0.7rem;color:#A3A3A3;margin-top:0.2rem;">all providers (combined)</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:0.75rem;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.68rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.35rem;">AI Cost</div>
+    <div style="font-size:1.7rem;font-weight:700;color:{% if total_combined_cost > 0.01 %}var(--ink){% else %}var(--ink){% endif %};">${{ "%.4f"|format(total_combined_cost) }}</div>
+    <div style="font-size:0.7rem;color:var(--gray-400);margin-top:0.2rem;">all providers (combined)</div>
   </div>
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.68rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.35rem;">Avg Cost / Scan</div>
-    <div style="font-size:1.7rem;font-weight:700;color:#111;">${{ "%.5f"|format(avg_cost_per_scan) }}</div>
-    <div style="font-size:0.7rem;color:#A3A3A3;margin-top:0.2rem;">blended average</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:0.75rem;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.68rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.35rem;">Avg Cost / Scan</div>
+    <div style="font-size:1.7rem;font-weight:700;color:var(--ink);">${{ "%.5f"|format(avg_cost_per_scan) }}</div>
+    <div style="font-size:0.7rem;color:var(--gray-400);margin-top:0.2rem;">blended average</div>
   </div>
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.68rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.35rem;">Top Provider</div>
-    <div style="font-size:1.7rem;font-weight:700;color:#111111;">{{ most_used_label }}</div>
-    <div style="font-size:0.7rem;color:#A3A3A3;margin-top:0.2rem;">by scan count</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:0.75rem;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.68rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.35rem;">Top Provider</div>
+    <div style="font-size:1.7rem;font-weight:700;color:var(--ink);">{{ most_used_label }}</div>
+    <div style="font-size:0.7rem;color:var(--gray-400);margin-top:0.2rem;">by scan count</div>
   </div>
 
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.1rem 1.25rem;">
-    <div style="font-size:0.68rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.35rem;">Avg Confidence</div>
-    <div style="font-size:1.7rem;font-weight:700;color:{% if overall_avg_conf >= 0.8 %}#3D7A4A{% elif overall_avg_conf >= 0.6 %}#8B6A00{% else %}#111111{% endif %};">{{ overall_conf_pct }}%</div>
-    <div style="font-size:0.7rem;color:#A3A3A3;margin-top:0.2rem;">extraction quality</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:0.75rem;padding:1.1rem 1.25rem;">
+    <div style="font-size:0.68rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.35rem;">Avg Confidence</div>
+    <div style="font-size:1.7rem;font-weight:700;color:{% if overall_avg_conf >= 0.8 %}var(--success){% elif overall_avg_conf >= 0.6 %}#8B6A00{% else %}var(--ink){% endif %};">{{ overall_conf_pct }}%</div>
+    <div style="font-size:0.7rem;color:var(--gray-400);margin-top:0.2rem;">extraction quality</div>
   </div>
 
 </div>
@@ -77,21 +77,21 @@
 <div style="display:grid;grid-template-columns:3fr 2fr;gap:1rem;margin-bottom:1.5rem;">
 
   {# Line chart — scans per day / hour #}
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.25rem 1.5rem;">
-    <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">{% if period == "today" %}Scans per Hour{% else %}Scans per Day{% endif %}</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:0.75rem;padding:1.25rem 1.5rem;">
+    <div style="font-size:0.8rem;font-weight:600;color:var(--gray-600);margin-bottom:1rem;">{% if period == "today" %}Scans per Hour{% else %}Scans per Day{% endif %}</div>
     <canvas id="scansChart" height="300" style="max-height:300px;"></canvas>
-    <div style="font-size:0.7rem;color:#A3A3A3;margin-top:0.75rem;line-height:1.6;">
-      <span style="margin-right:1rem;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#262626;margin-right:4px;vertical-align:middle;"></span><strong>Gemma</strong> — primary AI (OpenRouter)</span>
-      <span style="margin-right:1rem;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#525252;margin-right:4px;vertical-align:middle;"></span><strong>Claude</strong> — paid fallback</span>
-      <span style="margin-right:1rem;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#737373;margin-right:4px;vertical-align:middle;"></span><strong>Gemini</strong> — paid fallback</span>
-      <span style="margin-right:1rem;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#D4D4D4;margin-right:4px;vertical-align:middle;"></span><strong>Local</strong> — pattern library ($0)</span>
+    <div style="font-size:0.7rem;color:var(--gray-400);margin-top:0.75rem;line-height:1.6;">
+      <span style="margin-right:1rem;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gray-800);margin-right:4px;vertical-align:middle;"></span><strong>Gemma</strong> — primary AI (OpenRouter)</span>
+      <span style="margin-right:1rem;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gray-600);margin-right:4px;vertical-align:middle;"></span><strong>Claude</strong> — paid fallback</span>
+      <span style="margin-right:1rem;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gray-500);margin-right:4px;vertical-align:middle;"></span><strong>Gemini</strong> — paid fallback</span>
+      <span style="margin-right:1rem;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gray-300);margin-right:4px;vertical-align:middle;"></span><strong>Local</strong> — pattern library ($0)</span>
       <span title="Rule-based regex runs when all AI providers fail. Zero cost but lower accuracy.">⬜ <strong>Fallback</strong> — rule-based regex, $0 cost, runs when all AI fails</span>
     </div>
   </div>
 
   {# Doughnut — source breakdown #}
-  <div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.25rem 1.5rem;display:flex;flex-direction:column;">
-    <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">Source Breakdown</div>
+  <div style="background:var(--white);border:1px solid var(--border);border-radius:0.75rem;padding:1.25rem 1.5rem;display:flex;flex-direction:column;">
+    <div style="font-size:0.8rem;font-weight:600;color:var(--gray-600);margin-bottom:1rem;">Source Breakdown</div>
     <div style="flex:1;display:flex;align-items:center;justify-content:center;">
       <canvas id="doughnutChart" height="260" style="max-height:260px;"></canvas>
     </div>
@@ -100,14 +100,14 @@
 </div>
 
 {# ── Cost bar chart ────────────────────────────────────────────────────────── #}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
-  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:1rem;">{% if period == "today" %}AI Cost per Hour (USD){% else %}AI Cost per Day (USD){% endif %}</div>
+<div style="background:var(--white);border:1px solid var(--border);border-radius:0.75rem;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
+  <div style="font-size:0.8rem;font-weight:600;color:var(--gray-600);margin-bottom:1rem;">{% if period == "today" %}AI Cost per Hour (USD){% else %}AI Cost per Day (USD){% endif %}</div>
   <canvas id="costChart" height="200" style="max-height:200px;"></canvas>
 </div>
 
 {# ── Provider cost breakdown table ─────────────────────────────────────────── #}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
-  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:0.9rem;">Provider Cost Breakdown</div>
+<div style="background:var(--white);border:1px solid var(--border);border-radius:0.75rem;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
+  <div style="font-size:0.8rem;font-weight:600;color:var(--gray-600);margin-bottom:0.9rem;">Provider Cost Breakdown</div>
   {% if provider_stats %}
   <div class="adm-table-wrap">
     <table class="adm-table">
@@ -125,81 +125,81 @@
       </thead>
       <tbody>
         {% for ps in provider_stats %}
-        {% set src_color = {"gemma":"#111111","claude":"#D4845A","gemini":"#5A7AD4","local":"#AAAAAA","fallback":"#CCCCCC"}[ps.source] | default("#888") %}
+        {% set src_color = {"gemma":"#121212","claude":"#D4845A","gemini":"#5A7AD4","local":"#9A9AA1","fallback":"#C2C2C7"}[ps.source] | default("#888") %}
         <tr>
           <td>
             <span style="display:inline-flex;align-items:center;gap:0.4rem;">
               <span style="width:8px;height:8px;border-radius:50%;background:{{ src_color }};display:inline-block;"></span>
               <span style="font-weight:600;font-size:0.82rem;">{{ ps.source | capitalize }}</span>
               {% if ps.source == "fallback" %}
-              <span title="Rule-based regex (Step 7) — runs when all AI providers fail. Zero cost, but lower accuracy." style="cursor:help;font-size:0.68rem;background:#F0F0F0;color:#737373;border-radius:99px;padding:0.1rem 0.4rem;border:1px solid #E0E0E0;">Rule-based · $0</span>
+              <span title="Rule-based regex (Step 7) — runs when all AI providers fail. Zero cost, but lower accuracy." style="cursor:help;font-size:0.68rem;background:var(--gray-50);color:var(--gray-500);border-radius:99px;padding:0.1rem 0.4rem;border:1px solid var(--gray-200);">Rule-based · $0</span>
               {% elif ps.source == "local" %}
-              <span title="Local pattern library — learned from previous AI extractions. Zero API cost." style="cursor:help;font-size:0.68rem;background:#F0F0F0;color:#737373;border-radius:99px;padding:0.1rem 0.4rem;border:1px solid #E0E0E0;">Pattern match · $0</span>
+              <span title="Local pattern library — learned from previous AI extractions. Zero API cost." style="cursor:help;font-size:0.68rem;background:var(--gray-50);color:var(--gray-500);border-radius:99px;padding:0.1rem 0.4rem;border:1px solid var(--gray-200);">Pattern match · $0</span>
               {% endif %}
             </span>
           </td>
           <td style="font-size:0.82rem;">{{ ps.scans }}</td>
           <td style="font-size:0.82rem;">{{ "{:,}".format(ps.tokens_in) }}</td>
           <td style="font-size:0.82rem;">{{ "{:,}".format(ps.tokens_out) }}</td>
-          <td style="font-size:0.78rem;color:#737373;">
+          <td style="font-size:0.78rem;color:var(--gray-500);">
             {% if cost_rates[ps.source] is defined %}
               ${{ cost_rates[ps.source]["in"] }} / ${{ cost_rates[ps.source]["out"] }}
             {% else %}
               —
             {% endif %}
           </td>
-          <td style="font-size:0.82rem;font-weight:600;color:{% if ps.cost_usd > 0.001 %}#111111{% else %}#525252{% endif %};">${{ "%.4f"|format(ps.cost_usd) }}</td>
-          <td style="font-size:0.78rem;color:#737373;">${{ "%.5f"|format(ps.cost_per_scan) }}</td>
+          <td style="font-size:0.82rem;font-weight:600;color:{% if ps.cost_usd > 0.001 %}var(--ink){% else %}var(--gray-600){% endif %};">${{ "%.4f"|format(ps.cost_usd) }}</td>
+          <td style="font-size:0.78rem;color:var(--gray-500);">${{ "%.5f"|format(ps.cost_per_scan) }}</td>
           <td style="font-size:0.82rem;">
             {% set c_pct = (ps.avg_confidence * 100)|round(1) %}
-            <span style="color:{% if ps.avg_confidence >= 0.8 %}#3D7A4A{% elif ps.avg_confidence >= 0.6 %}#8B6A00{% else %}#111111{% endif %};font-weight:600;">{{ c_pct }}%</span>
+            <span style="color:{% if ps.avg_confidence >= 0.8 %}var(--success){% elif ps.avg_confidence >= 0.6 %}#8B6A00{% else %}var(--ink){% endif %};font-weight:600;">{{ c_pct }}%</span>
           </td>
         </tr>
         {% endfor %}
       </tbody>
       <tfoot>
-        <tr style="border-top:2px solid #EBEBEB;font-weight:600;">
+        <tr style="border-top:2px solid var(--border);font-weight:600;">
           <td style="font-size:0.82rem;">Totals</td>
           <td style="font-size:0.82rem;">{{ total_scans }}</td>
           <td style="font-size:0.82rem;">{{ "{:,}".format(provider_stats | sum(attribute='tokens_in')) }}</td>
           <td style="font-size:0.82rem;">{{ "{:,}".format(provider_stats | sum(attribute='tokens_out')) }}</td>
           <td>—</td>
-          <td style="font-size:0.82rem;color:{% if total_ai_cost > 0.001 %}#111111{% else %}#525252{% endif %};">${{ "%.4f"|format(total_ai_cost) }}</td>
-          <td style="font-size:0.78rem;color:#737373;">${{ "%.5f"|format(avg_cost_per_scan) }}</td>
+          <td style="font-size:0.82rem;color:{% if total_ai_cost > 0.001 %}var(--ink){% else %}var(--gray-600){% endif %};">${{ "%.4f"|format(total_ai_cost) }}</td>
+          <td style="font-size:0.78rem;color:var(--gray-500);">${{ "%.5f"|format(avg_cost_per_scan) }}</td>
           <td style="font-size:0.82rem;">
-            <span style="color:{% if overall_avg_conf >= 0.8 %}#3D7A4A{% elif overall_avg_conf >= 0.6 %}#8B6A00{% else %}#111111{% endif %};font-weight:600;">{{ (overall_avg_conf * 100)|round(1) }}%</span>
+            <span style="color:{% if overall_avg_conf >= 0.8 %}var(--success){% elif overall_avg_conf >= 0.6 %}#8B6A00{% else %}var(--ink){% endif %};font-weight:600;">{{ (overall_avg_conf * 100)|round(1) }}%</span>
           </td>
         </tr>
       </tfoot>
     </table>
   </div>
   {% else %}
-  <div style="text-align:center;padding:2rem;color:#A3A3A3;font-size:0.85rem;">No scan data in this period.</div>
+  <div style="text-align:center;padding:2rem;color:var(--gray-400);font-size:0.85rem;">No scan data in this period.</div>
   {% endif %}
 </div>
 
 {# ── Other LLM Calls Section ───────────────────────────────────────────────── #}
 {% if other_call_stats %}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:0;margin-bottom:1.5rem;overflow:hidden;">
-  <div style="border-bottom:1px solid #EBEBEB;padding:16px 20px;">
-    <h3 style="font-size:14px;font-weight:600;color:#111;margin:0;">Other AI Calls</h3>
-    <span style="font-size:12px;color:#666;">KB Chat · Compliance Checks · Query Expansion</span>
+<div style="background:var(--white);border:1px solid var(--border);border-radius:0.75rem;padding:0;margin-bottom:1.5rem;overflow:hidden;">
+  <div style="border-bottom:1px solid var(--border);padding:16px 20px;">
+    <h3 style="font-size:14px;font-weight:600;color:var(--ink);margin:0;">Other AI Calls</h3>
+    <span style="font-size:12px;color:var(--gray-500);">KB Chat · Compliance Checks · Query Expansion</span>
   </div>
   <div style="padding:0 20px 20px;">
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <thead>
-        <tr style="border-bottom:1px solid #EBEBEB;">
-          <th style="text-align:left;padding:10px 8px;color:#666;font-weight:500;">Call Type</th>
-          <th style="text-align:left;padding:10px 8px;color:#666;font-weight:500;">Provider</th>
-          <th style="text-align:right;padding:10px 8px;color:#666;font-weight:500;">Calls</th>
-          <th style="text-align:right;padding:10px 8px;color:#666;font-weight:500;">~Tokens In</th>
-          <th style="text-align:right;padding:10px 8px;color:#666;font-weight:500;">~Tokens Out</th>
-          <th style="text-align:right;padding:10px 8px;color:#666;font-weight:500;">Est. Cost</th>
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:10px 8px;color:var(--gray-500);font-weight:500;">Call Type</th>
+          <th style="text-align:left;padding:10px 8px;color:var(--gray-500);font-weight:500;">Provider</th>
+          <th style="text-align:right;padding:10px 8px;color:var(--gray-500);font-weight:500;">Calls</th>
+          <th style="text-align:right;padding:10px 8px;color:var(--gray-500);font-weight:500;">~Tokens In</th>
+          <th style="text-align:right;padding:10px 8px;color:var(--gray-500);font-weight:500;">~Tokens Out</th>
+          <th style="text-align:right;padding:10px 8px;color:var(--gray-500);font-weight:500;">Est. Cost</th>
         </tr>
       </thead>
       <tbody>
         {% for s in other_call_stats %}
-        <tr style="border-bottom:1px solid #F5F5F5;">
+        <tr style="border-bottom:1px solid var(--gray-50);">
           <td style="padding:9px 8px;">
             {% if s.call_type == 'kb_chat' %}KB Chat
             {% elif s.call_type == 'compliance_format' %}Compliance Format
@@ -208,25 +208,25 @@
             {% else %}{{ s.call_type }}{% endif %}
           </td>
           <td style="padding:9px 8px;">
-            <span style="font-size:11px;padding:2px 7px;border-radius:3px;background:{% if s.provider=='gemma' %}#EBF5FB{% elif s.provider=='claude' %}#F5EEF8{% else %}#E8F8F5{% endif %};color:#111;">
+            <span style="font-size:11px;padding:2px 7px;border-radius:3px;background:{% if s.provider=='gemma' %}#EBF5FB{% elif s.provider=='claude' %}#F5EEF8{% else %}#E8F8F5{% endif %};color:var(--ink);">
               {{ s.provider }}
             </span>
           </td>
           <td style="padding:9px 8px;text-align:right;">{{ s.count }}</td>
-          <td style="padding:9px 8px;text-align:right;color:#666;">{{ "{:,}".format(s.tokens_in) }}</td>
-          <td style="padding:9px 8px;text-align:right;color:#666;">{{ "{:,}".format(s.tokens_out) }}</td>
+          <td style="padding:9px 8px;text-align:right;color:var(--gray-500);">{{ "{:,}".format(s.tokens_in) }}</td>
+          <td style="padding:9px 8px;text-align:right;color:var(--gray-500);">{{ "{:,}".format(s.tokens_out) }}</td>
           <td style="padding:9px 8px;text-align:right;font-weight:600;">
-            {% if s.cost_usd > 0 %}${{ "%.5f"|format(s.cost_usd) }}{% else %}<span style="color:#666;">—</span>{% endif %}
+            {% if s.cost_usd > 0 %}${{ "%.5f"|format(s.cost_usd) }}{% else %}<span style="color:var(--gray-500);">—</span>{% endif %}
           </td>
         </tr>
         {% endfor %}
-        <tr style="border-top:2px solid #EBEBEB;font-weight:600;">
+        <tr style="border-top:2px solid var(--border);font-weight:600;">
           <td colspan="5" style="padding:10px 8px;">Other calls total</td>
           <td style="padding:10px 8px;text-align:right;">${{ "%.4f"|format(total_other_cost) }}</td>
         </tr>
       </tbody>
     </table>
-    <p style="font-size:11px;color:#999;margin-top:8px;">* Token counts are estimated (4 chars ≈ 1 token) for chat/compliance calls.</p>
+    <p style="font-size:11px;color:var(--gray-400);margin-top:8px;">* Token counts are estimated (4 chars ≈ 1 token) for chat/compliance calls.</p>
   </div>
 </div>
 {% endif %}
@@ -234,63 +234,63 @@
 {# ── Infrastructure cost estimator ─────────────────────────────────────────── #}
 {% set period_days = (daily_list | length) | default(30) %}
 {% set monthly_ai_cost = (total_ai_cost / [period_days, 1] | max * 30) | round(4) %}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
-  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:0.9rem;">Infrastructure Cost Estimator <span style="font-weight:400;color:#A3A3A3;font-size:0.72rem;">(extrapolated to 30 days)</span></div>
+<div style="background:var(--white);border:1px solid var(--border);border-radius:0.75rem;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
+  <div style="font-size:0.8rem;font-weight:600;color:var(--gray-600);margin-bottom:0.9rem;">Infrastructure Cost Estimator <span style="font-weight:400;color:var(--gray-400);font-size:0.72rem;">(extrapolated to 30 days)</span></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.75rem;">
 
-    <div style="border:1px solid #EBEBEB;border-radius:0.5rem;padding:0.9rem 1rem;">
-      <div style="font-size:0.72rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:0.3rem;">OpenRouter (Gemma 4 31B)</div>
+    <div style="border:1px solid var(--border);border-radius:0.5rem;padding:0.9rem 1rem;">
+      <div style="font-size:0.72rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em;margin-bottom:0.3rem;">OpenRouter (Gemma 4 31B)</div>
       {% set gemma_stat = provider_stats | selectattr("source","eq","gemma") | first | default(none) %}
       {% set gemma_monthly = ((gemma_stat.cost_usd if gemma_stat else 0) / [period_days, 1] | max * 30) | round(4) %}
-      <div style="font-size:1.2rem;font-weight:700;color:#111111;">${{ "%.2f"|format(gemma_monthly) }}<span style="font-size:0.72rem;font-weight:400;color:#A3A3A3;">/mo est.</span></div>
-      <div style="font-size:0.72rem;color:#A3A3A3;margin-top:0.2rem;">$0.10/$0.40 per 1M tokens</div>
+      <div style="font-size:1.2rem;font-weight:700;color:var(--ink);">${{ "%.2f"|format(gemma_monthly) }}<span style="font-size:0.72rem;font-weight:400;color:var(--gray-400);">/mo est.</span></div>
+      <div style="font-size:0.72rem;color:var(--gray-400);margin-top:0.2rem;">$0.10/$0.40 per 1M tokens</div>
     </div>
 
-    <div style="border:1px solid #EBEBEB;border-radius:0.5rem;padding:0.9rem 1rem;">
-      <div style="font-size:0.72rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:0.3rem;">Claude API (sonnet-4-6)</div>
+    <div style="border:1px solid var(--border);border-radius:0.5rem;padding:0.9rem 1rem;">
+      <div style="font-size:0.72rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em;margin-bottom:0.3rem;">Claude API (sonnet-4-6)</div>
       {% set claude_stat = provider_stats | selectattr("source","eq","claude") | first | default(none) %}
       {% set claude_monthly = ((claude_stat.cost_usd if claude_stat else 0) / [period_days, 1] | max * 30) | round(4) %}
-      <div style="font-size:1.2rem;font-weight:700;color:#D4845A;">${{ "%.2f"|format(claude_monthly) }}<span style="font-size:0.72rem;font-weight:400;color:#A3A3A3;">/mo est.</span></div>
-      <div style="font-size:0.72rem;color:#A3A3A3;margin-top:0.2rem;">$3.00/$15.00 per 1M tokens</div>
+      <div style="font-size:1.2rem;font-weight:700;color:#D4845A;">${{ "%.2f"|format(claude_monthly) }}<span style="font-size:0.72rem;font-weight:400;color:var(--gray-400);">/mo est.</span></div>
+      <div style="font-size:0.72rem;color:var(--gray-400);margin-top:0.2rem;">$3.00/$15.00 per 1M tokens</div>
     </div>
 
-    <div style="border:1px solid #EBEBEB;border-radius:0.5rem;padding:0.9rem 1rem;">
-      <div style="font-size:0.72rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:0.3rem;">Gemini API (flash-lite)</div>
+    <div style="border:1px solid var(--border);border-radius:0.5rem;padding:0.9rem 1rem;">
+      <div style="font-size:0.72rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em;margin-bottom:0.3rem;">Gemini API (flash-lite)</div>
       {% set gemini_stat = provider_stats | selectattr("source","eq","gemini") | first | default(none) %}
       {% set gemini_monthly = ((gemini_stat.cost_usd if gemini_stat else 0) / [period_days, 1] | max * 30) | round(4) %}
-      <div style="font-size:1.2rem;font-weight:700;color:#5A7AD4;">${{ "%.2f"|format(gemini_monthly) }}<span style="font-size:0.72rem;font-weight:400;color:#A3A3A3;">/mo est.</span></div>
-      <div style="font-size:0.72rem;color:#A3A3A3;margin-top:0.2rem;">$0.075/$0.30 per 1M tokens</div>
+      <div style="font-size:1.2rem;font-weight:700;color:var(--primary);">${{ "%.2f"|format(gemini_monthly) }}<span style="font-size:0.72rem;font-weight:400;color:var(--gray-400);">/mo est.</span></div>
+      <div style="font-size:0.72rem;color:var(--gray-400);margin-top:0.2rem;">$0.075/$0.30 per 1M tokens</div>
     </div>
 
-    <div style="border:1px solid #EBEBEB;border-radius:0.5rem;padding:0.9rem 1rem;">
-      <div style="font-size:0.72rem;font-weight:600;color:#A3A3A3;text-transform:uppercase;letter-spacing:.04em;margin-bottom:0.3rem;">Railway Hosting</div>
-      <div style="font-size:1.2rem;font-weight:700;color:#525252;">~$20.00<span style="font-size:0.72rem;font-weight:400;color:#A3A3A3;">/mo</span></div>
-      <div style="font-size:0.72rem;color:#A3A3A3;margin-top:0.2rem;">Starter plan (fixed)</div>
+    <div style="border:1px solid var(--border);border-radius:0.5rem;padding:0.9rem 1rem;">
+      <div style="font-size:0.72rem;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em;margin-bottom:0.3rem;">Railway Hosting</div>
+      <div style="font-size:1.2rem;font-weight:700;color:var(--gray-600);">~$20.00<span style="font-size:0.72rem;font-weight:400;color:var(--gray-400);">/mo</span></div>
+      <div style="font-size:0.72rem;color:var(--gray-400);margin-top:0.2rem;">Starter plan (fixed)</div>
     </div>
 
   </div>
-  <div style="margin-top:1rem;padding:0.75rem 1rem;background:#F8F8F8;border-radius:0.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
-    <span style="font-size:0.82rem;font-weight:600;color:#525252;">Estimated Total Monthly Cost</span>
+  <div style="margin-top:1rem;padding:0.75rem 1rem;background:var(--bg);border-radius:0.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+    <span style="font-size:0.82rem;font-weight:600;color:var(--gray-600);">Estimated Total Monthly Cost</span>
     {% set total_monthly = monthly_ai_cost + 20.0 %}
-    <span style="font-size:1.1rem;font-weight:700;color:{% if total_monthly > 50 %}#111111{% else %}#3D7A4A{% endif %};">${{ "%.2f"|format(total_monthly) }} / month</span>
+    <span style="font-size:1.1rem;font-weight:700;color:{% if total_monthly > 50 %}var(--ink){% else %}var(--success){% endif %};">${{ "%.2f"|format(total_monthly) }} / month</span>
   </div>
 </div>
 
 {# ── Daily / Hourly breakdown table ───────────────────────────────────────── #}
 {% if period == "today" and hourly_list %}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
-  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:0.9rem;">Hourly Breakdown — Today</div>
+<div style="background:var(--white);border:1px solid var(--border);border-radius:0.75rem;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
+  <div style="font-size:0.8rem;font-weight:600;color:var(--gray-600);margin-bottom:0.9rem;">Hourly Breakdown — Today</div>
   <div style="overflow-x:auto;">
     <table class="adm-table">
       <thead>
         <tr>
           <th>Hour</th>
           <th>Total</th>
-          <th style="color:#111111;">Gemma</th>
+          <th style="color:var(--ink);">Gemma</th>
           <th style="color:#D4845A;">Claude</th>
-          <th style="color:#5A7AD4;">Gemini</th>
-          <th style="color:#AAAAAA;">Local</th>
-          <th style="color:#CCCCCC;">Fallback</th>
+          <th style="color:var(--primary);">Gemini</th>
+          <th style="color:var(--gray-400);">Local</th>
+          <th style="color:var(--gray-300);">Fallback</th>
           <th>Est. Cost</th>
         </tr>
       </thead>
@@ -298,27 +298,27 @@
         {% for row in hourly_list %}
         {% if row.total > 0 %}
         <tr>
-          <td style="font-size:0.8rem;color:#525252;font-family:monospace;">{{ row.hour }}</td>
-          <td style="font-size:0.82rem;font-weight:600;color:#111;">{{ row.total }}</td>
-          <td style="font-size:0.82rem;color:{% if row.gemma > 0 %}#111111{% else %}#D4D4D4{% endif %};">{{ row.gemma }}</td>
-          <td style="font-size:0.82rem;color:{% if row.claude > 0 %}#D4845A{% else %}#D4D4D4{% endif %};">{{ row.claude }}</td>
-          <td style="font-size:0.82rem;color:{% if row.gemini > 0 %}#5A7AD4{% else %}#D4D4D4{% endif %};">{{ row.gemini }}</td>
-          <td style="font-size:0.82rem;color:{% if row.local > 0 %}#525252{% else %}#D4D4D4{% endif %};">{{ row.local }}</td>
-          <td style="font-size:0.82rem;color:#A3A3A3;">{{ row.fallback }}</td>
-          <td style="font-size:0.8rem;font-family:monospace;color:{% if row.cost > 0.001 %}#111111{% else %}#A3A3A3{% endif %};">${{ "%.6f"|format(row.cost) }}</td>
+          <td style="font-size:0.8rem;color:var(--gray-600);font-family:monospace;">{{ row.hour }}</td>
+          <td style="font-size:0.82rem;font-weight:600;color:var(--ink);">{{ row.total }}</td>
+          <td style="font-size:0.82rem;color:{% if row.gemma > 0 %}var(--ink){% else %}var(--gray-300){% endif %};">{{ row.gemma }}</td>
+          <td style="font-size:0.82rem;color:{% if row.claude > 0 %}#D4845A{% else %}var(--gray-300){% endif %};">{{ row.claude }}</td>
+          <td style="font-size:0.82rem;color:{% if row.gemini > 0 %}var(--primary){% else %}var(--gray-300){% endif %};">{{ row.gemini }}</td>
+          <td style="font-size:0.82rem;color:{% if row.local > 0 %}var(--gray-600){% else %}var(--gray-300){% endif %};">{{ row.local }}</td>
+          <td style="font-size:0.82rem;color:var(--gray-400);">{{ row.fallback }}</td>
+          <td style="font-size:0.8rem;font-family:monospace;color:{% if row.cost > 0.001 %}var(--ink){% else %}var(--gray-400){% endif %};">${{ "%.6f"|format(row.cost) }}</td>
         </tr>
         {% endif %}
         {% endfor %}
       </tbody>
     </table>
     {% if hourly_list | selectattr("total", "greaterthan", 0) | list | length == 0 %}
-    <p style="text-align:center;color:#A3A3A3;padding:1.5rem;">No scans today yet.</p>
+    <p style="text-align:center;color:var(--gray-400);padding:1.5rem;">No scans today yet.</p>
     {% endif %}
   </div>
 </div>
 {% else %}
-<div style="background:#fff;border:1px solid #EBEBEB;border-radius:0.75rem;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
-  <div style="font-size:0.8rem;font-weight:600;color:#525252;margin-bottom:0.9rem;">Daily Breakdown <span style="font-weight:400;color:#A3A3A3;font-size:0.72rem;">({{ daily_list | length }} days)</span></div>
+<div style="background:var(--white);border:1px solid var(--border);border-radius:0.75rem;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
+  <div style="font-size:0.8rem;font-weight:600;color:var(--gray-600);margin-bottom:0.9rem;">Daily Breakdown <span style="font-weight:400;color:var(--gray-400);font-size:0.72rem;">({{ daily_list | length }} days)</span></div>
   {% if daily_list %}
   <div class="adm-table-wrap" {% if daily_list | length > 14 %}style="max-height:420px;overflow-y:auto;"{% endif %}>
     <table class="adm-table">
@@ -326,38 +326,38 @@
         <tr>
           <th>Date</th>
           <th>Total</th>
-          <th style="color:#111111;">Gemma</th>
+          <th style="color:var(--ink);">Gemma</th>
           <th style="color:#D4845A;">Claude</th>
-          <th style="color:#5A7AD4;">Gemini</th>
-          <th style="color:#AAAAAA;">Local</th>
-          <th style="color:#CCCCCC;">Fallback</th>
+          <th style="color:var(--primary);">Gemini</th>
+          <th style="color:var(--gray-400);">Local</th>
+          <th style="color:var(--gray-300);">Fallback</th>
           <th>Est. Cost</th>
         </tr>
       </thead>
       <tbody>
         {% for row in daily_list | reverse %}
         <tr>
-          <td style="font-size:0.8rem;color:#525252;">{{ row.day }}</td>
-          <td style="font-size:0.82rem;font-weight:{% if row.total > 0 %}600{% else %}400{% endif %};color:{% if row.total > 0 %}#111{% else %}#D4D4D4{% endif %};">{{ row.total }}</td>
-          <td style="font-size:0.82rem;color:{% if row.gemma > 0 %}#111111{% else %}#D4D4D4{% endif %};">{{ row.gemma }}</td>
-          <td style="font-size:0.82rem;color:{% if row.claude > 0 %}#D4845A{% else %}#D4D4D4{% endif %};">{{ row.claude }}</td>
-          <td style="font-size:0.82rem;color:{% if row.gemini > 0 %}#5A7AD4{% else %}#D4D4D4{% endif %};">{{ row.gemini }}</td>
-          <td style="font-size:0.82rem;color:{% if row.local > 0 %}#525252{% else %}#D4D4D4{% endif %};">{{ row.local }}</td>
-          <td style="font-size:0.82rem;color:#A3A3A3;">{{ row.fallback }}</td>
-          <td style="font-size:0.8rem;color:{% if row.cost > 0.001 %}#111111{% else %}#A3A3A3{% endif %};">${{ "%.5f"|format(row.cost) }}</td>
+          <td style="font-size:0.8rem;color:var(--gray-600);">{{ row.day }}</td>
+          <td style="font-size:0.82rem;font-weight:{% if row.total > 0 %}600{% else %}400{% endif %};color:{% if row.total > 0 %}var(--ink){% else %}var(--gray-300){% endif %};">{{ row.total }}</td>
+          <td style="font-size:0.82rem;color:{% if row.gemma > 0 %}var(--ink){% else %}var(--gray-300){% endif %};">{{ row.gemma }}</td>
+          <td style="font-size:0.82rem;color:{% if row.claude > 0 %}#D4845A{% else %}var(--gray-300){% endif %};">{{ row.claude }}</td>
+          <td style="font-size:0.82rem;color:{% if row.gemini > 0 %}var(--primary){% else %}var(--gray-300){% endif %};">{{ row.gemini }}</td>
+          <td style="font-size:0.82rem;color:{% if row.local > 0 %}var(--gray-600){% else %}var(--gray-300){% endif %};">{{ row.local }}</td>
+          <td style="font-size:0.82rem;color:var(--gray-400);">{{ row.fallback }}</td>
+          <td style="font-size:0.8rem;color:{% if row.cost > 0.001 %}var(--ink){% else %}var(--gray-400){% endif %};">${{ "%.5f"|format(row.cost) }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
   {% else %}
-  <div style="text-align:center;padding:2rem;color:#A3A3A3;font-size:0.85rem;">No data in this period.</div>
+  <div style="text-align:center;padding:2rem;color:var(--gray-400);font-size:0.85rem;">No data in this period.</div>
   {% endif %}
 </div>
 {% endif %}
 
 {% if total_scans == 0 %}
-<div style="text-align:center;padding:3rem;color:#A3A3A3;font-size:0.88rem;">
+<div style="text-align:center;padding:3rem;color:var(--gray-400);font-size:0.88rem;">
   No label scans in this period. Adjust the date range or upload a label to begin.
 </div>
 {% endif %}
@@ -376,19 +376,19 @@
     data: {
       labels,
       datasets: [
-        { label: 'Gemma',    data: chartData.map(d => d.gemma),    borderColor: '#111111', backgroundColor: 'rgba(90,154,152,0.08)',  fill: true, tension: 0.3, pointRadius: 3 },
+        { label: 'Gemma',    data: chartData.map(d => d.gemma),    borderColor: '#121212', backgroundColor: 'rgba(79,70,229,0.08)',  fill: true, tension: 0.3, pointRadius: 3 },
         { label: 'Claude',   data: chartData.map(d => d.claude),   borderColor: '#D4845A', backgroundColor: 'rgba(212,132,90,0.08)',  fill: true, tension: 0.3, pointRadius: 3 },
         { label: 'Gemini',   data: chartData.map(d => d.gemini),   borderColor: '#5A7AD4', backgroundColor: 'rgba(90,122,212,0.08)', fill: true, tension: 0.3, pointRadius: 3 },
-        { label: 'Local',    data: chartData.map(d => d.local),    borderColor: '#AAAAAA', backgroundColor: 'rgba(170,170,170,0.08)', fill: true, tension: 0.3, pointRadius: 3 },
-        { label: 'Fallback', data: chartData.map(d => d.fallback), borderColor: '#CCCCCC', backgroundColor: 'rgba(204,204,204,0.05)', fill: true, tension: 0.3, pointRadius: 2, borderDash: [4,3] },
+        { label: 'Local',    data: chartData.map(d => d.local),    borderColor: '#9A9AA1', backgroundColor: 'rgba(170,170,170,0.08)', fill: true, tension: 0.3, pointRadius: 3 },
+        { label: 'Fallback', data: chartData.map(d => d.fallback), borderColor: '#C2C2C7', backgroundColor: 'rgba(204,204,204,0.05)', fill: true, tension: 0.3, pointRadius: 2, borderDash: [4,3] },
       ]
     },
     options: {
       responsive: true,
       plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } },
       scales: {
-        x: { ticks: { maxTicksLimit: isToday ? 24 : 10, font: { size: 10 } }, grid: { color: '#F0F0F0' } },
-        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 10 } }, grid: { color: '#F0F0F0' } }
+        x: { ticks: { maxTicksLimit: isToday ? 24 : 10, font: { size: 10 } }, grid: { color: '#F4F4F5' } },
+        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 10 } }, grid: { color: '#F4F4F5' } }
       }
     }
   });
@@ -397,8 +397,8 @@
   const srcLabels = providerStats.map(p => p.source.charAt(0).toUpperCase() + p.source.slice(1));
   const srcData   = providerStats.map(p => p.scans);
   const srcColors = providerStats.map(p => {
-    const map = { gemma: '#111111', claude: '#D4845A', gemini: '#5A7AD4', local: '#AAAAAA', fallback: '#DDDDDD' };
-    return map[p.source] || '#999';
+    const map = { gemma: '#121212', claude: '#D4845A', gemini: '#5A7AD4', local: '#9A9AA1', fallback: '#C2C2C7' };
+    return map[p.source] || '#9A9AA1';
   });
   if (providerStats.length > 0) {
     new Chart(document.getElementById('doughnutChart'), {
@@ -423,8 +423,8 @@
       datasets: [{
         label: 'Cost (USD)',
         data: chartData.map(d => parseFloat(d.cost.toFixed(6))),
-        backgroundColor: 'rgba(90,154,152,0.7)',
-        borderColor: '#111111',
+        backgroundColor: 'rgba(79,70,229,0.7)',
+        borderColor: '#121212',
         borderWidth: 1,
         borderRadius: 3,
       }]
@@ -440,7 +440,7 @@
             font: { size: 10 },
             callback: v => '$' + v.toFixed(4)
           },
-          grid: { color: '#F0F0F0' }
+          grid: { color: '#F4F4F5' }
         }
       }
     }
